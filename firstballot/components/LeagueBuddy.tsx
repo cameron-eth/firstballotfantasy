@@ -49,6 +49,13 @@ interface PlayerData {
   experience: number
   status: string
   espn_id?: string
+  rankingData?: {
+    rank: number
+    position: string
+    team: string
+    name: string
+    tier: number
+  }
 }
 
 interface TeamTrends {
@@ -252,14 +259,25 @@ const calculatePositionStrengths = (players: PlayerData[]): PositionStrengths =>
   };
 
   if (players && players.length > 0) {
+    console.log('Debug: Calculating position strengths for', players.length, 'players')
     players.forEach(player => {
-      if (player.position === 'QB') positionCounts.QB++;
-      else if (player.position === 'RB') positionCounts.RB++;
-      else if (player.position === 'WR') positionCounts.WR++;
-      else if (player.position === 'TE') positionCounts.TE++;
-      else if (player.position === 'FLEX') positionCounts.FLEX++;
-      else if (player.position === 'SFLX') positionCounts.SFLX++;
+      console.log('Debug: Player position:', player.position, 'for', player.playerName)
+      const position = player.position?.toUpperCase()
+      if (position === 'QB') positionCounts.QB++;
+      else if (position === 'RB') positionCounts.RB++;
+      else if (position === 'WR') positionCounts.WR++;
+      else if (position === 'TE') positionCounts.TE++;
+      else if (position === 'FLEX') positionCounts.FLEX++;
+      else if (position === 'SFLX' || position === 'SUPER_FLEX') positionCounts.SFLX++;
+      // Handle any other positions by adding to FLEX
+      else {
+        console.log('Debug: Unknown position:', player.position, 'for', player.playerName)
+        positionCounts.FLEX++;
+      }
     });
+    console.log('Debug: Final position counts:', positionCounts)
+  } else {
+    console.log('Debug: No players found for position strength calculation')
   }
 
   return positionCounts;
@@ -312,6 +330,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [showTransactionsSidebar, setShowTransactionsSidebar] = useState(false)
   const [allPlayers, setAllPlayers] = useState<Record<string, any>>({})
+  const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
   const [mobileTeamIndex, setMobileTeamIndex] = useState(0)
   const [mobileTrendingIndex, setMobileTrendingIndex] = useState(0)
 
@@ -342,7 +361,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         fetch('https://api.sleeper.app/v1/players/nfl'),
         fetch(`https://api.sleeper.app/v1/league/${leagueId}`),
         fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`),
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${week}`).catch(() => null)
+        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${week}`).catch(() => null),
+        fetch('/api/rankings').catch(() => null)
       ]
 
       const responses = await Promise.all(fetchPromises)
@@ -352,14 +372,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         throw new Error('Failed to fetch critical league data')
       }
 
-      const [rosters, users, allPlayers, league, matchups, transactionsResponse] = await Promise.all([
+      const [rosters, users, allPlayers, league, matchups, transactionsResponse, rankingsResponse] = await Promise.all([
         safeJsonParse(responses[0]!),
         safeJsonParse(responses[1]!),
         safeJsonParse(responses[2]!),
         safeJsonParse(responses[3]!),
         responses[4] && responses[4].ok ? safeJsonParse(responses[4]) : Promise.resolve([]),
-        responses[5] ? safeJsonParse(responses[5]) : Promise.resolve([])
-      ]) as [any[], any[], Record<string, any>, any, any[], any[]]
+        responses[5] ? safeJsonParse(responses[5]) : Promise.resolve([]),
+        responses[6] && responses[6].ok ? safeJsonParse(responses[6]) : Promise.resolve([])
+      ]) as [any[], any[], Record<string, any>, any, any[], any[], any[]]
 
       if (!rosters || !users || !allPlayers || !league) {
         throw new Error('Invalid data received from API')
@@ -379,6 +400,31 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       console.log('Debug: Valid rosters count:', validRosters.length)
 
       setAllPlayers(allPlayers)
+
+      // Process rankings data
+      if (rankingsResponse && rankingsResponse.length > 0) {
+        const rankingsMap = rankingsResponse.reduce((acc: any, player: any) => {
+          const playerName = player['PLAYER NAME'];
+          if (playerName) {
+            // Determine tier based on rank
+            let tier = 4; // Default tier
+            if (player.RK <= 12) tier = 1;
+            else if (player.RK <= 24) tier = 2;
+            else if (player.RK <= 48) tier = 3;
+            
+            acc[playerName] = {
+              rank: player.RK,
+              position: player.POS,
+              team: player.TEAM,
+              name: playerName,
+              tier: tier,
+            };
+          }
+          return acc;
+        }, {});
+        setPlayerRankings(rankingsMap);
+        console.log('Debug: Loaded', Object.keys(rankingsMap).length, 'player rankings');
+      }
 
       // Process transactions with validation
       const processedTransactions: Transaction[] = (transactionsResponse || []).map((tx: any) => ({
@@ -526,19 +572,28 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           const player = allPlayers[playerId]
           if (!player) return null
           
+          const playerName = `${player.first_name} ${player.last_name}`
+          const ranking = playerRankings[playerName]
+          
           return {
             playerId,
-            playerName: `${player.first_name} ${player.last_name}`,
+            playerName,
             position: player.position,
             team: player.team,
-            rank: player.search_rank || 999,
-            tier: getTierFromRank(player.search_rank),
+            rank: ranking?.rank || player.search_rank || 999,
+            tier: ranking?.tier ? `Tier ${ranking.tier}` : getTierFromRank(player.search_rank),
             age: player.age || 0,
             experience: player.years_exp || 0,
             status: player.status || 'Active',
-            espn_id: player.espn_id
+            espn_id: player.espn_id,
+            rankingData: ranking
           }
         }).filter(Boolean) as PlayerData[]
+
+        console.log('Debug: Team', teamName, 'has', players.length, 'players')
+        if (players.length > 0) {
+          console.log('Debug: Sample player positions:', players.slice(0, 3).map(p => ({ name: p.playerName, position: p.position })))
+        }
 
         const rawScore = calculateRawScore(players)
         const trends = calculateTeamTrends(players)
@@ -1443,7 +1498,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                           <div className="relative w-48 h-48">
                             {/* Center Rank */}
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="text-3xl font-bold text-yellow-400">#{selectedTeam.rank}</div>
+                              <div className="text-3xl font-bold text-yellow-400">#{teams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</div>
                               <div className="absolute -bottom-8 text-sm text-gray-400">Rank</div>
                             </div>
                             
@@ -1484,7 +1539,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-300">Points Rank:</span>
-                            <span className="text-slate-100">#{teams.sort((a, b) => b.pointsFor - a.pointsFor).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {teams.length}</span>
+                            <span className="text-slate-100">#{[...teams].sort((a, b) => b.pointsFor - a.pointsFor).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {teams.length}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-300">Avg Points:</span>
@@ -1568,15 +1623,33 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-slate-300">Young Players (≤25):</span>
+                            <span className="text-slate-300">Tier 3 Players:</span>
                             <span className="text-yellow-400 font-semibold">
+                              {selectedTeam.players.filter(p => p.tier === 'Tier 3').length}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-300">Young Players (≤25):</span>
+                            <span className="text-purple-400 font-semibold">
                               {selectedTeam.players.filter(p => p.age && p.age <= 25).length}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-slate-300">Avg Player Rank:</span>
-                            <span className="text-purple-400 font-semibold">
+                            <span className="text-pink-400 font-semibold">
                               #{Math.round(selectedTeam.players.reduce((sum, p) => sum + (p.rank || 999), 0) / selectedTeam.players.length)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-300">Top 50 Players:</span>
+                            <span className="text-green-400 font-semibold">
+                              {selectedTeam.players.filter(p => p.rank <= 50).length}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-300">Top 100 Players:</span>
+                            <span className="text-blue-400 font-semibold">
+                              {selectedTeam.players.filter(p => p.rank <= 100).length}
                             </span>
                           </div>
                         </div>

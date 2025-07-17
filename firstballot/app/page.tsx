@@ -119,7 +119,7 @@ export default function OverviewPage() {
           
           <div className="relative max-w-7xl mx-auto text-center">
             <div className="flex items-center justify-center mb-6">
-              <Trophy className="h-12 w-12 text-yellow-400 mr-4" />
+              <Trophy className="h-12 w-12 text-yellow-400 mr-4 hidden sm:block" />
               <h1 className="text-5xl md:text-7xl font-bold text-white font-mono">
                 FIRST BALLOT
               </h1>

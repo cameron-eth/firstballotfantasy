@@ -125,7 +125,7 @@ export default function OverviewPage() {
               </h1>
             </div>
             <h2 className="text-2xl md:text-4xl font-bold text-green-400 font-mono mb-6">
-              FANTASY FOOTBALL INTELLIGENCE
+              BUILT BY DEGENS <br/> FOR DEGENS
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
               Advanced analytics and machine learning to predict fantasy football performance. 

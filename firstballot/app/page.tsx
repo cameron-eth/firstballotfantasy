@@ -3,7 +3,29 @@
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Users, Target } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Users, 
+  Target, 
+  Trophy, 
+  BarChart3, 
+  Zap, 
+  ArrowRight, 
+  Star, 
+  Award,
+  Brain,
+  Database,
+  LineChart,
+  Users2,
+  Target as TargetIcon,
+  CheckCircle,
+  Play,
+  Music
+} from "lucide-react"
+import Link from "next/link"
 
 interface OverviewData {
   topPerformers: any[]
@@ -90,194 +112,200 @@ export default function OverviewPage() {
     <div className="min-h-screen bg-slate-900">
       <Header />
 
-      <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column */}
-          <div className="space-y-6">
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono">FIRST BALLOT FANTASY</CardTitle>
-                <p className="text-green-400 text-sm">
-                  Comprehensive analysis of Fantasy Football performance prediction (2015-2024)
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="gradient-border">
-                  <div className="gradient-border-content">
-                    <h3 className="text-green-400 font-mono mb-2">BACKGROUND</h3>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      To evaluate the predictability and patterns of fantasy football performance by analyzing 5,562
-                      skill position player seasons across 1,384 unique players. This project aims to identify which
-                      factors most strongly correlate with fantasy success and create reliable tier classifications for
-                      player evaluation.
-                    </p>
-                  </div>
-                </div>
+      <main className="w-full">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 px-4 sm:px-6 lg:px-8">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%239C92AC&quot; fill-opacity=&quot;0.05&quot;%3E%3Ccircle cx=&quot;30&quot; cy=&quot;30&quot; r=&quot;2&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50"></div>
+          
+          <div className="relative max-w-7xl mx-auto text-center">
+            <div className="flex items-center justify-center mb-6">
+              <Trophy className="h-12 w-12 text-yellow-400 mr-4" />
+              <h1 className="text-5xl md:text-7xl font-bold text-white font-mono">
+                FIRST BALLOT
+              </h1>
+            </div>
+            <h2 className="text-2xl md:text-4xl font-bold text-green-400 font-mono mb-6">
+              FANTASY FOOTBALL INTELLIGENCE
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
+              Advanced analytics and machine learning to predict fantasy football performance. 
+              Analyze {data.overallStats.totalRecords.toLocaleString()} player seasons across {data.overallStats.uniquePlayers.toLocaleString()} unique players.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link href="/draft-buddy">
+                <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 px-8 py-4 text-lg font-mono">
+                  <Zap className="h-5 w-5 mr-2" />
+                  DRAFT BUDDY
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </Link>
+              <Link href="/league-buddy">
+                <Button variant="outline" className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900 px-8 py-4 text-lg font-mono">
+                  <Users2 className="h-5 w-5 mr-2" />
+                  LEAGUE BUDDY
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </Link>
+            </div>
 
-                <div className="gradient-border">
-                  <div className="gradient-border-content">
-                    <h3 className="text-green-400 font-mono mb-2">MODEL STATUS</h3>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      Interpreting R² (R² = 0.74): The model explains 74% of fantasy performance variance, indicating
-                      strong predictive capability. Cross-validation with 5-fold splits ensures robust performance
-                      across different data subsets. Key features include career games played, draft position, and
-                      combine metrics.
-                    </p>
-                  </div>
+            {/* Social Media Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-12">
+              <a 
+                href="https://www.tiktok.com/@firstballotfb" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 hover:border-pink-400 transition-all duration-300 hover:scale-105"
+              >
+                <div className="flex items-center justify-center mb-4">
+                  <Music className="h-8 w-8 text-pink-400 group-hover:scale-110 transition-transform" />
                 </div>
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-white font-mono mb-2">TikTok</h3>
+                  <p className="text-sm text-gray-400 mb-3">@firstballotfb</p>
+                  <p className="text-xs text-gray-500">Quick fantasy tips & insights</p>
+                </div>
+              </a>
 
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="bg-slate-700 p-3 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-green-400" />
-                      <span className="text-xs text-gray-400">TOTAL RECORDS</span>
-                    </div>
-                    <p className="text-xl font-mono text-white">{data.overallStats.totalRecords.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-slate-700 p-3 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Target className="h-4 w-4 text-yellow-400" />
-                      <span className="text-xs text-gray-400">UNIQUE PLAYERS</span>
-                    </div>
-                    <p className="text-xl font-mono text-white">{data.overallStats.uniquePlayers.toLocaleString()}</p>
-                  </div>
+              <a 
+                href="https://www.youtube.com/@FirstBallotPod" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 hover:border-red-400 transition-all duration-300 hover:scale-105"
+              >
+                <div className="flex items-center justify-center mb-4">
+                  <Play className="h-8 w-8 text-red-400 group-hover:scale-110 transition-transform" />
                 </div>
-
-                {/* Position Breakdown */}
-                <div className="gradient-border">
-                  <div className="gradient-border-content">
-                    <h3 className="text-green-400 font-mono mb-3">POSITION BREAKDOWN</h3>
-                    <div className="space-y-2">
-                      {data.positionStats.map((pos: any) => (
-                        <div key={pos.position} className="flex justify-between items-center">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center text-slate-900 font-mono text-xs font-bold">
-                              {pos.position}
-                            </div>
-                            <span className="text-gray-300 text-sm">{pos.records} records</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-yellow-400 font-mono text-sm">{pos.percentage}%</span>
-                            {pos.avgPPG > 0 && <p className="text-xs text-gray-400">{pos.avgPPG} avg PPG</p>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-white font-mono mb-2">YouTube</h3>
+                  <p className="text-sm text-gray-400 mb-3">@FirstBallotPod</p>
+                  <p className="text-xs text-gray-500">In-depth analysis & podcasts</p>
                 </div>
-              </CardContent>
-            </Card>
+              </a>
+            </div>
+            
           </div>
+        </section>
 
-          {/* Right Column - keep existing content */}
-          <div className="space-y-6">
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono">TOP PERFORMERS</CardTitle>
-                <p className="text-green-400 text-sm">Highest actual fantasy PPG by season</p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {data.topPerformers.map((player: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between bg-slate-700 p-3 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-green-400 rounded-full flex items-center justify-center text-slate-900 font-mono text-sm font-bold">
-                          {player.position}
-                        </div>
-                        <div>
-                          <p className="font-mono text-white">{player.player_name}</p>
-                          <p className="text-xs text-gray-400">
-                            {player.season} • {player.tier || player.position_tier}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono text-green-400">{player.fantasy_ppg?.toFixed(2)}</p>
-                        <p className="text-xs text-gray-400">PPG</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Features Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold text-white font-mono mb-4">
+                POWERFUL FANTASY TOOLS
+              </h2>
+              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                Everything you need to dominate your fantasy football league
+              </p>
+            </div>
 
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono">MODEL PREDICTIONS</CardTitle>
-                <p className="text-green-400 text-sm">Highest predicted fantasy PPG</p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {data.topPredictions.map((player: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between bg-slate-700 p-3 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-slate-900 font-mono text-sm font-bold">
-                          {player.position}
-                        </div>
-                        <div>
-                          <p className="font-mono text-white">{player.player_name}</p>
-                          <p className="text-xs text-gray-400">
-                            {player.season} • {player.tier || player.position_tier}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono text-yellow-400">{player.predicted_fantasy_ppg?.toFixed(2)}</p>
-                        <p className="text-xs text-gray-400">PPG</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="bg-slate-800 border-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <Card className="bg-slate-700 border-slate-600 hover:border-yellow-400 transition-colors">
                 <CardHeader>
-                  <CardTitle className="text-green-400 font-mono text-sm flex items-center">
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    BREAKOUTS
-                  </CardTitle>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-yellow-400/20 rounded-lg">
+                      <Zap className="h-6 w-6 text-yellow-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white font-mono">Draft Buddy</CardTitle>
+                      <p className="text-sm text-gray-400">Real-time draft analysis</p>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {data.breakouts.map((player: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <div>
-                          <p className="font-mono text-white text-sm">{player.player_name}</p>
-                          <p className="text-xs text-gray-400">{player.position}</p>
-                        </div>
-                        <p className="font-mono text-green-400 text-sm">+{player.prediction_error?.toFixed(2)}</p>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-gray-300 mb-4">
+                    Live draft board with player rankings, tier analysis, and pick value calculations.
+                  </p>
+                  <Link href="/draft-buddy">
+                    <Button variant="outline" size="sm" className="w-full border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900">
+                      Launch Draft Buddy
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
 
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600 hover:border-green-400 transition-colors">
                 <CardHeader>
-                  <CardTitle className="text-red-400 font-mono text-sm flex items-center">
-                    <TrendingDown className="h-4 w-4 mr-2" />
-                    BUSTS
-                  </CardTitle>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-400/20 rounded-lg">
+                      <Users2 className="h-6 w-6 text-green-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white font-mono">League Buddy</CardTitle>
+                      <p className="text-sm text-gray-400">Team analysis & insights</p>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {data.busts.map((player: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <div>
-                          <p className="font-mono text-white text-sm">{player.player_name}</p>
-                          <p className="text-xs text-gray-400">{player.position}</p>
-                        </div>
-                        <p className="font-mono text-red-400 text-sm">{player.prediction_error?.toFixed(2)}</p>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-gray-300 mb-4">
+                    Comprehensive league analysis with team grades, player insights, and transaction tracking.
+                  </p>
+                  <Link href="/league-buddy">
+                    <Button variant="outline" size="sm" className="w-full border-green-400 text-green-400 hover:bg-green-400 hover:text-slate-900">
+                      Launch League Buddy
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
+
+              <Card className="bg-slate-700 border-slate-600 hover:border-blue-400 transition-colors">
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-400/20 rounded-lg">
+                      <BarChart3 className="h-6 w-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white font-mono">Player Tiers</CardTitle>
+                      <p className="text-sm text-gray-400">Position-based rankings</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-300 mb-4">
+                    Detailed player tier analysis with performance predictions and breakout/bust identification.
+                  </p>
+                  <Link href="/tiers">
+                    <Button variant="outline" size="sm" className="w-full border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-slate-900">
+                      View Player Tiers
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+             
             </div>
           </div>
-        </div>
+        </section>
+
+
+        {/* CTA Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-yellow-400/10 to-green-400/10">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white font-mono mb-6">
+              BUILT BY DEGENS FOR DEGENS
+            </h2>
+            <p className="text-xl text-gray-300 mb-8">
+              Take your fantasy football game to new heights with FirstBallot.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/draft-buddy">
+                <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 px-8 py-4 text-lg font-mono">
+                  <Trophy className="h-5 w-5 mr-2" />
+                  START DRAFTING
+                </Button>
+              </Link>
+              <Link href="/league-buddy">
+                <Button variant="outline" className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900 px-8 py-4 text-lg font-mono">
+                  <Users2 className="h-5 w-5 mr-2" />
+                  ANALYZE LEAGUE
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   )

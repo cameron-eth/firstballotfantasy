@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -30,7 +30,8 @@ import { TradeCharts } from "@/components/trade-charts"
 
 // Using valuation functions from trade-utils.ts
 
-export default function TradeMarketPage() {
+// Component that uses useSearchParams - needs to be wrapped in Suspense
+function TradeMarketContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [leagueId, setLeagueId] = useState<string>('')
@@ -719,4 +720,19 @@ export default function TradeMarketPage() {
       </div>
     </div>
   )
-} 
+}
+
+// Main component wrapped in Suspense
+export default function TradeMarketPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-slate-400 text-lg">Loading trade market...</div>
+        </div>
+      </div>
+    }>
+      <TradeMarketContent />
+    </Suspense>
+  )
+}

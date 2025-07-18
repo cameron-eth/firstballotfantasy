@@ -9,6 +9,8 @@ import { TeamLogo } from "@/components/team-logo"
 import { UserAvatar } from "@/components/user-avatar"
 import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loader2, AlertCircle, TrendingDown, ArrowUp, ArrowDown, Minus, ArrowLeft, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+
 
 // Enhanced TypeScript interfaces for better type safety
 interface LeagueBuddyProps {
@@ -319,6 +321,7 @@ const calculateRecentForm = (roster: any, matchups: any[]): string => {
 }
 
 export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
+  const router = useRouter()
   const [teams, setTeams] = useState<TeamData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -341,6 +344,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     try {
       setLoading(true)
       setError(null)
+      
+      // Cache the league ID for other components to use
+      localStorage.setItem('cachedLeagueId', leagueId)
+      sessionStorage.setItem('currentLeagueId', leagueId)
+      console.log('LeagueBuddy: Cached league ID:', leagueId)
 
       // Fetch NFL state to get current week
       const nflStateResponse = await fetch('https://api.sleeper.app/v1/state/nfl')
@@ -690,6 +698,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     }
   }, [leagueOverview?.trendingPlayers.length])
 
+  const handleTradeMarketClick = useCallback(() => {
+    router.push(`/trade-market?leagueId=${leagueId}`)
+  }, [router, leagueId])
+
   if (loading) {
     return (
       <Card className="bg-slate-800 border-slate-700">
@@ -723,7 +735,156 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   }
 
   return (
-    <div className="flex space-x-6">
+    <div className="flex flex-col space-y-6">
+      {/* Transactions Header */}
+      <Card className="bg-slate-800 border-slate-700 w-full mb-6">
+        <CardHeader>
+          <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-5 w-5" />
+              <span>TRANSACTIONS</span>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-slate-100">Week {currentWeek} Transactions</h3>
+            <div className="flex items-center space-x-2">
+              <button 
+                className="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 font-mono text-sm focus:outline-none"
+                onClick={handleTradeMarketClick}
+              >
+                <span>Trade Market</span>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button className="text-slate-400 hover:text-slate-300 text-sm">
+                <RefreshCw className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex flex-row gap-3 overflow-x-auto pb-2">
+            {transactions.length === 0 ? (
+              <div className="text-center py-8 min-w-[250px]">
+                <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">No transactions this week</p>
+              </div>
+            ) : (
+              transactions.map((tx) => {
+                // Get team names for the transaction
+                const teamNames = tx.rosterIds.map(rosterId => {
+                  const team = teams.find(t => t.rosterId === rosterId)
+                  return team?.teamName || `Team ${rosterId}`
+                }).join(' & ')
+
+                // Get player names for adds and drops
+                const addedPlayers = tx.adds ? Object.keys(tx.adds).map(playerId => {
+                  const player = allPlayers[playerId]
+                  return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
+                }) : []
+                
+                const droppedPlayers = tx.drops ? Object.keys(tx.drops).map(playerId => {
+                  const player = allPlayers[playerId]
+                  return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
+                }) : []
+
+                return (
+                  <div key={tx.transactionId} className="bg-slate-700 border-slate-600 p-3 rounded-lg min-w-[260px] max-w-xs flex-shrink-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className={`text-xs px-2 py-1 ${
+                        tx.type === 'trade' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
+                        tx.type === 'waiver' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
+                        'bg-green-400/20 text-green-400 border-green-400'
+                      }`}>
+                        {tx.type.toUpperCase()}
+                      </Badge>
+                      <span className="text-xs text-gray-400">Week {tx.week}</span>
+                    </div>
+                    
+                    <div className="text-sm text-slate-100 mb-2">
+                      <span className="font-semibold">{teamNames}</span>
+                    </div>
+
+                    {tx.type === 'trade' && (
+                      <div className="space-y-1">
+                        {addedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {droppedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {tx.draftPicks.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-blue-400">Draft Picks:</span> {tx.draftPicks.length} picks traded
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {tx.type === 'free_agent' && (
+                      <div className="space-y-1">
+                        {addedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-green-400">Signed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {droppedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {tx.type === 'waiver' && (
+                      <div className="space-y-1">
+                        {addedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-yellow-400">Claimed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {droppedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {tx.waiverBudget.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-purple-400">FAAB:</span> ${tx.waiverBudget[0]?.amount || 0}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-600">
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {new Date(tx.created).toLocaleDateString()}
+                      </div>
+                      <Badge variant="outline" className={`text-xs px-1 py-0 ${
+                        tx.status === 'complete' ? 'bg-green-400/20 text-green-400 border-green-400' :
+                        tx.status === 'pending' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
+                        'bg-red-400/20 text-red-400 border-red-400'
+                      }`}>
+                        {tx.status}
+                      </Badge>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+
+
       {/* Main Content */}
       <div className="flex-1 space-y-6">
        
@@ -1711,149 +1872,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Transactions Sidebar */}
-      <div className={`${showTransactionsSidebar ? 'block' : 'hidden'} lg:block w-80`}>
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Zap className="h-5 w-5" />
-                <span>TRANSACTIONS</span>
-              </div>
-              <button 
-                onClick={handleTransactionsToggle}
-                className="lg:hidden text-slate-400 hover:text-slate-300"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-slate-100">Week {currentWeek} Transactions</h3>
-              <button className="text-slate-400 hover:text-slate-300 text-sm">
-                <RefreshCw className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto">
-              {transactions.length === 0 ? (
-                <div className="text-center py-8">
-                  <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">No transactions this week</p>
-                </div>
-              ) : (
-                transactions.map((tx) => {
-                  // Get team names for the transaction
-                  const teamNames = tx.rosterIds.map(rosterId => {
-                    const team = teams.find(t => t.rosterId === rosterId)
-                    return team?.teamName || `Team ${rosterId}`
-                  }).join(' & ')
-
-                  // Get player names for adds and drops
-                  const addedPlayers = tx.adds ? Object.keys(tx.adds).map(playerId => {
-                    const player = allPlayers[playerId]
-                    return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
-                  }) : []
-                  
-                  const droppedPlayers = tx.drops ? Object.keys(tx.drops).map(playerId => {
-                    const player = allPlayers[playerId]
-                    return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
-                  }) : []
-
-                  return (
-                    <div key={tx.transactionId} className="bg-slate-700 border-slate-600 p-3 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="outline" className={`text-xs px-2 py-1 ${
-                          tx.type === 'trade' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
-                          tx.type === 'waiver' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                          'bg-green-400/20 text-green-400 border-green-400'
-                        }`}>
-                          {tx.type.toUpperCase()}
-                        </Badge>
-                        <span className="text-xs text-gray-400">Week {tx.week}</span>
-                      </div>
-                      
-                      <div className="text-sm text-slate-100 mb-2">
-                        <span className="font-semibold">{teamNames}</span>
-                      </div>
-
-                      {tx.type === 'trade' && (
-                        <div className="space-y-1">
-                          {addedPlayers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                            </div>
-                          )}
-                          {droppedPlayers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                            </div>
-                          )}
-                          {tx.draftPicks.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-blue-400">Draft Picks:</span> {tx.draftPicks.length} picks traded
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {tx.type === 'free_agent' && (
-                        <div className="space-y-1">
-                          {addedPlayers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-green-400">Signed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                            </div>
-                          )}
-                          {droppedPlayers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {tx.type === 'waiver' && (
-                        <div className="space-y-1">
-                          {addedPlayers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-yellow-400">Claimed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                            </div>
-                          )}
-                          {droppedPlayers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                            </div>
-                          )}
-                          {tx.waiverBudget.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-purple-400">FAAB:</span> ${tx.waiverBudget[0]?.amount || 0}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-600">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {new Date(tx.created).toLocaleDateString()}
-                        </div>
-                        <Badge variant="outline" className={`text-xs px-1 py-0 ${
-                          tx.status === 'complete' ? 'bg-green-400/20 text-green-400 border-green-400' :
-                          tx.status === 'pending' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                          'bg-red-400/20 text-red-400 border-red-400'
-                        }`}>
-                          {tx.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

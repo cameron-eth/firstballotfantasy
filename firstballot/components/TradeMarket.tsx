@@ -287,8 +287,8 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
         }
       })
 
-      const totalTradeValue = tradeTeams.reduce((sum, team) => sum + team.totalValueReceived, 0)
-      const winner = tradeTeams.reduce((max, team) => team.netValueGain > max.netValueGain ? team : max).rosterId
+      const totalTradeValue = tradeTeams.reduce((sum: number, team: any) => sum + team.totalValueReceived, 0)
+      const winner = tradeTeams.reduce((max: any, team: any) => team.netValueGain > max.netValueGain ? team : max).rosterId
 
       analyzedTrades.push({
         transactionId: trade.transaction_id,

@@ -424,8 +424,8 @@ export default function TradeMarketPage() {
     <div className="min-h-screen bg-slate-900 text-white p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
+          <div className="flex items-center space-x-3 sm:space-x-4">
             <Button
               variant="outline"
               onClick={() => router.back()}
@@ -435,49 +435,49 @@ export default function TradeMarketPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-yellow-400 font-mono">TRADE MARKET</h1>
-              <p className="text-slate-400">Dynasty-based trade analysis and valuations</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400 font-mono">TRADE MARKET</h1>
+              <p className="text-sm sm:text-base text-slate-400">Dynasty-based trade analysis and valuations</p>
             </div>
           </div>
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-400">{tradeAnalysis.length}</div>
-                <div className="text-sm text-gray-400">Total Trades</div>
+                <div className="text-xl sm:text-2xl font-bold text-blue-400">{tradeAnalysis.length}</div>
+                <div className="text-xs sm:text-sm text-gray-400">Total Trades</div>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-400">
+                <div className="text-xl sm:text-2xl font-bold text-green-400">
                   {tradeAnalysis.reduce((sum, trade) => sum + trade.teams.reduce((s, team) => s + team.playersReceived.length + team.playersSent.length, 0), 0)}
                 </div>
-                <div className="text-sm text-gray-400">Players Traded</div>
+                <div className="text-xs sm:text-sm text-gray-400">Players Traded</div>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">
+                <div className="text-xl sm:text-2xl font-bold text-purple-400">
                   {tradedPicks.length + tradeAnalysis.reduce((sum, trade) => sum + trade.teams.reduce((s, team) => s + team.picksReceived.length + team.picksSent.length, 0), 0)}
                 </div>
-                <div className="text-sm text-gray-400">Draft Picks</div>
+                <div className="text-xs sm:text-sm text-gray-400">Draft Picks</div>
               </div>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-400">
                   {Math.round(tradeAnalysis.reduce((sum, trade) => sum + trade.totalTradeValue, 0))}
                 </div>
-                <div className="text-sm text-gray-400">Total Value</div>
+                <div className="text-xs sm:text-sm text-gray-400">Total Value</div>
               </div>
             </CardContent>
           </Card>
@@ -486,16 +486,16 @@ export default function TradeMarketPage() {
         {/* Main Content Tabs */}
         <Tabs defaultValue="leaderboard" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-slate-800 border-slate-700">
-            <TabsTrigger value="leaderboard" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">
+            <TabsTrigger value="leaderboard" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
               Leaderboard
             </TabsTrigger>
-            <TabsTrigger value="charts" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">
+            <TabsTrigger value="charts" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
               Charts
             </TabsTrigger>
-            <TabsTrigger value="trades" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">
+            <TabsTrigger value="trades" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
               Recent Trades
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">
+            <TabsTrigger value="analysis" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
               Analysis
             </TabsTrigger>
           </TabsList>
@@ -511,40 +511,40 @@ export default function TradeMarketPage() {
               <CardContent>
                 <div className="space-y-3">
                   {traderStats.map((trader, index) => (
-                    <div key={trader.rosterId} className="flex items-center justify-between p-4 bg-slate-700 border border-slate-600 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-xl font-bold text-yellow-400">#{index + 1}</div>
+                    <div key={trader.rosterId} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-700 border border-slate-600 rounded-lg space-y-3 sm:space-y-0">
+                      <div className="flex items-center space-x-3 sm:space-x-4">
+                        <div className="text-lg sm:text-xl font-bold text-yellow-400">#{index + 1}</div>
                         <UserAvatar
                           avatarId={teams.find(t => t.rosterId === trader.rosterId)?.ownerAvatar}
                           displayName={trader.ownerName}
                           username={trader.ownerName}
-                          size={48}
+                          size={40}
                           className="flex-shrink-0"
                         />
-                        <div>
-                          <div className="text-lg font-semibold text-slate-100">{trader.teamName}</div>
-                          <div className="text-sm text-gray-400">{trader.ownerName}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-base sm:text-lg font-semibold text-slate-100 truncate">{trader.teamName}</div>
+                          <div className="text-xs sm:text-sm text-gray-400 truncate">{trader.ownerName}</div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-6">
+                      <div className="flex items-center justify-between sm:justify-end space-x-4 sm:space-x-6">
                         <div className="text-center">
-                          <div className="text-sm text-gray-400">Trades</div>
-                          <div className="text-lg font-semibold text-slate-100">{trader.totalTrades}</div>
+                          <div className="text-xs sm:text-sm text-gray-400">Trades</div>
+                          <div className="text-sm sm:text-lg font-semibold text-slate-100">{trader.totalTrades}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-sm text-gray-400">Avg/Trade</div>
-                          <div className={`text-lg font-semibold ${trader.avgValuePerTrade >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          <div className="text-xs sm:text-sm text-gray-400">Avg/Trade</div>
+                          <div className={`text-sm sm:text-lg font-semibold ${trader.avgValuePerTrade >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {formatValue(trader.avgValuePerTrade)}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-sm text-gray-400">Total Value</div>
-                          <div className={`text-lg font-semibold ${trader.totalValueGained >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          <div className="text-xs sm:text-sm text-gray-400">Total Value</div>
+                          <div className={`text-sm sm:text-lg font-semibold ${trader.totalValueGained >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {formatValue(trader.totalValueGained)}
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-lg px-4 py-2 ${GRADE_COLORS[trader.grade as keyof typeof GRADE_COLORS]}`}>
+                        <Badge variant="outline" className={`text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 ${GRADE_COLORS[trader.grade as keyof typeof GRADE_COLORS]}`}>
                           {trader.grade}
                         </Badge>
                       </div>
@@ -571,13 +571,9 @@ export default function TradeMarketPage() {
                 <div className="space-y-6">
                   {tradeAnalysis.map((trade) => (
                     <div key={trade.transactionId} className="p-6 bg-slate-700 border border-slate-600 rounded-lg">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="text-lg text-gray-400">
-                          {trade.season} Week {trade.week} • {trade.date}
-                        </div>
-                        <div className="text-lg font-semibold text-slate-100">
-                          Total Value: {Math.round(trade.totalTradeValue)}
-                        </div>
+                      <div className="flex items-center justify-between mb-4 text-sm text-gray-400">
+                        <span>{trade.season} Week {trade.week} • {trade.date}</span>
+                        <span className="text-blue-400 font-semibold">Total Value: {Math.round(trade.totalTradeValue)}</span>
                       </div>
                       
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

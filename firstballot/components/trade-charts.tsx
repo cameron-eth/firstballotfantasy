@@ -62,30 +62,30 @@ export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-4 min-w-0">
-                    <div className="text-right min-w-0">
-                      <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatValue(trader.totalValueGained)}
-                      </div>
-                      <div className="text-xs text-gray-400">{trader.totalTrades} trades</div>
-                    </div>
-                    
-                    <div className="w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isPositive ? 'bg-green-400' : 'bg-red-400'
-                        }`}
-                        style={{ 
-                          width: `${Math.abs(percentage)}%`,
-                          maxWidth: '100%'
-                        }}
-                      />
-                    </div>
-                    
-                    <Badge variant="outline" className={`text-xs px-2 py-1 ${GRADE_COLORS[trader.grade as keyof typeof GRADE_COLORS]}`}>
-                      {trader.grade}
-                    </Badge>
-                  </div>
+                                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
+                     <div className="text-right min-w-0">
+                       <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                         {formatValue(trader.totalValueGained)}
+                       </div>
+                       <div className="text-xs text-gray-400">{trader.totalTrades} trades</div>
+                     </div>
+                     
+                     <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                       <div 
+                         className={`h-full rounded-full transition-all duration-500 ${
+                           isPositive ? 'bg-green-400' : 'bg-red-400'
+                         }`}
+                         style={{ 
+                           width: `${Math.abs(percentage)}%`,
+                           maxWidth: '100%'
+                         }}
+                       />
+                     </div>
+                     
+                     <Badge variant="outline" className={`text-xs px-2 py-1 ${GRADE_COLORS[trader.grade as keyof typeof GRADE_COLORS]}`}>
+                       {trader.grade}
+                     </Badge>
+                   </div>
                 </div>
               )
             })}
@@ -124,28 +124,28 @@ export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-4 min-w-0">
-                    <div className="text-right min-w-0">
-                      <div className="font-semibold text-blue-400">
-                        {Math.round(trader.totalValueMoved)}
-                      </div>
-                      <div className="text-xs text-gray-400">value moved</div>
-                    </div>
-                    
-                    <div className="w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-400 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${percentage}%`,
-                          maxWidth: '100%'
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="text-xs text-gray-400 min-w-[3rem]">
-                      {trader.totalTrades} trades
-                    </div>
-                  </div>
+                                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
+                     <div className="text-right min-w-0">
+                       <div className="font-semibold text-blue-400">
+                         {Math.round(trader.totalValueMoved)}
+                       </div>
+                       <div className="text-xs text-gray-400">value moved</div>
+                     </div>
+                     
+                     <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                       <div 
+                         className="h-full bg-blue-400 rounded-full transition-all duration-500"
+                         style={{ 
+                           width: `${percentage}%`,
+                           maxWidth: '100%'
+                         }}
+                       />
+                     </div>
+                     
+                     <div className="text-xs text-gray-400 min-w-[3rem]">
+                       {trader.totalTrades} trades
+                     </div>
+                   </div>
                 </div>
               )
             })}
@@ -189,30 +189,30 @@ export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-4 min-w-0">
-                      <div className="text-right min-w-0">
-                        <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                          {formatValue(trader.avgValuePerTrade)}
-                        </div>
-                        <div className="text-xs text-gray-400">per trade</div>
-                      </div>
-                      
-                      <div className="w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            isPositive ? 'bg-green-400' : 'bg-red-400'
-                          }`}
-                          style={{ 
-                            width: `${Math.abs(percentage)}%`,
-                            maxWidth: '100%'
-                          }}
-                        />
-                      </div>
-                      
-                      <div className="text-xs text-gray-400 min-w-[3rem]">
-                        {trader.totalTrades} trades
-                      </div>
-                    </div>
+                                         <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
+                       <div className="text-right min-w-0">
+                         <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                           {formatValue(trader.avgValuePerTrade)}
+                         </div>
+                         <div className="text-xs text-gray-400">per trade</div>
+                       </div>
+                       
+                       <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                         <div 
+                           className={`h-full rounded-full transition-all duration-500 ${
+                             isPositive ? 'bg-green-400' : 'bg-red-400'
+                           }`}
+                           style={{ 
+                             width: `${Math.abs(percentage)}%`,
+                             maxWidth: '100%'
+                           }}
+                         />
+                       </div>
+                       
+                       <div className="text-xs text-gray-400 min-w-[3rem]">
+                         {trader.totalTrades} trades
+                       </div>
+                     </div>
                   </div>
                 )
               })}
@@ -253,7 +253,7 @@ export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-4 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
                       <div className="text-right min-w-0">
                         <div className="font-semibold text-yellow-400">
                           {trader.totalTrades}
@@ -261,7 +261,7 @@ export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
                         <div className="text-xs text-gray-400">trades</div>
                       </div>
                       
-                      <div className="w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                      <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-yellow-400 rounded-full transition-all duration-500"
                           style={{ 

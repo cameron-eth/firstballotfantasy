@@ -6,16 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TierExamples } from "@/components/tier-examples"
 import { supabase } from "@/lib/supabase"
 
-const positions = ["ALL", "QB", "RB", "WR", "TE"]
-
-interface AllPositionsData {
-  draft_round: string
-  elite_percentage: number
-  tier1_percentage: number
-  tier2_percentage: number
-  startable_percentage: number
-  streamer_percentage: number
-}
+const positions = ["QB", "RB", "WR", "TE"]
 
 interface PositionData {
   position: string
@@ -54,8 +45,7 @@ const tierColors = {
 }
 
 export default function ConversionPage() {
-  const [activePosition, setActivePosition] = useState("ALL")
-  const [allPositionsData, setAllPositionsData] = useState<AllPositionsData[]>([])
+  const [activePosition, setActivePosition] = useState("QB")
   const [positionData, setPositionData] = useState<PositionData[]>([])
   const [successRatesData, setSuccessRatesData] = useState<DraftSuccessData[]>([])
   const [prospectTierData, setProspectTierData] = useState<ProspectTierData[]>([])
@@ -71,13 +61,7 @@ export default function ConversionPage() {
       setLoading(true)
       setError(null)
 
-      // Fetch all positions data
-      const { data: allPosData, error: allPosError } = await supabase
-        .from("all_positions_draft_round_breakdown")
-        .select("*")
-        .order("draft_round")
 
-      if (allPosError) throw allPosError
 
       // Fetch position-specific data
       const { data: posData, error: posError } = await supabase
@@ -118,7 +102,6 @@ export default function ConversionPage() {
         setProspectTierData(prospectResult.data)
       }
 
-      setAllPositionsData(allPosData || [])
       setPositionData(posData || [])
       setSuccessRatesData(successData || [])
     } catch (err) {
@@ -138,8 +121,9 @@ export default function ConversionPage() {
   }
 
   const getCurrentData = () => {
-    if (activePosition === "ALL") {
-      return allPositionsData.map((row) => ({
+    const data = positionData
+      .filter((row) => row.position === activePosition)
+      .map((row) => ({
         draft_round: row.draft_round,
         Elite: row.elite_percentage,
         "Tier 1": row.tier1_percentage,
@@ -147,18 +131,7 @@ export default function ConversionPage() {
         Startable: row.startable_percentage,
         Streamer: row.streamer_percentage,
       }))
-    } else {
-      return positionData
-        .filter((row) => row.position === activePosition)
-        .map((row) => ({
-          draft_round: row.draft_round,
-          Elite: row.elite_percentage,
-          "Tier 1": row.tier1_percentage,
-          "Tier 2": row.tier2_percentage,
-          Startable: row.startable_percentage,
-          Streamer: row.streamer_percentage,
-        }))
-    }
+    return data
   }
 
   const getSuccessRateForPosition = (draftRound: string) => {
@@ -237,12 +210,10 @@ export default function ConversionPage() {
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
               <CardTitle className="text-yellow-400 font-mono">
-                {activePosition === "ALL" ? "DRAFT ROUND → PRO TIER" : `${activePosition} DRAFT ROUND → PRO TIER`}
+                {activePosition} DRAFT ROUND → PRO TIER
               </CardTitle>
               <p className="text-green-400 text-sm">
-                {activePosition === "ALL"
-                  ? "Conversion percentages by draft position (all positions)"
-                  : `${activePosition} conversion percentages by draft position`}
+                {activePosition} conversion percentages by draft position
               </p>
             </CardHeader>
             <CardContent>
@@ -330,9 +301,9 @@ export default function ConversionPage() {
         {/* Key Insights */}
         <Card className="mt-8 bg-slate-800 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono">
-              {activePosition === "ALL" ? "CONVERSION INSIGHTS" : `${activePosition} CONVERSION INSIGHTS`}
-            </CardTitle>
+                          <CardTitle className="text-yellow-400 font-mono">
+                {activePosition} CONVERSION INSIGHTS
+              </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

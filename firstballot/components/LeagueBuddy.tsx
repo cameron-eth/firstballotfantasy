@@ -361,6 +361,13 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       
       const week = nflState.week || 1
       setCurrentWeek(week)
+      
+      console.log('Debug: NFL State:', {
+        week: nflState.week,
+        season: nflState.season,
+        seasonType: nflState.season_type,
+        displayWeek: nflState.display_week
+      })
 
       // Fetch all data in parallel with error handling
       const fetchPromises = [
@@ -393,6 +400,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       if (!rosters || !users || !allPlayers || !league) {
         throw new Error('Invalid data received from API')
       }
+
+      console.log('Debug: League Info:', {
+        leagueId: league.league_id,
+        name: league.name,
+        season: league.season,
+        status: league.status,
+        totalRosters: league.total_rosters,
+        rosterPosCount: league.roster_positions
+      })
 
       // Add debugging to identify null user objects
       console.log('Debug: Rosters count:', rosters?.length)
@@ -570,15 +586,23 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       const teamsData: (TeamData | null)[] = rosters.map((roster: any) => {
         // Add null checks for roster data
         if (!roster || !roster.roster_id) {
+          console.log('Debug: Skipping invalid roster:', roster)
           return null
         }
         
         const owner = roster.owner_id ? validUsers.find((u: any) => u?.user_id === roster.owner_id) : null
         const teamName = owner?.metadata?.team_name || owner?.display_name || owner?.first_name || `Team ${roster.roster_id}`
         
+        console.log('Debug: Processing roster', roster.roster_id, 'for team', teamName)
+        console.log('Debug: Roster players array:', roster.players)
+        console.log('Debug: Roster players count:', roster.players?.length || 0)
+        
         const players = (roster.players || []).map((playerId: string) => {
           const player = allPlayers[playerId]
-          if (!player) return null
+          if (!player) {
+            console.log('Debug: Player not found in allPlayers for ID:', playerId)
+            return null
+          }
           
           const playerName = `${player.first_name} ${player.last_name}`
           const ranking = playerRankings[playerName]
@@ -601,6 +625,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         console.log('Debug: Team', teamName, 'has', players.length, 'players')
         if (players.length > 0) {
           console.log('Debug: Sample player positions:', players.slice(0, 3).map(p => ({ name: p.playerName, position: p.position })))
+        } else {
+          console.log('Debug: No players found for team', teamName, '- this might be a pre-season league or draft not completed')
         }
 
         const rawScore = calculateRawScore(players)
@@ -635,6 +661,9 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
       // Filter out null values and set teams
       const validTeamsData = teamsData.filter(Boolean) as TeamData[]
+      
+      console.log('Debug: Valid teams data count:', validTeamsData.length)
+      console.log('Debug: Teams with players:', validTeamsData.filter(t => t.players.length > 0).length)
       
       // Calculate grades based on percentile ranking
       const allScores = validTeamsData.map(team => team.gradeScore)
@@ -727,6 +756,35 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
               className="mt-4 bg-yellow-400 text-black hover:bg-yellow-300"
             >
               Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Check if this is a pre-season league with no players
+  const teamsWithPlayers = teams.filter(team => team.players.length > 0)
+  if (teams.length > 0 && teamsWithPlayers.length === 0) {
+    return (
+      <Card className="bg-slate-800 border-slate-700">
+        <CardContent className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Users className="h-8 w-8 text-yellow-400 mx-auto mb-4" />
+            <p className="text-yellow-400 font-mono text-lg mb-2">PRE-SEASON LEAGUE</p>
+            <p className="text-slate-300 mb-4">
+              This league appears to be in pre-season mode. Team data will be available once the draft is completed and the season begins.
+            </p>
+            <div className="text-sm text-slate-400 space-y-1">
+              <p>• League has {teams.length} teams registered</p>
+              <p>• Current week: {currentWeek}</p>
+              <p>• Season type: {leagueOverview?.seasonType || 'Unknown'}</p>
+            </div>
+            <Button 
+              onClick={fetchLeagueData}
+              className="mt-4 bg-yellow-400 text-black hover:bg-yellow-300"
+            >
+              Refresh Data
             </Button>
           </div>
         </CardContent>

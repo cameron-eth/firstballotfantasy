@@ -30,7 +30,11 @@ const tierNameMapping: { [key: string]: string } = {
   "QB2": "Tier 2",
   "RB2": "Tier 2",
   "WR2": "Tier 2", 
-  "TE2": "Startable", // TE2 players are typically startable
+  "TE2": "Tier 2",
+  "QB3": "Startable",
+  "RB3": "Startable",
+  "WR3": "Startable",
+  "TE3": "Startable",
   "Streamer": "Streamer",
   "Startable": "Startable",
   // Add any other mappings as needed

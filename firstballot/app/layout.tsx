@@ -4,6 +4,8 @@ import { Inter } from "next/font/google"
 import { Fira_Code } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth"
+import { Analytics } from "@vercel/analytics/next"
+
 
 const inter = Inter({ subsets: ["latin"] })
 

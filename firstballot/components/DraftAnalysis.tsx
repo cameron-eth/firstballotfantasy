@@ -329,36 +329,38 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
   }
 
   // Sorting logic for team grades
-  let sortedTeamGrades = [...data.teamGrades];
+  let sortedTeamGrades = [...(data.teamGrades || [])];
   if (sortMode === 'grade') {
-    sortedTeamGrades.sort((a, b) => b.gradeScore - a.gradeScore);
+    sortedTeamGrades.sort((a, b) => (b.gradeScore || 0) - (a.gradeScore || 0));
   } else {
-    sortedTeamGrades.sort((a, b) => a.teamName.localeCompare(b.teamName));
+    sortedTeamGrades.sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''));
   }
 
   // After you have all teamGrades and before rendering, assign grades by percentile
-  if (data && data.teamGrades) {
-    const scores = data.teamGrades.map(t => t.gradeScore);
-    const sortedScores = [...scores].sort((a, b) => a - b);
-    function getPercentile(score) {
-      const below = sortedScores.filter(s => s < score).length;
-      return (below / sortedScores.length) * 100;
+  if (data && data.teamGrades && data.teamGrades.length > 0) {
+    const scores = data.teamGrades.map(t => t.gradeScore || 0).filter(score => !isNaN(score));
+    if (scores.length > 0) {
+      const sortedScores = [...scores].sort((a, b) => a - b);
+      function getPercentile(score) {
+        const below = sortedScores.filter(s => s < score).length;
+        return (below / sortedScores.length) * 100;
+      }
+      data.teamGrades = data.teamGrades.map(team => {
+        const percentile = getPercentile(team.gradeScore || 0);
+        let letter = 'D';
+        if (percentile >= 90) letter = 'A+';
+        else if (percentile >= 80) letter = 'A';
+        else if (percentile >= 70) letter = 'A-';
+        else if (percentile >= 60) letter = 'B+';
+        else if (percentile >= 50) letter = 'B';
+        else if (percentile >= 40) letter = 'B-';
+        else if (percentile >= 30) letter = 'C+';
+        else if (percentile >= 20) letter = 'C';
+        else if (percentile >= 10) letter = 'C-';
+        // else D
+        return { ...team, grade: letter };
+      });
     }
-    data.teamGrades = data.teamGrades.map(team => {
-      const percentile = getPercentile(team.gradeScore);
-      let letter = 'D';
-      if (percentile >= 90) letter = 'A+';
-      else if (percentile >= 80) letter = 'A';
-      else if (percentile >= 70) letter = 'A-';
-      else if (percentile >= 60) letter = 'B+';
-      else if (percentile >= 50) letter = 'B';
-      else if (percentile >= 40) letter = 'B-';
-      else if (percentile >= 30) letter = 'C+';
-      else if (percentile >= 20) letter = 'C';
-      else if (percentile >= 10) letter = 'C-';
-      // else D
-      return { ...team, grade: letter };
-    });
   }
 
   // Pagination logic for picks
@@ -442,9 +444,9 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-2">
             {sortedTeamGrades.map((team) => (
-              <Card key={team.rosterId} className="p-4 bg-slate-800 border border-slate-700">
+              <div key={team.rosterId} className="p-3 sm:p-4 bg-slate-700 border border-slate-600 rounded-lg min-w-[280px] sm:min-w-0 flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     <UserAvatar
@@ -456,63 +458,63 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     />
                     <h3 className="font-semibold text-slate-100">{team.teamName}</h3>
                   </div>
-                  <Badge variant="outline" className={gradeColors[team.grade as keyof typeof gradeColors] + " text-sm px-2 py-1 border"}>
+                  <Badge variant="outline" className={(gradeColors[team.grade as keyof typeof gradeColors] || gradeColors['D']) + " text-sm px-2 py-1 border"}>
                     {team.grade}
                   </Badge>
                 </div>
-                <div className="space-y-2 text-sm text-slate-200">
+                <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-slate-200">
                   <div className="flex justify-between">
                     <span>Total Picks:</span>
-                    <span className="text-slate-100">{team.totalPicks}</span>
+                    <span className="text-slate-100">{team.totalPicks || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Average Rank:</span>
-                    <span className="text-slate-100">{team.averageRank}</span>
+                    <span className="text-slate-100">{team.averageRank || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Grade Score:</span>
-                    <span className="text-slate-100">{team.gradeScore}</span>
+                    <span className="text-slate-100">{team.gradeScore || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Steals:</span>
-                    <span className="text-green-400">{team.steals} ({team.stealRatio}%)</span>
+                    <span className="text-green-400">{team.steals || 0} ({team.stealRatio || 0}%)</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Reaches:</span>
-                    <span className="text-red-400">{team.reaches} ({team.reachRatio}%)</span>
+                    <span className="text-red-400">{team.reaches || 0} ({team.reachRatio || 0}%)</span>
                   </div>
-                  <div className="pt-2 border-t border-slate-600">
+                  <div className="pt-1.5 sm:pt-2 border-t border-slate-600">
                     <p className="text-xs text-slate-400 mb-1">Tier Breakdown:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {team.tierBreakdown.tier1 > 0 && (
-                        <Badge variant="outline" className="text-xs bg-green-400/20 text-green-400 border-green-400" >
-                          T1: {team.tierBreakdown.tier1}
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      {(team.tierBreakdown?.tier1 || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-green-400/20 text-green-400 border-green-400" >
+                          T1: {team.tierBreakdown?.tier1 || 0}
                         </Badge>
                       )}
-                      {team.tierBreakdown.tier2 > 0 && (
-                        <Badge variant="outline" className="text-xs bg-blue-400/20 text-blue-400 border-blue-400" >
-                          T2: {team.tierBreakdown.tier2}
+                      {(team.tierBreakdown?.tier2 || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-blue-400/20 text-blue-400 border-blue-400" >
+                          T2: {team.tierBreakdown?.tier2 || 0}
                         </Badge>
                       )}
-                      {team.tierBreakdown.tier3 > 0 && (
-                        <Badge variant="outline" className="text-xs bg-yellow-400/20 text-yellow-400 border-yellow-400" >
-                          T3: {team.tierBreakdown.tier3}
+                      {(team.tierBreakdown?.tier3 || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-yellow-400/20 text-yellow-400 border-yellow-400" >
+                          T3: {team.tierBreakdown?.tier3 || 0}
                         </Badge>
                       )}
-                      {team.tierBreakdown.tier4 > 0 && (
-                        <Badge variant="outline" className="text-xs bg-slate-400/20 text-slate-400 border-slate-400" >
-                          T4: {team.tierBreakdown.tier4}
+                      {(team.tierBreakdown?.tier4 || 0) > 0 && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-slate-400/20 text-slate-400 border-slate-400" >
+                          T4: {team.tierBreakdown?.tier4 || 0}
                         </Badge>
                       )}
                     </div>
                   </div>
-                  <div className="pt-2 border-t border-slate-600">
+                  <div className="pt-1.5 sm:pt-2 border-t border-slate-600">
                     <p className="text-xs text-slate-400 mb-1">Position Breakdown:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {Object.entries(team.positions).map(([pos, count]) => (
-                        count > 0 && (
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      {Object.entries(team.positions || {}).map(([pos, count]) => (
+                        (count as number) > 0 && (
                           <Badge key={pos} variant="outline" className={
-                            `text-xs border ${
+                            `text-xs px-1.5 py-0.5 border ${
                               pos === 'QB' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
                               pos === 'RB' ? 'bg-green-400/20 text-green-400 border-green-400' :
                               pos === 'WR' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
@@ -529,7 +531,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     </div>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </CardContent>

@@ -26,6 +26,7 @@ import {
   Music
 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth"
 
 interface OverviewData {
   topPerformers: any[]
@@ -43,6 +44,7 @@ interface OverviewData {
 }
 
 export default function OverviewPage() {
+  const { user } = useAuth()
   const [data, setData] = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -145,6 +147,18 @@ export default function OverviewPage() {
                 </Button>
               </Link>
             </div>
+            
+            {!user && (
+              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4 max-w-md mx-auto mb-8">
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
+                  <CheckCircle className="h-4 w-4 text-green-400" />
+                  <span className="font-mono">SIGN UP REQUIRED FOR LEAGUE & DRAFT BUDDY</span>
+                </div>
+                <p className="text-xs text-gray-400 text-center mt-2">
+                  Create a free account to access personalized league analysis and draft tools
+                </p>
+              </div>
+            )}
 
             {/* Social Media Links */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-12">

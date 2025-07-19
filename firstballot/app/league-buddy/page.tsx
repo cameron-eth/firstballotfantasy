@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import LeagueBuddy from "@/components/LeagueBuddy"
 import { AlertCircle, Loader2, Info, Trophy, Users, BarChart3 } from "lucide-react"
 import { useAuth } from '@/lib/auth'
+import { AuthGuard } from "@/components/auth-guard"
 
 export default function LeagueBuddyPage() {
   const { user: authUser } = useAuth()
@@ -221,182 +222,184 @@ export default function LeagueBuddyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <Header />
-      <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
-        <div className="space-y-6">
-          {/* Page Header */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono flex items-center space-x-2">
-                <Trophy className="h-6 w-6" />
-                <span>LEAGUE BUDDY</span>
-              </CardTitle>
-              <p className="text-gray-300 text-sm">
-                Comprehensive league analysis, team grading, and player insights
-              </p>
-            </CardHeader>
-          </Card>
-
-          {/* Show message if no sleeper username found */}
-          {noSleeperUsername && profileChecked && (
+    <AuthGuard>
+      <div className="min-h-screen bg-slate-900">
+        <Header />
+        <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
+          <div className="space-y-6">
+            {/* Page Header */}
             <Card className="bg-slate-800 border-slate-700">
-              <CardContent className="text-center py-8">
-                <div className="space-y-4">
-                  <p className="text-red-400 font-mono">
-                    Sleeper username not found in your profile. Please set it in your user settings.
+              <CardHeader>
+                <CardTitle className="text-yellow-400 font-mono flex items-center space-x-2">
+                  <Trophy className="h-6 w-6" />
+                  <span>LEAGUE BUDDY</span>
+                </CardTitle>
+                <p className="text-gray-300 text-sm">
+                  Comprehensive league analysis, team grading, and player insights
+                </p>
+              </CardHeader>
+            </Card>
+
+            {/* Show message if no sleeper username found */}
+            {noSleeperUsername && profileChecked && (
+              <Card className="bg-slate-800 border-slate-700">
+                <CardContent className="text-center py-8">
+                  <div className="space-y-4">
+                    <p className="text-red-400 font-mono">
+                      Sleeper username not found in your profile. Please set it in your user settings.
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                      <Input
+                        placeholder="Enter your Sleeper username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="max-w-xs"
+                      />
+                      <Button 
+                        onClick={connectToSleeper}
+                        disabled={loading || !username.trim()}
+                        className="bg-yellow-400 text-slate-900 hover:bg-yellow-300"
+                      >
+                        {loading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "CONNECT"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Connection Section */}
+            {(!user || leagues.length === 0) && !noSleeperUsername && (
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-green-400 font-mono">CONNECT TO SLEEPER</CardTitle>
+                  <p className="text-gray-300 text-sm">
+                    Enter your Sleeper username to view your leagues
                   </p>
-                  <div className="flex gap-4 justify-center">
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm text-gray-300 mb-2 block">Sleeper Username</label>
                     <Input
-                      placeholder="Enter your Sleeper username"
+                      placeholder="Enter Sleeper Username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="max-w-xs"
+                      className="w-full"
                     />
-                    <Button 
-                      onClick={connectToSleeper}
-                      disabled={loading || !username.trim()}
-                      className="bg-yellow-400 text-slate-900 hover:bg-yellow-300"
-                    >
-                      {loading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "CONNECT"
-                      )}
-                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Connection Section */}
-          {(!user || leagues.length === 0) && !noSleeperUsername && (
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-green-400 font-mono">CONNECT TO SLEEPER</CardTitle>
-                <p className="text-gray-300 text-sm">
-                  Enter your Sleeper username to view your leagues
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm text-gray-300 mb-2 block">Sleeper Username</label>
-                  <Input
-                    placeholder="Enter Sleeper Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <Button 
-                  onClick={connectToSleeper}
-                  disabled={loading}
-                  className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 w-full"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "CONNECT TO SLEEPER"
+                  <Button 
+                    onClick={connectToSleeper}
+                    disabled={loading}
+                    className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 w-full"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "CONNECT TO SLEEPER"
+                    )}
+                  </Button>
+                  {error && (
+                    <div className="flex items-center space-x-2 text-red-400 text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{error}</span>
+                    </div>
                   )}
-                </Button>
-                {error && (
-                  <div className="flex items-center space-x-2 text-red-400 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{error}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* League Select */}
-          {leagues.length > 0 && !selectedLeagueId && (
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-green-400 font-mono">SELECT LEAGUE</CardTitle>
-                <p className="text-gray-300 text-sm">
-                  Choose a league to view the dashboard
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {leagues.map((league) => (
-                    <Card 
-                      key={league.league_id} 
-                      className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
-                        selectedLeagueId === league.league_id ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
-                      }`}
-                      onClick={() => setSelectedLeagueId(league.league_id)}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="text-2xl font-bold text-yellow-400">#{league.league_id.slice(-2)}</div>
-                          <div>
-                            <h3 className="font-semibold text-slate-100">{league.name}</h3>
-                            <p className="text-sm text-gray-400">{league.season} • {league.status}</p>
+            {/* League Select */}
+            {leagues.length > 0 && !selectedLeagueId && (
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-green-400 font-mono">SELECT LEAGUE</CardTitle>
+                  <p className="text-gray-300 text-sm">
+                    Choose a league to view the dashboard
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {leagues.map((league) => (
+                      <Card 
+                        key={league.league_id} 
+                        className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
+                          selectedLeagueId === league.league_id ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
+                        }`}
+                        onClick={() => setSelectedLeagueId(league.league_id)}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="text-2xl font-bold text-yellow-400">#{league.league_id.slice(-2)}</div>
+                            <div>
+                              <h3 className="font-semibold text-slate-100">{league.name}</h3>
+                              <p className="text-sm text-gray-400">{league.season} • {league.status}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={`text-xs px-2 py-1 ${
+                            league.status === 'active' ? 'bg-green-400/20 text-green-400 border-green-400' :
+                            league.status === 'pre_draft' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
+                            'bg-gray-400/20 text-gray-400 border-gray-400'
+                          }`}>
+                            {league.status}
+                          </Badge>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm text-slate-200">
+                          <div className="flex justify-between">
+                            <span>Teams:</span>
+                            <span className="text-slate-100">{league.total_rosters || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Sport:</span>
+                            <span className="text-slate-100">{league.sport?.toUpperCase() || 'NFL'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Season:</span>
+                            <span className="text-slate-100">{league.season}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Draft ID:</span>
+                            <span className="text-slate-100">{league.draft_id ? 'Available' : 'N/A'}</span>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-xs px-2 py-1 ${
-                          league.status === 'active' ? 'bg-green-400/20 text-green-400 border-green-400' :
-                          league.status === 'pre_draft' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
-                          'bg-gray-400/20 text-gray-400 border-gray-400'
-                        }`}>
-                          {league.status}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-2 text-sm text-slate-200">
-                        <div className="flex justify-between">
-                          <span>Teams:</span>
-                          <span className="text-slate-100">{league.total_rosters || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Sport:</span>
-                          <span className="text-slate-100">{league.sport?.toUpperCase() || 'NFL'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Season:</span>
-                          <span className="text-slate-100">{league.season}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Draft ID:</span>
-                          <span className="text-slate-100">{league.draft_id ? 'Available' : 'N/A'}</span>
-                        </div>
-                      </div>
 
-                      <div className="mt-3 pt-3 border-t border-slate-600">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400">League ID:</span>
-                          <span className="text-slate-300 font-mono">{league.league_id}</span>
+                        <div className="mt-3 pt-3 border-t border-slate-600">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-400">League ID:</span>
+                            <span className="text-slate-300 font-mono">{league.league_id}</span>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                      </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-          {/* League Buddy Dashboard */}
-          {user && selectedLeagueId && (
-            <LeagueBuddy leagueId={selectedLeagueId} user={user} />
-          )}
+            {/* League Buddy Dashboard */}
+            {user && selectedLeagueId && (
+              <LeagueBuddy leagueId={selectedLeagueId} user={user} />
+            )}
 
-          {/* Loading State */}
-          {loading && (
-            <Card className="bg-slate-800 border-slate-700">
-              <CardContent className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-yellow-400 mx-auto mb-4" />
-                  <p className="text-green-400 font-mono">CONNECTING TO SLEEPER...</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {/* Loading State */}
+            {loading && (
+              <Card className="bg-slate-800 border-slate-700">
+                <CardContent className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-yellow-400 mx-auto mb-4" />
+                    <p className="text-green-400 font-mono">CONNECTING TO SLEEPER...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        </div>
-      </main>
-    </div>
+          </div>
+        </main>
+      </div>
+    </AuthGuard>
   )
 } 

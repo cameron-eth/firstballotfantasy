@@ -13,6 +13,8 @@ import { sleeperAPI, SleeperUser, SleeperLeague, SleeperDraft, SleeperPick, Slee
 import { Users, Trophy, AlertCircle, Loader2, Info, BarChart3 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from '@/lib/auth'
+import { AuthGuard } from "@/components/auth-guard"
+import { motion, AnimatePresence } from "framer-motion"
 
 export default function DraftBuddyPage() {
   const { user: authUser } = useAuth()
@@ -270,10 +272,11 @@ export default function DraftBuddyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <Header />
-      <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
-        <div className="space-y-6">
+    <AuthGuard>
+      <div className="min-h-screen bg-slate-900">
+        <Header />
+        <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
+          <div className="space-y-6">
           {/* Show message if no sleeper username found */}
           {noSleeperUsername && profileChecked && (
             <Card className="bg-slate-800 border-slate-700">
@@ -505,5 +508,6 @@ export default function DraftBuddyPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   )
 } 

@@ -10,6 +10,7 @@ import { UserAvatar } from "@/components/user-avatar"
 import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loader2, AlertCircle, TrendingDown, ArrowUp, ArrowDown, Minus, ArrowLeft, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { motion, AnimatePresence } from "framer-motion"
 
 
 // Enhanced TypeScript interfaces for better type safety
@@ -336,6 +337,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
   const [mobileTeamIndex, setMobileTeamIndex] = useState(0)
   const [mobileTrendingIndex, setMobileTrendingIndex] = useState(0)
+
 
   // Optimized data fetching with better error handling
   const fetchLeagueData = useCallback(async () => {
@@ -704,6 +706,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     setShowTransactionsSidebar(prev => !prev)
   }, [])
 
+
+
   const handleMobileTeamNavigation = useCallback((direction: 'prev' | 'next') => {
     if (direction === 'prev') {
       setMobileTeamIndex(prev => prev > 0 ? prev - 1 : teams.length - 1)
@@ -817,20 +821,17 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-              <button className="text-slate-400 hover:text-slate-300 text-sm">
-                <RefreshCw className="h-5 w-5" />
-              </button>
             </div>
           </div>
           
-          <div className="flex flex-row gap-3 overflow-x-auto pb-2">
+          <div className="flex flex-row gap-3 overflow-x-auto pb-4">
             {transactions.length === 0 ? (
               <div className="text-center py-8 min-w-[250px]">
                 <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
                 <p className="text-gray-400 text-sm">No transactions this week</p>
               </div>
             ) : (
-              transactions.map((tx) => {
+              transactions.map((tx, index) => {
                 // Get team names for the transaction
                 const teamNames = tx.rosterIds.map(rosterId => {
                   const team = teams.find(t => t.rosterId === rosterId)
@@ -849,7 +850,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                 }) : []
 
                 return (
-                  <div key={tx.transactionId} className="bg-slate-700 border-slate-600 p-3 rounded-lg min-w-[260px] max-w-xs flex-shrink-0">
+                  <div 
+                    key={tx.transactionId} 
+                    className="bg-slate-700 border-slate-600 p-3 rounded-lg min-w-[260px] max-w-xs flex-shrink-0 hover:scale-105 transition-transform duration-200"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="outline" className={`text-xs px-2 py-1 ${
                         tx.type === 'trade' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
@@ -1223,9 +1227,14 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                <div className="relative">
                  <div className="w-full">
                   {selectedTeam && (
-                    <Card 
-                      className="w-full cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 border-yellow-400 ring-2 ring-yellow-400 bg-slate-700"
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
+                      <Card 
+                        className="w-full cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 border-yellow-400 ring-2 ring-yellow-400 bg-slate-700"
+                      >
                       <div className="p-4">
                         {/* Team Header */}
                         <div className="flex items-center justify-between mb-3">
@@ -1353,6 +1362,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                         </div>
                       </div>
                     </Card>
+                    </motion.div>
                   )}
                 </div>
                 
@@ -1363,13 +1373,20 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             {/* Desktop Team Grid */}
             <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-4">
               {teams.map((team, index) => (
-                <Card 
-                  key={team.rosterId} 
-                  className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
-                    selectedTeam?.rosterId === team.rosterId ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
-                  }`}
-                  onClick={() => handleTeamSelect(team)}
+                <motion.div
+                  key={team.rosterId}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.3 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                 >
+                  <Card 
+                    className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
+                      selectedTeam?.rosterId === team.rosterId ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
+                    }`}
+                    onClick={() => handleTeamSelect(team)}
+                  >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
                       <div className="text-2xl font-bold text-yellow-400">#{index + 1}</div>
@@ -1492,6 +1509,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     </div>
                   </div>
                 </Card>
+                </motion.div>
               ))}
             </div>
           </CardContent>

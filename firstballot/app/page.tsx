@@ -127,10 +127,7 @@ export default function OverviewPage() {
             <h2 className="text-2xl md:text-4xl font-bold text-green-400 font-mono mb-6">
               BUILT BY DEGENS <br/> FOR DEGENS
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Advanced analytics and machine learning to predict fantasy football performance. 
-              Analyze {data.overallStats.totalRecords.toLocaleString()} player seasons across {data.overallStats.uniquePlayers.toLocaleString()} unique players.
-            </p>
+           
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Link href="/draft-buddy">
@@ -287,9 +284,7 @@ export default function OverviewPage() {
             <h2 className="text-3xl md:text-4xl font-bold text-white font-mono mb-6">
               BUILT BY DEGENS FOR DEGENS
             </h2>
-            <p className="text-xl text-gray-300 mb-8">
-              Take your fantasy football game to new heights with FirstBallot.
-            </p>
+           
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/draft-buddy">
                 <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 px-8 py-4 text-lg font-mono">

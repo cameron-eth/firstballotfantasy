@@ -29,6 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} ${firaCode.className} bg-slate-900 text-gray-100 min-h-screen`}>
         <AuthProvider>{children}</AuthProvider>
+        <Analytics />
       </body>
     </html>
   )

@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [signUpSuccess, setSignUpSuccess] = useState(false)
+  const [passwordsMatch, setPasswordsMatch] = useState(true)
   const router = useRouter()
   const { signIn, signUp } = useAuth()
 
@@ -49,7 +50,15 @@ export default function LoginPage() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
     const password = formData.get("password") as string
+    const confirmPassword = formData.get("confirmPassword") as string
     const username = formData.get("username") as string
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match. Please try again.")
+      setIsLoading(false)
+      return
+    }
 
     try {
       await signUp(email, password, username)
@@ -71,7 +80,7 @@ export default function LoginPage() {
               <Shield className="h-8 w-8 text-yellow-400" />
               <div>
                 <h1 className="text-xl font-bold text-green-400 font-mono">FIRST BALLOT FANTASY</h1>
-                <p className="text-xs text-gray-400">SECURE ACCESS PORTAL</p>
+                <p className="text-xs text-gray-400"></p>
               </div>
             </div>
             <div>
@@ -222,14 +231,49 @@ export default function LoginPage() {
                         required
                         minLength={6}
                         disabled={signUpSuccess}
+                        onChange={(e) => {
+                          const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value
+                          if (confirmPassword) {
+                            setPasswordsMatch(e.target.value === confirmPassword)
+                          }
+                        }}
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-gray-300 font-mono">
+                      CONFIRM PASSWORD
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        className={`pl-10 bg-slate-700 border-slate-600 text-white placeholder-gray-400 font-mono ${
+                          !passwordsMatch ? 'border-red-500' : ''
+                        }`}
+                        required
+                        disabled={signUpSuccess}
+                        onChange={(e) => {
+                          const password = (document.getElementById('password') as HTMLInputElement)?.value
+                          if (password) {
+                            setPasswordsMatch(password === e.target.value)
+                          }
+                        }}
+                      />
+                    </div>
+                    {!passwordsMatch && (
+                      <p className="text-red-400 text-xs font-mono">Passwords do not match</p>
+                    )}
                   </div>
 
                   <Button
                     type="submit"
                     className="w-full bg-green-400 text-slate-900 hover:bg-green-300 font-mono font-bold"
-                    disabled={isLoading || signUpSuccess}
+                    disabled={isLoading || signUpSuccess || !passwordsMatch}
                   >
                     {isLoading ? "CREATING ACCESS..." : signUpSuccess ? "ACCOUNT CREATED" : "CREATE ACCESS"}
                   </Button>

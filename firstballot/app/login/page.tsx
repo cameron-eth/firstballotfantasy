@@ -16,6 +16,7 @@ import Link from "next/link"
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signUpSuccess, setSignUpSuccess] = useState(false)
   const router = useRouter()
   const { signIn, signUp } = useAuth()
 
@@ -43,6 +44,7 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
+    setSignUpSuccess(false)
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
@@ -51,7 +53,7 @@ export default function LoginPage() {
 
     try {
       await signUp(email, password, username)
-      router.push("/")
+      setSignUpSuccess(true)
     } catch (err) {
       setError("Failed to create account. This email might already be in use.")
       console.error(err)
@@ -74,7 +76,7 @@ export default function LoginPage() {
             </div>
             <div>
               <CardTitle className="text-2xl text-yellow-400 font-mono">ACCESS CONTROL</CardTitle>
-              <CardDescription className="text-green-400">Authenticate to access advanced analytics</CardDescription>
+              <CardDescription className="text-green-400">Create a free account to access our tools</CardDescription>
             </div>
           </CardHeader>
 
@@ -83,6 +85,21 @@ export default function LoginPage() {
               <div className="bg-red-900/50 border border-red-700 text-red-400 p-3 rounded-lg flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span className="font-mono text-sm">{error}</span>
+              </div>
+            )}
+            
+            {signUpSuccess && (
+              <div className="bg-green-900/50 border border-green-700 text-green-400 p-4 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <span className="font-mono text-sm font-bold">ACCOUNT CREATED SUCCESSFULLY</span>
+                </div>
+                <p className="text-sm font-mono">
+                  Please check your email and click the confirmation link to activate your account.
+                </p>
+                <p className="text-xs text-green-300 mt-2">
+                  You can close this window and return to sign in once your email is confirmed.
+                </p>
               </div>
             )}
 
@@ -148,7 +165,7 @@ export default function LoginPage() {
                     className="w-full bg-yellow-400 text-slate-900 hover:bg-yellow-300 font-mono font-bold"
                     disabled={isLoading}
                   >
-                    {isLoading ? "AUTHENTICATING..." : "AUTHENTICATE"}
+                    {isLoading ? "AUTHENTICATING..." : "LOGIN"}
                   </Button>
                 </form>
               </TabsContent>
@@ -167,6 +184,7 @@ export default function LoginPage() {
                         placeholder="analyst_001"
                         className="pl-10 bg-slate-700 border-slate-600 text-white placeholder-gray-400 font-mono"
                         required
+                        disabled={signUpSuccess}
                       />
                     </div>
                   </div>
@@ -184,6 +202,7 @@ export default function LoginPage() {
                         placeholder="user@domain.com"
                         className="pl-10 bg-slate-700 border-slate-600 text-white placeholder-gray-400 font-mono"
                         required
+                        disabled={signUpSuccess}
                       />
                     </div>
                   </div>
@@ -202,6 +221,7 @@ export default function LoginPage() {
                         className="pl-10 bg-slate-700 border-slate-600 text-white placeholder-gray-400 font-mono"
                         required
                         minLength={6}
+                        disabled={signUpSuccess}
                       />
                     </div>
                   </div>
@@ -209,9 +229,9 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     className="w-full bg-green-400 text-slate-900 hover:bg-green-300 font-mono font-bold"
-                    disabled={isLoading}
+                    disabled={isLoading || signUpSuccess}
                   >
-                    {isLoading ? "CREATING ACCESS..." : "CREATE ACCESS"}
+                    {isLoading ? "CREATING ACCESS..." : signUpSuccess ? "ACCOUNT CREATED" : "CREATE ACCESS"}
                   </Button>
                 </form>
               </TabsContent>
@@ -221,7 +241,6 @@ export default function LoginPage() {
           <div className="px-6 pb-6">
             <div className="gradient-border">
               <div className="gradient-border-content text-center">
-                <p className="text-gray-400 text-xs font-mono">SECURE • ENCRYPTED • ANALYTICS-GRADE ACCESS</p>
                 <p className="text-gray-500 text-xs mt-1">
                   By continuing, you agree to our Terms of Service and Privacy Policy.
                 </p>

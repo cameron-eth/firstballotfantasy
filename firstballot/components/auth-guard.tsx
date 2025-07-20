@@ -94,7 +94,6 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
             <div className="px-6 pb-6">
               <div className="gradient-border">
                 <div className="gradient-border-content text-center">
-                  <p className="text-gray-400 text-xs font-mono">SECURE • ENCRYPTED • ANALYTICS-GRADE ACCESS</p>
                   <p className="text-gray-500 text-xs mt-1">
                     Your data is protected with enterprise-grade security.
                   </p>

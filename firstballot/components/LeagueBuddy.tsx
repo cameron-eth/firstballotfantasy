@@ -11,6 +11,7 @@ import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loa
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 
 // Enhanced TypeScript interfaces for better type safety
@@ -337,6 +338,18 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
   const [mobileTeamIndex, setMobileTeamIndex] = useState(0)
   const [mobileTrendingIndex, setMobileTrendingIndex] = useState(0)
+  const [sortBy, setSortBy] = useState<'gradeScore' | 'pointsFor' | 'wins'>("gradeScore")
+
+  const sortedTeams = useMemo(() => {
+    if (sortBy === 'gradeScore') {
+      return [...teams].sort((a, b) => b.gradeScore - a.gradeScore)
+    } else if (sortBy === 'pointsFor') {
+      return [...teams].sort((a, b) => b.pointsFor - a.pointsFor)
+    } else if (sortBy === 'wins') {
+      return [...teams].sort((a, b) => b.wins - a.wins)
+    }
+    return teams
+  }, [teams, sortBy])
 
 
   // Optimized data fetching with better error handling
@@ -1176,6 +1189,20 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Sort/Filter Dropdown */}
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-slate-300 text-sm">Sort by:</span>
+              <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
+                <SelectTrigger className="w-40 bg-slate-700 border-slate-600 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-700 border-slate-600 text-slate-100">
+                  <SelectItem value="gradeScore">Grade Score</SelectItem>
+                  <SelectItem value="pointsFor">Points For</SelectItem>
+                  <SelectItem value="wins">Wins</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             {/* Enhanced Mobile Team Selector */}
             <div className="md:hidden mb-6">
               {/* Navigation Controls */}
@@ -1190,7 +1217,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="text-sm text-slate-300 font-medium">
-                    {teams.findIndex(t => t.rosterId === selectedTeam?.rosterId) + 1} of {teams.length}
+                    {sortedTeams.findIndex(t => t.rosterId === selectedTeam?.rosterId) + 1} of {sortedTeams.length}
                   </span>
                   <Button
                     variant="outline"
@@ -1201,31 +1228,27 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                
-                                 {/* Quick Jump Selector */}
-                 <div className="flex items-center space-x-1">
-                   {teams.slice(0, 5).map((team, index) => (
-                     <button
-                       key={team.rosterId}
-                       onClick={() => handleMobileTeamSelect(team)}
-                       className={`w-2 h-2 rounded-full transition-all ${
-                         selectedTeam?.rosterId === team.rosterId 
-                           ? 'bg-yellow-400' 
-                           : 'bg-slate-600 hover:bg-slate-500'
-                       }`}
-                     />
-                   ))}
-                   {teams.length > 5 && (
-                     <span className="text-xs text-slate-400 ml-1">+{teams.length - 5}</span>
-                   )}
-                 </div>
-                 
-
+                {/* Quick Jump Selector */}
+                <div className="flex items-center space-x-1">
+                  {sortedTeams.slice(0, 5).map((team, index) => (
+                    <button
+                      key={team.rosterId}
+                      onClick={() => handleMobileTeamSelect(team)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        selectedTeam?.rosterId === team.rosterId 
+                          ? 'bg-yellow-400' 
+                          : 'bg-slate-600 hover:bg-slate-500'
+                      }`}
+                    />
+                  ))}
+                  {sortedTeams.length > 5 && (
+                    <span className="text-xs text-slate-400 ml-1">+{sortedTeams.length - 5}</span>
+                  )}
+                </div>
               </div>
-
-                             {/* Single Team Card Display */}
-               <div className="relative">
-                 <div className="w-full">
+              {/* Single Team Card Display */}
+              <div className="relative">
+                <div className="w-full">
                   {selectedTeam && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -1235,11 +1258,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       <Card 
                         className="w-full cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 border-yellow-400 ring-2 ring-yellow-400 bg-slate-700"
                       >
-                      <div className="p-4">
-                        {/* Team Header */}
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="p-4">
+                          {/* Team Header */}
                           <div className="flex items-center space-x-3">
-                            <div className="text-2xl font-bold text-yellow-400">#{teams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</div>
+                            <div className="text-2xl font-bold text-yellow-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</div>
                             <UserAvatar
                               avatarId={selectedTeam.ownerAvatar}
                               displayName={selectedTeam.ownerName}
@@ -1360,8 +1382,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                             ))}
                           </div>
                         </div>
-                      </div>
-                    </Card>
+                      </Card>
                     </motion.div>
                   )}
                 </div>
@@ -1372,7 +1393,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
             {/* Desktop Team Grid */}
             <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-4">
-              {teams.map((team, index) => (
+              {sortedTeams.map((team, index) => (
                 <motion.div
                   key={team.rosterId}
                   initial={{ opacity: 0, y: 20 }}
@@ -1387,128 +1408,128 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     }`}
                     onClick={() => handleTeamSelect(team)}
                   >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl font-bold text-yellow-400">#{index + 1}</div>
-                      <UserAvatar
-                        avatarId={team.ownerAvatar}
-                        displayName={team.ownerName}
-                        username={team.ownerUsername}
-                        size={40}
-                        className="flex-shrink-0"
-                      />
-                      <div>
-                        <h3 className="font-semibold text-slate-100">{team.teamName}</h3>
-                        <p className="text-sm text-gray-400">{team.ownerName}</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className={GRADE_COLORS[team.grade as keyof typeof GRADE_COLORS] + " text-sm px-2 py-1 border"}>
-                      {team.grade}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-slate-200">
-                    <div className="flex justify-between">
-                      <span>Grade Score:</span>
-                      <span className="text-slate-100">{team.gradeScore}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Players:</span>
-                      <span className="text-slate-100">{team.players.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Record:</span>
-                      <span className="text-slate-100">{team.wins}-{team.losses}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Points For:</span>
-                      <span className="text-slate-100">{Math.round(team.pointsFor)}</span>
-                    </div>
-                    {team.currentWeekProjection !== undefined && (
-                      <div className="flex justify-between">
-                        <span>Week {currentWeek} Proj:</span>
-                        <span className="text-slate-100">{team.currentWeekProjection.toFixed(1)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span>Waiver Pos:</span>
-                      <span className="text-slate-100">#{team.waiverPosition}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Moves:</span>
-                      <span className="text-slate-100">{team.totalMoves}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Recent Form:</span>
-                      <div className="flex items-center space-x-1">
-                        {team.recentForm === 'Hot' && <ArrowUp className="h-3 w-3 text-green-400" />}
-                        {team.recentForm === 'Cold' && <ArrowDown className="h-3 w-3 text-red-400" />}
-                        {team.recentForm === 'Neutral' && <Minus className="h-3 w-3 text-yellow-400" />}
-                        <span className={`text-xs ${
-                          team.recentForm === 'Hot' ? 'text-green-400' :
-                          team.recentForm === 'Cold' ? 'text-red-400' :
-                          team.recentForm === 'Neutral' ? 'text-yellow-400' : 'text-gray-400'
-                        }`}>
-                          {team.recentForm}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Position Strengths */}
-                  <div className="mt-3 pt-3 border-t border-slate-600">
-                    <p className="text-xs text-slate-400 mb-2">Position Strengths:</p>
-                    <div className="grid grid-cols-3 gap-1 text-xs">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-slate-300">QB:</span>
-                        <span className="text-slate-100">{team.positionStrengths.QB}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-slate-300">RB:</span>
-                        <span className="text-slate-100">{team.positionStrengths.RB}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                        <span className="text-slate-300">WR:</span>
-                        <span className="text-slate-100">{team.positionStrengths.WR}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        <span className="text-slate-300">TE:</span>
-                        <span className="text-slate-100">{team.positionStrengths.TE}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                        <span className="text-slate-300">FLEX:</span>
-                        <span className="text-slate-100">{team.positionStrengths.FLEX}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                        <span className="text-slate-300">SFLX:</span>
-                        <span className="text-slate-100">{team.positionStrengths.SFLX}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-slate-600">
-                    <p className="text-xs text-slate-400 mb-1">Top Players:</p>
-                    <div className="flex space-x-1">
-                      {team.players.slice(0, 3).map((player, idx) => (
-                        <PlayerHeadshot
-                          key={idx}
-                          playerId={player.espn_id || player.playerId}
-                          playerName={player.playerName}
-                          teamLogo={player.team}
-                          size={24}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl font-bold text-yellow-400">#{index + 1}</div>
+                        <UserAvatar
+                          avatarId={team.ownerAvatar}
+                          displayName={team.ownerName}
+                          username={team.ownerUsername}
+                          size={40}
                           className="flex-shrink-0"
-                          player={player}
                         />
-                      ))}
+                        <div>
+                          <h3 className="font-semibold text-slate-100">{team.teamName}</h3>
+                          <p className="text-sm text-gray-400">{team.ownerName}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={GRADE_COLORS[team.grade as keyof typeof GRADE_COLORS] + " text-sm px-2 py-1 border"}>
+                        {team.grade}
+                      </Badge>
                     </div>
-                  </div>
-                </Card>
+                    
+                    <div className="space-y-2 text-sm text-slate-200">
+                      <div className="flex justify-between">
+                        <span>Grade Score:</span>
+                        <span className="text-slate-100">{team.gradeScore}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Players:</span>
+                        <span className="text-slate-100">{team.players.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Record:</span>
+                        <span className="text-slate-100">{team.wins}-{team.losses}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Points For:</span>
+                        <span className="text-slate-100">{Math.round(team.pointsFor)}</span>
+                      </div>
+                      {team.currentWeekProjection !== undefined && (
+                        <div className="flex justify-between">
+                          <span>Week {currentWeek} Proj:</span>
+                          <span className="text-slate-100">{team.currentWeekProjection.toFixed(1)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>Waiver Pos:</span>
+                        <span className="text-slate-100">#{team.waiverPosition}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Moves:</span>
+                        <span className="text-slate-100">{team.totalMoves}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Recent Form:</span>
+                        <div className="flex items-center space-x-1">
+                          {team.recentForm === 'Hot' && <ArrowUp className="h-3 w-3 text-green-400" />}
+                          {team.recentForm === 'Cold' && <ArrowDown className="h-3 w-3 text-red-400" />}
+                          {team.recentForm === 'Neutral' && <Minus className="h-3 w-3 text-yellow-400" />}
+                          <span className={`text-xs ${
+                            team.recentForm === 'Hot' ? 'text-green-400' :
+                            team.recentForm === 'Cold' ? 'text-red-400' :
+                            team.recentForm === 'Neutral' ? 'text-yellow-400' : 'text-gray-400'
+                          }`}>
+                            {team.recentForm}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Position Strengths */}
+                    <div className="mt-3 pt-3 border-t border-slate-600">
+                      <p className="text-xs text-slate-400 mb-2">Position Strengths:</p>
+                      <div className="grid grid-cols-3 gap-1 text-xs">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-slate-300">QB:</span>
+                          <span className="text-slate-100">{team.positionStrengths.QB}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-slate-300">RB:</span>
+                          <span className="text-slate-100">{team.positionStrengths.RB}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                          <span className="text-slate-300">WR:</span>
+                          <span className="text-slate-100">{team.positionStrengths.WR}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <span className="text-slate-300">TE:</span>
+                          <span className="text-slate-100">{team.positionStrengths.TE}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                          <span className="text-slate-300">FLEX:</span>
+                          <span className="text-slate-100">{team.positionStrengths.FLEX}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                          <span className="text-slate-300">SFLX:</span>
+                          <span className="text-slate-100">{team.positionStrengths.SFLX}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-slate-600">
+                      <p className="text-xs text-slate-400 mb-1">Top Players:</p>
+                      <div className="flex space-x-1">
+                        {team.players.slice(0, 3).map((player, idx) => (
+                          <PlayerHeadshot
+                            key={idx}
+                            playerId={player.espn_id || player.playerId}
+                            playerName={player.playerName}
+                            teamLogo={player.team}
+                            size={24}
+                            className="flex-shrink-0"
+                            player={player}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
                 </motion.div>
               ))}
             </div>
@@ -1522,7 +1543,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-6">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center justify-center w-12 h-12 bg-blue-400/10 rounded-lg border border-blue-400/20">
-                  <span className="text-blue-400 font-bold text-lg">{teams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+                  <span className="text-blue-400 font-bold text-lg">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
                 </div>
                 <UserAvatar
                   avatarId={selectedTeam.ownerAvatar}
@@ -1735,7 +1756,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                           <div className="relative w-48 h-48">
                             {/* Center Rank */}
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="text-3xl font-bold text-yellow-400">#{teams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</div>
+                              <div className="text-3xl font-bold text-yellow-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</div>
                               <div className="absolute -bottom-8 text-sm text-gray-400">Rank</div>
                             </div>
                             
@@ -1772,11 +1793,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                         <div className="space-y-3">
                           <div className="flex justify-between items-center">
                             <span className="text-slate-300">Grade Rank:</span>
-                            <span className="text-slate-100">#{teams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {teams.length}</span>
+                            <span className="text-slate-100">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-300">Points Rank:</span>
-                            <span className="text-slate-100">#{[...teams].sort((a, b) => b.pointsFor - a.pointsFor).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {teams.length}</span>
+                            <span className="text-slate-100">#{[...sortedTeams].sort((a, b) => b.pointsFor - a.pointsFor).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-300">Avg Points:</span>
@@ -1806,7 +1827,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {teams.slice(0, 3).map((team, index) => (
+                        {sortedTeams.slice(0, 3).map((team, index) => (
                           <div key={team.rosterId} className={`p-3 rounded-lg border ${
                             team.rosterId === selectedTeam.rosterId 
                               ? 'bg-yellow-400/10 border-yellow-400' 

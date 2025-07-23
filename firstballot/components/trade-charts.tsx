@@ -5,13 +5,17 @@ import { Badge } from "@/components/ui/badge"
 import { UserAvatar } from "@/components/user-avatar"
 import { TrendingUp, TrendingDown, Trophy, Users, Target, BarChart3 } from "lucide-react"
 import { TraderStats, GRADE_COLORS, formatValue } from "@/lib/trade-utils"
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, CartesianGrid } from 'recharts';
+import React from "react";
 
 interface TradeChartsProps {
   traderStats: TraderStats[]
   teams: any[]
+  tradeAnalysis: any[]
 }
 
-export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
+export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsProps) {
   if (!traderStats || traderStats.length === 0) {
     return (
       <Card className="bg-slate-800 border-slate-700">
@@ -28,8 +32,50 @@ export function TradeCharts({ traderStats, teams }: TradeChartsProps) {
   const maxValueMoved = Math.max(...traderStats.map(t => t.totalValueMoved))
   const maxTrades = Math.max(...traderStats.map(t => t.totalTrades))
 
+  // Aggregate daily trade volume
+  const dailyVolume = React.useMemo(() => {
+    const volumeMap: Record<string, number> = {};
+    if (!Array.isArray(tradeAnalysis)) return [];
+    tradeAnalysis.forEach(trade => {
+      const date = trade.date; // already formatted as locale date string
+      if (!volumeMap[date]) volumeMap[date] = 0;
+      volumeMap[date] += trade.totalTradeValue;
+    });
+    // Convert to sorted array
+    return Object.entries(volumeMap)
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [tradeAnalysis]);
+
   return (
     <div className="space-y-6">
+      {/* Daily Trade Volume Area Chart */}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-cyan-400 font-mono text-lg flex items-center space-x-2">
+            <Users className="h-5 w-5" />
+            <span>DAILY TRADE VOLUME</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={dailyVolume} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00bcd4" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#00bcd4" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
+                <Tooltip formatter={(value: any) => [`${value} value`, 'Total Value']} labelFormatter={label => `Date: ${label}`}/>
+                <Area type="monotone" dataKey="value" stroke="#00bcd4" fillOpacity={1} fill="url(#colorVolume)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
       {/* Total Value Gained Chart */}
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>

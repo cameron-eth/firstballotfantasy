@@ -1,6 +1,8 @@
 "use client"
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import TradeMarket from "@/components/TradeMarket"
 import {
   LineChart,
   Line,
@@ -41,6 +43,7 @@ const modelPerformanceData = Array.from({ length: 200 }, (_, i) => {
 
 export default function ChartsPage() {
   const [draftPositionData, setDraftPositionData] = useState<Array<{ draftPick: number; fantasyPPG: number }>>([])
+  const [leagueData, setLeagueData] = useState<any>(null)
 
   useEffect(() => {
     async function fetchDraftPositionData() {
@@ -81,128 +84,166 @@ export default function ChartsPage() {
           <p className="text-green-400">Core insights from the fantasy football analytics pipeline</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 mb-8">
-          {/* Fantasy Production Trends */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono">FANTASY PRODUCTION TRENDS</CardTitle>
-              <p className="text-green-400 text-sm">Average fantasy PPG by season (2016-2024)</p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={fantasyProductionTrends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="season" stroke="#9CA3AF" domain={["dataMin", "dataMax"]} />
-                  <YAxis stroke="#9CA3AF" domain={[6.6, 7.8]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
-                      color: "#F3F4F6",
-                    }}
-                    formatter={(value, name) => [`${Number(value).toFixed(2)} PPG`, "Average Fantasy PPG"]}
-                    labelFormatter={(label) => `Season: ${label}`}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="avgPPG"
-                    stroke="#EF4444"
-                    strokeWidth={3}
-                    dot={{ fill: "#EF4444", strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs defaultValue="production-trends" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-slate-800 border-slate-700">
+            <TabsTrigger value="production-trends" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+              Production Trends
+            </TabsTrigger>
+            <TabsTrigger value="draft-analysis" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+              Draft Analysis
+            </TabsTrigger>
+            <TabsTrigger value="trade-analysis" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+              Trade Analysis
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+              Insights
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Performance vs Draft Position - Full Width */}
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono">PERFORMANCE VS DRAFT POSITION</CardTitle>
-            <p className="text-green-400 text-sm">Fantasy PPG by draft pick number • Live Data</p>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={500}>
-              <ScatterChart data={draftPositionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="draftPick"
-                  stroke="#9CA3AF"
-                  label={{
-                    value: "Draft Pick",
-                    position: "insideBottom",
-                    offset: -10,
-                    style: { textAnchor: "middle", fill: "#9CA3AF" },
-                  }}
-                />
-                <YAxis
-                  dataKey="fantasyPPG"
-                  stroke="#9CA3AF"
-                  label={{
-                    value: "Fantasy PPG",
-                    angle: -90,
-                    position: "insideLeft",
-                    style: { textAnchor: "middle", fill: "#9CA3AF" },
-                  }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "8px",
-                    color: "#F3F4F6",
-                  }}
-                  formatter={(value, name) => [
-                    name === "fantasyPPG" ? `${Number(value).toFixed(2)} PPG` : value,
-                    name === "fantasyPPG" ? "Fantasy PPG" : "Draft Pick",
-                  ]}
-                  labelFormatter={(label) => `Draft Pick: ${label}`}
-                />
-                <Scatter dataKey="fantasyPPG" fill="#FF6B9D" fillOpacity={0.6} />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          <TabsContent value="production-trends" className="space-y-6">
+            {/* Fantasy Production Trends */}
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-yellow-400 font-mono">FANTASY PRODUCTION TRENDS</CardTitle>
+                <p className="text-green-400 text-sm">Average fantasy PPG by season (2016-2024)</p>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart data={fantasyProductionTrends}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="season" stroke="#9CA3AF" domain={["dataMin", "dataMax"]} />
+                    <YAxis stroke="#9CA3AF" domain={[6.6, 7.8]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1F2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        color: "#F3F4F6",
+                      }}
+                      formatter={(value, name) => [`${Number(value).toFixed(2)} PPG`, "Average Fantasy PPG"]}
+                      labelFormatter={(label) => `Season: ${label}`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="avgPPG"
+                      stroke="#EF4444"
+                      strokeWidth={3}
+                      dot={{ fill: "#EF4444", strokeWidth: 2, r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* Key Insights */}
-        <Card className="mt-8 bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono">CHART INSIGHTS</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">DECLINING PRODUCTION</h3>
-                  <p className="text-gray-300 text-sm">
-                    Fantasy production has generally declined from 2016-2024, likely due to rule changes, increased
-                    parity, and defensive evolution.
-                  </p>
+          <TabsContent value="draft-analysis" className="space-y-6">
+            {/* Performance vs Draft Position - Full Width */}
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-yellow-400 font-mono">PERFORMANCE VS DRAFT POSITION</CardTitle>
+                <p className="text-green-400 text-sm">Fantasy PPG by draft pick number • Live Data</p>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={500}>
+                  <ScatterChart data={draftPositionData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis
+                      dataKey="draftPick"
+                      stroke="#9CA3AF"
+                      label={{
+                        value: "Draft Pick",
+                        position: "insideBottom",
+                        offset: -10,
+                        style: { textAnchor: "middle", fill: "#9CA3AF" },
+                      }}
+                    />
+                    <YAxis
+                      dataKey="fantasyPPG"
+                      stroke="#9CA3AF"
+                      label={{
+                        value: "Fantasy PPG",
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { textAnchor: "middle", fill: "#9CA3AF" },
+                      }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1F2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                        color: "#F3F4F6",
+                      }}
+                      formatter={(value, name) => [
+                        name === "fantasyPPG" ? `${Number(value).toFixed(2)} PPG` : value,
+                        name === "fantasyPPG" ? "Fantasy PPG" : "Draft Pick",
+                      ]}
+                      labelFormatter={(label) => `Draft Pick: ${label}`}
+                    />
+                    <Scatter dataKey="fantasyPPG" fill="#FF6B9D" fillOpacity={0.6} />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="trade-analysis" className="space-y-6">
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-yellow-400 font-mono">TRADE MARKET ANALYSIS</CardTitle>
+                <p className="text-green-400 text-sm">Trade value distribution and team performance in the market</p>
+              </CardHeader>
+              <CardContent>
+                <TradeMarket 
+                  leagueId="demo"
+                  teams={[]}
+                  allPlayers={{}}
+                  transactions={[]}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="insights" className="space-y-6">
+            {/* Key Insights */}
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-yellow-400 font-mono">CHART INSIGHTS</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="gradient-border">
+                    <div className="gradient-border-content">
+                      <h3 className="text-green-400 font-mono text-sm mb-2">DECLINING PRODUCTION</h3>
+                      <p className="text-gray-300 text-sm">
+                        Fantasy production has generally declined from 2016-2024, likely due to rule changes, increased
+                        parity, and defensive evolution.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="gradient-border">
+                    <div className="gradient-border-content">
+                      <h3 className="text-green-400 font-mono text-sm mb-2">STRONG MODEL FIT</h3>
+                      <p className="text-gray-300 text-sm">
+                        R² of 0.72 demonstrates strong predictive capability, with most predictions clustering around the
+                        diagonal trend line.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="gradient-border">
+                    <div className="gradient-border-content">
+                      <h3 className="text-green-400 font-mono text-sm mb-2">DRAFT CAPITAL VALUE</h3>
+                      <p className="text-gray-300 text-sm">
+                        Clear inverse relationship between draft position and fantasy performance, with early picks showing
+                        significantly higher upside.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">STRONG MODEL FIT</h3>
-                  <p className="text-gray-300 text-sm">
-                    R² of 0.72 demonstrates strong predictive capability, with most predictions clustering around the
-                    diagonal trend line.
-                  </p>
-                </div>
-              </div>
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">DRAFT CAPITAL VALUE</h3>
-                  <p className="text-gray-300 text-sm">
-                    Clear inverse relationship between draft position and fantasy performance, with early picks showing
-                    significantly higher upside.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   )

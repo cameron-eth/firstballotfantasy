@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PlayerHeadshot } from "@/components/player-headshot"
 import { UserAvatar } from "@/components/user-avatar"
 import { TrendingUp, TrendingDown, Trophy, Users, Target, Calendar, Award, ArrowUp, ArrowDown, Minus } from "lucide-react"
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import {
   processPlayerForTrade,
   getDraftPickValue,
@@ -164,7 +165,7 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
         }
         const totalValueReceived = playersReceived.reduce((sum, p) => sum + p.value, 0) + picksReceived.reduce((sum, p) => sum + p.finalValue, 0)
         const totalValueSent = playersSent.reduce((sum, p) => sum + p.value, 0) + picksSent.reduce((sum, p) => sum + p.finalValue, 0)
-        // Net value gain (will be adjusted for zero-sum below)
+        // Net value gain: just received - sent
         return {
           rosterId,
           teamName,
@@ -175,25 +176,12 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
           playersSent,
           picksSent,
           totalValueSent,
-          netValueGain: 0 // placeholder, will be set below
+          netValueGain: Math.round((totalValueReceived - totalValueSent) * 100) / 100
         }
       })
-      // Zero-sum adjustment: one team's gain is the other's loss
-      if (tradeTeams.length === 2) {
-        const gainA = tradeTeams[0].totalValueReceived - tradeTeams[0].totalValueSent
-        const gainB = tradeTeams[1].totalValueReceived - tradeTeams[1].totalValueSent
-        // Force zero-sum: gainA + gainB = 0
-        tradeTeams[0].netValueGain = Math.round((gainA - gainB) / 2 * 100) / 100
-        tradeTeams[1].netValueGain = -tradeTeams[0].netValueGain
-      } else {
-        // For multi-team trades, just use the difference
-        tradeTeams.forEach((team: any) => {
-          team.netValueGain = Math.round((team.totalValueReceived - team.totalValueSent) * 100) / 100
-        })
-      }
+      // Winner: team with highest totalValueReceived
+      const winner = tradeTeams.reduce((max: any, team: any) => team.totalValueReceived > max.totalValueReceived ? team : max, tradeTeams[0]).rosterId
       const totalTradeValue = tradeTeams.reduce((sum: number, team: any) => sum + team.totalValueReceived, 0)
-      // Winner: team with highest netValueGain
-      const winner = tradeTeams.reduce((max: any, team: any) => team.netValueGain > max.netValueGain ? team : max).rosterId
       analyzedTrades.push({
         transactionId: trade.transaction_id,
         week: trade.leg,
@@ -241,6 +229,28 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
       stat.grade = getGradeFromValue(stat.totalValueGained)
     })
     return Object.values(stats).sort((a, b) => b.totalValueGained - a.totalValueGained)
+  }, [tradeAnalysis])
+
+  // Calculate total value exchanged per owner for pie chart
+  const valueExchangedByOwner = useMemo(() => {
+    const exchanged: Record<number, { teamName: string, ownerName: string, value: number }> = {}
+    tradeAnalysis.forEach(trade => {
+      trade.teams.forEach(team => {
+        if (!exchanged[team.rosterId]) {
+          exchanged[team.rosterId] = {
+            teamName: team.teamName,
+            ownerName: team.ownerName,
+            value: 0
+          }
+        }
+        exchanged[team.rosterId].value += team.totalValueReceived + team.totalValueSent
+      })
+    })
+    return Object.values(exchanged).map(owner => ({
+      name: owner.teamName,
+      value: Math.round(owner.value * 10) / 10,
+      ownerName: owner.ownerName
+    }))
   }, [tradeAnalysis])
 
   if (loading) {
@@ -334,6 +344,101 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+      {/* Total Value Gained Pie Chart */}
+      <Card className="bg-slate-700 border-slate-600">
+        <CardHeader>
+          <CardTitle className="text-purple-400 font-mono text-lg flex items-center space-x-2">
+            <Target className="h-5 w-5" />
+            <span>TOTAL VALUE GAINED</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {traderStats.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={traderStats.map(trader => ({
+                    name: trader.teamName,
+                    value: Math.round(trader.totalValueGained * 10) / 10,
+                  }))}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#8884d8"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {traderStats.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={[
+                        '#FFD600', '#00E676', '#2979FF', '#FF1744', '#FF9100', 
+                        '#00B8D4', '#C51162', '#AEEA00', '#D500F9', '#FF3D00'
+                      ][index % 10]} 
+                    />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: any) => [`${value} points`, 'Value Gained']}
+                  labelFormatter={(label) => `Team: ${label}`}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-slate-400">No trade data available</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      {/* Total Value Exchanged Pie Chart */}
+      <Card className="bg-slate-700 border-slate-600">
+        <CardHeader>
+          <CardTitle className="text-cyan-400 font-mono text-lg flex items-center space-x-2">
+            <Users className="h-5 w-5" />
+            <span>TOTAL VALUE EXCHANGED</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {valueExchangedByOwner.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={valueExchangedByOwner}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#00bcd4"
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {valueExchangedByOwner.map((entry, index) => (
+                    <Cell
+                      key={`cell-exchanged-${index}`}
+                      fill={[
+                        '#FFD600', '#00E676', '#2979FF', '#FF1744', '#FF9100',
+                        '#00B8D4', '#C51162', '#AEEA00', '#D500F9', '#FF3D00'
+                      ][index % 10]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: any) => [`${value} points`, 'Value Exchanged']}
+                  labelFormatter={(label) => `Team: ${label}`}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-slate-400">No trade data available</div>
+            </div>
+          )}
         </CardContent>
       </Card>
       {/* Recent Trades */}

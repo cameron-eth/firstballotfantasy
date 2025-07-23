@@ -557,7 +557,7 @@ function TradeMarketContent() {
           </TabsContent>
 
           <TabsContent value="charts" className="space-y-6">
-            <TradeCharts traderStats={traderStats} teams={teams} />
+            <TradeCharts traderStats={traderStats} teams={teams} tradeAnalysis={tradeAnalysis} />
           </TabsContent>
 
           <TabsContent value="trades" className="space-y-6">

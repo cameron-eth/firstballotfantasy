@@ -61,39 +61,29 @@ export interface TraderStats {
 // Based on Dynasty SF Rankings with 150+ top players
 
 export const getPlayerValue = (rank: number): { value: number; tier: string; isRanked: boolean } => {
-  if (!rank || rank <= 0) {
-    // Unranked players: 3-15 points
+  if (!rank || rank <= 0 || rank > 1000) {
+    // Unranked or out-of-bounds: assign lowest value
     return {
-      value: Math.random() * 12 + 3,
+      value: 1,
       tier: 'Unranked',
       isRanked: false
     }
   }
 
-  let value: number
-  let tier: string
+  // Linear, non-negative, capped at minValue
+  const A = 100; // starting value
+  const B = 0.5; // decrement per rank
+  const minValue = 5;
 
-  if (rank <= 12) {
-    // Top 12: 85-100 points
-    value = Math.random() * 15 + 85
-    tier = 'Tier 1'
-  } else if (rank <= 36) {
-    // Ranks 13-36: 65-84 points
-    value = Math.random() * 19 + 65
-    tier = 'Tier 2'
-  } else if (rank <= 72) {
-    // Ranks 37-72: 45-64 points
-    value = Math.random() * 19 + 45
-    tier = 'Tier 3'
-  } else if (rank <= 120) {
-    // Ranks 73-120: 25-44 points
-    value = Math.random() * 19 + 25
-    tier = 'Tier 4'
-  } else {
-    // Ranks 121+: 5-24 points
-    value = Math.random() * 19 + 5
-    tier = 'Tier 5'
-  }
+  const value = Math.max(A - B * (rank - 1), minValue);
+
+  // Assign tier based on rank
+  let tier = '';
+  if (rank <= 12) tier = 'Tier 1';
+  else if (rank <= 36) tier = 'Tier 2';
+  else if (rank <= 72) tier = 'Tier 3';
+  else if (rank <= 120) tier = 'Tier 4';
+  else tier = 'Tier 5';
 
   return {
     value: Math.round(value * 100) / 100,

@@ -251,8 +251,14 @@ function TradeMarketContent() {
         }
       })
 
-      const totalTradeValue = tradeTeams.reduce((sum, team) => sum + team.totalValueReceived, 0)
-      const winner = tradeTeams.reduce((max, team) => team.netValueGain > max.netValueGain ? team : max).rosterId
+      const totalTradeValue = tradeTeams.reduce(
+        (sum: number, team: typeof tradeTeams[number]) => sum + team.totalValueReceived,
+        0
+      )
+      const winner = tradeTeams.reduce(
+        (max: typeof tradeTeams[number], team: typeof tradeTeams[number]) =>
+          team.netValueGain > max.netValueGain ? team : max
+      ).rosterId
 
       analyzedTrades.push({
         transactionId: trade.transaction_id,

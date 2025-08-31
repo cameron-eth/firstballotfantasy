@@ -621,7 +621,7 @@ export default function AnalysisPage() {
                     <div key={index} className="flex justify-between items-center p-3 bg-slate-700 rounded">
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          team={player.recent_team}
+                          team={player.recent_team || "NFL"}
                           size={32}
                           className="flex-shrink-0"
                         />
@@ -671,7 +671,7 @@ export default function AnalysisPage() {
                     <div key={index} className="flex justify-between items-center p-3 bg-slate-700 rounded">
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          team={player.recent_team}
+                          team={player.recent_team || "NFL"}
                           size={32}
                           className="flex-shrink-0"
                         />

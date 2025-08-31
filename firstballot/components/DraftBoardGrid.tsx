@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RefreshCw, Clock, Maximize2, Minimize2, Sparkles } from "lucide-react"
 import { SleeperPick, SleeperDraft, SleeperPlayer } from "@/lib/sleeper-api"
 import { supabase } from '@/lib/supabase';
+import { apiCache, CACHE_KEYS } from "@/lib/api-cache"
+import { sleeperApi } from '@/lib/nextjs-cache'
 
 interface DraftBoardGridProps {
   draft: SleeperDraft
@@ -13,19 +15,6 @@ interface DraftBoardGridProps {
   players: Record<string, SleeperPlayer>
   onRefresh: () => void
   lastRefresh: Date
-}
-
-// Utility: map pick difference to color/opacity
-function getPickValueStyle(diff: number) {
-  if (diff >= 30) return { background: "rgba(22,163,74,0.85)" } // strong green
-  if (diff >= 20) return { background: "rgba(22,163,74,0.65)" }
-  if (diff >= 10) return { background: "rgba(22,163,74,0.45)" }
-  if (diff >= 5)  return { background: "rgba(22,163,74,0.25)" }
-  if (diff >= -4) return { background: "rgba(202,138,4,0.25)" } // yellow
-  if (diff >= -9) return { background: "rgba(220,38,38,0.25)" } // light red
-  if (diff >= -19) return { background: "rgba(220,38,38,0.45)" }
-  if (diff >= -29) return { background: "rgba(220,38,38,0.65)" }
-  return { background: "rgba(220,38,38,0.85)" } // strong red
 }
 
 export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }: DraftBoardGridProps) {
@@ -36,6 +25,56 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
   const [highlightTeam, setHighlightTeam] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [userRosterId, setUserRosterId] = useState<string | null>(null)
+
+  // Memoized computed values
+  const rounds = useMemo(() => draft.settings.rounds, [draft.settings.rounds])
+  const teams = useMemo(() => draft.settings.total_rosters || 12, [draft.settings.total_rosters])
+  
+  // Memoized player rank map for efficient lookups
+  const playerRankMap = useMemo(() => {
+    return rankings.reduce((acc: Record<string, number>, player: any) => {
+      const playerName = player['PLAYER NAME']
+      if (playerName) {
+        acc[playerName] = player.RK
+      }
+      return acc
+    }, {})
+  }, [rankings])
+
+  // Memoized utility functions
+  const findPlayerRank = useCallback((playerName: string): number | null => {
+    return playerRankMap[playerName] || null
+  }, [playerRankMap])
+
+  const getPickValueStyle = useCallback((diff: number) => {
+    if (diff <= -10) return { background: '#10b981' } // green-500 - steal
+    if (diff <= -5) return { background: '#34d399' } // green-400 - good value
+    if (diff <= 0) return { background: '#6ee7b7' } // green-300 - slight value
+    if (diff <= 5) return { background: '#fbbf24' } // amber-400 - slight reach
+    if (diff <= 10) return { background: '#f59e0b' } // amber-500 - reach
+    return { background: '#ef4444' } // red-500 - major reach
+  }, [])
+
+  const getPositionColor = useCallback((position: string) => {
+    switch (position) {
+      case 'QB': return 'bg-blue-500'
+      case 'RB': return 'bg-green-500'
+      case 'WR': return 'bg-purple-500'
+      case 'TE': return 'bg-orange-500'
+      case 'K': return 'bg-yellow-500'
+      case 'DEF': return 'bg-red-500'
+      default: return 'bg-gray-500'
+    }
+  }, [])
+
+  const getPickTeamName = useCallback((pick: SleeperPick) => {
+    const rosterId = draft.slot_to_roster_id?.[pick.pick_no - 1]
+    return rosterId || 'Unknown'
+  }, [draft.slot_to_roster_id])
+
+  const getPickRosterId = useCallback((pick: SleeperPick) => {
+    return draft.slot_to_roster_id?.[pick.pick_no - 1] || null
+  }, [draft.slot_to_roster_id])
 
   // On mount, get the current user and auto-select their team if available
   useEffect(() => {
@@ -63,9 +102,12 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const res = await fetch("/api/rankings")
-        if (res.ok) {
-          const data = await res.json()
+        const response = await fetch("/api/rankings", {
+          cache: 'force-cache',
+          next: { revalidate: 3600 } // 1 hour
+        })
+        if (response.ok) {
+          const data = await response.json()
           setRankings(data)
         }
       } catch (e) {
@@ -77,47 +119,8 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
     fetchRankings()
   }, [])
 
-  const rounds = draft.settings.rounds
-  const teams = draft.settings.total_rosters || 12
-
-  // Find projected rank for a player by name (case-insensitive)
-  function findPlayerRank(playerName: string): number | null {
-    if (!rankings || rankings.length === 0) return null;
-    // Try exact match
-    let player = rankings.find(
-      (p) => p["PLAYER NAME"]?.toLowerCase() === playerName.toLowerCase()
-    );
-    if (!player) {
-      // Try contains (for suffixes, etc)
-      player = rankings.find(
-        (p) => p["PLAYER NAME"]?.toLowerCase().includes(playerName.toLowerCase())
-      );
-    }
-    return player ? player["RK"] || null : null;
-  }
-
-  const getPositionColor = (position: string) => {
-    switch (position) {
-      case 'QB': return 'bg-blue-500'
-      case 'RB': return 'bg-green-500'
-      case 'WR': return 'bg-yellow-500'
-      case 'TE': return 'bg-purple-500'
-      default: return 'bg-gray-500'
-    }
-  }
-
-  // Get all team names for dropdown
-  const teamNames = Array.from(new Set(picks.map(pick => {
-    const player = players[pick.player_id]
-    return pick.metadata?.team || player?.team || `Team ${pick.roster_id}`
-  })))
-
-  // Helper to get the roster_id for a pick
-  function getPickRosterId(pick: SleeperPick) {
-    return pick.roster_id
-  }
-
-  const renderPickCell = (pickNo: number) => {
+  // Memoized render function for pick cells
+  const renderPickCell = useCallback((pickNo: number) => {
     const pick = picks.find(p => p.pick_no === pickNo)
     if (!pick) {
       return (
@@ -170,9 +173,71 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
         </div>
       </div>
     )
-  }
+  }, [picks, players, findPlayerRank, getPickValueStyle, getPositionColor, getPickTeamName, highlightUser, highlightTeam, isExpanded])
 
-  const toggleExpand = () => setIsExpanded(!isExpanded)
+  // Memoized event handlers
+  const toggleExpand = useCallback(() => setIsExpanded(!isExpanded), [isExpanded])
+  const toggleHighlight = useCallback(() => setHighlightUser(!highlightUser), [highlightUser])
+
+  // Memoized grid items
+  const gridItems = useMemo(() => {
+    return Array.from({ length: rounds * teams }, (_, i) => {
+      const pickNo = i + 1;
+      const pick = picks.find(p => p.pick_no === pickNo)
+      if (!pick) {
+        return (
+          <div key={pickNo} className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}>
+            <span className="text-gray-400 text-xs font-mono">#{pickNo}</span>
+          </div>
+        )
+      }
+      const player = players[pick.player_id]
+      if (!player) {
+        return (
+          <div key={pickNo} className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}>
+            <span className="text-gray-400 text-xs font-mono">Unknown</span>
+      </div>
+    )
+  }
+      const playerName = `${player.first_name} ${player.last_name}`
+      const rank = findPlayerRank(playerName)
+      const diff = rank ? pick.pick_no - rank : null
+      const style = diff !== null ? getPickValueStyle(diff) : { background: '#334155' }
+      const position = player.position || pick.metadata?.position || 'UNK'
+      const pickRosterId = getPickRosterId(pick)
+      const shouldHighlight = highlightUser && ((userRosterId && pickRosterId === userRosterId) || (!userRosterId && highlightTeam === pickRosterId))
+      return (
+        <div key={pickNo}
+          className={`${isExpanded ? 'h-16' : 'h-16'} border border-slate-600 rounded-lg p-1 relative overflow-hidden ${shouldHighlight ? 'ring-2 ring-yellow-400 animate-pulse' : ''}`}
+          style={style}
+        >
+          <div className="flex items-center justify-between h-full">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-1 mb-0.5">
+                <Badge
+                  variant="secondary"
+                  className={`text-xs px-1 py-0 ${getPositionColor(position)} text-white`}
+                >
+                  {position}
+                </Badge>
+                {diff !== null && (
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    {diff > 0 ? `+${diff}` : diff}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-white font-mono text-xs truncate">
+                {playerName}
+              </p>
+              <p className="text-gray-300 text-xs truncate">
+                {player.team} • #{pick.pick_no}
+              </p>
+            </div>
+          </div>
+        </div>
+      )
+    })
+  }, [rounds, teams, picks, players, findPlayerRank, getPickValueStyle, getPositionColor, getPickRosterId, highlightUser, userRosterId, highlightTeam, isExpanded])
 
   return (
     <Card className={`${isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none' : ''} bg-slate-800 border-slate-700`}>
@@ -205,7 +270,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
                 <span>REFRESH</span>
               </button>
               <button
-                onClick={() => setHighlightUser(v => !v)}
+                onClick={toggleHighlight}
                 className={`px-3 py-1 rounded-lg font-mono text-sm flex items-center space-x-1 transition-colors border ${highlightUser ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400 ring-2 ring-yellow-400' : 'bg-slate-700 text-white border-slate-600 hover:bg-slate-600'}`}
                 title="Highlight My Picks"
               >
@@ -246,62 +311,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
               gridTemplateRows: `repeat(${rounds}, 64px)`
             }}
           >
-            {Array.from({ length: rounds * teams }, (_, i) => {
-              const pickNo = i + 1;
-              const pick = picks.find(p => p.pick_no === pickNo)
-              if (!pick) {
-                return (
-                  <div key={pickNo} className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}>
-                    <span className="text-gray-400 text-xs font-mono">#{pickNo}</span>
-                  </div>
-                )
-              }
-              const player = players[pick.player_id]
-              if (!player) {
-                return (
-                  <div key={pickNo} className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}>
-                    <span className="text-gray-400 text-xs font-mono">Unknown</span>
-                  </div>
-                )
-              }
-              const playerName = `${player.first_name} ${player.last_name}`
-              const rank = findPlayerRank(playerName)
-              const diff = rank ? pick.pick_no - rank : null
-              const style = diff !== null ? getPickValueStyle(diff) : { background: '#334155' }
-              const position = player.position || pick.metadata?.position || 'UNK'
-              const pickRosterId = getPickRosterId(pick)
-              const shouldHighlight = highlightUser && ((userRosterId && pickRosterId === userRosterId) || (!userRosterId && highlightTeam === pickRosterId))
-              return (
-                <div key={pickNo}
-                  className={`${isExpanded ? 'h-16' : 'h-16'} border border-slate-600 rounded-lg p-1 relative overflow-hidden ${shouldHighlight ? 'ring-2 ring-yellow-400 animate-pulse' : ''}`}
-                  style={style}
-                >
-                  <div className="flex items-center justify-between h-full">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-1 mb-0.5">
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs px-1 py-0 ${getPositionColor(position)} text-white`}
-                        >
-                          {position}
-                        </Badge>
-                        {diff !== null && (
-                          <Badge variant="outline" className="text-xs px-1 py-0">
-                            {diff > 0 ? `+${diff}` : diff}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-white font-mono text-xs truncate">
-                        {playerName}
-                      </p>
-                      <p className="text-gray-300 text-xs truncate">
-                        {player.team} • #{pick.pick_no}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            {gridItems}
           </div>
         </div>
       </CardContent>

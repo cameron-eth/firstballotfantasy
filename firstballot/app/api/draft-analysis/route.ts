@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase-server';
+import { sleeperApi } from '@/lib/nextjs-cache';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,42 +11,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Draft ID is required' }, { status: 400 });
     }
 
-    // Fetch draft data
-    const draftResponse = await fetch(`https://api.sleeper.app/v1/draft/${draftId}`);
-    if (!draftResponse.ok) {
-      throw new Error('Failed to fetch draft data');
-    }
-    const draft = await draftResponse.json();
+    // Fetch draft data with Next.js caching
+    const draft = await sleeperApi.getDraft(draftId);
 
-    // Fetch picks
-    const picksResponse = await fetch(`https://api.sleeper.app/v1/draft/${draftId}/picks`);
-    if (!picksResponse.ok) {
-      throw new Error('Failed to fetch picks data');
-    }
-    const picks = await picksResponse.json();
+    // Fetch picks with Next.js caching
+    const picks = await sleeperApi.getDraftPicks(draftId);
 
-    // Fetch traded picks
-    const tradedPicksResponse = await fetch(`https://api.sleeper.app/v1/draft/${draftId}/traded_picks`);
-    if (!tradedPicksResponse.ok) {
-      throw new Error('Failed to fetch traded picks data');
-    }
-    const tradedPicks = await tradedPicksResponse.json();
+    // Fetch traded picks with Next.js caching
+    const tradedPicks = await sleeperApi.getDraftTradedPicks(draftId);
 
-    // Fetch league rosters and users to get team names
-    const [rostersResponse, usersResponse] = await Promise.all([
-      fetch(`https://api.sleeper.app/v1/league/${draft.league_id}/rosters`),
-      fetch(`https://api.sleeper.app/v1/league/${draft.league_id}/users`)
+    // Fetch league rosters and users with Next.js caching
+    const [rosters, users] = await Promise.all([
+      sleeperApi.getLeagueRosters(draft.league_id),
+      sleeperApi.getLeagueUsers(draft.league_id)
     ]);
-    
-    if (!rostersResponse.ok) {
-      throw new Error('Failed to fetch league rosters');
-    }
-    if (!usersResponse.ok) {
-      throw new Error('Failed to fetch league users');
-    }
-    
-    const rosters = await rostersResponse.json();
-    const users = await usersResponse.json();
 
     // Fetch rankings for grading
     const { data: rankingsData, error: rankingsError } = await supabaseServer
@@ -115,12 +94,8 @@ export async function GET(request: NextRequest) {
       teamPicks[rosterId].push(pick);
     }
 
-    // Fetch all players for age lookup
-    const playersResponse = await fetch('https://api.sleeper.app/v1/players/nfl');
-    if (!playersResponse.ok) {
-      throw new Error('Failed to fetch player data');
-    }
-    const allPlayers = await playersResponse.json();
+    // Fetch all players for age lookup with Next.js caching
+    const allPlayers = await sleeperApi.getAllPlayers();
 
     // Grade each team's draft with enhanced logic
     const teamGrades = [];

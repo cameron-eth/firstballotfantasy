@@ -2,14 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Shield, User, LogOut, Menu, X, Lock } from "lucide-react"
+import { Shield, User, LogOut, Menu, X, Lock, Crown, CheckCircle, Sparkles, Zap } from "lucide-react"
 import { useAuth } from "@/lib/auth"
+import { useMembership } from "@/hooks/use-membership"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
 const navigation = [
   { name: "OVERVIEW", href: "/" },
-  { name: "TIERS", href: "/tiers" },
   { name: "DRAFT GUIDE", href: "/conversion" },
   { name: "LEAGUE BUDDY", href: "/league-buddy", requiresAuth: true },
   { name: "DRAFT BUDDY", href: "/draft-buddy", requiresAuth: true },
@@ -18,6 +18,7 @@ const navigation = [
 export function Header() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
+  const { isMember, loading: membershipLoading, error: membershipError } = useMembership()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
@@ -71,15 +72,76 @@ export function Header() {
           <div className="flex items-center space-x-3">
             {user ? (
               <motion.div 
-                className="flex items-center space-x-2 bg-slate-900/80 backdrop-blur-sm rounded-lg p-2 border border-slate-700/50"
+                className="flex items-center space-x-2"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="flex items-center justify-center w-6 h-6 bg-green-400/10 rounded-full">
-                  <User className="h-3 w-3 text-green-400" />
+                {/* PRO User - Premium Design */}
+                {!membershipLoading && isMember && (
+                  <motion.div 
+                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-sm rounded-lg p-2 border border-purple-500/30 shadow-lg shadow-purple-500/25"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <motion.div
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <Sparkles className="h-3 w-3 text-purple-400" />
+                      </motion.div>
+                      <span className="text-purple-400 text-xs font-bold font-mono hidden sm:block">PRO</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-center w-6 h-6 bg-purple-400/20 rounded-full border border-purple-400/30">
+                      <Crown className="h-3 w-3 text-purple-400" />
+                    </div>
+                    
+                    <span className="text-purple-300 text-sm font-mono hidden sm:block max-w-[120px] truncate">
+                      {user.email}
+                    </span>
+                    
+                    <motion.button
+                      onClick={signOut}
+                      className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded"
+                      title="Sign out"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <LogOut className="h-3 w-3" />
+                    </motion.button>
+                  </motion.div>
+                )}
+
+                {/* FREE User - Standard Design */}
+                {!membershipLoading && !isMember && (
+                  <motion.div 
+                    className="flex items-center space-x-2 bg-slate-700/50 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <Zap className="h-3 w-3 text-yellow-400" />
+                      <span className="text-yellow-400 text-xs font-bold font-mono hidden sm:block">FREE</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-center w-6 h-6 bg-slate-600/50 rounded-full border border-slate-500/50">
+                      <User className="h-3 w-3 text-gray-400" />
                 </div>
-                <span className="text-green-400 text-sm font-mono hidden sm:block">{user.email}</span>
+                    
+                    <span className="text-gray-300 text-sm font-mono hidden sm:block max-w-[120px] truncate">
+                      {user.email}
+                    </span>
+                    
+                    {/* Upgrade Button for FREE users */}
+                    <Link
+                      href="/billing"
+                      className="bg-gradient-to-r from-yellow-400 to-orange-400 text-slate-900 px-2 py-1 rounded text-xs font-bold font-mono hover:from-yellow-300 hover:to-orange-300 transition-all duration-200 shadow-md"
+                    >
+                      UPGRADE
+                    </Link>
+                    
                 <motion.button
                   onClick={signOut}
                   className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded"
@@ -89,6 +151,20 @@ export function Header() {
                 >
                   <LogOut className="h-3 w-3" />
                 </motion.button>
+                  </motion.div>
+                )}
+
+                {/* Loading State */}
+                {membershipLoading && (
+                  <motion.div 
+                    className="flex items-center space-x-2 bg-slate-700/50 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <div className="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-gray-400 text-xs font-mono hidden sm:block">Loading...</span>
+                  </motion.div>
+                )}
               </motion.div>
             ) : (
               <Link
@@ -119,7 +195,6 @@ export function Header() {
         {/* Subtitle Section */}
         <div className="hidden md:block pb-4">
           <div className="flex items-center space-x-4">
-           
           </div>
         </div>
 

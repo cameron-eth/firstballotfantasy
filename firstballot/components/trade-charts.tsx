@@ -94,7 +94,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
               return (
                 <div key={trader.rosterId} className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className="text-lg font-bold text-yellow-400 min-w-[2rem]">#{index + 1}</div>
+                    <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
                     <UserAvatar
                       avatarId={team?.ownerAvatar}
                       displayName={trader.ownerName}
@@ -156,7 +156,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
               return (
                 <div key={trader.rosterId} className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className="text-lg font-bold text-yellow-400 min-w-[2rem]">#{index + 1}</div>
+                    <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
                     <UserAvatar
                       avatarId={team?.ownerAvatar}
                       displayName={trader.ownerName}
@@ -221,7 +221,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                 return (
                   <div key={trader.rosterId} className="flex items-center space-x-4">
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="text-lg font-bold text-yellow-400 min-w-[2rem]">#{index + 1}</div>
+                      <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
                       <UserAvatar
                         avatarId={team?.ownerAvatar}
                         displayName={trader.ownerName}
@@ -269,7 +269,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
       {/* Trade Activity Chart */}
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle className="text-yellow-400 font-mono text-lg flex items-center space-x-2">
+          <CardTitle className="text-purple-400 font-mono text-lg flex items-center space-x-2">
             <Trophy className="h-5 w-5" />
             <span>TRADE ACTIVITY</span>
           </CardTitle>
@@ -285,7 +285,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                 return (
                   <div key={trader.rosterId} className="flex items-center space-x-4">
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="text-lg font-bold text-yellow-400 min-w-[2rem]">#{index + 1}</div>
+                      <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
                       <UserAvatar
                         avatarId={team?.ownerAvatar}
                         displayName={trader.ownerName}
@@ -301,7 +301,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                     
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
                       <div className="text-right min-w-0">
-                        <div className="font-semibold text-yellow-400">
+                        <div className="font-semibold text-purple-400">
                           {trader.totalTrades}
                         </div>
                         <div className="text-xs text-gray-400">trades</div>
@@ -309,7 +309,7 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                       
                       <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-yellow-400 rounded-full transition-all duration-500"
+                          className="h-full bg-purple-400 rounded-full transition-all duration-500"
                           style={{ 
                             width: `${percentage}%`,
                             maxWidth: '100%'

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlayerHeadshot } from "@/components/player-headshot"
+
 import { UserAvatar } from "@/components/user-avatar"
 import { TrendingUp, TrendingDown, Trophy, Users, Target, Calendar, Award, ArrowUp, ArrowDown, Minus, ArrowLeft, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -25,10 +25,7 @@ import {
   type TraderStats
 } from "@/lib/trade-utils"
 import { TradeCharts } from "@/components/trade-charts"
-
-// Using types from trade-utils.ts
-
-// Using valuation functions from trade-utils.ts
+import { leagueCache } from '@/lib/league-cache'
 
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function TradeMarketContent() {
@@ -45,7 +42,7 @@ function TradeMarketContent() {
   const [error, setError] = useState<string | null>(null)
   const [noLeagueId, setNoLeagueId] = useState(false)
 
-  // Try to get league ID from multiple sources
+  // Try to get league ID from multiple sources using unified cache
   useEffect(() => {
     // First try URL params
     const urlLeagueId = searchParams.get('leagueId')
@@ -54,23 +51,15 @@ function TradeMarketContent() {
       return
     }
     
-    // Then try localStorage (cached from LeagueBuddy)
-    const cachedLeagueId = localStorage.getItem('cachedLeagueId')
+    // Then try unified league cache
+    const cachedLeagueId = leagueCache.getLeagueId()
     if (cachedLeagueId) {
-      console.log('Trade Market Page: Using cached league ID:', cachedLeagueId)
+      
       setLeagueId(cachedLeagueId)
       return
     }
     
-    // Finally try sessionStorage
-    const sessionLeagueId = sessionStorage.getItem('currentLeagueId')
-    if (sessionLeagueId) {
-      console.log('Trade Market Page: Using session league ID:', sessionLeagueId)
-      setLeagueId(sessionLeagueId)
-      return
-    }
     
-    console.log('Trade Market Page: No league ID found in any source')
     setNoLeagueId(true)
     setLoading(false)
   }, [searchParams])
@@ -79,39 +68,31 @@ function TradeMarketContent() {
   useEffect(() => {
     const fetchData = async () => {
       if (!leagueId) {
-        console.log('No leagueId provided')
+  
         return
       }
       
-      console.log('Trade Market Page: Fetching data for leagueId:', leagueId)
-      setNoLeagueId(false) // Reset the no league ID state when we have a league ID
       
+      setNoLeagueId(false) // Reset the no league ID state when we have a league ID
+
       try {
         setLoading(true)
         setError(null)
-
+        
         // Use the new trade market API endpoint
         const apiUrl = `/api/trade-market?leagueId=${leagueId}`
-        console.log('Trade Market Page: Making API call to:', apiUrl)
+
         const response = await fetch(apiUrl)
         
-        console.log('Trade Market Page: API response status:', response.status)
+
         
         if (!response.ok) {
           const errorText = await response.text()
           console.error('Trade Market Page: API error response:', errorText)
           throw new Error(`Failed to fetch trade market data: ${response.status}`)
         }
-
-        const result = await response.json()
         
-        console.log('Trade Market Page: API result:', {
-          success: result.success,
-          hasData: !!result.data,
-          totalTrades: result.data?.totalTrades,
-          totalTeams: result.data?.totalTeams,
-          fullResult: result // Log the full result for debugging
-        })
+        const result = await response.json()
         
         if (!result.success) {
           throw new Error(result.error || 'Failed to fetch trade market data')
@@ -119,15 +100,7 @@ function TradeMarketContent() {
 
         const { data } = result
         
-        console.log('Trade Market Page: Setting state with data:', {
-          teamsCount: data.teams?.length,
-          playersCount: Object.keys(data.allPlayers || {}).length,
-          transactionsCount: data.transactions?.length,
-          tradedPicksCount: data.tradedPicks?.length,
-          rankingsCount: Object.keys(data.dynastyRankings || {}).length,
-          currentWeek: data.currentWeek,
-          fullData: data // Log the full data for debugging
-        })
+
         
         setTeams(data.teams || [])
         setAllPlayers(data.allPlayers || {})
@@ -135,50 +108,34 @@ function TradeMarketContent() {
         setTradedPicks(data.tradedPicks || [])
         setDynastyRankings(data.dynastyRankings || {})
 
-        console.log('Trade Market Data Loaded:', {
-          totalTrades: data.totalTrades,
-          totalTeams: data.totalTeams,
-          leagueId: data.leagueId
-        })
+
 
       } catch (err) {
-        console.error('Trade Market Page: Error fetching data:', err)
+
         setError(err instanceof Error ? err.message : 'Failed to load trade market data')
       } finally {
         setLoading(false)
       }
     }
-    
+
     fetchData()
   }, [leagueId])
 
   // Process trades and calculate values
   const tradeAnalysis = useMemo(() => {
-    console.log('Trade Market Page: Processing trade analysis with:', {
-      loading,
-      hasRankings: !!dynastyRankings && Object.keys(dynastyRankings).length > 0,
-      transactionsCount: transactions.length,
-      teamsCount: teams.length
-    })
+
     
     if (loading || !dynastyRankings || Object.keys(dynastyRankings).length === 0) {
-      console.log('Trade Market Page: Skipping trade analysis - missing data')
+
       return []
     }
 
     const analyzedTrades: TradeAnalysis[] = []
 
-    console.log('Trade Market Page: Processing', transactions.length, 'transactions')
+
 
     transactions.forEach((trade, index) => {
-      console.log(`Trade Market Page: Processing trade ${index + 1}:`, {
-        transactionId: trade.transaction_id,
-        type: trade.type,
-        rosterIds: trade.roster_ids,
-        hasAdds: !!trade.adds,
-        hasDrops: !!trade.drops,
-        hasDraftPicks: !!trade.draft_picks
-      })
+
       
       const tradeTeams = trade.roster_ids.map((rosterId: number) => {
         const team = teams.find(t => t.rosterId === rosterId)
@@ -271,9 +228,7 @@ function TradeMarketContent() {
       })
     })
 
-    console.log('Trade Market Page: Trade analysis complete:', {
-      analyzedTradesCount: analyzedTrades.length
-    })
+
 
     return analyzedTrades
   }, [transactions, teams, allPlayers, dynastyRankings, loading])
@@ -300,13 +255,13 @@ function TradeMarketContent() {
       <div className="min-h-screen bg-slate-900 text-white p-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
-            <h1 className="text-3xl font-bold text-yellow-400 font-mono mb-6">TRADE MARKET</h1>
+            <h1 className="text-3xl font-bold text-yellow-400/90 font-mono mb-6">TRADE MARKET</h1>
             <p className="text-slate-400 mb-6">No league ID found. Please enter your Sleeper league ID:</p>
             <div className="flex items-center justify-center space-x-2 mb-6">
               <input
                 type="text"
                 placeholder="Enter league ID"
-                className="px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400"
+                className="px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     const input = e.target as HTMLInputElement
@@ -324,12 +279,12 @@ function TradeMarketContent() {
                   const input = document.querySelector('input[placeholder="Enter league ID"]') as HTMLInputElement
                   if (input?.value.trim()) {
                     setLeagueId(input.value.trim())
-                    localStorage.setItem('cachedLeagueId', input.value.trim())
+                    leagueCache.setLeagueId(input.value.trim())
                     setNoLeagueId(false)
                     setLoading(true)
                   }
                 }}
-                className="bg-yellow-400 text-black hover:bg-yellow-300"
+                className="bg-purple-500 text-white hover:bg-purple-600 shadow-lg shadow-purple-500/25"
               >
                 Load League
               </Button>
@@ -338,10 +293,10 @@ function TradeMarketContent() {
                   try {
                     const response = await fetch('/api/test')
                     const result = await response.json()
-                    console.log('Test API result:', result)
+
                     alert(`Test API: ${result.success ? 'Success' : 'Failed'}\nSupabase: ${result.supabase?.hasError ? 'Error' : 'OK'}`)
                   } catch (err) {
-                    console.error('Test API error:', err)
+
                     alert('Test API failed')
                   }
                 }}
@@ -374,26 +329,26 @@ function TradeMarketContent() {
                 <input
                   type="text"
                   placeholder="Enter league ID"
-                  className="px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400"
+                  className="px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       const input = e.target as HTMLInputElement
                       if (input.value.trim()) {
                         setLeagueId(input.value.trim())
-                        localStorage.setItem('cachedLeagueId', input.value.trim())
+                        leagueCache.setLeagueId(input.value.trim())
                       }
                     }
                   }}
                 />
                 <Button 
-                  onClick={() => {
-                    const input = document.querySelector('input[placeholder="Enter league ID"]') as HTMLInputElement
-                    if (input?.value.trim()) {
-                      setLeagueId(input.value.trim())
-                      localStorage.setItem('cachedLeagueId', input.value.trim())
-                    }
-                  }}
-                  className="bg-yellow-400 text-black hover:bg-yellow-300"
+                                  onClick={() => {
+                  const input = document.querySelector('input[placeholder="Enter league ID"]') as HTMLInputElement
+                  if (input?.value.trim()) {
+                    setLeagueId(input.value.trim())
+                    leagueCache.setLeagueId(input.value.trim())
+                  }
+                }}
+                  className="bg-purple-500 text-white hover:bg-purple-600 shadow-lg shadow-purple-500/25"
                 >
                   Load League
                 </Button>
@@ -402,10 +357,10 @@ function TradeMarketContent() {
                     try {
                       const response = await fetch('/api/test')
                       const result = await response.json()
-                      console.log('Test API result:', result)
+
                       alert(`Test API: ${result.success ? 'Success' : 'Failed'}\nSupabase: ${result.supabase?.hasError ? 'Error' : 'OK'}`)
                     } catch (err) {
-                      console.error('Test API error:', err)
+
                       alert('Test API failed')
                     }
                   }}
@@ -442,7 +397,7 @@ function TradeMarketContent() {
               Back
             </Button>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400 font-mono">TRADE MARKET</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400/90 font-mono">TRADE MARKET</h1>
               <p className="text-sm sm:text-base text-slate-400">Dynasty-based trade analysis and valuations</p>
             </div>
           </div>
@@ -453,7 +408,7 @@ function TradeMarketContent() {
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-blue-400">{tradeAnalysis.length}</div>
+                <div className="text-xl sm:text-2xl font-bold text-yellow-400/90">{tradeAnalysis.length}</div>
                 <div className="text-xs sm:text-sm text-gray-400">Total Trades</div>
               </div>
             </CardContent>
@@ -461,7 +416,7 @@ function TradeMarketContent() {
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-green-400">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-400/90">
                   {tradeAnalysis.reduce((sum, trade) => sum + trade.teams.reduce((s, team) => s + team.playersReceived.length + team.playersSent.length, 0), 0)}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-400">Players Traded</div>
@@ -471,7 +426,7 @@ function TradeMarketContent() {
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-purple-400">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-400/90">
                   {tradedPicks.length + tradeAnalysis.reduce((sum, trade) => sum + trade.teams.reduce((s, team) => s + team.picksReceived.length + team.picksSent.length, 0), 0)}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-400">Draft Picks</div>
@@ -481,7 +436,7 @@ function TradeMarketContent() {
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-yellow-400">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-400/90">
                   {Math.round(tradeAnalysis.reduce((sum, trade) => sum + trade.totalTradeValue, 0))}
                 </div>
                 <div className="text-xs sm:text-sm text-gray-400">Total Value</div>
@@ -493,16 +448,16 @@ function TradeMarketContent() {
         {/* Main Content Tabs */}
         <Tabs defaultValue="leaderboard" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-slate-800 border-slate-700">
-            <TabsTrigger value="leaderboard" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
+            <TabsTrigger value="leaderboard" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400/90 text-xs sm:text-sm px-2 sm:px-3">
               Leaderboard
             </TabsTrigger>
-            <TabsTrigger value="charts" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
+            <TabsTrigger value="charts" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400/90 text-xs sm:text-sm px-2 sm:px-3">
               Charts
             </TabsTrigger>
-            <TabsTrigger value="trades" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
+            <TabsTrigger value="trades" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400/90 text-xs sm:text-sm px-2 sm:px-3">
               Recent Trades
             </TabsTrigger>
-            <TabsTrigger value="analysis" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400 text-xs sm:text-sm px-2 sm:px-3">
+            <TabsTrigger value="analysis" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400/90 text-xs sm:text-sm px-2 sm:px-3">
               Analysis
             </TabsTrigger>
           </TabsList>
@@ -510,7 +465,7 @@ function TradeMarketContent() {
           <TabsContent value="leaderboard" className="space-y-6">
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono text-lg flex items-center space-x-2">
+                <CardTitle className="text-yellow-400/90 font-mono text-lg flex items-center space-x-2">
                   <Trophy className="h-5 w-5" />
                   <span>TRADE LEADERBOARD</span>
                 </CardTitle>
@@ -520,7 +475,7 @@ function TradeMarketContent() {
                   {traderStats.map((trader, index) => (
                     <div key={trader.rosterId} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-slate-700 border border-slate-600 rounded-lg space-y-3 sm:space-y-0">
                       <div className="flex items-center space-x-3 sm:space-x-4">
-                        <div className="text-lg sm:text-xl font-bold text-yellow-400">#{index + 1}</div>
+                        <div className="text-lg sm:text-xl font-bold text-yellow-400/90">#{index + 1}</div>
                         <UserAvatar
                           avatarId={teams.find(t => t.rosterId === trader.rosterId)?.ownerAvatar}
                           displayName={trader.ownerName}

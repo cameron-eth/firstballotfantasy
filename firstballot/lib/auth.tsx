@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, username: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -57,6 +57,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     })
     if (error) throw error
+
+    // If signup is successful and we have a user, create their profile
+    if (data.user) {
+      try {
+        const response = await fetch('/api/user-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            authId: data.user.id,
+            email: data.user.email,
+            username: username,
+          }),
+        })
+
+        if (!response.ok) {
+          console.error('Failed to create user profile during signup');
+        }
+      } catch (profileError) {
+        console.error('Error creating user profile:', profileError);
+      }
+    }
   }
 
   const signOut = async () => {

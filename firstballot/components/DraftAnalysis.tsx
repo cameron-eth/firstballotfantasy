@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Maximize2, Minimize2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { PlayerHeadshot } from "@/components/player-headshot"
+
 import { UserAvatar } from "@/components/user-avatar"
 
 interface DraftAnalysisProps {
@@ -91,9 +91,9 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#f59e0b',
       valueKey: 'comprehensiveScore',
       leaderboardColor: 'text-amber-500',
-      getData: (teamGrades) => {
+      getData: (teamGrades: TeamGrade[]) => {
         // Calculate comprehensive score for each team
-        const teamsWithScores = teamGrades.map(tg => {
+        const teamsWithScores = teamGrades.map((tg: TeamGrade) => {
           // Normalize each metric to 0-100 scale
           const avgRankScore = Math.max(0, 100 - (tg.averageRank - 1) * 2); // Lower rank = higher score
           const totalValueScore = Math.min(100, (tg.totalValue / 1000) * 10); // Normalize to 1000 max
@@ -132,9 +132,9 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
         
         return teamsWithScores;
       },
-      getLeaderboard: (teamGrades) => {
+      getLeaderboard: (teamGrades: TeamGrade[]) => {
         // Same calculation as getData but return sorted leaderboard
-        const teamsWithScores = teamGrades.map(tg => {
+        const teamsWithScores = teamGrades.map((tg: TeamGrade) => {
           const avgRankScore = Math.max(0, 100 - (tg.averageRank - 1) * 2);
           const totalValueScore = Math.min(100, (tg.totalValue / 1000) * 10);
           const valuePerPickScore = Math.min(100, (tg.averageValue / 100) * 10);
@@ -169,7 +169,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
           };
         });
         
-        return teamsWithScores.sort((a, b) => b.value - a.value);
+        return teamsWithScores.sort((a: any, b: any) => b.value - a.value);
       },
     },
     {
@@ -179,8 +179,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#f87171',
       valueKey: 'reaches',
       leaderboardColor: 'text-red-400',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.reaches })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.reaches - a.reaches).map(tg => ({ label: tg.teamName, value: tg.reaches })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.reaches })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.reaches - a.reaches).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.reaches })),
     },
     {
       key: 'steals',
@@ -189,8 +189,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#34d399',
       valueKey: 'steals',
       leaderboardColor: 'text-green-400',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.steals })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.steals - a.steals).map(tg => ({ label: tg.teamName, value: tg.steals })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.steals })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.steals - a.steals).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.steals })),
     },
     {
       key: 'tier1',
@@ -199,8 +199,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#fde68a',
       valueKey: 'tier1',
       leaderboardColor: 'text-yellow-300',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.tierBreakdown.tier1 - a.tierBreakdown.tier1).map(tg => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.tierBreakdown.tier1 - a.tierBreakdown.tier1).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
     },
     {
       key: 'totalValue',
@@ -209,8 +209,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#60a5fa',
       valueKey: 'totalValue',
       leaderboardColor: 'text-blue-400',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.totalValue })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.totalValue - a.totalValue).map(tg => ({ label: tg.teamName, value: tg.totalValue })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.totalValue })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.totalValue - a.totalValue).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.totalValue })),
     },
     {
       key: 'bestWR',
@@ -219,8 +219,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#a78bfa',
       valueKey: 'WR',
       leaderboardColor: 'text-purple-400',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.positions.WR })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.positions.WR - a.positions.WR).map(tg => ({ label: tg.teamName, value: tg.positions.WR })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.WR })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.WR - a.positions.WR).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.WR })),
     },
     {
       key: 'bestRB',
@@ -229,8 +229,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#10b981',
       valueKey: 'RB',
       leaderboardColor: 'text-emerald-500',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.positions.RB })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.positions.RB - a.positions.RB).map(tg => ({ label: tg.teamName, value: tg.positions.RB })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.RB })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.RB - a.positions.RB).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.RB })),
     },
     {
       key: 'bestQB',
@@ -239,8 +239,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#3b82f6',
       valueKey: 'QB',
       leaderboardColor: 'text-blue-500',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.positions.QB })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.positions.QB - a.positions.QB).map(tg => ({ label: tg.teamName, value: tg.positions.QB })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.QB })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.QB - a.positions.QB).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.QB })),
     },
     {
       key: 'bestTE',
@@ -249,18 +249,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#8b5cf6',
       valueKey: 'TE',
       leaderboardColor: 'text-violet-500',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.positions.TE })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => b.positions.TE - a.positions.TE).map(tg => ({ label: tg.teamName, value: tg.positions.TE })),
-    },
-    {
-      key: 'avgAge',
-      title: 'Average Player Age by Team',
-      barColor: '#f472b6', // pink-400
-      labelColor: '#f472b6',
-      valueKey: 'averageAge',
-      leaderboardColor: 'text-pink-400',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.averageAge })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => a.averageAge - b.averageAge).map(tg => ({ label: tg.teamName, value: tg.averageAge })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.TE })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.TE - a.positions.TE).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.TE })),
     },
     {
       key: 'avgRank',
@@ -269,8 +259,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#38bdf8',
       valueKey: 'averageRank',
       leaderboardColor: 'text-sky-400',
-      getData: (teamGrades) => teamGrades.map(tg => ({ label: tg.teamName, value: tg.averageRank })),
-      getLeaderboard: (teamGrades) => teamGrades.slice().sort((a, b) => a.averageRank - b.averageRank).map(tg => ({ label: tg.teamName, value: tg.averageRank })),
+      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.averageRank })),
+      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => a.averageRank - b.averageRank).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.averageRank })),
     },
   ];
   const currentChart = charts[chartsIndex];
@@ -341,7 +331,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
     const scores = data.teamGrades.map(t => t.gradeScore || 0).filter(score => !isNaN(score));
     if (scores.length > 0) {
       const sortedScores = [...scores].sort((a, b) => a - b);
-      function getPercentile(score) {
+      function getPercentile(score: number) {
         const below = sortedScores.filter(s => s < score).length;
         return (below / sortedScores.length) * 100;
       }
@@ -665,7 +655,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                         <TableCell className="font-medium text-slate-200">{round}</TableCell>
                         {Array.from({ length: data.draft.settings.teams }, (_, i) => (
                           <TableCell key={i + 1} className="text-slate-200">
-                            {slots[i + 1] || '-'}
+                            {(slots as Record<string, any>)[i + 1] || '-'}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -709,17 +699,17 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                   {currentChart.getLeaderboard(data.teamGrades).map((row, i) => (
                     <li key={row.label} className="mb-1">
                       <span className={`font-bold ${currentChart.leaderboardColor}`}>{row.value}</span> — {row.label}
-                      {currentChart.key === 'comprehensiveRankings' && row.details && (
+                      {currentChart.key === 'comprehensiveRankings' && (row as any).details && (
                         <div className="ml-4 mt-1 text-xs text-slate-400">
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                            <span>Avg Rank: {row.details.avgRank}</span>
-                            <span>Total Value: {row.details.totalValue}</span>
-                            <span>Avg Value: {row.details.avgValue}</span>
-                            <span>Steals: {row.details.steals}</span>
-                            <span>Reaches: {row.details.reaches}</span>
-                            <span>Tier 1: {row.details.tier1}</span>
-                            <span>Tier 2: {row.details.tier2}</span>
-                            <span>Grade: {row.details.grade}</span>
+                            <span>Avg Rank: {(row as any).details.avgRank}</span>
+                            <span>Total Value: {(row as any).details.totalValue}</span>
+                            <span>Avg Value: {(row as any).details.avgValue}</span>
+                            <span>Steals: {(row as any).details.steals}</span>
+                            <span>Reaches: {(row as any).details.reaches}</span>
+                            <span>Tier 1: {(row as any).details.tier1}</span>
+                            <span>Tier 2: {(row as any).details.tier2}</span>
+                            <span>Grade: {(row as any).details.grade}</span>
                           </div>
                         </div>
                       )}
@@ -767,11 +757,16 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
 }
 
 // BarChart component (simple SVG bar chart)
-function BarChart({ data, barColor, labelColor, maxBarWidth = 300 }) {
-  const maxValue = useMemo(() => Math.max(...data.map(d => d.value)), [data]);
+function BarChart({ data, barColor, labelColor, maxBarWidth = 300 }: { 
+  data: Array<{ label: string; value: number }>; 
+  barColor: string; 
+  labelColor: string; 
+  maxBarWidth?: number; 
+}) {
+  const maxValue = useMemo(() => Math.max(...data.map((d: { label: string; value: number }) => d.value)), [data]);
   return (
     <div className="space-y-1">
-      {data.map((d, i) => (
+      {data.map((d: { label: string; value: number }, i: number) => (
         <div key={d.label} className="flex items-center gap-2">
           <span className="w-32 truncate text-xs" style={{ color: labelColor }}>{d.label}</span>
           <div className="flex-1 bg-slate-700 rounded h-4 relative">

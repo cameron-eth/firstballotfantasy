@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlayerHeadshot } from "@/components/player-headshot"
+
 import { TeamLogo } from "@/components/team-logo"
 import { UserAvatar } from "@/components/user-avatar"
 import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loader2, AlertCircle, TrendingDown, ArrowUp, ArrowDown, Minus, ArrowLeft, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { leagueCache } from '@/lib/league-cache'
+import { sleeperApi } from '@/lib/nextjs-cache'
 
 
 // Enhanced TypeScript interfaces for better type safety
@@ -263,9 +265,7 @@ const calculatePositionStrengths = (players: PlayerData[]): PositionStrengths =>
   };
 
   if (players && players.length > 0) {
-    console.log('Debug: Calculating position strengths for', players.length, 'players')
     players.forEach(player => {
-      console.log('Debug: Player position:', player.position, 'for', player.playerName)
       const position = player.position?.toUpperCase()
       if (position === 'QB') positionCounts.QB++;
       else if (position === 'RB') positionCounts.RB++;
@@ -275,13 +275,9 @@ const calculatePositionStrengths = (players: PlayerData[]): PositionStrengths =>
       else if (position === 'SFLX' || position === 'SUPER_FLEX') positionCounts.SFLX++;
       // Handle any other positions by adding to FLEX
       else {
-        console.log('Debug: Unknown position:', player.position, 'for', player.playerName)
         positionCounts.FLEX++;
       }
     });
-    console.log('Debug: Final position counts:', positionCounts)
-  } else {
-    console.log('Debug: No players found for position strength calculation')
   }
 
   return positionCounts;
@@ -338,19 +334,70 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
   const [mobileTeamIndex, setMobileTeamIndex] = useState(0)
   const [mobileTrendingIndex, setMobileTrendingIndex] = useState(0)
+  const [teamDisplayIndex, setTeamDisplayIndex] = useState(0)
   const [sortBy, setSortBy] = useState<'gradeScore' | 'pointsFor' | 'wins'>("gradeScore")
 
+  // Memoized sorted teams to prevent unnecessary re-sorting
   const sortedTeams = useMemo(() => {
-    if (sortBy === 'gradeScore') {
-      return [...teams].sort((a, b) => b.gradeScore - a.gradeScore)
-    } else if (sortBy === 'pointsFor') {
-      return [...teams].sort((a, b) => b.pointsFor - a.pointsFor)
-    } else if (sortBy === 'wins') {
-      return [...teams].sort((a, b) => b.wins - a.wins)
-    }
-    return teams
-  }, [teams, sortBy])
+    return [...teams].sort((a, b) => {
+      // Sort by wins first, then by points
+      if (a.wins !== b.wins) return b.wins - a.wins
+      return b.pointsFor - a.pointsFor
+    })
+  }, [teams])
 
+  // Memoized event handlers to prevent unnecessary re-renders
+  const handleTeamSelect = useCallback((team: TeamData) => {
+    setSelectedTeam(team)
+  }, [])
+
+  const handleTransactionsToggle = useCallback(() => {
+    setShowTransactionsSidebar(prev => !prev)
+  }, [])
+
+  const handleMobileTeamNavigation = useCallback((direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setMobileTeamIndex(prev => prev > 0 ? prev - 1 : teams.length - 1)
+    } else {
+      setMobileTeamIndex(prev => prev < teams.length - 1 ? prev + 1 : 0)
+    }
+  }, [teams.length])
+
+  const handleMobileTeamSelect = useCallback((team: TeamData) => {
+    setSelectedTeam(team)
+    // Auto-scroll to the selected team card
+    const teamIndex = teams.findIndex(t => t.rosterId === team.rosterId)
+    setMobileTeamIndex(teamIndex)
+  }, [teams])
+
+  const handleMobileTrendingNavigation = useCallback((direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setMobileTrendingIndex(prev => prev > 0 ? prev - 1 : (leagueOverview?.trendingPlayers.length || 6) - 1)
+    } else {
+      setMobileTrendingIndex(prev => prev < (leagueOverview?.trendingPlayers.length || 6) - 1 ? prev + 1 : 0)
+    }
+  }, [leagueOverview?.trendingPlayers.length])
+
+  const handleTeamDisplayNavigation = useCallback((direction: 'prev' | 'next') => {
+    const maxIndex = Math.max(0, Math.ceil(sortedTeams.length / 4) - 1)
+    if (direction === 'prev') {
+      setTeamDisplayIndex(prev => prev > 0 ? prev - 1 : maxIndex)
+    } else {
+      setTeamDisplayIndex(prev => prev < maxIndex ? prev + 1 : 0)
+    }
+  }, [sortedTeams.length])
+
+  const handleTradeMarketClick = useCallback(() => {
+    router.push(`/trade-market?leagueId=${leagueId}`)
+  }, [router, leagueId])
+
+  const handleDraftBuddyClick = useCallback(() => {
+    router.push(`/draft-buddy?leagueId=${leagueId}`)
+  }, [router, leagueId])
+
+  const handleScoutingPortalClick = useCallback(() => {
+    router.push(`/scouting-portal?leagueId=${leagueId}`)
+  }, [router, leagueId])
 
   // Optimized data fetching with better error handling
   const fetchLeagueData = useCallback(async () => {
@@ -361,109 +408,51 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       setError(null)
       
       // Cache the league ID for other components to use
-      localStorage.setItem('cachedLeagueId', leagueId)
-      sessionStorage.setItem('currentLeagueId', leagueId)
-      console.log('LeagueBuddy: Cached league ID:', leagueId)
+      leagueCache.setLeagueId(leagueId)
 
-      // Fetch NFL state to get current week
-      const nflStateResponse = await fetch('https://api.sleeper.app/v1/state/nfl')
-      if (!validateApiResponse(nflStateResponse, 'NFL State')) {
-        throw new Error('Failed to fetch NFL state')
-      }
-      
-      const nflState = await safeJsonParse(nflStateResponse)
-      if (!nflState) throw new Error('Invalid NFL state data')
-      
+      // Fetch NFL state to get current week using Next.js caching
+      const nflState = await sleeperApi.getNflState() as any
       const week = nflState.week || 1
       setCurrentWeek(week)
-      
-      console.log('Debug: NFL State:', {
-        week: nflState.week,
-        season: nflState.season,
-        seasonType: nflState.season_type,
-        displayWeek: nflState.display_week
-      })
 
-      // Fetch all data in parallel with error handling
-      const fetchPromises = [
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`),
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`),
-        fetch('https://api.sleeper.app/v1/players/nfl'),
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}`),
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`),
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${week}`).catch(() => null),
-        fetch('/api/rankings').catch(() => null)
-      ]
-
-      const responses = await Promise.all(fetchPromises)
-      
-      // Validate critical responses
-      if (!responses[0] || !responses[1] || !responses[2] || !responses[3] ||         !validateApiResponse(responses[0], 'Rosters') ||         !validateApiResponse(responses[1], 'Users') ||         !validateApiResponse(responses[2], 'Players') ||         !validateApiResponse(responses[3], 'League')) {
-        throw new Error('Failed to fetch critical league data')
-      }
-
+      // Fetch all data in parallel with Next.js caching
       const [rosters, users, allPlayers, league, matchups, transactionsResponse, rankingsResponse] = await Promise.all([
-        safeJsonParse(responses[0]!),
-        safeJsonParse(responses[1]!),
-        safeJsonParse(responses[2]!),
-        safeJsonParse(responses[3]!),
-        responses[4] && responses[4].ok ? safeJsonParse(responses[4]) : Promise.resolve([]),
-        responses[5] ? safeJsonParse(responses[5]) : Promise.resolve([]),
-        responses[6] && responses[6].ok ? safeJsonParse(responses[6]) : Promise.resolve([])
+        sleeperApi.getLeagueRosters(leagueId),
+        sleeperApi.getLeagueUsers(leagueId),
+        sleeperApi.getAllPlayers(),
+        sleeperApi.getLeagueInfo(leagueId),
+        sleeperApi.getLeagueMatchups(leagueId, week).catch(() => []),
+        sleeperApi.getTransactions(leagueId, week).catch(() => []),
+        fetch('/api/rankings').then(res => res.ok ? res.json() : []).catch(() => [])
       ]) as [any[], any[], Record<string, any>, any, any[], any[], any[]]
 
       if (!rosters || !users || !allPlayers || !league) {
         throw new Error('Invalid data received from API')
       }
-
-      console.log('Debug: League Info:', {
-        leagueId: league.league_id,
-        name: league.name,
-        season: league.season,
-        status: league.status,
-        totalRosters: league.total_rosters,
-        rosterPosCount: league.roster_positions
-      })
-
-      // Add debugging to identify null user objects
-      console.log('Debug: Rosters count:', rosters?.length)
-      console.log('Debug: Users count:', users?.length)
-      console.log('Debug: Sample roster:', rosters?.[0])
-      console.log('Debug: Sample user:', users?.[0])
       
       // Filter out any null or invalid users/rosters
       const validUsers = users.filter((u: any) => u && u.user_id)
       const validRosters = rosters.filter((r: any) => r && r.roster_id)
-      
-      console.log('Debug: Valid users count:', validUsers.length)
-      console.log('Debug: Valid rosters count:', validRosters.length)
-
-      setAllPlayers(allPlayers)
 
       // Process rankings data
+      let rankingsMap: Record<string, any> = {}
       if (rankingsResponse && rankingsResponse.length > 0) {
-        const rankingsMap = rankingsResponse.reduce((acc: any, player: any) => {
-          const playerName = player['PLAYER NAME'];
+        rankingsMap = rankingsResponse.reduce((acc: any, player: any) => {
+          const playerName = player['PLAYER NAME']
           if (playerName) {
-            // Determine tier based on rank
-            let tier = 4; // Default tier
-            if (player.RK <= 12) tier = 1;
-            else if (player.RK <= 24) tier = 2;
-            else if (player.RK <= 48) tier = 3;
-            
             acc[playerName] = {
               rank: player.RK,
               position: player.POS,
               team: player.TEAM,
               name: playerName,
-              tier: tier,
-            };
+              tier: player.RK <= 12 ? 1 : player.RK <= 36 ? 2 : player.RK <= 72 ? 3 : player.RK <= 120 ? 4 : 5
+            }
           }
-          return acc;
-        }, {});
-        setPlayerRankings(rankingsMap);
-        console.log('Debug: Loaded', Object.keys(rankingsMap).length, 'player rankings');
+          return acc
+        }, {})
       }
+
+      setAllPlayers(allPlayers)
 
       // Process transactions with validation
       const processedTransactions: Transaction[] = (transactionsResponse || []).map((tx: any) => ({
@@ -484,11 +473,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
       setTransactions(processedTransactions)
 
-      // Process trending players with validation
-      const trendingResponse = await fetch('https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=10').catch(() => null)
-      const trending = trendingResponse ? await safeJsonParse(trendingResponse) : []
+      // Process trending players with Next.js caching
+      const trending = await sleeperApi.getTrendingPlayers().catch(() => [])
       
-      const trendingPlayers: TrendingPlayer[] = (trending || []).map((item: any) => {
+      const trendingPlayers: TrendingPlayer[] = Array.isArray(trending) ? trending.map((item: any) => {
         const player = allPlayers[item.player_id]
         return {
           playerId: item.player_id || '',
@@ -500,92 +488,42 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           netChange: item.count || 0,
           espn_id: player?.espn_id
         }
-      }).filter((player: TrendingPlayer) => player.playerName !== 'Unknown Player')
+      }).filter((player: TrendingPlayer) => player.playerName !== 'Unknown Player') : []
 
       // Process matchups with deduplication
       const matchupData: MatchupData[] = []
       const matchupMap = new Map()
       
-      console.log('Debug: Matchups data:', matchups)
-      console.log('Debug: Current week:', week)
-      
       if (matchups && matchups.length > 0) {
         matchups.forEach((matchup: any) => {
-          console.log('Debug: Processing matchup:', matchup)
-          if (!matchupMap.has(matchup.matchup_id)) {
-            matchupMap.set(matchup.matchup_id, [])
-          }
-          matchupMap.get(matchup.matchup_id).push(matchup)
-        })
-
-        matchupMap.forEach((matchupPair: any[], matchupId: number) => {
-          if (matchupPair.length === 2) {
-            const [team1, team2] = matchupPair
-            
-            // Add null checks for roster data
-            if (!team1 || !team2) return
-            
-            const team1Roster = validRosters.find((r: any) => r?.roster_id === team1.roster_id)
-            const team2Roster = validRosters.find((r: any) => r?.roster_id === team2.roster_id)
-            
-            // Add null checks for owner data
-            const team1Owner = team1Roster?.owner_id ? validUsers.find((u: any) => u?.user_id === team1Roster.owner_id) : null
-            const team2Owner = team2Roster?.owner_id ? validUsers.find((u: any) => u?.user_id === team2Roster.owner_id) : null
-            
-            const team1Name = team1Owner?.metadata?.team_name || team1Owner?.display_name || team1Owner?.first_name || `Team ${team1.roster_id}`
-            const team2Name = team2Owner?.metadata?.team_name || team2Owner?.display_name || team2Owner?.first_name || `Team ${team2.roster_id}`
-            
-            console.log('Debug: Team1 points:', team1.points, 'Team2 points:', team2.points)
-            
+          const key = `${matchup.roster_id}-${matchup.opponent}`
+          if (!matchupMap.has(key)) {
+            matchupMap.set(key, true)
             matchupData.push({
-              rosterId: team1.roster_id,
-              teamName: team1Name,
-              projectedPoints: team1.points || 0,
-              actualPoints: team1.points || 0,
-              opponentRosterId: team2.roster_id,
-              opponentTeamName: team2Name,
-              opponentProjectedPoints: team2.points || 0,
-              opponentActualPoints: team2.points || 0,
-              isHome: true
+              rosterId: matchup.roster_id,
+              teamName: '', // Will be filled later
+              projectedPoints: matchup.points || 0,
+              actualPoints: matchup.points || 0,
+              opponentRosterId: matchup.opponent,
+              opponentTeamName: '', // Will be filled later
+              opponentProjectedPoints: matchup.opponent_points || 0,
+              opponentActualPoints: matchup.opponent_points || 0,
+              isHome: false
             })
           }
         })
-      } else {
-        console.log('Debug: No matchups found for week', week)
       }
 
-      // Remove duplicate matchups
-      const uniqueMatchups = matchupData.filter((matchup, index, self) => 
-        index === self.findIndex(m => 
-          (m.rosterId === matchup.rosterId && m.opponentRosterId === matchup.opponentRosterId) ||
-          (m.rosterId === matchup.opponentRosterId && m.opponentRosterId === matchup.rosterId)
-        )
-      )
+      // Calculate league overview stats
+      const totalPoints = validRosters.reduce((sum: number, roster: any) => sum + (roster.settings?.fpts || 0), 0)
+      const avgPoints = totalPoints / validRosters.length
+      const highestScoring = validRosters.reduce((highest: any, roster: any) => 
+        (roster.settings?.fpts || 0) > (highest?.settings?.fpts || 0) ? roster : highest, null)
+      const lowestScoring = validRosters.reduce((lowest: any, roster: any) => 
+        (roster.settings?.fpts || 0) < (lowest?.settings?.fpts || 0) ? roster : lowest, validRosters[0])
 
-      setCurrentMatchups(uniqueMatchups)
-
-      // Calculate league overview with validation
-      const totalPoints = rosters.reduce((sum: number, roster: any) => sum + (roster.settings?.fpts || 0), 0)
-      const avgPoints = totalPoints / Math.max(rosters.length, 1)
-      
-      const scoringRosters = rosters.filter((roster: any) => (roster.settings?.fpts || 0) > 0)
-      let highestScoring = rosters[0]
-      let lowestScoring = rosters[0]
-      
-      if (scoringRosters.length > 0) {
-        highestScoring = scoringRosters.reduce((max: any, roster: any) => 
-          (roster.settings?.fpts || 0) > (max.settings?.fpts || 0) ? roster : max
-        )
-        lowestScoring = scoringRosters.reduce((min: any, roster: any) => 
-          (roster.settings?.fpts || 0) < (min.settings?.fpts || 0) ? roster : min
-        )
-      } else if (rosters.length > 1) {
-        highestScoring = rosters[0]
-        lowestScoring = rosters[rosters.length - 1]
-      }
-
-      const highestOwner = highestScoring?.owner_id ? validUsers.find((u: any) => u?.user_id === highestScoring.owner_id) : null
-      const lowestOwner = lowestScoring?.owner_id ? validUsers.find((u: any) => u?.user_id === lowestScoring.owner_id) : null
+      const highestOwner = highestScoring ? validUsers.find((u: any) => u.user_id === highestScoring.owner_id) : null
+      const lowestOwner = lowestScoring ? validUsers.find((u: any) => u.user_id === lowestScoring.owner_id) : null
 
       setLeagueOverview({
         totalTeams: rosters.length,
@@ -601,21 +539,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       const teamsData: (TeamData | null)[] = rosters.map((roster: any) => {
         // Add null checks for roster data
         if (!roster || !roster.roster_id) {
-          console.log('Debug: Skipping invalid roster:', roster)
           return null
         }
         
         const owner = roster.owner_id ? validUsers.find((u: any) => u?.user_id === roster.owner_id) : null
         const teamName = owner?.metadata?.team_name || owner?.display_name || owner?.first_name || `Team ${roster.roster_id}`
         
-        console.log('Debug: Processing roster', roster.roster_id, 'for team', teamName)
-        console.log('Debug: Roster players array:', roster.players)
-        console.log('Debug: Roster players count:', roster.players?.length || 0)
-        
         const players = (roster.players || []).map((playerId: string) => {
           const player = allPlayers[playerId]
           if (!player) {
-            console.log('Debug: Player not found in allPlayers for ID:', playerId)
             return null
           }
           
@@ -637,13 +569,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           }
         }).filter(Boolean) as PlayerData[]
 
-        console.log('Debug: Team', teamName, 'has', players.length, 'players')
-        if (players.length > 0) {
-          console.log('Debug: Sample player positions:', players.slice(0, 3).map(p => ({ name: p.playerName, position: p.position })))
-        } else {
-          console.log('Debug: No players found for team', teamName, '- this might be a pre-season league or draft not completed')
-        }
-
         const rawScore = calculateRawScore(players)
         const trends = calculateTeamTrends(players)
         const positionStrengths = calculatePositionStrengths(players)
@@ -662,7 +587,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           pointsFor: roster.settings?.fpts || 0,
           pointsAgainst: roster.settings?.fpts_against || 0,
           rank: roster.rank || 0,
-          grade: '', // Will be set after percentile calculation
+          grade: '', 
           gradeScore: rawScore,
           players,
           trends,
@@ -674,13 +599,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         }
       })
 
-      // Filter out null values and set teams
       const validTeamsData = teamsData.filter(Boolean) as TeamData[]
       
-      console.log('Debug: Valid teams data count:', validTeamsData.length)
-      console.log('Debug: Teams with players:', validTeamsData.filter(t => t.players.length > 0).length)
-      
-      // Calculate grades based on percentile ranking
       const allScores = validTeamsData.map(team => team.gradeScore)
       validTeamsData.forEach(team => {
         const gradeResult = calculateGradeFromPercentile(team.gradeScore, allScores)
@@ -709,44 +629,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       setSelectedTeam(selectedTeam)
     }
   }, [mobileTeamIndex, teams])
-
-  // Memoized event handlers
-  const handleTeamSelect = useCallback((team: TeamData) => {
-    setSelectedTeam(team)
-  }, [])
-
-  const handleTransactionsToggle = useCallback(() => {
-    setShowTransactionsSidebar(prev => !prev)
-  }, [])
-
-
-
-  const handleMobileTeamNavigation = useCallback((direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      setMobileTeamIndex(prev => prev > 0 ? prev - 1 : teams.length - 1)
-    } else {
-      setMobileTeamIndex(prev => prev < teams.length - 1 ? prev + 1 : 0)
-    }
-  }, [teams.length])
-
-  const handleMobileTeamSelect = useCallback((team: TeamData) => {
-    setSelectedTeam(team)
-    // Auto-scroll to the selected team card
-    const teamIndex = teams.findIndex(t => t.rosterId === team.rosterId)
-    setMobileTeamIndex(teamIndex)
-  }, [teams])
-
-  const handleMobileTrendingNavigation = useCallback((direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      setMobileTrendingIndex(prev => prev > 0 ? prev - 1 : (leagueOverview?.trendingPlayers.length || 6) - 1)
-    } else {
-      setMobileTrendingIndex(prev => prev < (leagueOverview?.trendingPlayers.length || 6) - 1 ? prev + 1 : 0)
-    }
-  }, [leagueOverview?.trendingPlayers.length])
-
-  const handleTradeMarketClick = useCallback(() => {
-    router.push(`/trade-market?leagueId=${leagueId}`)
-  }, [router, leagueId])
 
   if (loading) {
     return (
@@ -824,16 +706,34 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         <CardContent>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-slate-100">Week {currentWeek} Transactions</h3>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <button 
-                className="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 font-mono text-sm focus:outline-none"
+                className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
                 onClick={handleTradeMarketClick}
               >
-                <span>Trade Market</span>
+                <span className="font-semibold">Trade Market</span>
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
+              <button 
+                className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+                onClick={handleDraftBuddyClick}
+              >
+                <span className="font-semibold">Draft Buddy</span>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              {/* <button 
+                className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+                onClick={handleScoutingPortalClick}
+              >
+                <span className="font-semibold">Scouting Portal</span>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button> */}
             </div>
           </div>
           
@@ -865,7 +765,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                 return (
                   <div 
                     key={tx.transactionId} 
-                    className="bg-slate-700 border-slate-600 p-3 rounded-lg min-w-[260px] max-w-xs flex-shrink-0 hover:scale-105 transition-transform duration-200"
+                    className="bg-slate-700 border-slate-600 p-3 rounded-lg min-w-[260px] max-w-xs flex-shrink-0"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="outline" className={`text-xs px-2 py-1 ${
@@ -883,7 +783,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     </div>
 
                     {tx.type === 'trade' && (
-                      <div className="space-y-1">
+                      <div className=" text-slate-300  space-y-1">
                         {addedPlayers.length > 0 && (
                           <div className="text-xs">
                             <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
@@ -896,7 +796,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                         )}
                         {tx.draftPicks.length > 0 && (
                           <div className="text-xs">
-                            <span className="text-blue-400">Draft Picks:</span> {tx.draftPicks.length} picks traded
+                            <span className="text-blue-400 italic">Draft Picks:</span> {tx.draftPicks.length} picks traded
                           </div>
                         )}
                       </div>
@@ -1130,14 +1030,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                         <Card className="w-full bg-slate-700 border-slate-600 ring-2 ring-green-400">
                           <CardContent className="p-4">
                             <div className="flex items-center space-x-3">
-                              <PlayerHeadshot
-                                playerId={leagueOverview.trendingPlayers[mobileTrendingIndex].espn_id || leagueOverview.trendingPlayers[mobileTrendingIndex].playerId}
-                                playerName={leagueOverview.trendingPlayers[mobileTrendingIndex].playerName}
-                                teamLogo={leagueOverview.trendingPlayers[mobileTrendingIndex].team}
-                                size={48}
-                                className="flex-shrink-0"
-                                player={leagueOverview.trendingPlayers[mobileTrendingIndex]}
-                              />
+                              <TeamLogo team={leagueOverview.trendingPlayers[mobileTrendingIndex].team} size={48} className="flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-slate-100 truncate text-lg">{leagueOverview.trendingPlayers[mobileTrendingIndex].playerName}</div>
                                 <div className="text-sm text-gray-400">{leagueOverview.trendingPlayers[mobileTrendingIndex].position} • {leagueOverview.trendingPlayers[mobileTrendingIndex].team}</div>
@@ -1156,14 +1049,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       <Card key={index} className="bg-slate-700 border-slate-600">
                         <CardContent className="p-3">
                           <div className="flex items-center space-x-3">
-                            <PlayerHeadshot
-                              playerId={player.espn_id || player.playerId}
-                              playerName={player.playerName}
-                              teamLogo={player.team}
-                              size={32}
-                              className="flex-shrink-0"
-                              player={player}
-                            />
+                            <TeamLogo team={player.team} size={32} className="flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="font-semibold text-slate-100 truncate">{player.playerName}</div>
                               <div className="text-xs text-gray-400">{player.position} • {player.team}</div>
@@ -1370,14 +1256,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                           <p className="text-xs text-slate-400 mb-2 font-medium">Top Players:</p>
                           <div className="flex space-x-2">
                             {selectedTeam.players.slice(0, 3).map((player, idx) => (
-                              <PlayerHeadshot
+                              <TeamLogo
                                 key={idx}
-                                playerId={player.espn_id || player.playerId}
-                                playerName={player.playerName}
-                                teamLogo={player.team}
+                                team={player.team}
                                 size={24}
                                 className="flex-shrink-0"
-                                player={player}
                               />
                             ))}
                           </div>
@@ -1391,147 +1274,190 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
               </div>
             </div>
 
-            {/* Desktop Team Grid */}
-            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-3 gap-4">
-              {sortedTeams.map((team, index) => (
-                <motion.div
-                  key={team.rosterId}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card 
-                    className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
-                      selectedTeam?.rosterId === team.rosterId ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
-                    }`}
-                    onClick={() => handleTeamSelect(team)}
+            {/* Desktop Team Grid - 1x4 Layout with Navigation */}
+            <div className="hidden md:block">
+              {/* Navigation Controls */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTeamDisplayNavigation('prev')}
+                    className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-yellow-400"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-2xl font-bold text-yellow-400">#{index + 1}</div>
-                        <UserAvatar
-                          avatarId={team.ownerAvatar}
-                          displayName={team.ownerName}
-                          username={team.ownerUsername}
-                          size={40}
-                          className="flex-shrink-0"
-                        />
-                        <div>
-                          <h3 className="font-semibold text-slate-100">{team.teamName}</h3>
-                          <p className="text-sm text-gray-400">{team.ownerName}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={GRADE_COLORS[team.grade as keyof typeof GRADE_COLORS] + " text-sm px-2 py-1 border"}>
-                        {team.grade}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm text-slate-200">
-                      <div className="flex justify-between">
-                        <span>Grade Score:</span>
-                        <span className="text-slate-100">{team.gradeScore}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Players:</span>
-                        <span className="text-slate-100">{team.players.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Record:</span>
-                        <span className="text-slate-100">{team.wins}-{team.losses}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Points For:</span>
-                        <span className="text-slate-100">{Math.round(team.pointsFor)}</span>
-                      </div>
-                      {team.currentWeekProjection !== undefined && (
-                        <div className="flex justify-between">
-                          <span>Week {currentWeek} Proj:</span>
-                          <span className="text-slate-100">{team.currentWeekProjection.toFixed(1)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span>Waiver Pos:</span>
-                        <span className="text-slate-100">#{team.waiverPosition}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Moves:</span>
-                        <span className="text-slate-100">{team.totalMoves}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Recent Form:</span>
-                        <div className="flex items-center space-x-1">
-                          {team.recentForm === 'Hot' && <ArrowUp className="h-3 w-3 text-green-400" />}
-                          {team.recentForm === 'Cold' && <ArrowDown className="h-3 w-3 text-red-400" />}
-                          {team.recentForm === 'Neutral' && <Minus className="h-3 w-3 text-yellow-400" />}
-                          <span className={`text-xs ${
-                            team.recentForm === 'Hot' ? 'text-green-400' :
-                            team.recentForm === 'Cold' ? 'text-red-400' :
-                            team.recentForm === 'Neutral' ? 'text-yellow-400' : 'text-gray-400'
-                          }`}>
-                            {team.recentForm}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-slate-300 font-medium">
+                    Teams {teamDisplayIndex * 4 + 1}-{Math.min((teamDisplayIndex + 1) * 4, sortedTeams.length)} of {sortedTeams.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTeamDisplayNavigation('next')}
+                    className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-yellow-400"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Page Indicators */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.ceil(sortedTeams.length / 4) }, (_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setTeamDisplayIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        teamDisplayIndex === index 
+                          ? 'bg-yellow-400' 
+                          : 'bg-slate-600 hover:bg-slate-500'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
 
-                    {/* Position Strengths */}
-                    <div className="mt-3 pt-3 border-t border-slate-600">
-                      <p className="text-xs text-slate-400 mb-2">Position Strengths:</p>
-                      <div className="grid grid-cols-3 gap-1 text-xs">
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <span className="text-slate-300">QB:</span>
-                          <span className="text-slate-100">{team.positionStrengths.QB}</span>
+              {/* 1x4 Team Cards Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+                {sortedTeams.slice(teamDisplayIndex * 4, (teamDisplayIndex + 1) * 4).map((team, index) => {
+                  const actualIndex = teamDisplayIndex * 4 + index
+                  return (
+                    <motion.div
+                      key={team.rosterId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1, duration: 0.3 }}
+                    >
+                      <Card 
+                        className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
+                          selectedTeam?.rosterId === team.rosterId ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
+                        }`}
+                        onClick={() => handleTeamSelect(team)}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="text-2xl font-bold text-yellow-400">#{actualIndex + 1}</div>
+                            <UserAvatar
+                              avatarId={team.ownerAvatar}
+                              displayName={team.ownerName}
+                              username={team.ownerUsername}
+                              size={40}
+                              className="flex-shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-slate-100 truncate">{team.teamName}</h3>
+                              <p className="text-sm text-gray-400 truncate">{team.ownerName}</p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className={GRADE_COLORS[team.grade as keyof typeof GRADE_COLORS] + " text-sm px-2 py-1 border"}>
+                            {team.grade}
+                          </Badge>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-slate-300">RB:</span>
-                          <span className="text-slate-100">{team.positionStrengths.RB}</span>
+                        
+                        <div className="space-y-2 text-sm text-slate-200">
+                          <div className="flex justify-between">
+                            <span>Grade Score:</span>
+                            <span className="text-slate-100">{team.gradeScore}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Players:</span>
+                            <span className="text-slate-100">{team.players.length}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Record:</span>
+                            <span className="text-slate-100">{team.wins}-{team.losses}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Points For:</span>
+                            <span className="text-slate-100">{Math.round(team.pointsFor)}</span>
+                          </div>
+                          {team.currentWeekProjection !== undefined && (
+                            <div className="flex justify-between">
+                              <span>Week {currentWeek} Proj:</span>
+                              <span className="text-slate-100">{team.currentWeekProjection.toFixed(1)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>Waiver Pos:</span>
+                            <span className="text-slate-100">#{team.waiverPosition}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Total Moves:</span>
+                            <span className="text-slate-100">{team.totalMoves}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span>Recent Form:</span>
+                            <div className="flex items-center space-x-1">
+                              {team.recentForm === 'Hot' && <ArrowUp className="h-3 w-3 text-green-400" />}
+                              {team.recentForm === 'Cold' && <ArrowDown className="h-3 w-3 text-red-400" />}
+                              {team.recentForm === 'Neutral' && <Minus className="h-3 w-3 text-yellow-400" />}
+                              <span className={`text-xs ${
+                                team.recentForm === 'Hot' ? 'text-green-400' :
+                                team.recentForm === 'Cold' ? 'text-red-400' :
+                                team.recentForm === 'Neutral' ? 'text-yellow-400' : 'text-gray-400'
+                              }`}>
+                                {team.recentForm}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                          <span className="text-slate-300">WR:</span>
-                          <span className="text-slate-100">{team.positionStrengths.WR}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          <span className="text-slate-300">TE:</span>
-                          <span className="text-slate-100">{team.positionStrengths.TE}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                          <span className="text-slate-300">FLEX:</span>
-                          <span className="text-slate-100">{team.positionStrengths.FLEX}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                          <span className="text-slate-300">SFLX:</span>
-                          <span className="text-slate-100">{team.positionStrengths.SFLX}</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="mt-3 pt-3 border-t border-slate-600">
-                      <p className="text-xs text-slate-400 mb-1">Top Players:</p>
-                      <div className="flex space-x-1">
-                        {team.players.slice(0, 3).map((player, idx) => (
-                          <PlayerHeadshot
-                            key={idx}
-                            playerId={player.espn_id || player.playerId}
-                            playerName={player.playerName}
-                            teamLogo={player.team}
-                            size={24}
-                            className="flex-shrink-0"
-                            player={player}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
+                        {/* Position Strengths */}
+                        <div className="mt-3 pt-3 border-t border-slate-600">
+                          <p className="text-xs text-slate-400 mb-2">Position Strengths:</p>
+                          <div className="grid grid-cols-3 gap-1 text-xs">
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-slate-300">QB:</span>
+                              <span className="text-slate-100">{team.positionStrengths.QB}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-slate-300">RB:</span>
+                              <span className="text-slate-100">{team.positionStrengths.RB}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                              <span className="text-slate-300">WR:</span>
+                              <span className="text-slate-100">{team.positionStrengths.WR}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-slate-300">TE:</span>
+                              <span className="text-slate-100">{team.positionStrengths.TE}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                              <span className="text-slate-300">FLEX:</span>
+                              <span className="text-slate-100">{team.positionStrengths.FLEX}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                              <span className="text-slate-300">SFLX:</span>
+                              <span className="text-slate-100">{team.positionStrengths.SFLX}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-slate-600">
+                          <p className="text-xs text-slate-400 mb-1">Top Players:</p>
+                          <div className="flex space-x-1">
+                            {team.players.slice(0, 3).map((player, idx) => (
+                              <TeamLogo
+                                key={idx}
+                                team={player.team}
+                                size={24}
+                                className="flex-shrink-0"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  )
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -1639,13 +1565,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     {selectedTeam.players.map((player, index) => (
                       <Card key={index} className="p-3 bg-slate-700 border-slate-600">
                         <div className="flex items-center space-x-3">
-                          <PlayerHeadshot
-                            playerId={player.espn_id || player.playerId}
-                            playerName={player.playerName}
-                            teamLogo={player.team}
+                          <TeamLogo
+                            team={player.team}
                             size={40}
                             className="flex-shrink-0"
-                            player={player}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2 mb-1">
@@ -1684,12 +1607,9 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center space-x-3">
-                          <PlayerHeadshot
-                            playerId={selectedTeam.trends.bestPlayer.espn_id || selectedTeam.trends.bestPlayer.playerId}
-                            playerName={selectedTeam.trends.bestPlayer.playerName}
-                            teamLogo={selectedTeam.trends.bestPlayer.team}
+                          <TeamLogo
+                            team={selectedTeam.trends.bestPlayer.team}
                             size={48}
-                            player={selectedTeam.trends.bestPlayer}
                           />
                           <div>
                             <h4 className="font-semibold text-slate-100">{selectedTeam.trends.bestPlayer.playerName}</h4>
@@ -1705,12 +1625,9 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center space-x-3">
-                          <PlayerHeadshot
-                            playerId={selectedTeam.trends.breakoutCandidate.espn_id || selectedTeam.trends.breakoutCandidate.playerId}
-                            playerName={selectedTeam.trends.breakoutCandidate.playerName}
-                            teamLogo={selectedTeam.trends.breakoutCandidate.team}
+                          <TeamLogo
+                            team={selectedTeam.trends.breakoutCandidate.team}
                             size={48}
-                            player={selectedTeam.trends.breakoutCandidate}
                           />
                           <div>
                             <h4 className="font-semibold text-slate-100">{selectedTeam.trends.breakoutCandidate.playerName}</h4>
@@ -1726,12 +1643,9 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center space-x-3">
-                          <PlayerHeadshot
-                            playerId={selectedTeam.trends.sleeperPick.espn_id || selectedTeam.trends.sleeperPick.playerId}
-                            playerName={selectedTeam.trends.sleeperPick.playerName}
-                            teamLogo={selectedTeam.trends.sleeperPick.team}
+                          <TeamLogo
+                            team={selectedTeam.trends.sleeperPick.team}
                             size={48}
-                            player={selectedTeam.trends.sleeperPick}
                           />
                           <div>
                             <h4 className="font-semibold text-slate-100">{selectedTeam.trends.sleeperPick.playerName}</h4>
@@ -1946,19 +1860,59 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-green-400">8-6</div>
+                          <div className="text-2xl font-bold text-green-400">
+                            {(() => {
+                              const totalGames = selectedTeam.wins + selectedTeam.losses
+                              const currentWinRate = totalGames > 0 ? selectedTeam.wins / totalGames : 0.5
+                              const adjustedWinRate = Math.min(0.85, Math.max(0.15, currentWinRate + (selectedTeam.gradeScore - 50) / 200))
+                              const projectedWins = Math.round(adjustedWinRate * 14)
+                              const projectedLosses = 14 - projectedWins
+                              return `${projectedWins}-${projectedLosses}`
+                            })()}
+                          </div>
                           <div className="text-sm text-gray-400">Projected Record</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">4th</div>
+                          <div className="text-2xl font-bold text-blue-400">
+                            {(() => {
+                              const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
+                              const gradeAdjustment = selectedTeam.gradeScore > 70 ? -1 : selectedTeam.gradeScore < 30 ? 1 : 0
+                              const projectedRank = Math.max(1, Math.min(teams.length, teamRank + gradeAdjustment))
+                              return `${projectedRank}${projectedRank === 1 ? 'st' : projectedRank === 2 ? 'nd' : projectedRank === 3 ? 'rd' : 'th'}`
+                            })()}
+                          </div>
                           <div className="text-sm text-gray-400">Projected Finish</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-yellow-400">125.3</div>
+                          <div className="text-2xl font-bold text-yellow-400">
+                            {(() => {
+                              const totalGames = selectedTeam.wins + selectedTeam.losses
+                              const currentAvg = totalGames > 0 ? selectedTeam.pointsFor / totalGames : 120
+                              const gradeMultiplier = 0.8 + (selectedTeam.gradeScore / 100) * 0.4
+                              const projectedAvg = currentAvg * gradeMultiplier
+                              return projectedAvg.toFixed(1)
+                            })()}
+                          </div>
                           <div className="text-sm text-gray-400">Avg PPG</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-400">65%</div>
+                          <div className="text-2xl font-bold text-purple-400">
+                            {(() => {
+                              const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
+                              const totalTeams = teams.length
+                              const playoffSpots = Math.max(4, Math.ceil(totalTeams / 2))
+                              
+                              let baseChance = 0
+                              if (teamRank <= playoffSpots / 2) baseChance = 85
+                              else if (teamRank <= playoffSpots) baseChance = 65
+                              else if (teamRank <= playoffSpots + 2) baseChance = 35
+                              else baseChance = 15
+                              
+                              const gradeBonus = (selectedTeam.gradeScore - 50) * 0.5
+                              const finalChance = Math.max(5, Math.min(95, baseChance + gradeBonus))
+                              return `${Math.round(finalChance)}%`
+                            })()}
+                          </div>
                           <div className="text-sm text-gray-400">Playoff Chance</div>
                         </div>
                       </div>

@@ -4,9 +4,9 @@ import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlayerHeadshot } from "@/components/player-headshot"
+
 import { UserAvatar } from "@/components/user-avatar"
-import { TrendingUp, TrendingDown, Trophy, Users, Target, Calendar, Award, ArrowUp, ArrowDown, Minus } from "lucide-react"
+import { TrendingUp, TrendingDown, Trophy, Users, Target, Calendar, Award, ArrowUp, ArrowDown, Minus, AlertCircle } from "lucide-react"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import {
   processPlayerForTrade,
@@ -20,6 +20,12 @@ interface TradeMarketProps {
   teams: any[]
   allPlayers: Record<string, any>
   transactions: any[]
+  userId?: string
+  dynastyRankings?: Record<string, any>
+  lastUpdated?: string
+  dataVersion?: string
+  weeksAnalyzed?: number[]
+  totalTransactionsAnalyzed?: number
 }
 
 interface PlayerValue {
@@ -77,15 +83,37 @@ interface TraderStats {
   grade: string
 }
 
-const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, transactions }) => {
-  const [dynastyRankings, setDynastyRankings] = useState<Record<string, any>>({})
-  const [loading, setLoading] = useState(true)
+const TradeMarket: React.FC<TradeMarketProps> = ({ 
+  leagueId, 
+  teams, 
+  allPlayers, 
+  transactions, 
+  userId,
+  dynastyRankings: initialDynastyRankings,
+  lastUpdated,
+  dataVersion,
+  weeksAnalyzed,
+  totalTransactionsAnalyzed
+}) => {
+  const [dynastyRankings, setDynastyRankings] = useState<Record<string, any>>(initialDynastyRankings || {})
+  const [loading, setLoading] = useState(!initialDynastyRankings)
+  const [error, setError] = useState<string | null>(null)
 
-  // Fetch dynasty rankings
+  // Fetch dynasty rankings if not provided
   useEffect(() => {
+    if (initialDynastyRankings) {
+      setDynastyRankings(initialDynastyRankings)
+      setLoading(false)
+      return
+    }
+
     const fetchRankings = async () => {
       try {
-        const response = await fetch('/api/rankings')
+        setError(null)
+        const response = await fetch('/api/rankings', { 
+          cache: 'force-cache',
+          next: { revalidate: 3600 } // 1 hour
+        })
         if (response.ok) {
           const data = await response.json()
           const rankingsMap = data.reduce((acc: any, player: any) => {
@@ -102,15 +130,18 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
             return acc
           }, {})
           setDynastyRankings(rankingsMap)
+        } else {
+          throw new Error('Failed to fetch rankings')
         }
       } catch (error) {
         console.error('Failed to fetch dynasty rankings:', error)
+        setError('Failed to load dynasty rankings data')
       } finally {
         setLoading(false)
       }
     }
     fetchRankings()
-  }, [])
+  }, [initialDynastyRankings])
 
   // Process trades and calculate values using shared utils
   const tradeAnalysis = useMemo(() => {
@@ -261,8 +292,42 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="flex items-center justify-center space-x-2 text-red-400 mb-4">
+          <AlertCircle className="h-5 w-5" />
+          <span>Error loading trade data</span>
+        </div>
+        <div className="text-sm text-slate-400">{error}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
+      {/* Data Status Bar */}
+      {(lastUpdated || dataVersion || weeksAnalyzed) && (
+        <Card className="bg-slate-800 border-slate-600">
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center justify-between text-xs text-slate-400">
+              {lastUpdated && (
+                <span>Last updated: {new Date(lastUpdated).toLocaleString()}</span>
+              )}
+              {dataVersion && (
+                <span>Data version: {dataVersion}</span>
+              )}
+              {weeksAnalyzed && weeksAnalyzed.length > 0 && (
+                <span>Weeks analyzed: {weeksAnalyzed.join(', ')}</span>
+              )}
+              {totalTransactionsAnalyzed && (
+                <span>Total transactions: {totalTransactionsAnalyzed}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-slate-700 border-slate-600">
@@ -304,6 +369,7 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
           </CardContent>
         </Card>
       </div>
+
       {/* Trade Leaderboard */}
       <Card className="bg-slate-700 border-slate-600">
         <CardHeader>
@@ -346,6 +412,7 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
           </div>
         </CardContent>
       </Card>
+
       {/* Total Value Gained Pie Chart */}
       <Card className="bg-slate-700 border-slate-600">
         <CardHeader>
@@ -395,6 +462,7 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
           )}
         </CardContent>
       </Card>
+
       {/* Total Value Exchanged Pie Chart */}
       <Card className="bg-slate-700 border-slate-600">
         <CardHeader>
@@ -441,6 +509,7 @@ const TradeMarket: React.FC<TradeMarketProps> = ({ leagueId, teams, allPlayers, 
           )}
         </CardContent>
       </Card>
+
       {/* Recent Trades */}
       <Card className="bg-slate-700 border-slate-600">
         <CardHeader>

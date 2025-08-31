@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PlayerHeadshot } from "@/components/player-headshot"
+import { TeamLogo } from "@/components/team-logo"
+
 import {
   BarChart,
   Bar,
@@ -619,13 +620,10 @@ export default function AnalysisPage() {
                   {topBreakouts.map((player, index) => (
                     <div key={index} className="flex justify-between items-center p-3 bg-slate-700 rounded">
                       <div className="flex items-center space-x-3">
-                        <PlayerHeadshot
-                          playerId={player.player_id}
-                          playerName={player.player_name}
-                          teamLogo={player.recent_team}
+                        <TeamLogo
+                          team={player.recent_team}
                           size={32}
                           className="flex-shrink-0"
-                          player={player}
                         />
                         <div>
                           <div className="text-white font-medium">{player.player_name}</div>
@@ -672,13 +670,10 @@ export default function AnalysisPage() {
                   {topBusts.map((player, index) => (
                     <div key={index} className="flex justify-between items-center p-3 bg-slate-700 rounded">
                       <div className="flex items-center space-x-3">
-                        <PlayerHeadshot
-                          playerId={player.player_id}
-                          playerName={player.player_name}
-                          teamLogo={player.recent_team}
+                        <TeamLogo
+                          team={player.recent_team}
                           size={32}
                           className="flex-shrink-0"
-                          player={player}
                         />
                         <div>
                           <div className="text-white font-medium">{player.player_name}</div>

@@ -3,12 +3,23 @@ import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
+    // Get the authenticated user from the request
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const token = authHeader.substring(7)
+    
+    // Verify the JWT token and get the user
+    const { data: { user }, error: authError } = await supabaseServer.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Use the authenticated user's ID instead of query parameter
+    const userId = user.id
 
     // Fetch the user profile from the user_profiles table
     const { data: profile, error } = await supabaseServer

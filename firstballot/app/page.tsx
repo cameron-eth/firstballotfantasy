@@ -203,7 +203,7 @@ export default function OverviewPage() {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-white font-mono mb-4">
-                POWERFUL FANTASY TOOLS
+                POWERFUL FANTASY FOOTBALL TOOLS
               </h2>
               <p className="text-xl text-gray-300 max-w-2xl mx-auto">
                 Everything you need to dominate your fantasy football league

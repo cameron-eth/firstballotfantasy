@@ -8,12 +8,21 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import LeagueBuddy from "@/components/LeagueBuddy"
-import { AlertCircle, Loader2, Info, Trophy, Users, BarChart3 } from "lucide-react"
+import { AlertCircle, Loader2, Info, Trophy, Users, BarChart3, Crown } from "lucide-react"
 import { useAuth } from '@/lib/auth'
 import { AuthGuard } from "@/components/auth-guard"
+import { useMembershipCheck } from "@/hooks/use-membership"
+import { LeagueCard } from "@/components/league-access-control"
+import { UpgradePrompt } from "@/components/upgrade-prompt"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { cacheUtils } from "@/lib/cache-utils"
+import { supabase } from "@/lib/supabase"
+import { sleeperApi } from '@/lib/nextjs-cache'
 
 export default function LeagueBuddyPage() {
   const { user: authUser } = useAuth()
+  const { canAccessLeague, isMember, loading: membershipLoading } = useMembershipCheck()
+  
   const [username, setUsername] = useState("")
   const [user, setUser] = useState<any>(null)
   const [leagues, setLeagues] = useState<any[]>([])
@@ -25,62 +34,15 @@ export default function LeagueBuddyPage() {
   const [showTransactionsSidebar, setShowTransactionsSidebar] = useState(false)
   const [isCacheValidState, setIsCacheValidState] = useState(false)
 
-  // Cache keys
-  const SLEEPER_USERNAME_CACHE_KEY = 'firstballot_sleeper_username'
-  const SLEEPER_USER_CACHE_KEY = 'firstballot_sleeper_user'
-  const SLEEPER_LEAGUES_CACHE_KEY = 'firstballot_sleeper_leagues'
-  const CACHE_EXPIRY_KEY = 'firstballot_cache_expiry'
-  const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
-
-  // Cache utility functions
-  const getCachedData = (key: string) => {
-    try {
-      const cached = localStorage.getItem(key)
-      if (!cached) return null
-      
-      const data = JSON.parse(cached)
-      return data
-    } catch (error) {
-      console.error('Error reading from cache:', error)
-      return null
-    }
-  }
-
-  const setCachedData = (key: string, data: any) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data))
-    } catch (error) {
-      console.error('Error writing to cache:', error)
-    }
-  }
-
-  const isCacheValid = () => {
-    const expiry = getCachedData(CACHE_EXPIRY_KEY)
-    if (!expiry) return false
-    return Date.now() < expiry
-  }
-
-  const setCacheExpiry = () => {
-    setCachedData(CACHE_EXPIRY_KEY, Date.now() + CACHE_DURATION)
-  }
-
-  const clearCache = () => {
-    try {
-      localStorage.removeItem(SLEEPER_USERNAME_CACHE_KEY)
-      localStorage.removeItem(SLEEPER_USER_CACHE_KEY)
-      localStorage.removeItem(SLEEPER_LEAGUES_CACHE_KEY)
-      localStorage.removeItem(CACHE_EXPIRY_KEY)
-    } catch (error) {
-      console.error('Error clearing cache:', error)
-    }
-  }
+  // Use shared cache utility
+  const { keys } = cacheUtils
 
   const handleTransactionsToggle = useCallback(() => {
     setShowTransactionsSidebar(prev => !prev)
   }, [])
 
   const handleClearCache = () => {
-    clearCache()
+    cacheUtils.clear()
     setUsername("")
     setUser(null)
     setLeagues([])
@@ -92,7 +54,18 @@ export default function LeagueBuddyPage() {
     if (authUser?.id) {
       const loadSettings = async () => {
         try {
-          const response = await fetch(`/api/settings?userId=${authUser.id}`)
+          // Get the current session token
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session?.access_token) {
+            throw new Error('No valid session')
+          }
+
+          const response = await fetch('/api/settings', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          })
           if (response.ok) {
             const data = await response.json()
             if (data.sleeper_username) {
@@ -116,31 +89,31 @@ export default function LeagueBuddyPage() {
 
   // Check cache validity on mount (client-side only)
   useEffect(() => {
-    setIsCacheValidState(isCacheValid())
+    setIsCacheValidState(cacheUtils.isValid())
   }, [])
 
   // On mount, fetch the user settings for Sleeper username
   useEffect(() => {
     if (!authUser?.id) {
-      console.log('No authenticated user found')
+
       return
     }
 
     const loadSettings = async () => {
       try {
         // Check cache first
-        if (isCacheValid()) {
-          const cachedUsername = getCachedData(SLEEPER_USERNAME_CACHE_KEY)
-          const cachedUser = getCachedData(SLEEPER_USER_CACHE_KEY)
-          const cachedLeagues = getCachedData(SLEEPER_LEAGUES_CACHE_KEY)
+        if (cacheUtils.isValid()) {
+          const cachedUsername = cacheUtils.get(keys.SLEEPER_USERNAME)
+          const cachedUser = cacheUtils.get(keys.SLEEPER_USER)
+          const cachedLeagues = cacheUtils.get(keys.SLEEPER_LEAGUES)
           
           if (cachedUsername) {
-            console.log('Using cached Sleeper username:', cachedUsername)
+    
             setUsername(cachedUsername)
             setNoSleeperUsername(false)
             
             if (cachedUser && cachedLeagues) {
-              console.log('Using cached Sleeper data')
+      
               setUser(cachedUser)
               setLeagues(cachedLeagues)
               if (cachedLeagues.length === 1) {
@@ -156,7 +129,18 @@ export default function LeagueBuddyPage() {
         }
 
         // If no cache or cache expired, fetch from API
-        const response = await fetch(`/api/settings?userId=${authUser.id}`)
+        // Get the current session token
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+          throw new Error('No valid session')
+        }
+
+        const response = await fetch('/api/settings', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
         if (response.ok) {
           const data = await response.json()
           if (data.sleeper_username) {
@@ -164,8 +148,8 @@ export default function LeagueBuddyPage() {
             setNoSleeperUsername(false)
             
             // Cache the username
-            setCachedData(SLEEPER_USERNAME_CACHE_KEY, data.sleeper_username)
-            setCacheExpiry()
+            cacheUtils.set(keys.SLEEPER_USERNAME, data.sleeper_username)
+            cacheUtils.setExpiry()
             
             // Auto-connect if username is saved
             await connectToSleeper()
@@ -184,7 +168,7 @@ export default function LeagueBuddyPage() {
     loadSettings()
   }, [authUser?.id])
 
-  const connectToSleeper = async () => {
+  const connectToSleeper = useCallback(async () => {
     if (!username.trim()) {
       setError("Please enter a Sleeper username")
       return
@@ -195,23 +179,19 @@ export default function LeagueBuddyPage() {
       setLeagues([])
       setSelectedLeagueId("")
       
-      // Get user id
-      const userRes = await fetch(`https://api.sleeper.app/v1/user/${username}`)
-      if (!userRes.ok) throw new Error("User not found")
-      const userData = await userRes.json()
+      // Get user id with Next.js caching
+      const userData = await sleeperApi.getUser(username) as any
       setUser(userData)
       
       // Cache the user data
-      setCachedData(SLEEPER_USER_CACHE_KEY, userData)
+      cacheUtils.set(keys.SLEEPER_USER, userData)
       
-      // Get leagues
-      const leaguesRes = await fetch(`https://api.sleeper.app/v1/user/${userData.user_id}/leagues/nfl/2025`)
-      if (!leaguesRes.ok) throw new Error("Could not fetch leagues")
-      const leaguesData = await leaguesRes.json()
+      // Get leagues with Next.js caching
+      const leaguesData = await sleeperApi.getUserLeagues(userData.user_id) as any[]
       setLeagues(leaguesData)
       
       // Cache the leagues data
-      setCachedData(SLEEPER_LEAGUES_CACHE_KEY, leaguesData)
+      cacheUtils.set(keys.SLEEPER_LEAGUES, leaguesData)
       
       if (leaguesData.length === 1) setSelectedLeagueId(leaguesData[0].league_id)
       setLoading(false)
@@ -219,7 +199,7 @@ export default function LeagueBuddyPage() {
       setError(err.message || "Failed to connect to Sleeper")
       setLoading(false)
     }
-  }
+  }, [username, keys.SLEEPER_USER, keys.SLEEPER_LEAGUES])
 
   return (
     <AuthGuard>
@@ -240,40 +220,8 @@ export default function LeagueBuddyPage() {
               </CardHeader>
             </Card>
 
-            {/* Show message if no sleeper username found */}
-            {noSleeperUsername && profileChecked && (
-              <Card className="bg-slate-800 border-slate-700">
-                <CardContent className="text-center py-8">
-                  <div className="space-y-4">
-                    <p className="text-red-400 font-mono">
-                      Sleeper username not found in your profile. Please set it in your user settings.
-                    </p>
-                    <div className="flex gap-4 justify-center">
-                      <Input
-                        placeholder="Enter your Sleeper username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="max-w-xs"
-                      />
-                      <Button 
-                        onClick={connectToSleeper}
-                        disabled={loading || !username.trim()}
-                        className="bg-yellow-400 text-slate-900 hover:bg-yellow-300"
-                      >
-                        {loading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "CONNECT"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Connection Section */}
-            {(!user || leagues.length === 0) && !noSleeperUsername && (
+            {!user && (
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
                   <CardTitle className="text-green-400 font-mono">CONNECT TO SLEEPER</CardTitle>
@@ -316,66 +264,64 @@ export default function LeagueBuddyPage() {
             {leagues.length > 0 && !selectedLeagueId && (
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
                   <CardTitle className="text-green-400 font-mono">SELECT LEAGUE</CardTitle>
                   <p className="text-gray-300 text-sm">
                     Choose a league to view the dashboard
                   </p>
+                    </div>
+                    {!isMember && leagues.length > 1 && (
+                      <div className="flex items-center space-x-2">
+                        <Crown className="h-4 w-4 text-yellow-400" />
+                        <span className="text-xs text-yellow-400 font-mono">FREE: 1 LEAGUE</span>
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {leagues.map((league) => (
-                      <Card 
+                    {leagues.map((league, index) => {
+                      // Always allow first league, restrict others if not member
+                      const canAccess = index === 0 || isMember;
+              
+                      return (
+                        <LeagueCard
                         key={league.league_id} 
-                        className={`p-4 cursor-pointer transition-all hover:border-yellow-400 hover:bg-slate-700 ${
-                          selectedLeagueId === league.league_id ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
-                        }`}
+                          league={league}
+                          leagueIndex={index}
+                          canAccess={canAccess}
+                          isMember={isMember}
+                          isSelected={selectedLeagueId === league.league_id}
                         onClick={() => setSelectedLeagueId(league.league_id)}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-3">
-                            <div className="text-2xl font-bold text-yellow-400">#{league.league_id.slice(-2)}</div>
-                            <div>
-                              <h3 className="font-semibold text-slate-100">{league.name}</h3>
-                              <p className="text-sm text-gray-400">{league.season} • {league.status}</p>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className={`text-xs px-2 py-1 ${
-                            league.status === 'active' ? 'bg-green-400/20 text-green-400 border-green-400' :
-                            league.status === 'pre_draft' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
-                            'bg-gray-400/20 text-gray-400 border-gray-400'
-                          }`}>
-                            {league.status}
-                          </Badge>
+                        />
+                      );
+                    })}
                         </div>
                         
-                        <div className="space-y-2 text-sm text-slate-200">
-                          <div className="flex justify-between">
-                            <span>Teams:</span>
-                            <span className="text-slate-100">{league.total_rosters || 'N/A'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Sport:</span>
-                            <span className="text-slate-100">{league.sport?.toUpperCase() || 'NFL'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Season:</span>
-                            <span className="text-slate-100">{league.season}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Draft ID:</span>
-                            <span className="text-slate-100">{league.draft_id ? 'Available' : 'N/A'}</span>
+                  {/* Upgrade Prompt for Free Users with Multiple Leagues */}
+                  {!isMember && leagues.length > 1 && (
+                    <div className="mt-6 p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
+                      <div className="text-center space-y-3">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Crown className="h-5 w-5 text-yellow-400" />
+                          <h3 className="text-yellow-400 font-mono">UNLOCK ALL LEAGUES</h3>
+                        </div>
+                        <p className="text-gray-300 text-sm">
+                          Upgrade to Pro to access all {leagues.length} of your leagues
+                        </p>
+                        <Button 
+                          onClick={() => {
+                    
+                            window.location.href = 'https://buy.stripe.com/test_dRm3cvdadbi5fdV3oZeAg00'
+                          }}
+                          className="bg-yellow-400 text-slate-900 hover:bg-yellow-300"
+                        >
+                          Upgrade to Pro
+                        </Button>
                           </div>
                         </div>
-
-                        <div className="mt-3 pt-3 border-t border-slate-600">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-400">League ID:</span>
-                            <span className="text-slate-300 font-mono">{league.league_id}</span>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -387,14 +333,16 @@ export default function LeagueBuddyPage() {
 
             {/* Loading State */}
             {loading && (
-              <Card className="bg-slate-800 border-slate-700">
-                <CardContent className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-yellow-400 mx-auto mb-4" />
-                    <p className="text-green-400 font-mono">CONNECTING TO SLEEPER...</p>
+              <div className="text-center py-8">
+                <LoadingSpinner size="lg" text="Loading league data..." />
+              </div>
+            )}
+
+            {/* Membership Loading State */}
+            {membershipLoading && (
+              <div className="text-center py-8">
+                <LoadingSpinner size="default" text="Checking membership..." />
                   </div>
-                </CardContent>
-              </Card>
             )}
 
           </div>

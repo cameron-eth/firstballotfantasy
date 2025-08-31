@@ -90,4 +90,48 @@ export function getPlayerHeadshotUrl(player: any, espnPlayersData: any[]): strin
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`;
   }
   return undefined;
+}
+
+// Debug ESPN ID resolution
+export function debugEspnIdResolution(player: any, espnPlayersData: any[]): any {
+  const playerName = player.playerName || `${player.first_name} ${player.last_name}`;
+  const activePlayers = espnPlayersData.filter(p => p.active !== false);
+  
+  // Try exact match
+  const exactMatches = activePlayers.filter(p => 
+    p.fullName?.toLowerCase() === playerName.toLowerCase()
+  );
+  
+  // Try partial match
+  const partialMatches = activePlayers.filter(p => {
+    const espnName = p.fullName?.toLowerCase();
+    const searchName = playerName.toLowerCase();
+    return espnName?.includes(searchName) || searchName.includes(espnName);
+  });
+  
+  // Try first/last name match
+  const nameMatches = player.first_name && player.last_name ? 
+    activePlayers.filter(p => 
+      p.firstName?.toLowerCase() === player.first_name.toLowerCase() &&
+      p.lastName?.toLowerCase() === player.last_name.toLowerCase()
+    ) : [];
+  
+  return {
+    player,
+    playerName,
+    exactMatches: exactMatches.slice(0, 5),
+    partialMatches: partialMatches.slice(0, 5),
+    nameMatches: nameMatches.slice(0, 5),
+    totalActivePlayers: activePlayers.length,
+    resolvedEspnId: getEspnId(player, espnPlayersData)
+  };
+}
+
+// Get ESPN ID cache statistics
+export function getEspnIdCacheStats(): any {
+  return {
+    espnDataLoaded: espnPlayersData !== null,
+    espnDataCount: espnPlayersData?.length || 0,
+    cacheStatus: 'In-memory cache'
+  };
 } 

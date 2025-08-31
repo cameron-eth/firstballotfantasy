@@ -80,7 +80,7 @@ export default function ConversionPage() {
       if (successError) throw successError
 
       // Fetch prospect tier breakdown data via API
-      console.log("Fetching prospect tier breakdown data...")
+
       const prospectResponse = await fetch("/api/prospect-tier-breakdown")
       if (!prospectResponse.ok) {
         console.error("Prospect tier API response not ok:", prospectResponse.status, prospectResponse.statusText)
@@ -88,7 +88,7 @@ export default function ConversionPage() {
       }
       
       const prospectResult = await prospectResponse.json()
-      console.log("Prospect tier API response:", prospectResult)
+      
       
       if (prospectResult.error) {
         throw new Error(prospectResult.error)

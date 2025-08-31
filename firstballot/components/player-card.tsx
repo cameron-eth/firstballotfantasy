@@ -2,7 +2,8 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown } from "lucide-react"
-import { PlayerHeadshot } from "./player-headshot"
+import { TeamLogo } from "./team-logo"
+
 
 interface Player {
   name: string
@@ -45,14 +46,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <PlayerHeadshot
-              playerId={player.playerId}
-              playerName={player.name}
-              teamLogo={player.team}
-              size={48}
-              className="flex-shrink-0"
-              player={player}
-            />
+            <TeamLogo team={player.team} size={48} className="flex-shrink-0" />
             <div>
               <h3 className="font-mono font-bold text-white">{player.name}</h3>
               <p className="text-sm text-gray-400">{player.team}</p>

@@ -43,23 +43,23 @@ export function getEspnId(player: any, espnPlayersData: any[]): string | undefin
   
   // Try exact match first
   let matches = activePlayers.filter(p => 
-    p.fullName?.toLowerCase() === playerName.toLowerCase()
+    p.fullName?.toLowerCase() === playerName?.toLowerCase()
   );
 
   // If no exact match, try partial match
   if (matches.length === 0) {
     matches = activePlayers.filter(p => {
       const espnName = p.fullName?.toLowerCase();
-      const searchName = playerName.toLowerCase();
-      return espnName?.includes(searchName) || searchName.includes(espnName);
+      const searchName = playerName?.toLowerCase();
+      return espnName && searchName && (espnName.includes(searchName) || searchName.includes(espnName));
     });
   }
 
   // If still no match, try first and last name separately
   if (matches.length === 0 && player.first_name && player.last_name) {
     matches = activePlayers.filter(p => 
-      p.firstName?.toLowerCase() === player.first_name.toLowerCase() &&
-      p.lastName?.toLowerCase() === player.last_name.toLowerCase()
+      p.firstName?.toLowerCase() === player.first_name?.toLowerCase() &&
+      p.lastName?.toLowerCase() === player.last_name?.toLowerCase()
     );
   }
 
@@ -99,21 +99,21 @@ export function debugEspnIdResolution(player: any, espnPlayersData: any[]): any 
   
   // Try exact match
   const exactMatches = activePlayers.filter(p => 
-    p.fullName?.toLowerCase() === playerName.toLowerCase()
+    p.fullName?.toLowerCase() === playerName?.toLowerCase()
   );
   
   // Try partial match
   const partialMatches = activePlayers.filter(p => {
     const espnName = p.fullName?.toLowerCase();
-    const searchName = playerName.toLowerCase();
-    return espnName?.includes(searchName) || searchName.includes(espnName);
+    const searchName = playerName?.toLowerCase();
+    return espnName && searchName && (espnName.includes(searchName) || searchName.includes(espnName));
   });
   
   // Try first/last name match
   const nameMatches = player.first_name && player.last_name ? 
     activePlayers.filter(p => 
-      p.firstName?.toLowerCase() === player.first_name.toLowerCase() &&
-      p.lastName?.toLowerCase() === player.last_name.toLowerCase()
+      p.firstName?.toLowerCase() === player.first_name?.toLowerCase() &&
+      p.lastName?.toLowerCase() === player.last_name?.toLowerCase()
     ) : [];
   
   return {

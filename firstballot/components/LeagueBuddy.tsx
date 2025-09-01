@@ -361,7 +361,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         teamPositionScores[team.rosterId] = {}
         
         positions.forEach(position => {
-          const positionPlayers = team.players.filter(p => p && p.position === position)
+          const positionPlayers = team.players.filter(p => p && p.position && p.position === position)
           if (positionPlayers.length === 0) {
             teamPositionScores[team.rosterId][position] = 999 // Worst possible score
           } else {
@@ -649,7 +649,9 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             return null
           }
           
-          const playerName = `${player.first_name} ${player.last_name}`
+          const firstName = player.first_name || ''
+          const lastName = player.last_name || ''
+          const playerName = `${firstName} ${lastName}`.trim()
           const ranking = playerRankings[playerName]
           
           return {

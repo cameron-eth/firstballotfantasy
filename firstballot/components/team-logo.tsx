@@ -46,16 +46,29 @@ const teamAbbreviations: { [key: string]: string } = {
 
 export function TeamLogo({ team, size = 32, className = "" }: TeamLogoProps) {
   const [imageError, setImageError] = useState(false)
+  
+  // Add null safety checks
+  if (!team) {
+    return (
+      <div
+        className={`bg-slate-700 rounded-full flex items-center justify-center font-mono font-bold text-gray-300 ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <span className="text-xs">??</span>
+      </div>
+    )
+  }
+  
   const teamAbbr = teamAbbreviations[team] || team
 
-  if (imageError) {
+  if (imageError || !teamAbbr) {
     // Fallback to team initials
     return (
       <div
         className={`bg-slate-700 rounded-full flex items-center justify-center font-mono font-bold text-gray-300 ${className}`}
         style={{ width: size, height: size }}
       >
-        <span className="text-xs">{teamAbbr.slice(0, 2)}</span>
+        <span className="text-xs">{teamAbbr?.slice(0, 2) || '??'}</span>
       </div>
     )
   }
@@ -64,7 +77,7 @@ export function TeamLogo({ team, size = 32, className = "" }: TeamLogoProps) {
     <div className={`relative ${className}`} style={{ width: size, height: size }}>
       <Image
         src={`https://a.espncdn.com/i/teamlogos/nfl/500/${teamAbbr.toLowerCase()}.png`}
-        alt={`${team} logo`}
+        alt={`${team || 'Unknown team'} logo`}
         width={size}
         height={size}
         className="rounded-full object-cover"

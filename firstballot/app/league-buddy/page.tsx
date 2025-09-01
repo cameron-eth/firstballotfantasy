@@ -207,18 +207,7 @@ export default function LeagueBuddyPage() {
         <Header />
         <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
           <div className="space-y-6">
-            {/* Page Header */}
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono flex items-center space-x-2">
-                  <Trophy className="h-6 w-6" />
-                  <span>LEAGUE BUDDY</span>
-                </CardTitle>
-                <p className="text-gray-300 text-sm">
-                  Comprehensive league analysis, team grading, and player insights
-                </p>
-              </CardHeader>
-            </Card>
+           
 
             {/* Connection Section */}
             {!user && (

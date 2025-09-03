@@ -31,15 +31,13 @@ export default function LeagueBuddyPage() {
   const [error, setError] = useState<string | null>(null)
   const [profileChecked, setProfileChecked] = useState(false)
   const [noSleeperUsername, setNoSleeperUsername] = useState(false)
-  const [showTransactionsSidebar, setShowTransactionsSidebar] = useState(false)
+
   const [isCacheValidState, setIsCacheValidState] = useState(false)
 
   // Use shared cache utility
   const { keys } = cacheUtils
 
-  const handleTransactionsToggle = useCallback(() => {
-    setShowTransactionsSidebar(prev => !prev)
-  }, [])
+
 
   const handleClearCache = () => {
     cacheUtils.clear()

@@ -14,7 +14,7 @@ import { Users, Trophy, AlertCircle, Loader2, Info, BarChart3, Crown } from "luc
 import { supabase } from "@/lib/supabase"
 import { useAuth } from '@/lib/auth'
 import { AuthGuard } from "@/components/auth-guard"
-import { motion, AnimatePresence } from "framer-motion"
+
 import { useMembershipCheck } from "@/hooks/use-membership"
 import { LeagueCard } from "@/components/league-access-control"
 import { UpgradePrompt } from "@/components/upgrade-prompt"

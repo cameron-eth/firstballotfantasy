@@ -7,10 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { TeamLogo } from "@/components/team-logo"
 import { UserAvatar } from "@/components/user-avatar"
-import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loader2, AlertCircle, TrendingDown, ArrowUp, ArrowDown, Minus, ArrowLeft, ArrowRight, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loader2, AlertCircle, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { leagueCache } from '@/lib/league-cache'
 import { sleeperApi } from '@/lib/nextjs-cache'
@@ -324,18 +324,14 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedTeam, setSelectedTeam] = useState<TeamData | null>(null)
-  const [viewMode, setViewMode] = useState<'overview' | 'teams' | 'trends' | 'players' | 'transactions'>('overview')
+
   const [leagueOverview, setLeagueOverview] = useState<LeagueOverview | null>(null)
   const [currentMatchups, setCurrentMatchups] = useState<MatchupData[]>([])
   const [currentWeek, setCurrentWeek] = useState<number>(1)
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [showTransactionsSidebar, setShowTransactionsSidebar] = useState(false)
+
   const [allPlayers, setAllPlayers] = useState<Record<string, any>>({})
   const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
-  const [mobileTeamIndex, setMobileTeamIndex] = useState(0)
-  const [mobileTrendingIndex, setMobileTrendingIndex] = useState(0)
-  const [teamDisplayIndex, setTeamDisplayIndex] = useState(0)
-  const [sortBy, setSortBy] = useState<'gradeScore' | 'pointsFor' | 'wins'>("gradeScore")
 
   // Memoized sorted teams to prevent unnecessary re-sorting
   const sortedTeams = useMemo(() => {
@@ -421,19 +417,19 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   
   const getTierColor = useCallback((tier: string) => {
     switch(tier) {
-      case 'Powerhouse': return 'bg-green-600 text-white'
-      case 'Contender': return 'bg-yellow-600 text-white'
-      case 'Pretender': return 'bg-orange-600 text-white'
-      case 'Rebuilder': return 'bg-red-600 text-white'
-      default: return 'bg-gray-600 text-white'
+      case 'Powerhouse': return 'bg-green-900/80 text-green-200 border-green-700/50'
+      case 'Contender': return 'bg-yellow-900/80 text-yellow-200 border-yellow-700/50'
+      case 'Pretender': return 'bg-orange-900/80 text-orange-200 border-orange-700/50'
+      case 'Rebuilder': return 'bg-red-900/80 text-red-200 border-red-700/50'
+      default: return 'bg-gray-900/80 text-gray-200 border-gray-700/50'
     }
   }, [])
   
   const getRankColor = useCallback((rank: number) => {
-    if (rank <= 3) return 'bg-green-500 text-white'
-    if (rank <= 6) return 'bg-yellow-500 text-white'
-    if (rank <= 9) return 'bg-orange-500 text-white'
-    return 'bg-red-500 text-white'
+    if (rank <= 3) return 'bg-green-900/70 text-green-100 border-green-700/40'
+    if (rank <= 6) return 'bg-yellow-900/70 text-yellow-100 border-yellow-700/40'
+    if (rank <= 9) return 'bg-orange-900/70 text-orange-100 border-orange-700/40'
+    return 'bg-red-900/70 text-red-100 border-red-700/40'
   }, [])
 
   // Memoized event handlers to prevent unnecessary re-renders
@@ -449,41 +445,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     }
   }, [])
 
-  const handleTransactionsToggle = useCallback(() => {
-    setShowTransactionsSidebar(prev => !prev)
-  }, [])
 
-  const handleMobileTeamNavigation = useCallback((direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      setMobileTeamIndex(prev => prev > 0 ? prev - 1 : teams.length - 1)
-    } else {
-      setMobileTeamIndex(prev => prev < teams.length - 1 ? prev + 1 : 0)
-    }
-  }, [teams.length])
 
-  const handleMobileTeamSelect = useCallback((team: TeamData) => {
-    setSelectedTeam(team)
-    // Auto-scroll to the selected team card
-    const teamIndex = teams.findIndex(t => t.rosterId === team.rosterId)
-    setMobileTeamIndex(teamIndex)
-  }, [teams])
 
-  const handleMobileTrendingNavigation = useCallback((direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      setMobileTrendingIndex(prev => prev > 0 ? prev - 1 : (leagueOverview?.trendingPlayers.length || 6) - 1)
-    } else {
-      setMobileTrendingIndex(prev => prev < (leagueOverview?.trendingPlayers.length || 6) - 1 ? prev + 1 : 0)
-    }
-  }, [leagueOverview?.trendingPlayers.length])
 
-  const handleTeamDisplayNavigation = useCallback((direction: 'prev' | 'next') => {
-    const maxIndex = Math.max(0, Math.ceil(sortedTeams.length / 4) - 1)
-    if (direction === 'prev') {
-      setTeamDisplayIndex(prev => prev > 0 ? prev - 1 : maxIndex)
-    } else {
-      setTeamDisplayIndex(prev => prev < maxIndex ? prev + 1 : 0)
-    }
-  }, [sortedTeams.length])
+
+
+
+
+
 
   const handleTradeMarketClick = useCallback(() => {
     router.push(`/trade-market?leagueId=${leagueId}`)
@@ -493,9 +463,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     router.push(`/draft-buddy?leagueId=${leagueId}`)
   }, [router, leagueId])
 
-  const handleScoutingPortalClick = useCallback(() => {
-    router.push(`/scouting-portal?leagueId=${leagueId}`)
-  }, [router, leagueId])
+
 
   // Optimized data fetching with better error handling
   const fetchLeagueData = useCallback(async () => {
@@ -722,13 +690,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     fetchLeagueData()
   }, [fetchLeagueData])
 
-  // Auto-select team on mobile navigation
-  useEffect(() => {
-    if (teams.length > 0 && mobileTeamIndex >= 0 && mobileTeamIndex < teams.length) {
-      const selectedTeam = teams[mobileTeamIndex]
-      setSelectedTeam(selectedTeam)
-    }
-  }, [mobileTeamIndex, teams])
+
 
   if (loading) {
     return (
@@ -1078,6 +1040,35 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                   <h2 className="text-2xl font-bold text-yellow-400 font-mono tracking-wide">{selectedTeam.teamName}</h2>
                   <p className="text-lg font-semibold text-yellow-400 font-mono">DETAILED ANALYSIS</p>
                 </div>
+                <div className="flex items-center space-x-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
+                      const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
+                      handleTeamSelect(sortedTeams[prevIndex])
+                    }}
+                    className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:border-yellow-400 hover:text-yellow-400"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-slate-300 font-mono min-w-[80px] text-center">
+                    {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
+                      const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
+                      handleTeamSelect(sortedTeams[nextIndex])
+                    }}
+                    className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:border-yellow-400 hover:text-yellow-400"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Badge variant="outline" className={`text-lg px-4 py-2 ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]} border-2`}>
                   {selectedTeam.grade}
                 </Badge>
@@ -1086,7 +1077,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
             {/* Navigation Tabs */}
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-1">
-              <Tabs defaultValue="roster" className="w-full">
+              <Tabs defaultValue="projections" className="w-full">
                 <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 p-0 h-auto">
                   <TabsTrigger 
                     value="roster" 
@@ -1529,20 +1520,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Sort/Filter Dropdown */}
-            <div className="mb-4 flex items-center gap-2">
-              <span className="text-slate-300 text-sm">Sort by:</span>
-              <Select value={sortBy} onValueChange={v => setSortBy(v as typeof sortBy)}>
-                <SelectTrigger className="w-40 bg-slate-700 border-slate-600 text-slate-100">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600 text-slate-100">
-                  <SelectItem value="gradeScore">Grade Score</SelectItem>
-                  <SelectItem value="pointsFor">Points For</SelectItem>
-                  <SelectItem value="wins">Wins</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
 
             {/* Comprehensive Team Rankings Table */}
             <div className="mb-6">
@@ -1554,11 +1532,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                         <th className="text-left p-3 text-slate-200 font-mono text-sm min-w-[200px]">Team</th>
                         <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[120px]">Contender Tier</th>
                         <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[100px]">Starter Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">QB<br/>Pos Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">RB<br/>Pos Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">WR<br/>Pos Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">TE<br/>Pos Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">FLEX<br/>Pos Rank</th>
+                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">QB<br/>Rank</th>
+                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">RB<br/>Rank</th>
+                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">WR<br/>Rank</th>
+                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">TE<br/>Rank</th>
+                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">FLEX<br/>Rank</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1596,37 +1574,37 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               </div>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getTierColor(contenderTier)} font-mono text-xs px-3 py-1`}>
+                              <Badge variant="outline" className={`${getTierColor(contenderTier)} font-mono text-xs px-3 py-1 border`}>
                                 {contenderTier}
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getRankColor(index + 1)} font-mono text-sm px-2 py-1`}>
+                              <Badge variant="outline" className={`${getRankColor(index + 1)} font-mono text-sm px-2 py-1 border`}>
                                 {index + 1}
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getRankColor(qbRank)} font-mono text-sm px-2 py-1`}>
+                              <Badge variant="outline" className={`${getRankColor(qbRank)} font-mono text-sm px-2 py-1 border`}>
                                 {qbRank}
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getRankColor(rbRank)} font-mono text-sm px-2 py-1`}>
+                              <Badge variant="outline" className={`${getRankColor(rbRank)} font-mono text-sm px-2 py-1 border`}>
                                 {rbRank}
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getRankColor(wrRank)} font-mono text-sm px-2 py-1`}>
+                              <Badge variant="outline" className={`${getRankColor(wrRank)} font-mono text-sm px-2 py-1 border`}>
                                 {wrRank}
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getRankColor(teRank)} font-mono text-sm px-2 py-1`}>
+                              <Badge variant="outline" className={`${getRankColor(teRank)} font-mono text-sm px-2 py-1 border`}>
                                 {teRank}
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Badge className={`${getRankColor(flexRank)} font-mono text-sm px-2 py-1`}>
+                              <Badge variant="outline" className={`${getRankColor(flexRank)} font-mono text-sm px-2 py-1 border`}>
                                 {flexRank}
                               </Badge>
                             </td>

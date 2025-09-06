@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { TeamLogo } from "@/components/team-logo"
 import { UserAvatar } from "@/components/user-avatar"
-import { Users, Trophy, Zap, Calendar, Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, Trophy, Zap, Calendar, Loader2, AlertCircle, ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
@@ -814,26 +814,26 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                   </div>
                   <span className="text-xl">LEAGUE OVERVIEW</span>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   <button 
-                    className="flex items-center space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-4 py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
+                    className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
                     onClick={handleTradeMarketClick}
                   >
-                    <Trophy className="h-4 w-4" />
+                    <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="font-semibold hidden sm:inline">Trade Market</span>
                     <span className="font-semibold sm:hidden">Trade</span>
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg width="12" height="12" className="sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
                   <button 
-                    className="flex items-center space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-4 py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
+                    className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
                     onClick={handleDraftBuddyClick}
                   >
-                    <Users className="h-4 w-4" />
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="font-semibold hidden sm:inline">Draft Buddy</span>
                     <span className="font-semibold sm:hidden">Draft</span>
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg width="12" height="12" className="sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -843,28 +843,28 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             <CardContent>
               {/* Current Week Matchups */}
               {currentMatchups.length > 0 ? (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-3">
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-slate-100 mb-6 flex items-center space-x-3">
                     <div className="p-2 bg-blue-400/10 rounded-lg border border-blue-400/20">
                       <Calendar className="h-5 w-5 text-blue-400" />
                     </div>
                     <span>Week {currentWeek} Matchups</span>
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     {currentMatchups.slice(0, 4).map((matchup, index) => (
                       <Card key={index} className="bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 hover:border-slate-500 transition-all duration-200">
-                        <CardContent className="p-4">
+                        <CardContent className="p-5 sm:p-6">
                           <div className="flex items-center justify-between">
-                            <div className="flex-1 text-left">
-                              <div className="font-semibold text-slate-100 truncate mb-1">{matchup.teamName}</div>
-                              <div className="text-sm text-slate-400 font-medium">
+                            <div className="flex-1 text-left min-w-0">
+                              <div className="font-semibold text-slate-100 truncate mb-2 text-sm sm:text-base">{matchup.teamName}</div>
+                              <div className="text-xs sm:text-sm text-slate-400 font-medium">
                                 {matchup.actualPoints > 0 ? `${matchup.actualPoints.toFixed(1)} pts` : 'No score yet'}
                               </div>
                             </div>
-                            <div className="mx-3 sm:mx-4 text-slate-400 text-center flex-shrink-0 font-mono font-bold">VS</div>
-                            <div className="flex-1 text-right">
-                              <div className="font-semibold text-slate-100 truncate text-right mb-1">{matchup.opponentTeamName}</div>
-                              <div className="text-sm text-slate-400 text-right font-medium">
+                            <div className="mx-4 sm:mx-6 text-slate-400 text-center flex-shrink-0 font-mono font-bold text-sm sm:text-base">VS</div>
+                            <div className="flex-1 text-right min-w-0">
+                              <div className="font-semibold text-slate-100 truncate text-right mb-2 text-sm sm:text-base">{matchup.opponentTeamName}</div>
+                              <div className="text-xs sm:text-sm text-slate-400 text-right font-medium">
                                 {matchup.opponentActualPoints > 0 ? `${matchup.opponentActualPoints.toFixed(1)} pts` : 'No score yet'}
                               </div>
                             </div>
@@ -896,16 +896,16 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
               {/* Recent Transactions */}
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-3">
+                  <h3 className="text-lg font-semibold text-slate-100 mb-6 flex items-center space-x-3">
                     <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
                       <Zap className="h-5 w-5 text-yellow-400" />
                     </div>
                     <span>Week {currentWeek} Transactions</span>
                   </h3>
                   
-                <div className="flex flex-row gap-3 overflow-x-auto pb-4">
+                <div className="flex flex-row gap-4 sm:gap-6 overflow-x-auto pb-4">
                   {transactions.length === 0 ? (
-                    <div className="text-center py-8 min-w-[250px]">
+                    <div className="text-center py-8 min-w-[280px] sm:min-w-[320px]">
                       <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
                       <p className="text-gray-400 text-sm">No transactions this week</p>
                       </div>
@@ -931,7 +931,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       return (
                         <div 
                           key={tx.transactionId} 
-                          className="bg-slate-700 border-slate-600 p-3 rounded-lg min-w-[260px] max-w-xs flex-shrink-0"
+                          className="bg-slate-700/50 border border-slate-600/50 hover:bg-slate-700/80 transition-all duration-200 p-4 sm:p-5 rounded-lg min-w-[280px] sm:min-w-[320px] max-w-sm flex-shrink-0"
                         >
                           <div className="flex items-center justify-between mb-2">
                             <Badge variant="outline" className={`text-xs px-2 py-1 ${
@@ -1033,58 +1033,62 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         {selectedTeam && (
           <div className="space-y-6">
             {/* Enhanced Team Header */}
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-6 overflow-hidden">
+            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-4 sm:p-6 overflow-hidden">
               {/* Background Pattern */}
               <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30"></div>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))]"></div>
               
-              <div className="relative flex items-center space-x-4">
-                <div className="flex items-center justify-center w-14 h-14 bg-blue-400/10 rounded-xl border border-blue-400/20 backdrop-blur-sm">
-                  <span className="text-blue-400 font-bold text-xl">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+              <div className="relative flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-blue-400/10 rounded-xl border border-blue-400/20 backdrop-blur-sm">
+                    <span className="text-blue-400 font-bold text-lg sm:text-xl">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+                  </div>
+                  <UserAvatar
+                    avatarId={selectedTeam.ownerAvatar}
+                    displayName={selectedTeam.ownerName}
+                    username={selectedTeam.ownerUsername}
+                    size={48}
+                    className="sm:w-14 sm:h-14 flex-shrink-0 ring-2 ring-yellow-400/20"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-400 font-mono tracking-wide mb-1 truncate">{selectedTeam.teamName}</h2>
+                    <p className="text-sm sm:text-lg font-semibold text-yellow-400/70 font-mono">DETAILED ANALYSIS</p>
+                  </div>
                 </div>
-                <UserAvatar
-                  avatarId={selectedTeam.ownerAvatar}
-                  displayName={selectedTeam.ownerName}
-                  username={selectedTeam.ownerUsername}
-                  size={56}
-                  className="flex-shrink-0 ring-2 ring-yellow-400/20"
-                />
-                <div className="flex-1">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-yellow-400 font-mono tracking-wide mb-1">{selectedTeam.teamName}</h2>
-                  <p className="text-lg font-semibold text-yellow-400/70 font-mono">DETAILED ANALYSIS</p>
+                <div className="flex items-center justify-between sm:justify-end space-x-3">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
+                        const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
+                        handleTeamSelect(sortedTeams[prevIndex])
+                      }}
+                      className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200 h-8 w-8 sm:h-9 sm:w-9"
+                    >
+                      <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                    <span className="text-xs sm:text-sm text-slate-300 font-mono min-w-[60px] sm:min-w-[80px] text-center bg-slate-700/50 px-2 sm:px-3 py-1 rounded-lg backdrop-blur-sm">
+                      {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
+                        const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
+                        handleTeamSelect(sortedTeams[nextIndex])
+                      }}
+                      className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200 h-8 w-8 sm:h-9 sm:w-9"
+                    >
+                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </div>
+                  <Badge variant="outline" className={`text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 border-2 backdrop-blur-sm ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
+                    {selectedTeam.grade}
+                  </Badge>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
-                      const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
-                      handleTeamSelect(sortedTeams[prevIndex])
-                    }}
-                    className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-slate-300 font-mono min-w-[80px] text-center bg-slate-700/50 px-3 py-1 rounded-lg backdrop-blur-sm">
-                    {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
-                      const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
-                      handleTeamSelect(sortedTeams[nextIndex])
-                    }}
-                    className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Badge variant="outline" className={`text-lg px-4 py-2 border-2 backdrop-blur-sm ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
-                  {selectedTeam.grade}
-                </Badge>
               </div>
             </div>
 
@@ -1103,29 +1107,29 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     value="trends" 
                     className="text-slate-300 data-[state=active]:bg-green-400/10 data-[state=active]:text-green-400 data-[state=active]:border-green-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-green-400/70 hover:bg-green-400/5"
                   >
+                    <TrendingUp className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Trends</span>
-                    <span className="sm:hidden">📈</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="power" 
                     className="text-slate-300 data-[state=active]:bg-blue-400/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-blue-400/70 hover:bg-blue-400/5"
                   >
+                    <Zap className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Power</span>
-                    <span className="sm:hidden">⚡</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="analysis" 
                     className="text-slate-300 data-[state=active]:bg-purple-400/10 data-[state=active]:text-purple-400 data-[state=active]:border-purple-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-purple-400/70 hover:bg-purple-400/5"
                   >
+                    <BarChart3 className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Analysis</span>
-                    <span className="sm:hidden">📊</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="projections" 
                     className="text-slate-300 data-[state=active]:bg-orange-400/10 data-[state=active]:text-orange-400 data-[state=active]:border-orange-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-orange-400/70 hover:bg-orange-400/5"
                   >
+                    <Target className="h-4 w-4 sm:mr-2" />
                     <span className="hidden sm:inline">Projections</span>
-                    <span className="sm:hidden">🎯</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -1546,102 +1550,196 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           <CardContent>
 
 
-            {/* Comprehensive Team Rankings Table */}
+            {/* Comprehensive Team Rankings - Responsive Layout */}
             <div className="mb-6">
-              <div className="bg-slate-700 border border-slate-600 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-slate-600">
-                        <th className="text-left p-3 text-slate-200 font-mono text-sm min-w-[200px]">Team</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[120px]">Contender Tier</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[100px]">Starter Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">QB<br/>Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">RB<br/>Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">WR<br/>Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">TE<br/>Rank</th>
-                        <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">FLEX<br/>Rank</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedTeams.filter(team => team && team.rosterId).map((team, index) => {
-                        try {
-                          const contenderTier = getContenderTier(team.grade || 'F', index + 1)
-                          const teamRankings = leaguePositionRankings[team.rosterId] || {}
-                          const qbRank = teamRankings['QB'] || 12
-                          const rbRank = teamRankings['RB'] || 12
-                          const wrRank = teamRankings['WR'] || 12
-                          const teRank = teamRankings['TE'] || 12
-                          const flexRank = teamRankings['FLEX'] || 12
-                        
-                        return (
-                          <tr 
-                            key={team.rosterId} 
-                            className={`border-t border-slate-600 hover:bg-slate-600/50 cursor-pointer transition-all ${
-                              selectedTeam?.rosterId === team.rosterId ? 'bg-yellow-400/10 border-yellow-400' : ''
-                            }`}
-                            onClick={() => handleTeamSelect(team)}
-                          >
-                            <td className="p-3">
-                              <div className="flex items-center space-x-3">
-                                <UserAvatar
-                                  avatarId={team.ownerAvatar}
-                                  displayName={team.ownerName}
-                                  username={team.ownerUsername}
-                                  size={32}
-                                  className="flex-shrink-0"
-                                />
-                                <div className="min-w-0">
-                                  <div className="font-semibold text-slate-100 truncate">{team.teamName}</div>
-                                  <div className="text-xs text-gray-400 truncate">{team.ownerName}</div>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block">
+                <div className="bg-slate-700 border border-slate-600 rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-slate-600">
+                          <th className="text-left p-3 text-slate-200 font-mono text-sm min-w-[200px]">Team</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[120px]">Contender Tier</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[100px]">Starter Rank</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">QB<br/>Rank</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">RB<br/>Rank</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">WR<br/>Rank</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">TE<br/>Rank</th>
+                          <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[80px]">FLEX<br/>Rank</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedTeams.filter(team => team && team.rosterId).map((team, index) => {
+                          try {
+                            const contenderTier = getContenderTier(team.grade || 'F', index + 1)
+                            const teamRankings = leaguePositionRankings[team.rosterId] || {}
+                            const qbRank = teamRankings['QB'] || 12
+                            const rbRank = teamRankings['RB'] || 12
+                            const wrRank = teamRankings['WR'] || 12
+                            const teRank = teamRankings['TE'] || 12
+                            const flexRank = teamRankings['FLEX'] || 12
+                          
+                          return (
+                            <tr 
+                              key={team.rosterId} 
+                              className={`border-t border-slate-600 hover:bg-slate-600/50 cursor-pointer transition-all ${
+                                selectedTeam?.rosterId === team.rosterId ? 'bg-yellow-400/10 border-yellow-400' : ''
+                              }`}
+                              onClick={() => handleTeamSelect(team)}
+                            >
+                              <td className="p-3">
+                                <div className="flex items-center space-x-3">
+                                  <UserAvatar
+                                    avatarId={team.ownerAvatar}
+                                    displayName={team.ownerName}
+                                    username={team.ownerUsername}
+                                    size={32}
+                                    className="flex-shrink-0"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-slate-100 truncate">{team.teamName}</div>
+                                    <div className="text-xs text-gray-400 truncate">{team.ownerName}</div>
+        </div>
       </div>
-    </div>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getTierColor(contenderTier)} font-mono text-xs px-3 py-1 border`}>
-                                {contenderTier}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getRankColor(index + 1)} font-mono text-sm px-2 py-1 border`}>
-                                {index + 1}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getRankColor(qbRank)} font-mono text-sm px-2 py-1 border`}>
-                                {qbRank}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getRankColor(rbRank)} font-mono text-sm px-2 py-1 border`}>
-                                {rbRank}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getRankColor(wrRank)} font-mono text-sm px-2 py-1 border`}>
-                                {wrRank}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getRankColor(teRank)} font-mono text-sm px-2 py-1 border`}>
-                                {teRank}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-center">
-                              <Badge variant="outline" className={`${getRankColor(flexRank)} font-mono text-sm px-2 py-1 border`}>
-                                {flexRank}
-                              </Badge>
-                            </td>
-                          </tr>
-                        )
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getTierColor(contenderTier)} font-mono text-xs px-3 py-1 border`}>
+                                  {contenderTier}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getRankColor(index + 1)} font-mono text-sm px-2 py-1 border`}>
+                                  {index + 1}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getRankColor(qbRank)} font-mono text-sm px-2 py-1 border`}>
+                                  {qbRank}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getRankColor(rbRank)} font-mono text-sm px-2 py-1 border`}>
+                                  {rbRank}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getRankColor(wrRank)} font-mono text-sm px-2 py-1 border`}>
+                                  {wrRank}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getRankColor(teRank)} font-mono text-sm px-2 py-1 border`}>
+                                  {teRank}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className={`${getRankColor(flexRank)} font-mono text-sm px-2 py-1 border`}>
+                                  {flexRank}
+                                </Badge>
+                              </td>
+                            </tr>
+                          )
                         } catch (error) {
                           console.error('Error rendering team row:', error, team)
                           return null
                         }
-                      })}
-                    </tbody>
-                  </table>
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-3">
+                {sortedTeams.filter(team => team && team.rosterId).map((team, index) => {
+                  try {
+                    const contenderTier = getContenderTier(team.grade || 'F', index + 1)
+                    const teamRankings = leaguePositionRankings[team.rosterId] || {}
+                    const qbRank = teamRankings['QB'] || 12
+                    const rbRank = teamRankings['RB'] || 12
+                    const wrRank = teamRankings['WR'] || 12
+                    const teRank = teamRankings['TE'] || 12
+                    const flexRank = teamRankings['FLEX'] || 12
+                  
+                    return (
+                      <Card 
+                        key={team.rosterId}
+                        className={`bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 cursor-pointer transition-all duration-200 ${
+                          selectedTeam?.rosterId === team.rosterId ? 'ring-2 ring-yellow-400/50 border-yellow-400/50' : ''
+                        }`}
+                        onClick={() => handleTeamSelect(team)}
+                      >
+                        <CardContent className="p-4">
+                          {/* Team Header */}
+                          <div className="flex items-center justify-between mb-3 gap-2">
+                            <div className="flex items-center space-x-2 min-w-0 flex-1">
+                              <Badge variant="outline" className={`${getRankColor(index + 1)} font-mono text-xs px-1.5 py-0.5 border flex-shrink-0`}>
+                                #{index + 1}
+                              </Badge>
+                              <UserAvatar
+                                avatarId={team.ownerAvatar}
+                                displayName={team.ownerName}
+                                username={team.ownerUsername}
+                                size={28}
+                                className="flex-shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-slate-100 text-xs truncate">
+                                  {team.teamName.length > 18 ? team.teamName.substring(0, 15) + '...' : team.teamName}
+                                </div>
+                                <div className="text-xs text-gray-400 truncate">
+                                  {team.ownerName.length > 12 ? team.ownerName.substring(0, 9) + '...' : team.ownerName}
+                                </div>
+                              </div>
+                            </div>
+                            <Badge variant="outline" className={`${getTierColor(contenderTier)} font-mono text-xs px-1.5 py-0.5 border flex-shrink-0`}>
+                              {contenderTier}
+                            </Badge>
+                          </div>
+
+                          {/* Position Rankings Grid */}
+                          <div className="grid grid-cols-5 gap-2">
+                            <div className="text-center">
+                              <div className="text-xs text-slate-400 font-mono mb-1">QB</div>
+                              <Badge variant="outline" className={`${getRankColor(qbRank)} font-mono text-xs px-1 py-0.5 border w-full justify-center`}>
+                                {qbRank}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-slate-400 font-mono mb-1">RB</div>
+                              <Badge variant="outline" className={`${getRankColor(rbRank)} font-mono text-xs px-1 py-0.5 border w-full justify-center`}>
+                                {rbRank}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-slate-400 font-mono mb-1">WR</div>
+                              <Badge variant="outline" className={`${getRankColor(wrRank)} font-mono text-xs px-1 py-0.5 border w-full justify-center`}>
+                                {wrRank}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-slate-400 font-mono mb-1">TE</div>
+                              <Badge variant="outline" className={`${getRankColor(teRank)} font-mono text-xs px-1 py-0.5 border w-full justify-center`}>
+                                {teRank}
+                              </Badge>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs text-slate-400 font-mono mb-1">FLEX</div>
+                              <Badge variant="outline" className={`${getRankColor(flexRank)} font-mono text-xs px-1 py-0.5 border w-full justify-center`}>
+                                {flexRank}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  } catch (error) {
+                    console.error('Error rendering team row:', error, team)
+                    return null
+                  }
+                })}
               </div>
             </div>
           </CardContent>

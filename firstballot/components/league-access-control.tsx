@@ -31,9 +31,9 @@ export function LeagueAccessControl({
     }
   }
 
-  const baseClasses = `p-4 transition-all ${
+  const baseClasses = `p-5 transition-all duration-200 ${
     canAccess 
-      ? 'cursor-pointer hover:border-yellow-400 hover:bg-slate-700' 
+      ? 'cursor-pointer hover:border-yellow-400 hover:bg-slate-700/80' 
       : 'cursor-not-allowed opacity-50 grayscale'
   } ${className}`
 
@@ -107,14 +107,14 @@ export function LeagueCard({
       }`}
       leagueName={league.name}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="text-2xl font-bold text-yellow-400">
             #{league.league_id.slice(-2)}
           </div>
           <div>
-            <h3 className="font-semibold text-slate-100">{league.name}</h3>
-            <p className="text-sm text-gray-400">
+            <h3 className="font-semibold text-slate-100 text-lg">{league.name}</h3>
+            <p className="text-sm text-slate-400">
               {league.season} • {league.status}
             </p>
           </div>
@@ -127,22 +127,22 @@ export function LeagueCard({
         </Badge>
       </div>
       
-      <div className="space-y-2 text-sm text-slate-200">
-        <div className="flex justify-between">
-          <span>Teams:</span>
-          <span className="text-slate-100">{league.total_rosters || 'N/A'}</span>
+      <div className="space-y-3 text-sm">
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400">Teams:</span>
+          <span className="text-slate-100 font-semibold">{league.total_rosters || 'N/A'}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Sport:</span>
-          <span className="text-slate-100">{league.sport?.toUpperCase() || 'NFL'}</span>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400">Sport:</span>
+          <span className="text-slate-100 font-semibold">{league.sport?.toUpperCase() || 'NFL'}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Season:</span>
-          <span className="text-slate-100">{league.season}</span>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400">Season:</span>
+          <span className="text-slate-100 font-semibold">{league.season}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Draft ID:</span>
-          <span className="text-slate-100">{league.draft_id ? 'Available' : 'N/A'}</span>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400">Draft ID:</span>
+          <span className="text-slate-100 font-semibold">{league.draft_id ? 'Available' : 'N/A'}</span>
         </div>
       </div>
 

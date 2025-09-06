@@ -801,43 +801,40 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
         {/* Enhanced League Overview Dashboard */}
         {leagueOverview && (
-          <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+          <Card className="bg-slate-800 border-slate-700">
             <CardHeader className="relative">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30 rounded-t-xl"></div>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))] rounded-t-xl"></div>
               
               <CardTitle className="relative text-yellow-400 font-mono flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3">
                   <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
                     <Trophy className="h-6 w-6" />
                   </div>
                   <span className="text-xl">LEAGUE OVERVIEW</span>
                 </div>
                 <div className="flex items-center space-x-2 sm:space-x-3">
-                  <button 
+              <button 
                     className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
-                    onClick={handleTradeMarketClick}
-                  >
+                onClick={handleTradeMarketClick}
+              >
                     <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="font-semibold hidden sm:inline">Trade Market</span>
                     <span className="font-semibold sm:hidden">Trade</span>
                     <svg width="12" height="12" className="sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  <button 
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button 
                     className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
-                    onClick={handleDraftBuddyClick}
-                  >
+                onClick={handleDraftBuddyClick}
+              >
                     <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="font-semibold hidden sm:inline">Draft Buddy</span>
                     <span className="font-semibold sm:hidden">Draft</span>
                     <svg width="12" height="12" className="sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -847,7 +844,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                   <h3 className="text-lg font-semibold text-slate-100 mb-6 flex items-center space-x-3">
                     <div className="p-2 bg-blue-400/10 rounded-lg border border-blue-400/20">
                       <Calendar className="h-5 w-5 text-blue-400" />
-                    </div>
+          </div>
                     <span>Week {currentWeek} Matchups</span>
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -904,127 +901,127 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                   </h3>
                   
                 <div className="flex flex-row gap-4 sm:gap-6 overflow-x-auto pb-4">
-                  {transactions.length === 0 ? (
+            {transactions.length === 0 ? (
                     <div className="text-center py-8 min-w-[280px] sm:min-w-[320px]">
-                      <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">No transactions this week</p>
-                      </div>
-                  ) : (
-                    transactions.map((tx, index) => {
-                      // Get team names for the transaction
-                      const teamNames = tx.rosterIds.map(rosterId => {
-                        const team = teams.find(t => t.rosterId === rosterId)
-                        return team?.teamName || `Team ${rosterId}`
-                      }).join(' & ')
-
-                      // Get player names for adds and drops
-                      const addedPlayers = tx.adds ? Object.keys(tx.adds).map(playerId => {
-                        const player = allPlayers[playerId]
-                        return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
-                      }) : []
-                      
-                      const droppedPlayers = tx.drops ? Object.keys(tx.drops).map(playerId => {
-                        const player = allPlayers[playerId]
-                        return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
-                      }) : []
-
-                      return (
-                        <div 
-                          key={tx.transactionId} 
-                          className="bg-slate-700/50 border border-slate-600/50 hover:bg-slate-700/80 transition-all duration-200 p-4 sm:p-5 rounded-lg min-w-[280px] sm:min-w-[320px] max-w-sm flex-shrink-0"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline" className={`text-xs px-2 py-1 ${
-                              tx.type === 'trade' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
-                              tx.type === 'waiver' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                              'bg-green-400/20 text-green-400 border-green-400'
-                            }`}>
-                              {tx.type.toUpperCase()}
-                          </Badge>
-                            <span className="text-xs text-gray-400">Week {tx.week}</span>
-                        </div>
-                        
-                          <div className="text-sm text-slate-100 mb-2">
-                            <span className="font-semibold">{teamNames}</span>
-                          </div>
-
-                          {tx.type === 'trade' && (
-                            <div className=" text-slate-300  space-y-1">
-                              {addedPlayers.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                          </div>
-                              )}
-                              {droppedPlayers.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                          </div>
-                              )}
-                              {tx.draftPicks.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-blue-400 italic">Draft Picks:</span> {tx.draftPicks.length} picks traded
-                            </div>
-                          )}
-                          </div>
-                          )}
-
-                          {tx.type === 'free_agent' && (
-                            <div className="space-y-1">
-                              {addedPlayers.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-green-400">Signed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                            </div>
-                              )}
-                              {droppedPlayers.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                            </div>
-                              )}
-                            </div>
-                          )}
-
-                          {tx.type === 'waiver' && (
-                            <div className="space-y-1">
-                              {addedPlayers.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-yellow-400">Claimed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                          </div>
-                              )}
-                              {droppedPlayers.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                        </div>
-                  )}
-                              {tx.waiverBudget.length > 0 && (
-                                <div className="text-xs">
-                                  <span className="text-purple-400">FAAB:</span> ${tx.waiverBudget[0]?.amount || 0}
-                </div>
-                              )}
+                <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">No transactions this week</p>
               </div>
-                          )}
+            ) : (
+              transactions.map((tx, index) => {
+                // Get team names for the transaction
+                const teamNames = tx.rosterIds.map(rosterId => {
+                  const team = teams.find(t => t.rosterId === rosterId)
+                  return team?.teamName || `Team ${rosterId}`
+                }).join(' & ')
 
-                          <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-600">
-                            <div className="flex items-center">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {new Date(tx.created).toLocaleDateString()}
-                </div>
-                            <Badge variant="outline" className={`text-xs px-1 py-0 ${
-                              tx.status === 'complete' ? 'bg-green-400/20 text-green-400 border-green-400' :
-                              tx.status === 'pending' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                              'bg-red-400/20 text-red-400 border-red-400'
-                            }`}>
-                              {tx.status}
-                          </Badge>
-                        </div>
-                          </div>
-                      )
-                    })
-                  )}
-                          </div>
-                        </div>
+                // Get player names for adds and drops
+                const addedPlayers = tx.adds ? Object.keys(tx.adds).map(playerId => {
+                  const player = allPlayers[playerId]
+                  return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
+                }) : []
+                
+                const droppedPlayers = tx.drops ? Object.keys(tx.drops).map(playerId => {
+                  const player = allPlayers[playerId]
+                  return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
+                }) : []
 
-          </CardContent>
-        </Card>
+                return (
+                  <div 
+                    key={tx.transactionId} 
+                          className="bg-slate-700/50 border border-slate-600/50 hover:bg-slate-700/80 transition-all duration-200 p-4 sm:p-5 rounded-lg min-w-[280px] sm:min-w-[320px] max-w-sm flex-shrink-0"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className={`text-xs px-2 py-1 ${
+                        tx.type === 'trade' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
+                        tx.type === 'waiver' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
+                        'bg-green-400/20 text-green-400 border-green-400'
+                      }`}>
+                        {tx.type.toUpperCase()}
+                      </Badge>
+                      <span className="text-xs text-gray-400">Week {tx.week}</span>
+                    </div>
+                    
+                    <div className="text-sm text-slate-100 mb-2">
+                      <span className="font-semibold">{teamNames}</span>
+                    </div>
+
+                    {tx.type === 'trade' && (
+                      <div className=" text-slate-300  space-y-1">
+                        {addedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {droppedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {tx.draftPicks.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-blue-400 italic">Draft Picks:</span> {tx.draftPicks.length} picks traded
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {tx.type === 'free_agent' && (
+                      <div className="space-y-1">
+                        {addedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-green-400">Signed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {droppedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {tx.type === 'waiver' && (
+                      <div className="space-y-1">
+                        {addedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-yellow-400">Claimed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {droppedPlayers.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
+                          </div>
+                        )}
+                        {tx.waiverBudget.length > 0 && (
+                          <div className="text-xs">
+                            <span className="text-purple-400">FAAB:</span> ${tx.waiverBudget[0]?.amount || 0}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-600">
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {new Date(tx.created).toLocaleDateString()}
+                      </div>
+                      <Badge variant="outline" className={`text-xs px-1 py-0 ${
+                        tx.status === 'complete' ? 'bg-green-400/20 text-green-400 border-green-400' :
+                        tx.status === 'pending' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
+                        'bg-red-400/20 text-red-400 border-red-400'
+                      }`}>
+                        {tx.status}
+                      </Badge>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+                    </div>
+
+                  </CardContent>
+                </Card>
         )}
 
 
@@ -1033,33 +1030,30 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         {selectedTeam && (
           <div className="space-y-6">
             {/* Enhanced Team Header */}
-            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-4 sm:p-6 overflow-hidden">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30"></div>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))]"></div>
+            <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 overflow-hidden">
               
               <div className="relative flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
                 <div className="flex items-center space-x-3 sm:space-x-4">
                   <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-blue-400/10 rounded-xl border border-blue-400/20 backdrop-blur-sm">
                     <span className="text-blue-400 font-bold text-lg sm:text-xl">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
-                  </div>
-                  <UserAvatar
-                    avatarId={selectedTeam.ownerAvatar}
-                    displayName={selectedTeam.ownerName}
-                    username={selectedTeam.ownerUsername}
+                              </div>
+                            <UserAvatar
+                              avatarId={selectedTeam.ownerAvatar}
+                              displayName={selectedTeam.ownerName}
+                              username={selectedTeam.ownerUsername}
                     size={48}
                     className="sm:w-14 sm:h-14 flex-shrink-0 ring-2 ring-yellow-400/20"
                   />
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-400 font-mono tracking-wide mb-1 truncate">{selectedTeam.teamName}</h2>
                     <p className="text-sm sm:text-lg font-semibold text-yellow-400/70 font-mono">DETAILED ANALYSIS</p>
-                  </div>
-                </div>
+                            </div>
+                          </div>
                 <div className="flex items-center justify-between sm:justify-end space-x-3">
                   <div className="flex items-center space-x-2 sm:space-x-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                  <Button
+                    variant="outline"
+                    size="sm"
                       onClick={() => {
                         const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
                         const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
@@ -1068,13 +1062,13 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200 h-8 w-8 sm:h-9 sm:w-9"
                     >
                       <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
+                  </Button>
                     <span className="text-xs sm:text-sm text-slate-300 font-mono min-w-[60px] sm:min-w-[80px] text-center bg-slate-700/50 px-2 sm:px-3 py-1 rounded-lg backdrop-blur-sm">
                       {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
                       onClick={() => {
                         const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
                         const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
@@ -1083,17 +1077,17 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200 h-8 w-8 sm:h-9 sm:w-9"
                     >
                       <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </div>
+                  </Button>
+                </div>
                   <Badge variant="outline" className={`text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 border-2 backdrop-blur-sm ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
                     {selectedTeam.grade}
-                  </Badge>
-                </div>
-              </div>
-            </div>
+                          </Badge>
+                        </div>
+                          </div>
+                        </div>
 
             {/* Enhanced Navigation Tabs */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-1">
+            <div className="bg-slate-800 border border-slate-700 rounded-lg p-1">
               <Tabs defaultValue="projections" className="w-full">
                 <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 p-0 h-auto gap-1">
                   <TabsTrigger 
@@ -1134,7 +1128,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                 </TabsList>
 
                 <TabsContent value="roster" className="space-y-6 pt-6">
-                  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-6">
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
                     <h3 className="text-blue-400 font-mono text-lg mb-4">POSITION STRENGTHS</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                       <div className="flex items-center space-x-2">
@@ -1462,14 +1456,14 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                 </TabsContent>
 
                 <TabsContent value="projections" className="space-y-4">
-                  <Card className="bg-slate-700 border-slate-600">
+                  <Card className="bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 transition-all duration-200">
                     <CardHeader>
                       <CardTitle className="text-green-400 text-sm">SEASON PROJECTIONS</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-400">
+                        <div className="text-center min-w-0">
+                          <div className="text-xl sm:text-2xl font-bold text-green-400">
                             {(() => {
                               const totalGames = selectedTeam.wins + selectedTeam.losses
                               const currentWinRate = totalGames > 0 ? selectedTeam.wins / totalGames : 0.5
@@ -1479,10 +1473,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               return `${projectedWins}-${projectedLosses}`
                             })()}
                           </div>
-                          <div className="text-sm text-gray-400">Projected Record</div>
+                          <div className="text-xs sm:text-sm text-gray-400 truncate px-1">Projected Record</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">
+                        <div className="text-center min-w-0">
+                          <div className="text-xl sm:text-2xl font-bold text-blue-400">
                             {(() => {
                               const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
                               const gradeAdjustment = selectedTeam.gradeScore > 70 ? -1 : selectedTeam.gradeScore < 30 ? 1 : 0
@@ -1490,10 +1484,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               return `${projectedRank}${projectedRank === 1 ? 'st' : projectedRank === 2 ? 'nd' : projectedRank === 3 ? 'rd' : 'th'}`
                             })()}
                           </div>
-                          <div className="text-sm text-gray-400">Projected Finish</div>
+                          <div className="text-xs sm:text-sm text-gray-400 truncate px-1">Projected Finish</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-yellow-400">
+                        <div className="text-center min-w-0">
+                          <div className="text-xl sm:text-2xl font-bold text-yellow-400">
                             {(() => {
                               const totalGames = selectedTeam.wins + selectedTeam.losses
                               const currentAvg = totalGames > 0 ? selectedTeam.pointsFor / totalGames : 120
@@ -1502,10 +1496,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               return projectedAvg.toFixed(1)
                             })()}
                           </div>
-                          <div className="text-sm text-gray-400">Avg PPG</div>
+                          <div className="text-xs sm:text-sm text-gray-400 truncate px-1">Avg PPG</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-400">
+                        <div className="text-center min-w-0">
+                          <div className="text-xl sm:text-2xl font-bold text-purple-400">
                             {(() => {
                               const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
                               const totalTeams = teams.length
@@ -1534,7 +1528,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         )}
 
         {/* Enhanced Team Rankings */}
-        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+          <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="relative">
             {/* Background Pattern */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30 rounded-t-xl"></div>
@@ -1543,7 +1537,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             <CardTitle className="relative text-yellow-400 font-mono flex items-center space-x-3">
               <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
                 <Trophy className="h-6 w-6" />
-              </div>
+      </div>
               <span className="text-xl">TEAM RANKINGS</span>
             </CardTitle>
           </CardHeader>
@@ -1600,7 +1594,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                                   <div className="min-w-0">
                                     <div className="font-semibold text-slate-100 truncate">{team.teamName}</div>
                                     <div className="text-xs text-gray-400 truncate">{team.ownerName}</div>
-        </div>
+    </div>
       </div>
                               </td>
                               <td className="p-3 text-center">

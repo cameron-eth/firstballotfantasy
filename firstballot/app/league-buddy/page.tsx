@@ -249,22 +249,17 @@ export default function LeagueBuddyPage() {
 
             {/* League Select */}
             {leagues.length > 0 && !selectedLeagueId && (
-              <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+              <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-green-400/10 rounded-lg border border-green-400/20">
-                        <BarChart3 className="h-6 w-6 text-green-400" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-green-400 font-mono text-xl">SELECT LEAGUE</CardTitle>
-                        <p className="text-slate-300 text-sm">
-                          Choose a league to view the dashboard
-                        </p>
-                      </div>
+                    <div>
+                  <CardTitle className="text-green-400 font-mono">SELECT LEAGUE</CardTitle>
+                  <p className="text-gray-300 text-sm">
+                    Choose a league to view the dashboard
+                  </p>
                     </div>
                     {!isMember && leagues.length > 1 && (
-                      <div className="flex items-center space-x-2 bg-yellow-400/10 px-3 py-2 rounded-lg border border-yellow-400/20">
+                      <div className="flex items-center space-x-2">
                         <Crown className="h-4 w-4 text-yellow-400" />
                         <span className="text-xs text-yellow-400 font-mono">FREE: 1 LEAGUE</span>
                       </div>

@@ -5,6 +5,8 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import type { User } from "@supabase/supabase-js"
 import { supabase } from "./supabase"
+import { setupFetchWithAuth } from "./setup-fetch-with-auth"
+import { userApi } from "./user-api"
 
 interface AuthContextType {
   user: User | null
@@ -25,6 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Set up fetch interceptor after auth is initialized
+      if (typeof window !== 'undefined') {
+        setupFetchWithAuth()
+      }
     })
 
     // Listen for auth changes
@@ -61,17 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // If signup is successful and we have a user, create their profile
     if (data.user) {
       try {
-        const response = await fetch('/api/user-profile', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const response = await userApi.addUserProfile(JSON.stringify({
             authId: data.user.id,
             email: data.user.email,
             username: username,
-          }),
-        })
+          }));
 
         if (!response.ok) {
           console.error('Failed to create user profile during signup');

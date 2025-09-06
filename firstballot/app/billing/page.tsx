@@ -23,6 +23,7 @@ import {
 import { toast } from 'sonner';
 import { StripePaymentLinks } from '@/lib/stripe-payment-links';
 import { supabase } from '@/lib/supabase';
+import { userApi } from '@/lib/user-api';
 
 const PRICING_PLANS = [
   {
@@ -101,12 +102,7 @@ function BillingSimpleContent() {
           throw new Error('No valid session');
         }
 
-        const response = await fetch('/api/user-profile', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await userApi.getUserProfile();
         
         if (response.ok) {
           const data = await response.json();

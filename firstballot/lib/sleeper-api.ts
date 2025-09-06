@@ -34,7 +34,7 @@ export interface SleeperPick {
   pick_no: number
   player_id: string
   picked_by: string
-  roster_id: string
+  roster_id: number
   round: number
   draft_slot: number
   metadata: {

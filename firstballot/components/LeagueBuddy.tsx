@@ -7,11 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { TeamLogo } from "@/components/team-logo"
 import { UserAvatar } from "@/components/user-avatar"
-import { BarChart3, TrendingUp, Users, Trophy, Target, Zap, Calendar, Award, Loader2, AlertCircle, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, Trophy, Zap, Calendar, Loader2, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { leagueCache } from '@/lib/league-cache'
 import { sleeperApi } from '@/lib/nextjs-cache'
 
@@ -82,6 +81,16 @@ interface PositionStrengths {
   SFLX: number
 }
 
+// Raw Sleeper API matchup structure
+interface SleeperMatchup {
+  starters: string[]
+  roster_id: number
+  players: string[]
+  matchup_id: number
+  points: number
+  custom_points: number | null
+}
+
 interface MatchupData {
   rosterId: number
   teamName: string
@@ -92,6 +101,9 @@ interface MatchupData {
   opponentProjectedPoints: number
   opponentActualPoints: number
   isHome: boolean
+  matchupId?: number
+  starters?: string[]
+  players?: string[]
 }
 
 interface LeagueOverview {
@@ -360,7 +372,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           const positionPlayers = team.players.filter(p => p && p.position && p.position === position)
           if (positionPlayers.length === 0) {
             teamPositionScores[team.rosterId][position] = 999 // Worst possible score
-          } else {
+    } else {
             // Use best player rank for QB, average of top 2 for skill positions
             const sortedRanks = positionPlayers.map(p => p.rank || 999).sort((a, b) => a - b)
             if (position === 'QB') {
@@ -556,28 +568,54 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         }
       }).filter((player: TrendingPlayer) => player.playerName !== 'Unknown Player') : []
 
-      // Process matchups with deduplication
+      // Process matchups correctly according to Sleeper API format
       const matchupData: MatchupData[] = []
-      const matchupMap = new Map()
+      const matchupMap = new Map<number, SleeperMatchup[]>()
       
       if (matchups && matchups.length > 0) {
-        matchups.forEach((matchup: any) => {
-          const key = `${matchup.roster_id}-${matchup.opponent}`
-          if (!matchupMap.has(key)) {
-            matchupMap.set(key, true)
+        console.log(`🏈 Processing ${matchups.length} matchup entries for week ${week}:`, matchups)
+        // Group matchups by matchup_id (teams with same matchup_id play each other)
+        matchups.forEach((matchup: SleeperMatchup) => {
+          const matchupId = matchup.matchup_id
+          if (!matchupMap.has(matchupId)) {
+            matchupMap.set(matchupId, [])
+          }
+          matchupMap.get(matchupId)!.push(matchup)
+        })
+        
+        // Create matchup pairs
+        matchupMap.forEach((teams, matchupId) => {
+          if (teams.length === 2) {
+            const [team1, team2] = teams
+            
+            // Find team names
+            const team1Owner = validUsers.find((u: any) => validRosters.find((r: any) => r.roster_id === team1.roster_id)?.owner_id === u.user_id)
+            const team2Owner = validUsers.find((u: any) => validRosters.find((r: any) => r.roster_id === team2.roster_id)?.owner_id === u.user_id)
+            
+            const team1Name = team1Owner?.metadata?.team_name || team1Owner?.display_name || `Team ${team1.roster_id}`
+            const team2Name = team2Owner?.metadata?.team_name || team2Owner?.display_name || `Team ${team2.roster_id}`
+            
+            // Add both matchup perspectives with full Sleeper API data
             matchupData.push({
-              rosterId: matchup.roster_id,
-              teamName: '', // Will be filled later
-              projectedPoints: matchup.points || 0,
-              actualPoints: matchup.points || 0,
-              opponentRosterId: matchup.opponent,
-              opponentTeamName: '', // Will be filled later
-              opponentProjectedPoints: matchup.opponent_points || 0,
-              opponentActualPoints: matchup.opponent_points || 0,
-              isHome: false
+              rosterId: team1.roster_id,
+              teamName: team1Name,
+              projectedPoints: team1.points || 0,
+              actualPoints: team1.points || 0,
+              opponentRosterId: team2.roster_id,
+              opponentTeamName: team2Name,
+              opponentProjectedPoints: team2.points || 0,
+              opponentActualPoints: team2.points || 0,
+              isHome: false,
+              matchupId: matchupId,
+              starters: team1.starters || [],
+              players: team1.players || []
             })
           }
         })
+        
+        console.log(`✅ Processed ${matchupData.length} matchup pairs:`, matchupData)
+      } else {
+        console.log(`⚠️ No matchup data found for week ${week}`)
       }
 
       // Calculate league overview stats
@@ -600,6 +638,9 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         lowestScoringTeam: lowestOwner?.metadata?.team_name || lowestOwner?.display_name || lowestOwner?.first_name || `Team ${lowestScoring?.roster_id || 'Unknown'}`,
         trendingPlayers
       })
+
+      // Set the processed matchup data
+      setCurrentMatchups(matchupData)
 
       // Process teams data with validation
       const teamsData: (TeamData | null)[] = rosters.map((roster: any) => {
@@ -758,30 +799,40 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       {/* Main Content */}
       <div className="flex-1 space-y-6">
 
-        {/* League Overview Dashboard */}
+        {/* Enhanced League Overview Dashboard */}
         {leagueOverview && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Trophy className="h-5 w-5" />
-                  <span>LEAGUE OVERVIEW</span>
+          <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+            <CardHeader className="relative">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30 rounded-t-xl"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))] rounded-t-xl"></div>
+              
+              <CardTitle className="relative text-yellow-400 font-mono flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
+                    <Trophy className="h-6 w-6" />
+                  </div>
+                  <span className="text-xl">LEAGUE OVERVIEW</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <button 
-                    className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+                    className="flex items-center space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-4 py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
                     onClick={handleTradeMarketClick}
                   >
-                    <span className="font-semibold">Trade Market</span>
+                    <Trophy className="h-4 w-4" />
+                    <span className="font-semibold hidden sm:inline">Trade Market</span>
+                    <span className="font-semibold sm:hidden">Trade</span>
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
                   <button 
-                    className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+                    className="flex items-center space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-sm px-4 py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
                     onClick={handleDraftBuddyClick}
                   >
-                    <span className="font-semibold">Draft Buddy</span>
+                    <Users className="h-4 w-4" />
+                    <span className="font-semibold hidden sm:inline">Draft Buddy</span>
+                    <span className="font-semibold sm:hidden">Draft</span>
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
@@ -790,74 +841,30 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Card className="bg-slate-700 border-slate-600">
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <BarChart3 className="h-4 w-4 text-blue-400" />
-                      <span className="text-sm text-gray-400">Standings</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-100">{leagueOverview.totalTeams} Teams</div>
-                    <div className="text-xs text-gray-400">Week {leagueOverview.currentWeek}</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-slate-700 border-slate-600">
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Target className="h-4 w-4 text-green-400" />
-                      <span className="text-sm text-gray-400">Avg. Points</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-100">{leagueOverview.averagePointsPerTeam}</div>
-                    <div className="text-xs text-gray-400">Per Team</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-slate-700 border-slate-600">
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <TrendingUp className="h-4 w-4 text-yellow-400" />
-                      <span className="text-sm text-gray-400">Highest Scoring</span>
-                    </div>
-                    <div className="text-lg font-semibold text-slate-100 truncate">{leagueOverview.highestScoringTeam}</div>
-                    <div className="text-xs text-gray-400">Top Team</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-slate-700 border-slate-600">
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <TrendingDown className="h-4 w-4 text-red-400" />
-                      <span className="text-sm text-gray-400">Lowest Scoring</span>
-                    </div>
-                    <div className="text-lg font-semibold text-slate-100 truncate">{leagueOverview.lowestScoringTeam}</div>
-                    <div className="text-xs text-gray-400">Bottom Team</div>
-                  </CardContent>
-                </Card>
-              </div>
-
               {/* Current Week Matchups */}
               {currentMatchups.length > 0 ? (
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
-                    <Calendar className="h-5 w-5 text-blue-400" />
+                  <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-3">
+                    <div className="p-2 bg-blue-400/10 rounded-lg border border-blue-400/20">
+                      <Calendar className="h-5 w-5 text-blue-400" />
+                    </div>
                     <span>Week {currentWeek} Matchups</span>
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {currentMatchups.slice(0, 4).map((matchup, index) => (
-                      <Card key={index} className="bg-slate-700 border-slate-600">
+                      <Card key={index} className="bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 hover:border-slate-500 transition-all duration-200">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex-1 text-left">
-                              <div className="font-semibold text-slate-100 truncate">{matchup.teamName}</div>
-                              <div className="text-sm text-gray-400">
+                              <div className="font-semibold text-slate-100 truncate mb-1">{matchup.teamName}</div>
+                              <div className="text-sm text-slate-400 font-medium">
                                 {matchup.actualPoints > 0 ? `${matchup.actualPoints.toFixed(1)} pts` : 'No score yet'}
                               </div>
                             </div>
-                            <div className="mx-2 sm:mx-4 text-gray-500 text-center flex-shrink-0">vs</div>
+                            <div className="mx-3 sm:mx-4 text-slate-400 text-center flex-shrink-0 font-mono font-bold">VS</div>
                             <div className="flex-1 text-right">
-                              <div className="font-semibold text-slate-100 truncate text-right">{matchup.opponentTeamName}</div>
-                              <div className="text-sm text-gray-400 text-right">
+                              <div className="font-semibold text-slate-100 truncate text-right mb-1">{matchup.opponentTeamName}</div>
+                              <div className="text-sm text-slate-400 text-right font-medium">
                                 {matchup.opponentActualPoints > 0 ? `${matchup.opponentActualPoints.toFixed(1)} pts` : 'No score yet'}
                               </div>
                             </div>
@@ -888,18 +895,20 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
               )}
 
               {/* Recent Transactions */}
-              <div>
-                <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
-                  <Zap className="h-5 w-5 text-yellow-400" />
-                  <span>Week {currentWeek} Transactions</span>
-                </h3>
-                
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-3">
+                    <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
+                      <Zap className="h-5 w-5 text-yellow-400" />
+                    </div>
+                    <span>Week {currentWeek} Transactions</span>
+                  </h3>
+                  
                 <div className="flex flex-row gap-3 overflow-x-auto pb-4">
                   {transactions.length === 0 ? (
                     <div className="text-center py-8 min-w-[250px]">
                       <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
                       <p className="text-gray-400 text-sm">No transactions this week</p>
-                    </div>
+                      </div>
                   ) : (
                     transactions.map((tx, index) => {
                       // Get team names for the transaction
@@ -931,10 +940,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               'bg-green-400/20 text-green-400 border-green-400'
                             }`}>
                               {tx.type.toUpperCase()}
-                            </Badge>
+                          </Badge>
                             <span className="text-xs text-gray-400">Week {tx.week}</span>
-                          </div>
-                          
+                        </div>
+                        
                           <div className="text-sm text-slate-100 mb-2">
                             <span className="font-semibold">{teamNames}</span>
                           </div>
@@ -944,19 +953,19 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               {addedPlayers.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                                </div>
+                          </div>
                               )}
                               {droppedPlayers.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                                </div>
+                          </div>
                               )}
                               {tx.draftPicks.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-blue-400 italic">Draft Picks:</span> {tx.draftPicks.length} picks traded
-                                </div>
-                              )}
                             </div>
+                          )}
+                          </div>
                           )}
 
                           {tx.type === 'free_agent' && (
@@ -964,12 +973,12 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               {addedPlayers.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-green-400">Signed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                                </div>
+                            </div>
                               )}
                               {droppedPlayers.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                                </div>
+                            </div>
                               )}
                             </div>
                           )}
@@ -979,66 +988,70 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                               {addedPlayers.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-yellow-400">Claimed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                                </div>
+                          </div>
                               )}
                               {droppedPlayers.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                                </div>
-                              )}
+                        </div>
+                  )}
                               {tx.waiverBudget.length > 0 && (
                                 <div className="text-xs">
                                   <span className="text-purple-400">FAAB:</span> ${tx.waiverBudget[0]?.amount || 0}
-                                </div>
+                </div>
                               )}
-                            </div>
+              </div>
                           )}
 
                           <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-600">
                             <div className="flex items-center">
                               <Calendar className="h-3 w-3 mr-1" />
                               {new Date(tx.created).toLocaleDateString()}
-                            </div>
+                </div>
                             <Badge variant="outline" className={`text-xs px-1 py-0 ${
                               tx.status === 'complete' ? 'bg-green-400/20 text-green-400 border-green-400' :
                               tx.status === 'pending' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
                               'bg-red-400/20 text-red-400 border-red-400'
                             }`}>
                               {tx.status}
-                            </Badge>
-                          </div>
+                          </Badge>
                         </div>
+                          </div>
                       )
                     })
                   )}
-                </div>
-              </div>
-         
-            </CardContent>
-          </Card>
+                          </div>
+                        </div>
+
+          </CardContent>
+        </Card>
         )}
 
 
 
-        {/* Selected Team Details */}
+        {/* Enhanced Selected Team Details */}
         {selectedTeam && (
           <div className="space-y-6">
-            {/* Team Header */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-6">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center justify-center w-12 h-12 bg-blue-400/10 rounded-lg border border-blue-400/20">
-                  <span className="text-blue-400 font-bold text-lg">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+            {/* Enhanced Team Header */}
+            <div className="relative bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-6 overflow-hidden">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))]"></div>
+              
+              <div className="relative flex items-center space-x-4">
+                <div className="flex items-center justify-center w-14 h-14 bg-blue-400/10 rounded-xl border border-blue-400/20 backdrop-blur-sm">
+                  <span className="text-blue-400 font-bold text-xl">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
                 </div>
                 <UserAvatar
                   avatarId={selectedTeam.ownerAvatar}
                   displayName={selectedTeam.ownerName}
                   username={selectedTeam.ownerUsername}
-                  size={48}
-                  className="flex-shrink-0"
+                  size={56}
+                  className="flex-shrink-0 ring-2 ring-yellow-400/20"
                 />
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-yellow-400 font-mono tracking-wide">{selectedTeam.teamName}</h2>
-                  <p className="text-lg font-semibold text-yellow-400 font-mono">DETAILED ANALYSIS</p>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-yellow-400 font-mono tracking-wide mb-1">{selectedTeam.teamName}</h2>
+                  <p className="text-lg font-semibold text-yellow-400/70 font-mono">DETAILED ANALYSIS</p>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Button
@@ -1049,11 +1062,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
                       handleTeamSelect(sortedTeams[prevIndex])
                     }}
-                    className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:border-yellow-400 hover:text-yellow-400"
+                    className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm text-slate-300 font-mono min-w-[80px] text-center">
+                  <span className="text-sm text-slate-300 font-mono min-w-[80px] text-center bg-slate-700/50 px-3 py-1 rounded-lg backdrop-blur-sm">
                     {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
                   </span>
                   <Button
@@ -1064,50 +1077,55 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
                       handleTeamSelect(sortedTeams[nextIndex])
                     }}
-                    className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:border-yellow-400 hover:text-yellow-400"
+                    className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <Badge variant="outline" className={`text-lg px-4 py-2 ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]} border-2`}>
+                <Badge variant="outline" className={`text-lg px-4 py-2 border-2 backdrop-blur-sm ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
                   {selectedTeam.grade}
                 </Badge>
               </div>
             </div>
 
-            {/* Navigation Tabs */}
+            {/* Enhanced Navigation Tabs */}
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg p-1">
               <Tabs defaultValue="projections" className="w-full">
-                <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 p-0 h-auto">
+                <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 p-0 h-auto gap-1">
                   <TabsTrigger 
                     value="roster" 
-                    className="text-slate-200 data-[state=active]:bg-slate-700/80 data-[state=active]:text-yellow-400 font-mono text-sm py-3 rounded-lg transition-all duration-200"
+                    className="text-slate-300 data-[state=active]:bg-yellow-400/10 data-[state=active]:text-yellow-400 data-[state=active]:border-yellow-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-yellow-400/70 hover:bg-yellow-400/5"
                   >
-                    Roster
+                    <span className="hidden sm:inline">Roster</span>
+                    <span className="sm:hidden">Team</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="trends" 
-                    className="text-slate-200 data-[state=active]:bg-slate-700/80 data-[state=active]:text-yellow-400 font-mono text-sm py-3 rounded-lg transition-all duration-200"
+                    className="text-slate-300 data-[state=active]:bg-green-400/10 data-[state=active]:text-green-400 data-[state=active]:border-green-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-green-400/70 hover:bg-green-400/5"
                   >
-                    Trends
+                    <span className="hidden sm:inline">Trends</span>
+                    <span className="sm:hidden">📈</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="power" 
-                    className="text-slate-200 data-[state=active]:bg-slate-700/80 data-[state=active]:text-yellow-400 font-mono text-sm py-3 rounded-lg transition-all duration-200"
+                    className="text-slate-300 data-[state=active]:bg-blue-400/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-blue-400/70 hover:bg-blue-400/5"
                   >
-                    Power Ranking
+                    <span className="hidden sm:inline">Power</span>
+                    <span className="sm:hidden">⚡</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="analysis" 
-                    className="text-slate-200 data-[state=active]:bg-slate-700/80 data-[state=active]:text-yellow-400 font-mono text-sm py-3 rounded-lg transition-all duration-200"
+                    className="text-slate-300 data-[state=active]:bg-purple-400/10 data-[state=active]:text-purple-400 data-[state=active]:border-purple-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-purple-400/70 hover:bg-purple-400/5"
                   >
-                    Analysis
+                    <span className="hidden sm:inline">Analysis</span>
+                    <span className="sm:hidden">📊</span>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="projections" 
-                    className="text-slate-200 data-[state=active]:bg-slate-700/80 data-[state=active]:text-yellow-400 font-mono text-sm py-3 rounded-lg transition-all duration-200"
+                    className="text-slate-300 data-[state=active]:bg-orange-400/10 data-[state=active]:text-orange-400 data-[state=active]:border-orange-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-orange-400/70 hover:bg-orange-400/5"
                   >
-                    Projections
+                    <span className="hidden sm:inline">Projections</span>
+                    <span className="sm:hidden">🎯</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -1511,12 +1529,18 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           </div>
         )}
 
-        {/* Team Rankings */}
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5" />
-              <span>TEAM RANKINGS</span>
+        {/* Enhanced Team Rankings */}
+        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+          <CardHeader className="relative">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-800/30 to-slate-700/30 rounded-t-xl"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.1),rgba(255,255,255,0))] rounded-t-xl"></div>
+            
+            <CardTitle className="relative text-yellow-400 font-mono flex items-center space-x-3">
+              <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
+                <Trophy className="h-6 w-6" />
+              </div>
+              <span className="text-xl">TEAM RANKINGS</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1570,8 +1594,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                                 <div className="min-w-0">
                                   <div className="font-semibold text-slate-100 truncate">{team.teamName}</div>
                                   <div className="text-xs text-gray-400 truncate">{team.ownerName}</div>
-                                </div>
-                              </div>
+      </div>
+    </div>
                             </td>
                             <td className="p-3 text-center">
                               <Badge variant="outline" className={`${getTierColor(contenderTier)} font-mono text-xs px-3 py-1 border`}>

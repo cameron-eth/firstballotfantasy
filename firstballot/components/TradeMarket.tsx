@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { UserAvatar } from "@/components/user-avatar"
-import { TrendingUp, TrendingDown, Trophy, Users, Target, Calendar, Award, ArrowUp, ArrowDown, Minus, AlertCircle } from "lucide-react"
+import { TrendingUp, TrendingDown, Trophy, Users, Target, Calendar, ArrowUp, ArrowDown, Minus, AlertCircle } from "lucide-react"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import {
   processPlayerForTrade,

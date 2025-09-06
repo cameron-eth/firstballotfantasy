@@ -28,7 +28,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
 
   // Memoized computed values
   const rounds = useMemo(() => draft.settings.rounds, [draft.settings.rounds])
-  const teams = useMemo(() => draft.settings.total_rosters || 12, [draft.settings.total_rosters])
+  const teams = useMemo(() => draft.settings.teams || 12, [draft.settings.teams])
   
   // Memoized player rank map for efficient lookups
   const playerRankMap = useMemo(() => {
@@ -73,7 +73,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
   }, [draft.slot_to_roster_id])
 
   const getPickRosterId = useCallback((pick: SleeperPick) => {
-    return draft.slot_to_roster_id?.[pick.pick_no - 1] || null
+    return draft.slot_to_roster_id?.[pick.pick_no - 1]?.toString() || null
   }, [draft.slot_to_roster_id])
 
   // On mount, get the current user and auto-select their team if available

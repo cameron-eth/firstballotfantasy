@@ -55,6 +55,9 @@ export interface TraderStats {
   worstTrade: number
   totalValueMoved: number
   grade: string
+  marketShareByTrades: number // Percentage of total trades
+  marketShareByValue: number // Percentage of total value moved
+  marketShareByActivity: number // Percentage of total trading activity
 }
 
 // Dynasty Player Valuation System
@@ -263,7 +266,10 @@ export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStat
           bestTrade: 0,
           worstTrade: 0,
           totalValueMoved: 0,
-          grade: 'F'
+          grade: 'F',
+          marketShareByTrades: 0,
+          marketShareByValue: 0,
+          marketShareByActivity: 0
         }
       }
       
@@ -281,10 +287,20 @@ export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStat
     })
   })
   
-  // Calculate averages and win rates
+  // Calculate totals for market share percentages
+  const totalTrades = tradeAnalysis.length
+  const totalValueMoved = Object.values(stats).reduce((sum, stat) => sum + stat.totalValueMoved, 0)
+  const totalActivity = Object.values(stats).reduce((sum, stat) => sum + stat.totalTrades, 0)
+  
+  // Calculate averages, win rates, and market share percentages
   Object.values(stats).forEach(stat => {
     stat.avgValuePerTrade = stat.totalTrades > 0 ? stat.totalValueGained / stat.totalTrades : 0
     stat.grade = getGradeFromValue(stat.totalValueGained)
+    
+    // Calculate market share percentages
+    stat.marketShareByTrades = totalTrades > 0 ? (stat.totalTrades / totalActivity) * 100 : 0
+    stat.marketShareByValue = totalValueMoved > 0 ? (stat.totalValueMoved / totalValueMoved) * 100 : 0
+    stat.marketShareByActivity = totalActivity > 0 ? (stat.totalTrades / totalActivity) * 100 : 0
   })
   
   return Object.values(stats).sort((a, b) => b.totalValueGained - a.totalValueGained)

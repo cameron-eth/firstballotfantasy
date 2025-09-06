@@ -413,7 +413,7 @@ function TradeMarketContent() {
         </div>
 
         {/* Enhanced Summary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="bg-slate-800/50 border-slate-700/50 hover:bg-slate-800/80 transition-all duration-200">
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">

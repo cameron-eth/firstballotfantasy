@@ -31,9 +31,9 @@ export function LeagueAccessControl({
     }
   }
 
-  const baseClasses = `p-4 transition-all ${
+  const baseClasses = `p-6 transition-all duration-200 backdrop-blur-sm border ${
     canAccess 
-      ? 'cursor-pointer hover:border-yellow-400 hover:bg-slate-700' 
+      ? 'cursor-pointer hover:border-yellow-400/50 hover:bg-slate-700/80 hover:shadow-lg hover:shadow-yellow-400/10' 
       : 'cursor-not-allowed opacity-50 grayscale'
   } ${className}`
 
@@ -103,53 +103,53 @@ export function LeagueCard({
       isMember={isMember}
       onClick={onClick}
       className={`${
-        isSelected ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
+        isSelected ? 'border-yellow-400/50 ring-2 ring-yellow-400/50 bg-slate-700/80' : 'bg-slate-800/50 border-slate-700/50'
       }`}
       leagueName={league.name}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <div className="text-2xl font-bold text-yellow-400">
-            #{league.league_id.slice(-2)}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-center w-12 h-12 bg-yellow-400/10 rounded-xl border border-yellow-400/20 backdrop-blur-sm">
+            <span className="text-yellow-400 font-bold text-lg">#{league.league_id.slice(-2)}</span>
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-100">{league.name}</h3>
-            <p className="text-sm text-gray-400">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-slate-100 text-lg truncate">{league.name}</h3>
+            <p className="text-sm text-slate-400 font-mono">
               {league.season} • {league.status}
             </p>
           </div>
         </div>
         <Badge 
           variant="outline" 
-          className={`text-xs px-2 py-1 ${getStatusColor(league.status)}`}
+          className={`text-xs px-3 py-1 font-mono ${getStatusColor(league.status)}`}
         >
           {league.status}
         </Badge>
       </div>
       
-      <div className="space-y-2 text-sm text-slate-200">
-        <div className="flex justify-between">
-          <span>Teams:</span>
-          <span className="text-slate-100">{league.total_rosters || 'N/A'}</span>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/30">
+          <div className="text-slate-400 text-xs font-mono mb-1">Teams</div>
+          <div className="text-slate-100 font-semibold">{league.total_rosters || 'N/A'}</div>
         </div>
-        <div className="flex justify-between">
-          <span>Sport:</span>
-          <span className="text-slate-100">{league.sport?.toUpperCase() || 'NFL'}</span>
+        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/30">
+          <div className="text-slate-400 text-xs font-mono mb-1">Sport</div>
+          <div className="text-slate-100 font-semibold">{league.sport?.toUpperCase() || 'NFL'}</div>
         </div>
-        <div className="flex justify-between">
-          <span>Season:</span>
-          <span className="text-slate-100">{league.season}</span>
+        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/30">
+          <div className="text-slate-400 text-xs font-mono mb-1">Season</div>
+          <div className="text-slate-100 font-semibold">{league.season}</div>
         </div>
-        <div className="flex justify-between">
-          <span>Draft ID:</span>
-          <span className="text-slate-100">{league.draft_id ? 'Available' : 'N/A'}</span>
+        <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/30">
+          <div className="text-slate-400 text-xs font-mono mb-1">Draft ID</div>
+          <div className="text-slate-100 font-semibold">{league.draft_id ? 'Available' : 'N/A'}</div>
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-600">
+      <div className="mt-4 pt-4 border-t border-slate-600/50">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-400">League ID:</span>
-          <span className="text-slate-300 font-mono">{league.league_id}</span>
+          <span className="text-slate-400 font-mono">League ID:</span>
+          <span className="text-slate-300 font-mono bg-slate-700/50 px-2 py-1 rounded border border-slate-600/30">{league.league_id}</span>
         </div>
       </div>
     </LeagueAccessControl>

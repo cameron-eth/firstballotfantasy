@@ -954,7 +954,9 @@ function TradeMarketContent() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="flex items-center justify-between p-3 bg-blue-400/5 rounded-lg border border-blue-400/20">
                                 <div className="flex items-center space-x-2">
-                                  <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-white font-bold text-xs">📈</div>
+                                  <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center">
+                                    <TrendingUp className="h-3 w-3 text-white" />
+                                  </div>
                                   <div>
                                     <div className="text-slate-100 font-medium text-sm">
                                       {bestAvgTrader.ownerName}
@@ -969,7 +971,9 @@ function TradeMarketContent() {
 
                               <div className="flex items-center justify-between p-3 bg-green-400/5 rounded-lg border border-green-400/20">
                                 <div className="flex items-center space-x-2">
-                                  <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center text-white font-bold text-xs">💰</div>
+                                  <div className="w-6 h-6 bg-green-400 rounded-full flex items-center justify-center">
+                                    <Trophy className="h-3 w-3 text-white" />
+                                  </div>
                                   <div>
                                     <div className="text-slate-100 font-medium text-sm">
                                       {mostValueTrader.ownerName}

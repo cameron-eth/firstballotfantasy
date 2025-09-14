@@ -565,7 +565,7 @@ function TradeMarketContent() {
                   {traderStats.map((trader, index) => {
                     const team = teams.find(t => t.rosterId === trader.rosterId)
                     const isTopTrader = index < 3
-                    const winRate = team ? (team.wins / Math.max(team.wins + team.losses, 1)) * 100 : 0
+                    const winRate = trader.winRate
                     const cardClasses = isTopTrader 
                       ? 'bg-gradient-to-r from-yellow-400/5 to-green-400/5 border-yellow-400/30 hover:border-yellow-400/50' 
                       : 'bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 hover:border-slate-600'
@@ -645,11 +645,6 @@ function TradeMarketContent() {
                                 <Badge variant="outline" className="text-xs bg-purple-400/10 text-purple-400 border-purple-400/30">
                                   {trader.marketShareByValue.toFixed(1)}% Share
                                 </Badge>
-                                {team && (
-                                  <Badge variant="outline" className="text-xs bg-slate-600/50 text-slate-300 border-slate-500">
-                                    {team.wins}-{team.losses}
-                                  </Badge>
-                                )}
                               </div>
                               {team && (
                                 <span className="text-xs text-slate-400">
@@ -683,9 +678,6 @@ function TradeMarketContent() {
                               <div className="text-sm text-slate-400 truncate">{trader.ownerName}</div>
                               {team && (
                                 <div className="flex items-center space-x-2 mt-1">
-                                  <Badge variant="outline" className="text-xs bg-slate-600/50 text-slate-300 border-slate-500">
-                                    {team.wins}-{team.losses}
-                                  </Badge>
                                   <span className="text-xs text-slate-400">
                                     {Math.round(winRate)}% Win Rate
                                   </span>

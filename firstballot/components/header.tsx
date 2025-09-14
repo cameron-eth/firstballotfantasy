@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from "framer-motion"
 
 const navigation = [
   { name: "OVERVIEW", href: "/" },
-  { name: "DRAFT GUIDE", href: "/conversion" },
   { name: "LEAGUE BUDDY", href: "/league-buddy", requiresAuth: true },
   { name: "DRAFT BUDDY", href: "/draft-buddy", requiresAuth: true },
 ]

@@ -1030,59 +1030,82 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         {selectedTeam && (
           <div className="space-y-6">
             {/* Enhanced Team Header */}
-            <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 overflow-hidden">
+            <div className="relative bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/50 to-slate-700/50"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.08),rgba(255,255,255,0))]"></div>
               
-              <div className="relative flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-blue-400/10 rounded-xl border border-blue-400/20 backdrop-blur-sm">
-                    <span className="text-blue-400 font-bold text-lg sm:text-xl">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
-                              </div>
-                            <UserAvatar
-                              avatarId={selectedTeam.ownerAvatar}
-                              displayName={selectedTeam.ownerName}
-                              username={selectedTeam.ownerUsername}
-                    size={48}
-                    className="sm:w-14 sm:h-14 flex-shrink-0 ring-2 ring-yellow-400/20"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-400 font-mono tracking-wide mb-1 truncate">{selectedTeam.teamName}</h2>
-                    <p className="text-sm sm:text-lg font-semibold text-yellow-400/70 font-mono">DETAILED ANALYSIS</p>
-                            </div>
-                          </div>
-                <div className="flex items-center justify-between sm:justify-end space-x-3">
-                  <div className="flex items-center space-x-2 sm:space-x-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                      onClick={() => {
-                        const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
-                        const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
-                        handleTeamSelect(sortedTeams[prevIndex])
-                      }}
-                      className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200 h-8 w-8 sm:h-9 sm:w-9"
-                    >
-                      <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-                    <span className="text-xs sm:text-sm text-slate-300 font-mono min-w-[60px] sm:min-w-[80px] text-center bg-slate-700/50 px-2 sm:px-3 py-1 rounded-lg backdrop-blur-sm">
-                      {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                      onClick={() => {
-                        const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
-                        const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
-                        handleTeamSelect(sortedTeams[nextIndex])
-                      }}
-                      className="bg-slate-700/80 border-slate-600/50 text-slate-300 hover:bg-slate-600/80 hover:border-yellow-400/50 hover:text-yellow-400 backdrop-blur-sm transition-all duration-200 h-8 w-8 sm:h-9 sm:w-9"
-                    >
-                      <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                  </Button>
-                </div>
-                  <Badge variant="outline" className={`text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 border-2 backdrop-blur-sm ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
-                    {selectedTeam.grade}
-                          </Badge>
+              <div className="relative p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 gap-6 lg:gap-12">
+                  {/* Left Section - Team Info */}
+                  <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-5 flex-1 min-w-0">
+                    <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl border-2 border-blue-400/30 backdrop-blur-sm shadow-lg flex-shrink-0">
+                      <span className="text-blue-400 font-bold text-base sm:text-lg lg:text-xl font-mono">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+                    </div>
+                    <UserAvatar
+                      avatarId={selectedTeam.ownerAvatar}
+                      displayName={selectedTeam.ownerName}
+                      username={selectedTeam.ownerUsername}
+                      size={40}
+                      className="sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex-shrink-0 ring-2 ring-yellow-400/30 shadow-lg"
+                    />
+                    <div className="flex-1 min-w-0 lg:ml-2">
+                      <div className="flex items-center space-x-2 mb-1 lg:mb-2">
+                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0"></div>
+                        <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-yellow-400 font-mono tracking-wide truncate drop-shadow-lg">{selectedTeam.teamName}</h2>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-yellow-400/80 flex-shrink-0" />
+                        <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-semibold text-yellow-400/90 font-mono tracking-wide uppercase">
+                          Detailed Analysis
+                        </p>
+                        <div className="flex space-x-1 flex-shrink-0">
+                          <div className="w-1 h-1 bg-yellow-400/60 rounded-full"></div>
+                          <div className="w-1 h-1 bg-yellow-400/40 rounded-full"></div>
+                          <div className="w-1 h-1 bg-yellow-400/20 rounded-full"></div>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Right Section - Navigation Controls */}
+                  <div className="flex items-center justify-between sm:justify-end lg:justify-end space-x-3 lg:space-x-4 flex-shrink-0">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
+                          const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
+                          handleTeamSelect(sortedTeams[prevIndex])
+                        }}
+                        className="bg-gradient-to-r from-slate-700/90 to-slate-600/90 border-slate-500/60 text-slate-200 hover:from-slate-600/90 hover:to-slate-500/90 hover:border-yellow-400/60 hover:text-yellow-400 backdrop-blur-sm transition-all duration-300 h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 shadow-lg hover:shadow-yellow-400/20"
+                      >
+                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
+                      </Button>
+                      <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 border border-slate-500/60 rounded-lg px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 backdrop-blur-sm shadow-lg">
+                        <span className="text-xs sm:text-sm text-slate-200 font-mono font-semibold min-w-[60px] sm:min-w-[70px] lg:min-w-[80px] text-center block">
+                          {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
+                          const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
+                          handleTeamSelect(sortedTeams[nextIndex])
+                        }}
+                        className="bg-gradient-to-r from-slate-700/90 to-slate-600/90 border-slate-500/60 text-slate-200 hover:from-slate-600/90 hover:to-slate-500/90 hover:border-yellow-400/60 hover:text-yellow-400 backdrop-blur-sm transition-all duration-300 h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 shadow-lg hover:shadow-yellow-400/20"
+                      >
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
+                      </Button>
+                    </div>
+                    <Badge variant="outline" className={`text-sm sm:text-base lg:text-lg px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 border-2 font-mono font-bold backdrop-blur-sm shadow-lg ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
+                      {selectedTeam.grade}
+                    </Badge>
+                  </div>
+                </div>
                           </div>
                         </div>
 

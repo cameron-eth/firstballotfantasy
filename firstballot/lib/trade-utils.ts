@@ -250,7 +250,7 @@ export const processPlayerForTrade = (
 
 // Calculate trade statistics
 export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStats[] => {
-  const stats: Record<number, TraderStats> = {}
+  const stats: Record<number, TraderStats & { winningTrades: number }> = {}
   
   tradeAnalysis.forEach(trade => {
     trade.teams.forEach(team => {
@@ -269,7 +269,8 @@ export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStat
           grade: 'F',
           marketShareByTrades: 0,
           marketShareByValue: 0,
-          marketShareByActivity: 0
+          marketShareByActivity: 0,
+          winningTrades: 0
         }
       }
       
@@ -277,6 +278,11 @@ export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStat
       stat.totalTrades++
       stat.totalValueGained += team.netValueGain
       stat.totalValueMoved += team.totalValueReceived + team.totalValueSent
+      
+      // Count winning trades (trades where they left with more value)
+      if (team.netValueGain > 0) {
+        stat.winningTrades++
+      }
       
       if (team.netValueGain > stat.bestTrade) {
         stat.bestTrade = team.netValueGain
@@ -297,13 +303,17 @@ export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStat
     stat.avgValuePerTrade = stat.totalTrades > 0 ? stat.totalValueGained / stat.totalTrades : 0
     stat.grade = getGradeFromValue(stat.totalValueGained)
     
+    // Calculate win rate as percentage of trades where they left with more value
+    stat.winRate = stat.totalTrades > 0 ? (stat.winningTrades / stat.totalTrades) * 100 : 0
+    
     // Calculate market share percentages
     stat.marketShareByTrades = totalTrades > 0 ? (stat.totalTrades / totalActivity) * 100 : 0
     stat.marketShareByValue = totalValueMoved > 0 ? (stat.totalValueMoved / totalValueMoved) * 100 : 0
     stat.marketShareByActivity = totalActivity > 0 ? (stat.totalTrades / totalActivity) * 100 : 0
   })
   
-  return Object.values(stats).sort((a, b) => b.totalValueGained - a.totalValueGained)
+  // Remove temporary winningTrades field and return clean TraderStats
+  return Object.values(stats).map(({ winningTrades, ...stat }) => stat).sort((a, b) => b.totalValueGained - a.totalValueGained)
 }
 
 // Format value for display

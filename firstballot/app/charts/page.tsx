@@ -2,7 +2,6 @@
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import TradeMarket from "@/components/TradeMarket"
 import {
   LineChart,
   Line,
@@ -194,12 +193,9 @@ export default function ChartsPage() {
                 <p className="text-green-400 text-sm">Trade value distribution and team performance in the market</p>
               </CardHeader>
               <CardContent>
-                <TradeMarket 
-                  leagueId="demo"
-                  teams={[]}
-                  allPlayers={{}}
-                  transactions={[]}
-                />
+                <div className="text-center py-8">
+                  <p className="text-gray-400">Trade market analysis coming soon...</p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

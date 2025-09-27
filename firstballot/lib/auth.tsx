@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js"
 import { supabase } from "./supabase"
 import { setupFetchWithAuth } from "./setup-fetch-with-auth"
 import { userApi } from "./user-api"
+import { cacheUtils } from "./cache-utils"
 
 interface AuthContextType {
   user: User | null
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    cacheUtils.clear(); 
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,

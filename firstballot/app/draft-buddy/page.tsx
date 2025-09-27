@@ -89,7 +89,7 @@ function DraftBuddyContent() {
               }
             } else {
               // Auto-connect if username is cached but user/leagues aren't
-              await connectUser()
+              await connectUser(cachedUsername)
             }
             setProfileChecked(true)
             return
@@ -107,7 +107,7 @@ function DraftBuddyContent() {
             cacheUtils.setExpiry()
             
             // Auto-connect if username is saved
-            await connectUser()
+            await connectUser(data.sleeper_username)
           } else {
             setNoSleeperUsername(true)
           }
@@ -123,8 +123,9 @@ function DraftBuddyContent() {
   }, [authUser?.id])
 
   // Connect user to Sleeper API
-  const connectUser = useCallback(async () => {
-    if (!username.trim()) {
+  const connectUser = useCallback(async (usernameOverride?: string) => {
+    const currentUsername = usernameOverride || username;
+    if (!currentUsername.trim()) {
       setError("Please enter a Sleeper username")
       return
     }
@@ -140,7 +141,7 @@ function DraftBuddyContent() {
       setPlayers({})
       
       // Fetch user by username
-      const userData = await sleeperAPI.getUser(username)
+      const userData = await sleeperAPI.getUser(currentUsername)
       
       // Validate user data
       if (!userData || !userData.user_id) {
@@ -278,7 +279,7 @@ function DraftBuddyContent() {
                   />
                 </div>
                 <Button 
-                  onClick={connectUser}
+                  onClick={() => connectUser()}
                   disabled={loading}
                   className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 w-full"
                 >

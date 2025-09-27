@@ -38,42 +38,6 @@ export default function LeagueBuddyPage() {
   // Use shared cache utility
   const { keys } = cacheUtils
 
-
-
-  const handleClearCache = () => {
-    cacheUtils.clear()
-    setUsername("")
-    setUser(null)
-    setLeagues([])
-    setSelectedLeagueId("")
-    setNoSleeperUsername(false)
-    setProfileChecked(false)
-    setIsCacheValidState(false)
-    // Reload settings
-    if (authUser?.id) {
-      const loadSettings = async () => {
-        try {
-          const data = await userApi.getUserSettings()
-          if (data) {
-            if (data.sleeper_username) {
-              setUsername(data.sleeper_username)
-              setNoSleeperUsername(false)
-              await connectToSleeper()
-            } else {
-              setNoSleeperUsername(true)
-            }
-          }
-          setProfileChecked(true)
-        } catch (err) {
-          console.error('Failed to load settings:', err)
-          setProfileChecked(true)
-          setNoSleeperUsername(true)
-        }
-      }
-      loadSettings()
-    }
-  }
-
   // Check cache validity on mount (client-side only)
   useEffect(() => {
     setIsCacheValidState(cacheUtils.isValid())
@@ -106,9 +70,9 @@ export default function LeagueBuddyPage() {
               if (cachedLeagues.length === 1) {
                 setSelectedLeagueId(cachedLeagues[0].league_id)
               }
-            } else {
+            } else  {
               // Auto-connect if username is cached but user/leagues aren't
-              await connectToSleeper()
+              await connectToSleeper(cachedUsername)
             }
             setProfileChecked(true)
             return
@@ -126,8 +90,8 @@ export default function LeagueBuddyPage() {
             cacheUtils.set(keys.SLEEPER_USERNAME, data.sleeper_username)
             cacheUtils.setExpiry()
             
-            // Auto-connect if username is saved
-            await connectToSleeper()
+            // Auto-connect if username is saved - pass the username directly to avoid race condition
+            await connectToSleeper(data.sleeper_username)
           } else {
             setNoSleeperUsername(true)
           }
@@ -143,8 +107,9 @@ export default function LeagueBuddyPage() {
     loadSettings()
   }, [authUser?.id])
 
-  const connectToSleeper = useCallback(async () => {
-    if (!username.trim()) {
+  const connectToSleeper = useCallback(async (usernameOverride?: string) => {
+    const currentUsername = usernameOverride || username;
+    if (!currentUsername.trim()) {
       setError("Please enter a Sleeper username")
       return
     }
@@ -155,7 +120,7 @@ export default function LeagueBuddyPage() {
       setSelectedLeagueId("")
       
       // Get user id with Next.js caching
-      const userData = await sleeperApi.getUser(username) as any
+      const userData = await sleeperApi.getUser(currentUsername) as any
       setUser(userData)
      
       const updateResponse = await userApi.updateUserSleeperProfile(
@@ -210,7 +175,7 @@ export default function LeagueBuddyPage() {
                     />
                   </div>
                   <Button 
-                    onClick={connectToSleeper}
+                    onClick={() => connectToSleeper()}
                     disabled={loading}
                     className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 w-full"
                   >

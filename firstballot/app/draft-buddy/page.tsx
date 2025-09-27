@@ -21,6 +21,7 @@ import { UpgradePrompt } from "@/components/upgrade-prompt"
 import { Spinner } from "@/components/ui/spinner"
 import { useSearchParams } from "next/navigation"
 import { cacheUtils } from "@/lib/cache-utils"
+import { userApi } from "@/lib/user-api"
 
 function DraftBuddyContent() {
   const { user: authUser } = useAuth()
@@ -76,7 +77,6 @@ function DraftBuddyContent() {
           const cachedLeagues = cacheUtils.get(keys.SLEEPER_LEAGUES)
           
           if (cachedUsername) {
-    
             setUsername(cachedUsername)
             setNoSleeperUsername(false)
             
@@ -97,21 +97,8 @@ function DraftBuddyContent() {
         }
 
         // If no cache or cache expired, fetch from API
-        // Get the current session token
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) {
-          throw new Error('No valid session')
-        }
-
-        const response = await fetch('/api/settings', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          if (data.sleeper_username) {
+        const data = await userApi.getUserSettings()
+        if (data && data.sleeper_username) {
             setUsername(data.sleeper_username)
             setNoSleeperUsername(false)
             
@@ -124,7 +111,6 @@ function DraftBuddyContent() {
           } else {
             setNoSleeperUsername(true)
           }
-        }
         setProfileChecked(true)
       } catch (err) {
         console.error('Failed to load settings:', err)
@@ -162,7 +148,11 @@ function DraftBuddyContent() {
       }
       
       setUser(userData)
-      
+      const updateResponse = await userApi.updateUserSleeperProfile(
+        {
+          sleeper_username: userData.username
+        }
+      );
       // Cache the user data
       cacheUtils.set(keys.SLEEPER_USER, userData)
       

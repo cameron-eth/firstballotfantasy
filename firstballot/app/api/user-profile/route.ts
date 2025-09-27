@@ -1,52 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the authenticated user from the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get the userId and JWT token from headers (set by middleware after auth verification)
+    const userId = request.headers.get('x-user-id')
+    const userJwt = request.headers.get('x-user-jwt')
+    
+    if (!userId || !userJwt) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7);
-    
-    // Verify the JWT token and get the user
-    const { data: { user }, error: authError } = await supabaseServer.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    // Create an authenticated Supabase client with the user's JWT token
+    const userSupabase = createAuthenticatedSupabaseClient(userJwt)
 
-    // Get user profile by auth_id
-    const { data, error } = await supabaseServer
+    // Get user profile by auth_id using authenticated client (respects RLS)
+    const { data, error } = await userSupabase
       .from('user_profiles')
       .select('id, auth_id, username, email, sleeper_username, sleeper_id, membership_status, created_at, updated_at')
-      .eq('auth_id', user.id)
-      .single();
+      .eq('auth_id', userId)
+      .single()
 
     if (error) {
-      console.error('Error fetching user profile:', error);
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('Error in GET /api/user-profile:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { authId, email, username } = await request.json()
-    
-    if (!authId || !email) {
-      return NextResponse.json({ error: 'Auth ID and email are required' }, { status: 400 })
+    const { email, username } = await request.json()
+    const authId = request.headers.get('x-user-id');
+    const userJwt = request.headers.get('x-user-jwt');
+
+    if (!authId || !email || !username) {
+      return NextResponse.json({ error: 'Auth ID, email, and username are required' }, { status: 400 })
+    }
+
+    // Try using the user's JWT token for profile creation
+    let serviceClient;
+    if (userJwt) {
+      serviceClient = createAuthenticatedSupabaseClient(userJwt);
+    } else {
+      serviceClient = createClient(
+        "https://aanoqbjauukcczrlnxka.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhbm9xYmphdXVrY2N6cmxueGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MzM1NjQsImV4cCI6MjA1NjEwOTU2NH0.5QMnDzOI-y_XiIRGTmnLfzZ6i8vDbBXfO5sHuxqd0EU"
+      );
     }
 
     // Check if profile already exists
-    const { data: existingProfile } = await supabaseServer
+    const { data: existingProfile } = await serviceClient
       .from('user_profiles')
       .select('id')
       .eq('auth_id', authId)
@@ -57,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new profile with proper schema
-    const { data, error } = await supabaseServer
+    const { data, error } = await serviceClient
       .from('user_profiles')
       .insert({
         auth_id: authId,
@@ -72,41 +80,48 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating profile:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error in POST /api/user-profile:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { userId, sleeper_username } = await request.json()
+    // Get the userId and JWT token from headers (set by middleware after auth verification)
+    const userId = request.headers.get('x-user-id')
+    const userJwt = request.headers.get('x-user-jwt')
     
-    if (!userId || !sleeper_username) {
-      return NextResponse.json({ error: 'User ID and sleeper_username are required' }, { status: 400 })
+    if (!userId || !userJwt) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
-    // Update the sleeper_username
-    const { data, error } = await supabaseServer
+    // Create an authenticated Supabase client with the user's JWT token
+    const userSupabase = createAuthenticatedSupabaseClient(userJwt)
+
+    const { sleeper_username } = await request.json()
+    
+    if (!sleeper_username) {
+      return NextResponse.json({ error: 'sleeper_username is required' }, { status: 400 })
+    }
+
+    // Update the sleeper_username using the authenticated client (respects RLS)
+    const { data, error } = await userSupabase
       .from('user_profiles')
       .update({ sleeper_username: sleeper_username })
-      .eq('id', userId)
+      .eq('auth_id', userId)
       .select()
       .single()
 
     if (error) {
-      console.error('Error updating profile:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error in PATCH /api/user-profile:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

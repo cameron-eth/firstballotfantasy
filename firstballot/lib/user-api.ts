@@ -2,9 +2,21 @@ export interface IUserApi {
     getUserProfile(): Promise<any>;
     updateUserSleeperProfile(data: any): Promise<Response>;
     addUserProfile(data: any): Promise<Response>;
+    getUserSettings(): Promise<any>; // Add this to the interface
+
 }
 
 export class UserApi implements IUserApi {
+    public async getUserSettings() {
+        const response = await fetch('/api/settings', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        return response.json();
+    }
+
     public async getUserProfile() {
         const response = await fetch('/api/user-profile', {
             cache: 'force-cache',
@@ -24,7 +36,6 @@ export class UserApi implements IUserApi {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                userId: data.userId, 
                 sleeper_username: data.sleeper_username
             }),
         });

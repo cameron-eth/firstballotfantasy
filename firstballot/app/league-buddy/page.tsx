@@ -18,6 +18,7 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 import { cacheUtils } from "@/lib/cache-utils"
 import { supabase } from "@/lib/supabase"
 import { sleeperApi } from '@/lib/nextjs-cache'
+import { userApi } from "@/lib/user-api"
 
 export default function LeagueBuddyPage() {
   const { user: authUser } = useAuth()
@@ -52,20 +53,8 @@ export default function LeagueBuddyPage() {
     if (authUser?.id) {
       const loadSettings = async () => {
         try {
-          // Get the current session token
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session?.access_token) {
-            throw new Error('No valid session')
-          }
-
-          const response = await fetch('/api/settings', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          if (response.ok) {
-            const data = await response.json()
+          const data = await userApi.getUserSettings()
+          if (data) {
             if (data.sleeper_username) {
               setUsername(data.sleeper_username)
               setNoSleeperUsername(false)
@@ -127,20 +116,8 @@ export default function LeagueBuddyPage() {
         }
 
         // If no cache or cache expired, fetch from API
-        // Get the current session token
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) {
-          throw new Error('No valid session')
-        }
-
-        const response = await fetch('/api/settings', {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
+        const data = await userApi.getUserSettings()
+        if (data) {
           if (data.sleeper_username) {
             setUsername(data.sleeper_username)
             setNoSleeperUsername(false)
@@ -174,13 +151,19 @@ export default function LeagueBuddyPage() {
     try {
       setLoading(true)
       setError(null)
-      setLeagues([])
+      setLeagues([]) 
       setSelectedLeagueId("")
       
       // Get user id with Next.js caching
       const userData = await sleeperApi.getUser(username) as any
       setUser(userData)
-      
+     
+      const updateResponse = await userApi.updateUserSleeperProfile(
+              {
+                sleeper_username: userData.username
+              }
+            );
+
       // Cache the user data
       cacheUtils.set(keys.SLEEPER_USER, userData)
       

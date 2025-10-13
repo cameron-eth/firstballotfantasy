@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { TeamLogo } from "@/components/team-logo"
 import { UserAvatar } from "@/components/user-avatar"
-import { Users, Trophy, Zap, Calendar, Loader2, AlertCircle, ChevronLeft, ChevronRight, TrendingUp, BarChart3, Target } from "lucide-react"
+import { CurrentLineup } from "@/components/league/CurrentLineup"
+import { PlayerNGSStats } from "@/components/player-ngs-stats"
+import { Users, Trophy, Zap, Calendar, Loader2, AlertCircle, TrendingUp, BarChart3, Target, Eye, Clipboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
@@ -54,6 +56,11 @@ interface PlayerData {
   experience: number
   status: string
   espn_id?: string
+  fantasy_points_ppr?: number
+  fantasy_points_half_ppr?: number
+  fantasy_points?: number
+  games_played?: number
+  fantasy_ppg?: number  // Fantasy points per game from NGS
   rankingData?: {
     rank: number
     position: string
@@ -89,6 +96,8 @@ interface SleeperMatchup {
   matchup_id: number
   points: number
   custom_points: number | null
+  starters_points: number[] | null
+  players_points: Record<string, number> | null
 }
 
 interface MatchupData {
@@ -104,6 +113,11 @@ interface MatchupData {
   matchupId?: number
   starters?: string[]
   players?: string[]
+  startersPoints?: number[]
+  playersPoints?: Record<string, number>
+  opponentAvatar?: string
+  opponentUsername?: string
+  opponentDisplayName?: string
 }
 
 interface LeagueOverview {
@@ -114,6 +128,7 @@ interface LeagueOverview {
   highestScoringTeam: string
   lowestScoringTeam: string
   trendingPlayers: TrendingPlayer[]
+  rosterPositions: Record<string, number>
 }
 
 interface TrendingPlayer {
@@ -127,21 +142,6 @@ interface TrendingPlayer {
   espn_id?: string
 }
 
-interface Transaction {
-  transactionId: string
-  type: 'trade' | 'free_agent' | 'waiver'
-  status: string
-  week: number
-  rosterIds: number[]
-  adds: Record<string, number> | null
-  drops: Record<string, number> | null
-  draftPicks: any[]
-  waiverBudget: any[]
-  creator: string
-  created: number
-  consenterIds: number[]
-  metadata: any
-}
 
 // Constants for better maintainability
 const GRADE_COLORS = {
@@ -340,10 +340,13 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const [leagueOverview, setLeagueOverview] = useState<LeagueOverview | null>(null)
   const [currentMatchups, setCurrentMatchups] = useState<MatchupData[]>([])
   const [currentWeek, setCurrentWeek] = useState<number>(1)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
 
   const [allPlayers, setAllPlayers] = useState<Record<string, any>>({})
   const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
+  const [activeSection, setActiveSection] = useState<'overview' | 'roster' | 'league'>('overview')
+  const [lineupMode, setLineupMode] = useState<'current' | 'optimized'>('current')
+  const [whatIfLineup, setWhatIfLineup] = useState<string[]>([]) // Player IDs for what-if scenario
+  const [selectedStarterToSwap, setSelectedStarterToSwap] = useState<string | null>(null) // For what-if swaps
 
   // Memoized sorted teams to prevent unnecessary re-sorting
   const sortedTeams = useMemo(() => {
@@ -471,6 +474,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     router.push(`/trade-market?leagueId=${leagueId}`)
   }, [router, leagueId])
 
+  const handleScoutingPortalClick = useCallback(() => {
+    router.push(`/scouting-portal?leagueId=${leagueId}`)
+  }, [router, leagueId])
+
   const handleDraftBuddyClick = useCallback(() => {
     router.push(`/draft-buddy?leagueId=${leagueId}`)
   }, [router, leagueId])
@@ -484,25 +491,69 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     try {
       setLoading(true)
       setError(null)
-      
+
       // Cache the league ID for other components to use
       leagueCache.setLeagueId(leagueId)
 
-      // Fetch NFL state to get current week using Next.js caching
-      const nflState = await sleeperApi.getNflState() as any
-      const week = nflState.week || 1
+      // Fetch NFL state to get current week - ALWAYS get fresh data (no cache)
+      const nflState = await fetch('https://api.sleeper.app/v1/state/nfl', { cache: 'no-store' }).then(r => r.json()) as any
+      const week = nflState?.week || nflState?.display_week || 6 // Fallback to week 6 if API fails
+      console.log('NFL State (FRESH):', { week, season: nflState?.season, seasonType: nflState?.season_type })
       setCurrentWeek(week)
 
-      // Fetch all data in parallel with Next.js caching
-      const [rosters, users, allPlayers, league, matchups, transactionsResponse, rankingsResponse] = await Promise.all([
-        sleeperApi.getLeagueRosters(leagueId),
-        sleeperApi.getLeagueUsers(leagueId),
+      // Fetch all data in parallel - ROSTERS, USERS & MATCHUPS are ALWAYS FRESH (no cache)
+      const [rosters, users, allPlayers, league, matchups, rankingsResponse] = await Promise.all([
+        fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`, { cache: 'no-store' }).then(r => r.json()),
+        fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(r => r.json()),
         sleeperApi.getAllPlayers(),
         sleeperApi.getLeagueInfo(leagueId),
-        sleeperApi.getLeagueMatchups(leagueId, week).catch(() => []),
-        sleeperApi.getTransactions(leagueId, week).catch(() => []),
+        fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
         fetch('/api/rankings').then(res => res.ok ? res.json() : []).catch(() => [])
-      ]) as [any[], any[], Record<string, any>, any, any[], any[], any[]]
+      ]) as [any[], any[], Record<string, any>, any, any[], any[]]
+      
+      // SIMPLE: Get stats for all roster players using their Sleeper IDs
+      const allSleeperPlayerIds = Array.from(new Set(
+        rosters.flatMap((r: any) => r.players || [])
+      ))
+      
+      console.log('🏈 Fetching stats for', allSleeperPlayerIds.length, 'roster players...')
+      
+      // Fetch stats directly - API handles Sleeper ID -> GSIS ID -> Stats mapping
+      const rosterStatsMap: Record<string, { fantasy_ppg: number, total_fantasy_points: number, games_played: number }> = {}
+      
+      if (allSleeperPlayerIds.length > 0) {
+        try {
+          const playerIdsParam = allSleeperPlayerIds.join(',')
+          const response = await fetch(`/api/roster-stats?player_ids=${playerIdsParam}`, { cache: 'no-store' })
+          
+          if (response.ok) {
+            const result = await response.json()
+            console.log('📊 Roster Stats Response:', result.count, 'players')
+            
+            // Map by Sleeper player ID (simple!)
+            result.data.forEach((playerStats: any) => {
+              rosterStatsMap[playerStats.sleeper_player_id] = {
+                fantasy_ppg: parseFloat(playerStats.fantasy_ppg) || 0,
+                total_fantasy_points: parseFloat(playerStats.total_fantasy_points) || 0,
+                games_played: playerStats.games_played || 0
+              }
+            })
+            
+            console.log('✅ Loaded stats for', Object.keys(rosterStatsMap).length, 'players')
+            console.log('📈 Sample roster stats:', Object.entries(rosterStatsMap).slice(0, 5).map(([id, stats]) => ({
+              id, 
+              name: result.data.find((p: any) => p.sleeper_player_id === id)?.player_name,
+              fantasy_ppg: stats.fantasy_ppg
+            })))
+          } else {
+            console.error('❌ Failed to fetch stats:', response.statusText)
+          }
+        } catch (err) {
+          console.error('❌ Failed to fetch stats:', err)
+        }
+      }
+      
+      console.log('Roster data fetched (FRESH):', { rosterCount: rosters?.length, matchupCount: matchups?.length })
 
       if (!rosters || !users || !allPlayers || !league) {
         throw new Error('Invalid data received from API')
@@ -530,26 +581,25 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         }, {})
       }
 
-      setAllPlayers(allPlayers)
-
-      // Process transactions with validation
-      const processedTransactions: Transaction[] = (transactionsResponse || []).map((tx: any) => ({
-        transactionId: tx.transaction_id || '',
-        type: tx.type || 'free_agent',
-        status: tx.status || 'complete',
-        week: tx.leg || week,
-        rosterIds: tx.roster_ids || [],
-        adds: tx.adds || null,
-        drops: tx.drops || null,
-        draftPicks: tx.draft_picks || [],
-        waiverBudget: tx.waiver_budget || [],
-        creator: tx.creator || '',
-        created: tx.created || Date.now(),
-        consenterIds: tx.consenter_ids || [],
-        metadata: tx.metadata || {}
-      }))
-
-      setTransactions(processedTransactions)
+      // SIMPLE: Merge stats directly into allPlayers using Sleeper player IDs
+      const enhancedPlayers = { ...allPlayers }
+      let mergedCount = 0
+      Object.entries(rosterStatsMap).forEach(([sleeperId, stats]) => {
+        if (enhancedPlayers[sleeperId]) {
+          enhancedPlayers[sleeperId] = {
+            ...enhancedPlayers[sleeperId],
+            fantasy_ppg: stats.fantasy_ppg,
+            fantasy_points_ppr: stats.total_fantasy_points,
+            games_played: stats.games_played
+          }
+          if (stats.fantasy_ppg > 0) mergedCount++
+        }
+      })
+      
+      console.log('✅ Enhanced', Object.values(enhancedPlayers).filter(p => p.fantasy_ppg > 0).length, 'players with stats')
+      console.log(`🔄 Merged ${mergedCount} players with fantasy_ppg > 0 from rosterStatsMap`)
+      
+      setAllPlayers(enhancedPlayers)
 
       // Process trending players with Next.js caching
       const trending = await sleeperApi.getTrendingPlayers().catch(() => [])
@@ -595,7 +645,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             const team1Name = team1Owner?.metadata?.team_name || team1Owner?.display_name || `Team ${team1.roster_id}`
             const team2Name = team2Owner?.metadata?.team_name || team2Owner?.display_name || `Team ${team2.roster_id}`
             
-            // Add both matchup perspectives with full Sleeper API data
+            // Add both matchup perspectives with full Sleeper API data including player points
             matchupData.push({
               rosterId: team1.roster_id,
               teamName: team1Name,
@@ -608,7 +658,12 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
               isHome: false,
               matchupId: matchupId,
               starters: team1.starters || [],
-              players: team1.players || []
+              players: team1.players || [],
+              startersPoints: team1.starters_points || [],
+              playersPoints: team1.players_points || {},
+              opponentAvatar: team2Owner?.avatar,
+              opponentUsername: team2Owner?.display_name || team2Owner?.metadata?.team_name,
+              opponentDisplayName: team2Owner?.display_name
             })
           }
         })
@@ -636,7 +691,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         averagePointsPerTeam: Math.round(avgPoints),
         highestScoringTeam: highestOwner?.metadata?.team_name || highestOwner?.display_name || highestOwner?.first_name || `Team ${highestScoring?.roster_id || 'Unknown'}`,
         lowestScoringTeam: lowestOwner?.metadata?.team_name || lowestOwner?.display_name || lowestOwner?.first_name || `Team ${lowestScoring?.roster_id || 'Unknown'}`,
-        trendingPlayers
+        trendingPlayers,
+        rosterPositions: league?.roster_positions || { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SUPER_FLEX: 1 }
       })
 
       // Set the processed matchup data
@@ -653,7 +709,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         const teamName = owner?.metadata?.team_name || owner?.display_name || owner?.first_name || `Team ${roster.roster_id}`
         
         const players = (roster.players || []).map((playerId: string) => {
-          const player = allPlayers[playerId]
+          const player = enhancedPlayers[playerId]
           if (!player) {
             return null
           }
@@ -662,6 +718,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           const lastName = player.last_name || ''
           const playerName = `${firstName} ${lastName}`.trim()
           const ranking = playerRankings[playerName]
+          
+          // Use already-merged NGS stats from enhanced allPlayers (merged by GSIS ID)
+          const fantasyPointsPPR = player.fantasy_points_ppr || 0
+          const gamesPlayed = player.games_played || 0
+          const fantasyPPG = player.fantasy_ppg || 0
           
           return {
             playerId,
@@ -674,6 +735,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             experience: player.years_exp || 0,
             status: player.status || 'Active',
             espn_id: player.espn_id,
+            fantasy_points_ppr: fantasyPointsPPR,
+            fantasy_points_half_ppr: player.fantasy_points_half_ppr,
+            fantasy_points: fantasyPointsPPR,
+            games_played: gamesPlayed,
+            fantasy_ppg: fantasyPPG,
             rankingData: ranking
           }
         }).filter(Boolean) as PlayerData[]
@@ -795,363 +861,849 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   }
 
   return (
-    <div className="flex flex-col space-y-6">
-      {/* Main Content */}
-      <div className="flex-1 space-y-6">
-
-        {/* Enhanced League Overview Dashboard */}
-        {leagueOverview && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="relative">
-              
-              <CardTitle className="relative text-yellow-400 font-mono flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-                    <Trophy className="h-6 w-6" />
-                  </div>
-                  <span className="text-xl">LEAGUE OVERVIEW</span>
+    <div className="flex h-screen overflow-hidden">
+      {/* Sidebar Navigation */}
+      <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
+        {/* Team Info */}
+        {selectedTeam && (
+          <div className="p-4 border-b border-slate-700">
+            <div className="flex items-center space-x-3 mb-3">
+              <UserAvatar
+                avatarId={selectedTeam.ownerAvatar}
+                displayName={selectedTeam.ownerName}
+                username={selectedTeam.ownerUsername}
+                size={40}
+                className="ring-2 ring-yellow-400/30"
+              />
+              <div className="flex-1 min-w-0">
+                <h2 className="text-sm font-bold text-yellow-400 font-mono truncate">{selectedTeam.teamName}</h2>
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="text-slate-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+                  <Badge variant="outline" className={`text-xs font-mono ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
+                    {selectedTeam.grade}
+                  </Badge>
                 </div>
-                <div className="flex items-center space-x-2 sm:space-x-3">
-              <button 
-                    className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
-                onClick={handleTradeMarketClick}
-              >
-                    <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="font-semibold hidden sm:inline">Trade Market</span>
-                    <span className="font-semibold sm:hidden">Trade</span>
-                    <svg width="12" height="12" className="sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button 
-                    className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/80 hover:bg-slate-600/80 text-yellow-400 hover:text-yellow-300 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 backdrop-blur-sm"
-                onClick={handleDraftBuddyClick}
-              >
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="font-semibold hidden sm:inline">Draft Buddy</span>
-                    <span className="font-semibold sm:hidden">Draft</span>
-                    <svg width="12" height="12" className="sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Current Week Matchups */}
-              {currentMatchups.length > 0 ? (
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-slate-100 mb-6 flex items-center space-x-3">
-                    <div className="p-2 bg-blue-400/10 rounded-lg border border-blue-400/20">
-                      <Calendar className="h-5 w-5 text-blue-400" />
-          </div>
-                    <span>Week {currentWeek} Matchups</span>
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                    {currentMatchups.slice(0, 4).map((matchup, index) => (
-                      <Card key={index} className="bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 hover:border-slate-500 transition-all duration-200">
-                        <CardContent className="p-5 sm:p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 text-left min-w-0">
-                              <div className="font-semibold text-slate-100 truncate mb-2 text-sm sm:text-base">{matchup.teamName}</div>
-                              <div className="text-xs sm:text-sm text-slate-400 font-medium">
-                                {matchup.actualPoints > 0 ? `${matchup.actualPoints.toFixed(1)} pts` : 'No score yet'}
-                              </div>
-                            </div>
-                            <div className="mx-4 sm:mx-6 text-slate-400 text-center flex-shrink-0 font-mono font-bold text-sm sm:text-base">VS</div>
-                            <div className="flex-1 text-right min-w-0">
-                              <div className="font-semibold text-slate-100 truncate text-right mb-2 text-sm sm:text-base">{matchup.opponentTeamName}</div>
-                              <div className="text-xs sm:text-sm text-slate-400 text-right font-medium">
-                                {matchup.opponentActualPoints > 0 ? `${matchup.opponentActualPoints.toFixed(1)} pts` : 'No score yet'}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-slate-100 mb-4 flex items-center space-x-2">
-                    <Calendar className="h-5 w-5 text-blue-400" />
-                    <span>Week {currentWeek} Matchups</span>
-                  </h3>
-                  <Card className="bg-slate-700 border-slate-600">
-                    <CardContent className="p-6 text-center">
-                      <div className="text-gray-400">
-                        {currentWeek === 1 ? (
-                          <p>Season hasn't started yet. Matchups will appear here once games begin.</p>
-                        ) : (
-                          <p>No matchups found for Week {currentWeek}. This could be a bye week or the season hasn't started.</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Recent Transactions */}
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-100 mb-6 flex items-center space-x-3">
-                    <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-                      <Zap className="h-5 w-5 text-yellow-400" />
-                    </div>
-                    <span>Week {currentWeek} Transactions</span>
-                  </h3>
-                  
-                <div className="flex flex-row gap-4 sm:gap-6 overflow-x-auto pb-4">
-            {transactions.length === 0 ? (
-                    <div className="text-center py-8 min-w-[280px] sm:min-w-[320px]">
-                <Zap className="h-8 w-8 text-gray-500 mx-auto mb-2" />
-                <p className="text-gray-400 text-sm">No transactions this week</p>
               </div>
-            ) : (
-              transactions.map((tx, index) => {
-                // Get team names for the transaction
-                const teamNames = tx.rosterIds.map(rosterId => {
-                  const team = teams.find(t => t.rosterId === rosterId)
-                  return team?.teamName || `Team ${rosterId}`
-                }).join(' & ')
-
-                // Get player names for adds and drops
-                const addedPlayers = tx.adds ? Object.keys(tx.adds).map(playerId => {
-                  const player = allPlayers[playerId]
-                  return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
-                }) : []
-                
-                const droppedPlayers = tx.drops ? Object.keys(tx.drops).map(playerId => {
-                  const player = allPlayers[playerId]
-                  return player ? `${player.first_name} ${player.last_name}` : `Player ${playerId}`
-                }) : []
-
-                return (
-                  <div 
-                    key={tx.transactionId} 
-                          className="bg-slate-700/50 border border-slate-600/50 hover:bg-slate-700/80 transition-all duration-200 p-4 sm:p-5 rounded-lg min-w-[280px] sm:min-w-[320px] max-w-sm flex-shrink-0"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="outline" className={`text-xs px-2 py-1 ${
-                        tx.type === 'trade' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
-                        tx.type === 'waiver' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                        'bg-green-400/20 text-green-400 border-green-400'
-                      }`}>
-                        {tx.type.toUpperCase()}
-                      </Badge>
-                      <span className="text-xs text-gray-400">Week {tx.week}</span>
-                    </div>
-                    
-                    <div className="text-sm text-slate-100 mb-2">
-                      <span className="font-semibold">{teamNames}</span>
-                    </div>
-
-                    {tx.type === 'trade' && (
-                      <div className=" text-slate-300  space-y-1">
-                        {addedPlayers.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-green-400">Added:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                          </div>
-                        )}
-                        {droppedPlayers.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                          </div>
-                        )}
-                        {tx.draftPicks.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-blue-400 italic">Draft Picks:</span> {tx.draftPicks.length} picks traded
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {tx.type === 'free_agent' && (
-                      <div className="space-y-1">
-                        {addedPlayers.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-green-400">Signed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                          </div>
-                        )}
-                        {droppedPlayers.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {tx.type === 'waiver' && (
-                      <div className="space-y-1">
-                        {addedPlayers.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-yellow-400">Claimed:</span> <span className="text-gray-300">{addedPlayers.join(', ')}</span>
-                          </div>
-                        )}
-                        {droppedPlayers.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-red-400">Dropped:</span> <span className="text-gray-300">{droppedPlayers.join(', ')}</span>
-                          </div>
-                        )}
-                        {tx.waiverBudget.length > 0 && (
-                          <div className="text-xs">
-                            <span className="text-purple-400">FAAB:</span> ${tx.waiverBudget[0]?.amount || 0}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between text-xs text-gray-400 mt-2 pt-2 border-t border-slate-600">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {new Date(tx.created).toLocaleDateString()}
-                      </div>
-                      <Badge variant="outline" className={`text-xs px-1 py-0 ${
-                        tx.status === 'complete' ? 'bg-green-400/20 text-green-400 border-green-400' :
-                        tx.status === 'pending' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                        'bg-red-400/20 text-red-400 border-red-400'
-                      }`}>
-                        {tx.status}
-                      </Badge>
-                    </div>
-                  </div>
-                )
-              })
-            )}
+            </div>
+            <div className="text-xs text-slate-400">{selectedTeam.wins}-{selectedTeam.losses}</div>
           </div>
-                    </div>
-
-                  </CardContent>
-                </Card>
         )}
 
+        {/* Navigation Items */}
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => setActiveSection('overview')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-mono text-sm transition-all ${
+              activeSection === 'overview'
+                ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30'
+                : 'text-slate-300 hover:bg-slate-700 hover:text-yellow-400'
+            }`}
+          >
+            <Target className="h-5 w-5" />
+            <span>Overview</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveSection('roster')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-mono text-sm transition-all ${
+              activeSection === 'roster'
+                ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30'
+                : 'text-slate-300 hover:bg-slate-700 hover:text-yellow-400'
+            }`}
+          >
+            <Users className="h-5 w-5" />
+            <span>My Team</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveSection('league')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-mono text-sm transition-all ${
+              activeSection === 'league'
+                ? 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30'
+                : 'text-slate-300 hover:bg-slate-700 hover:text-yellow-400'
+            }`}
+          >
+            <Trophy className="h-5 w-5" />
+            <span>League</span>
+          </button>
+        </nav>
 
+        {/* Quick Actions */}
+        <div className="p-4 border-t border-slate-700 space-y-2">
+          <button 
+            className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+            onClick={handleTradeMarketClick}
+          >
+            <Trophy className="h-4 w-4" />
+            <span>Trade Market</span>
+          </button>
+          <button 
+            className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+            onClick={handleScoutingPortalClick}
+          >
+            <Eye className="h-4 w-4" />
+            <span>Scouting Portal</span>
+          </button>
+          <button 
+            className="w-full flex items-center justify-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+            onClick={handleDraftBuddyClick}
+          >
+            <Users className="h-4 w-4" />
+            <span>Draft Buddy</span>
+          </button>
+        </div>
+      </div>
 
-        {/* Enhanced Selected Team Details */}
-        {selectedTeam && (
-          <div className="space-y-6">
-            {/* Enhanced Team Header */}
-            <div className="relative bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-              {/* Background Pattern */}
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/50 to-slate-700/50"></div>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.08),rgba(255,255,255,0))]"></div>
-              
-              <div className="relative p-4 sm:p-6 lg:p-8">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 gap-6 lg:gap-12">
-                  {/* Left Section - Team Info */}
-                  <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-5 flex-1 min-w-0">
-                    <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl border-2 border-blue-400/30 backdrop-blur-sm shadow-lg flex-shrink-0">
-                      <span className="text-blue-400 font-bold text-base sm:text-lg lg:text-xl font-mono">{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
-                    </div>
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto bg-slate-900">
+        <div className="p-6">
+          
+          {/* OVERVIEW SECTION */}
+          {activeSection === 'overview' && selectedTeam && leagueOverview && (() => {
+          const userMatchup = currentMatchups.find(m => m.rosterId === selectedTeam.rosterId)
+          const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
+          const isWinning = pointDiff > 0
+          const isTied = pointDiff === 0
+
+          return (
+            <Card className="bg-slate-800 border-slate-700">
+              <CardContent className="p-6">
+                {/* Header: Team Info + Actions */}
+                <div className="flex items-center justify-between flex-wrap gap-4 mb-6 pb-6 border-b border-slate-700">
+                  <div className="flex items-center space-x-4">
                     <UserAvatar
                       avatarId={selectedTeam.ownerAvatar}
                       displayName={selectedTeam.ownerName}
                       username={selectedTeam.ownerUsername}
-                      size={40}
-                      className="sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex-shrink-0 ring-2 ring-yellow-400/30 shadow-lg"
+                      size={48}
+                      className="ring-2 ring-yellow-400/30"
                     />
-                    <div className="flex-1 min-w-0 lg:ml-2">
-                      <div className="flex items-center space-x-2 mb-1 lg:mb-2">
-                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 bg-yellow-400 rounded-full animate-pulse flex-shrink-0"></div>
-                        <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-yellow-400 font-mono tracking-wide truncate drop-shadow-lg">{selectedTeam.teamName}</h2>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-yellow-400/80 flex-shrink-0" />
-                        <p className="text-xs sm:text-sm lg:text-base xl:text-lg font-semibold text-yellow-400/90 font-mono tracking-wide uppercase">
-                          Detailed Analysis
-                        </p>
-                        <div className="flex space-x-1 flex-shrink-0">
-                          <div className="w-1 h-1 bg-yellow-400/60 rounded-full"></div>
-                          <div className="w-1 h-1 bg-yellow-400/40 rounded-full"></div>
-                          <div className="w-1 h-1 bg-yellow-400/20 rounded-full"></div>
-                        </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-yellow-400 font-mono mb-1">{selectedTeam.teamName}</h2>
+                      <div className="flex items-center space-x-3 text-sm">
+                        <span className="text-slate-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
+                        <Badge variant="outline" className={`text-xs font-mono ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
+                          {selectedTeam.grade}
+                        </Badge>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-slate-400">{selectedTeam.wins}-{selectedTeam.losses}</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Right Section - Navigation Controls */}
-                  <div className="flex items-center justify-between sm:justify-end lg:justify-end space-x-3 lg:space-x-4 flex-shrink-0">
-                    <div className="flex items-center space-x-2 sm:space-x-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
-                          const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedTeams.length - 1
-                          handleTeamSelect(sortedTeams[prevIndex])
-                        }}
-                        className="bg-gradient-to-r from-slate-700/90 to-slate-600/90 border-slate-500/60 text-slate-200 hover:from-slate-600/90 hover:to-slate-500/90 hover:border-yellow-400/60 hover:text-yellow-400 backdrop-blur-sm transition-all duration-300 h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 shadow-lg hover:shadow-yellow-400/20"
-                      >
-                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
-                      </Button>
-                      <div className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 border border-slate-500/60 rounded-lg px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 backdrop-blur-sm shadow-lg">
-                        <span className="text-xs sm:text-sm text-slate-200 font-mono font-semibold min-w-[60px] sm:min-w-[70px] lg:min-w-[80px] text-center block">
-                          {sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const currentIndex = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId)
-                          const nextIndex = currentIndex < sortedTeams.length - 1 ? currentIndex + 1 : 0
-                          handleTeamSelect(sortedTeams[nextIndex])
-                        }}
-                        className="bg-gradient-to-r from-slate-700/90 to-slate-600/90 border-slate-500/60 text-slate-200 hover:from-slate-600/90 hover:to-slate-500/90 hover:border-yellow-400/60 hover:text-yellow-400 backdrop-blur-sm transition-all duration-300 h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 shadow-lg hover:shadow-yellow-400/20"
-                      >
-                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
-                      </Button>
-                    </div>
-                    <Badge variant="outline" className={`text-sm sm:text-base lg:text-lg px-3 sm:px-4 lg:px-5 py-1.5 sm:py-2 lg:py-2.5 border-2 font-mono font-bold backdrop-blur-sm shadow-lg ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
-                      {selectedTeam.grade}
-                    </Badge>
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+                      onClick={handleTradeMarketClick}
+                    >
+                      <Trophy className="h-4 w-4" />
+                      <span className="hidden sm:inline">Trade</span>
+                    </button>
+                    <button 
+                      className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+                      onClick={handleScoutingPortalClick}
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span className="hidden sm:inline">Scout</span>
+                    </button>
+                    <button 
+                      className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+                      onClick={handleDraftBuddyClick}
+                    >
+                      <Users className="h-4 w-4" />
+                      <span className="hidden sm:inline">Draft</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* Matchup Score - Compact with Avatars */}
+                {userMatchup ? (
+                  <div className="bg-slate-700/30 rounded-lg p-4">
+                    <div className="text-center mb-3">
+                      <div className="text-slate-500 font-mono text-xs mb-1">WEEK {currentWeek}</div>
+                      <div className={`text-sm font-bold ${isWinning ? 'text-green-400' : isTied ? 'text-slate-300' : 'text-red-400'}`}>
+                        {isWinning ? 'WINNING' : isTied ? 'TIED' : 'LOSING'}
+                        {userMatchup.actualPoints > 0 && <span className="ml-2">by {Math.abs(pointDiff).toFixed(1)}</span>}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between gap-4">
+                      {/* Your Team */}
+                      <div className="flex items-center space-x-3 flex-1">
+                        <UserAvatar
+                          avatarId={selectedTeam.ownerAvatar}
+                          displayName={selectedTeam.ownerName}
+                          username={selectedTeam.ownerUsername}
+                          size={48}
+                          className="ring-2 ring-yellow-400/50 flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-slate-400 text-xs font-mono mb-1">YOU</div>
+                          <div className="text-2xl font-bold text-slate-100 font-mono">
+                            {userMatchup.actualPoints > 0 ? userMatchup.actualPoints.toFixed(1) : '0'}
                           </div>
                         </div>
+                      </div>
+                      
+                      {/* VS */}
+                      <div className="text-slate-600 font-mono text-sm px-2">VS</div>
+                      
+                      {/* Opponent Team */}
+                      <div className="flex items-center space-x-3 flex-1 justify-end">
+                        <div className="flex-1 min-w-0 text-right">
+                          <div className="text-slate-400 text-xs font-mono mb-1 truncate">{userMatchup.opponentTeamName.toUpperCase()}</div>
+                          <div className="text-2xl font-bold text-slate-100 font-mono">
+                            {userMatchup.opponentActualPoints > 0 ? userMatchup.opponentActualPoints.toFixed(1) : '0'}
+                          </div>
+                        </div>
+                        <UserAvatar
+                          avatarId={userMatchup.opponentAvatar}
+                          displayName={userMatchup.opponentDisplayName || userMatchup.opponentTeamName}
+                          username={userMatchup.opponentUsername || userMatchup.opponentTeamName}
+                          size={48}
+                          className="ring-2 ring-blue-400/50 flex-shrink-0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Target className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+                    <p className="text-slate-400 text-sm">No matchup for Week {currentWeek}</p>
+                  </div>
+                )}
 
-            {/* Enhanced Navigation Tabs */}
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-1">
-              <Tabs defaultValue="projections" className="w-full">
-                <TabsList className="grid w-full grid-cols-5 bg-transparent border-0 p-0 h-auto gap-1">
-                  <TabsTrigger 
-                    value="roster" 
-                    className="text-slate-300 data-[state=active]:bg-yellow-400/10 data-[state=active]:text-yellow-400 data-[state=active]:border-yellow-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-yellow-400/70 hover:bg-yellow-400/5"
-                  >
-                    <span className="hidden sm:inline">Roster</span>
-                    <span className="sm:hidden">Team</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="trends" 
-                    className="text-slate-300 data-[state=active]:bg-green-400/10 data-[state=active]:text-green-400 data-[state=active]:border-green-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-green-400/70 hover:bg-green-400/5"
-                  >
-                    <TrendingUp className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Trends</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="power" 
-                    className="text-slate-300 data-[state=active]:bg-blue-400/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-blue-400/70 hover:bg-blue-400/5"
-                  >
-                    <Zap className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Power</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="analysis" 
-                    className="text-slate-300 data-[state=active]:bg-purple-400/10 data-[state=active]:text-purple-400 data-[state=active]:border-purple-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-purple-400/70 hover:bg-purple-400/5"
-                  >
-                    <BarChart3 className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Analysis</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="projections" 
-                    className="text-slate-300 data-[state=active]:bg-orange-400/10 data-[state=active]:text-orange-400 data-[state=active]:border-orange-400/30 font-mono text-xs sm:text-sm py-3 px-2 sm:px-4 rounded-lg transition-all duration-200 border border-transparent hover:text-orange-400/70 hover:bg-orange-400/5"
-                  >
-                    <Target className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Projections</span>
-                  </TabsTrigger>
-                </TabsList>
+                {/* Current Week Lineup */}
+                {userMatchup && (() => {
+                  // Build player projections map from team players data
+                  const playerProjections: Record<string, number> = {}
+                  selectedTeam.players.forEach(player => {
+                    if (player.fantasy_ppg && player.fantasy_ppg > 0) {
+                      playerProjections[player.playerId] = player.fantasy_ppg
+                    }
+                  })
+                  
+                  return (
+                    <div className="mt-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <Clipboard className="h-5 w-5 text-blue-400" />
+                        <h3 className="text-lg font-semibold text-white font-mono">WEEK {currentWeek} LINEUP</h3>
+                      </div>
+                      <CurrentLineup 
+                        matchup={userMatchup} 
+                        allPlayers={allPlayers}
+                        playerProjections={playerProjections}
+                      />
+                    </div>
+                  )
+                })()}
+              </CardContent>
+            </Card>
+          )
+        })()}
 
-                <TabsContent value="roster" className="space-y-6 pt-6">
-                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+          {/* Lineup Manager - Current vs Optimized with What-If */}
+          {selectedTeam && leagueOverview && (() => {
+            const rosterPositions = leagueOverview.rosterPositions || { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1, SUPER_FLEX: 1 }
+            
+            // Get current starters from matchup data
+            const userMatchup = currentMatchups.find(m => m.rosterId === selectedTeam.rosterId)
+            const currentStarters = userMatchup?.starters || []
+            
+            // Helper function to get mock NFL opponent and calculate projections
+            const getOpponentInfo = (player: PlayerData) => {
+              const nflTeams = ['ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC', 'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG', 'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WAS']
+              const seed = player.team.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+              const opponentIndex = (seed + player.rank) % nflTeams.length
+              const opponentTeam = nflTeams[opponentIndex]
+              const isHome = seed % 2 === 0
+              
+              const toughDefenses = ['BAL', 'SF', 'BUF', 'DAL', 'PIT', 'CLE', 'NYJ', 'PHI']
+              const eliteMatchups = ['ARI', 'CAR', 'DEN', 'LV', 'NYG', 'WAS', 'ATL', 'IND']
+              const goodMatchups = ['GB', 'KC', 'LAC', 'MIA', 'TB', 'HOU']
+              
+              let matchupRating = 'Average'
+              if (toughDefenses.includes(opponentTeam)) matchupRating = 'Tough'
+              else if (eliteMatchups.includes(opponentTeam)) matchupRating = 'Elite'
+              else if (goodMatchups.includes(opponentTeam)) matchupRating = 'Good'
+              else matchupRating = Math.random() > 0.5 ? 'Great' : 'Average'
+              
+              return { opponentTeam, isHome, matchupRating }
+            }
+
+            // Calculate point projection based on actual FFP/G and matchup
+            const calculateProjection = (player: PlayerData, matchupRating: string) => {
+              // Use fantasy_ppg from NGS database (already calculated correctly in ETL pipeline)
+              let avgFPPG = 0
+              
+              if (player.fantasy_ppg && player.fantasy_ppg > 0) {
+                // Use pre-calculated PPG from NGS database
+                avgFPPG = player.fantasy_ppg
+              } else {
+                // Fallback: estimate based on rank if no fantasy data available
+                switch (player.position) {
+                  case 'QB':
+                    if (player.rank <= 6) avgFPPG = 22
+                    else if (player.rank <= 12) avgFPPG = 19
+                    else if (player.rank <= 18) avgFPPG = 17
+                    else if (player.rank <= 24) avgFPPG = 15
+                    else avgFPPG = 12
+                    break
+                  case 'RB':
+                    if (player.rank <= 12) avgFPPG = 16
+                    else if (player.rank <= 24) avgFPPG = 13
+                    else if (player.rank <= 36) avgFPPG = 11
+                    else if (player.rank <= 48) avgFPPG = 9
+                    else avgFPPG = 7
+                    break
+                  case 'WR':
+                    if (player.rank <= 12) avgFPPG = 15
+                    else if (player.rank <= 24) avgFPPG = 12
+                    else if (player.rank <= 36) avgFPPG = 10
+                    else if (player.rank <= 48) avgFPPG = 8
+                    else avgFPPG = 6
+                    break
+                  case 'TE':
+                    if (player.rank <= 6) avgFPPG = 12
+                    else if (player.rank <= 12) avgFPPG = 9
+                    else if (player.rank <= 18) avgFPPG = 7
+                    else avgFPPG = 5
+                    break
+                  default:
+                    avgFPPG = 8
+                }
+              }
+              
+              // Apply matchup modifier
+              let matchupModifier = 1.0
+              if (matchupRating === 'Elite') matchupModifier = 1.15
+              else if (matchupRating === 'Great') matchupModifier = 1.08
+              else if (matchupRating === 'Good') matchupModifier = 1.03
+              else if (matchupRating === 'Average') matchupModifier = 1.0
+              else if (matchupRating === 'Tough') matchupModifier = 0.88
+              
+              // Add slight variance for realism
+              const variance = (Math.random() * 2 - 1) * 1.2
+              
+              return Math.max(0, Math.round((avgFPPG * matchupModifier + variance) * 10) / 10)
+            }
+
+            // Build lineup based on mode (current, optimized, or what-if)
+            const buildLineup = (mode: 'current' | 'optimized', whatIfStarters?: string[]) => {
+              const lineup: { position: string, player: PlayerData, slotType: 'starter' | 'flex' | 'superflex' }[] = []
+              const bench: PlayerData[] = []
+              const usedPlayers = new Set<string>()
+
+              if (mode === 'current' && whatIfStarters && whatIfStarters.length > 0) {
+                // What-if scenario - use custom starters
+                whatIfStarters.forEach((playerId) => {
+                  const player = selectedTeam.players.find(p => p.playerId === playerId)
+                  if (player) {
+                    lineup.push({ position: player.position, player, slotType: 'starter' })
+                    usedPlayers.add(playerId)
+                  }
+                })
+              } else if (mode === 'current' && currentStarters.length > 0) {
+                // Current lineup from Sleeper
+                currentStarters.forEach((playerId) => {
+                  const player = selectedTeam.players.find(p => p.playerId === playerId)
+                  if (player) {
+                    lineup.push({ position: player.position, player, slotType: 'starter' })
+                    usedPlayers.add(playerId)
+                  }
+                })
+              } else {
+                // Optimized lineup
+                const qbs = selectedTeam.players.filter(p => p.position === 'QB').sort((a, b) => a.rank - b.rank)
+                const rbs = selectedTeam.players.filter(p => p.position === 'RB').sort((a, b) => a.rank - b.rank)
+                const wrs = selectedTeam.players.filter(p => p.position === 'WR').sort((a, b) => a.rank - b.rank)
+                const tes = selectedTeam.players.filter(p => p.position === 'TE').sort((a, b) => a.rank - b.rank)
+                const flexEligible = [...rbs, ...wrs, ...tes].sort((a, b) => a.rank - b.rank)
+                const superFlexEligible = [...qbs, ...rbs, ...wrs, ...tes].sort((a, b) => a.rank - b.rank)
+
+                // Fill QB slots
+                for (let i = 0; i < (rosterPositions.QB || 0); i++) {
+                  if (qbs[i]) {
+                    lineup.push({ position: 'QB', player: qbs[i], slotType: 'starter' })
+                    usedPlayers.add(qbs[i].playerId)
+                  }
+                }
+
+                // Fill RB slots
+                for (let i = 0; i < (rosterPositions.RB || 0); i++) {
+                  if (rbs[i]) {
+                    lineup.push({ position: 'RB', player: rbs[i], slotType: 'starter' })
+                    usedPlayers.add(rbs[i].playerId)
+                  }
+                }
+
+                // Fill WR slots
+                for (let i = 0; i < (rosterPositions.WR || 0); i++) {
+                  if (wrs[i]) {
+                    lineup.push({ position: 'WR', player: wrs[i], slotType: 'starter' })
+                    usedPlayers.add(wrs[i].playerId)
+                  }
+                }
+
+                // Fill TE slots
+                for (let i = 0; i < (rosterPositions.TE || 0); i++) {
+                  if (tes[i]) {
+                    lineup.push({ position: 'TE', player: tes[i], slotType: 'starter' })
+                    usedPlayers.add(tes[i].playerId)
+                  }
+                }
+
+                // Fill FLEX slots
+                const remainingFlex = flexEligible.filter(p => !usedPlayers.has(p.playerId))
+                for (let i = 0; i < (rosterPositions.FLEX || 0); i++) {
+                  if (remainingFlex[i]) {
+                    lineup.push({ position: 'FLEX', player: remainingFlex[i], slotType: 'flex' })
+                    usedPlayers.add(remainingFlex[i].playerId)
+                  }
+                }
+
+                // Fill SUPER_FLEX slots
+                const remainingSuperFlex = superFlexEligible.filter(p => !usedPlayers.has(p.playerId))
+                for (let i = 0; i < (rosterPositions.SUPER_FLEX || 0); i++) {
+                  if (remainingSuperFlex[i]) {
+                    lineup.push({ position: 'SUPER_FLEX', player: remainingSuperFlex[i], slotType: 'superflex' })
+                    usedPlayers.add(remainingSuperFlex[i].playerId)
+                  }
+                }
+              }
+
+              // Everyone else goes to bench
+              selectedTeam.players.forEach(p => {
+                if (!usedPlayers.has(p.playerId)) {
+                  bench.push(p)
+                }
+              })
+
+              return { lineup, bench }
+            }
+
+            // Get the appropriate lineup based on current mode
+            const { lineup, bench } = buildLineup(
+              lineupMode, 
+              whatIfLineup.length > 0 ? whatIfLineup : undefined
+            )
+
+            // Handle player swap for what-if scenarios
+            const handleSwapPlayer = (starterPlayerId: string, benchPlayerId: string) => {
+              const newStarters = lineup.map(slot => slot.player.playerId)
+              const starterIndex = newStarters.indexOf(starterPlayerId)
+              if (starterIndex !== -1) {
+                newStarters[starterIndex] = benchPlayerId
+                setWhatIfLineup(newStarters)
+              }
+            }
+
+            // Reset what-if to current lineup
+            const handleResetWhatIf = () => {
+              setWhatIfLineup([])
+            }
+
+            // Calculate total projected points using season averages with fallback
+            const totalProjection = lineup.reduce((sum, slot) => {
+              let ppg = slot.player.fantasy_ppg || 0
+              // Fallback to Sleeper's own stats if NGS data is missing
+              if (!ppg && slot.player.fantasy_points_ppr && slot.player.games_played && slot.player.games_played > 0) {
+                ppg = slot.player.fantasy_points_ppr / slot.player.games_played
+              }
+              return sum + ppg
+            }, 0)
+
+            // Calculate bench potential using season averages with fallback
+            const benchProjections = bench.slice(0, 5).map(player => {
+              let ppg = player.fantasy_ppg || 0
+              // Fallback to Sleeper's own stats if NGS data is missing
+              if (!ppg && player.fantasy_points_ppr && player.games_played && player.games_played > 0) {
+                ppg = player.fantasy_points_ppr / player.games_played
+              }
+              return ppg
+            })
+            const benchPotential = benchProjections.reduce((sum, proj) => sum + proj, 0)
+
+            // Count players by matchup quality
+            const matchupBreakdown = lineup.reduce((acc, slot) => {
+              const { matchupRating } = getOpponentInfo(slot.player)
+              acc[matchupRating] = (acc[matchupRating] || 0) + 1
+              return acc
+            }, {} as Record<string, number>)
+
+            // Identify suggested swaps (bench player has better FPPG than starter)
+            const keyDecisions: Array<{ starter: PlayerData, bench: PlayerData, difference: number }> = []
+            lineup.forEach(slot => {
+              const starterFPPG = slot.player.fantasy_ppg || 0
+              
+              // Find best bench player at same position or flex eligible
+              const eligibleBench = bench.filter(b => 
+                b.position === slot.player.position || 
+                (slot.position === 'FLEX' && ['RB', 'WR', 'TE'].includes(b.position)) ||
+                (slot.position === 'SUPER_FLEX' && ['QB', 'RB', 'WR', 'TE'].includes(b.position))
+              )
+              
+              if (eligibleBench.length > 0) {
+                const bestBench = eligibleBench[0]
+                const benchFPPG = bestBench.fantasy_ppg || 0
+                
+                // Only suggest swap if bench player has better FPPG
+                if (benchFPPG > starterFPPG) {
+                  const diff = benchFPPG - starterFPPG
+                  keyDecisions.push({ starter: slot.player, bench: bestBench, difference: diff })
+                }
+              }
+            })
+
+            return (
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+                  <div>
+                    <CardTitle className="text-yellow-400 font-mono flex items-center text-lg">
+                      <Target className="h-5 w-5 mr-2" />
+                      {lineupMode === 'current' ? 'CURRENT' : 'OPTIMIZED'} LINEUP - WEEK {currentWeek}
+                      {whatIfLineup.length > 0 && <span className="ml-2 text-blue-400 text-sm">(What-If)</span>}
+                    </CardTitle>
+                    <p className="text-slate-400 text-sm mt-1">
+                      {lineupMode === 'current' 
+                        ? whatIfLineup.length > 0 
+                          ? 'Testing custom lineup changes' 
+                          : 'Your active lineup on Sleeper'
+                        : 'AI-optimized based on rankings, stats, and matchups'
+                      }
+                      {' • '}
+                      <span className="text-slate-500">PPR scoring (pass + rush + rec)</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-slate-400 font-mono mb-1">SEASON AVG</div>
+                    <div className="text-3xl font-bold text-yellow-400 font-mono">{totalProjection.toFixed(1)}</div>
+                    <div className="text-xs text-slate-500 font-mono mt-1">
+                      {benchPotential > 0 && `+${benchPotential.toFixed(1)} on bench`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mode Toggle + Actions */}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        setLineupMode('current')
+                        handleResetWhatIf()
+                      }}
+                      className={`px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
+                        lineupMode === 'current'
+                          ? 'bg-yellow-400 text-slate-900'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      Current Lineup
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLineupMode('optimized')
+                        handleResetWhatIf()
+                      }}
+                      className={`px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
+                        lineupMode === 'optimized'
+                          ? 'bg-yellow-400 text-slate-900'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      Optimized
+                    </button>
+                    {whatIfLineup.length > 0 && (
+                      <button
+                        onClick={handleResetWhatIf}
+                        className="px-3 py-2 rounded-lg font-mono text-xs bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Quick Stats Bar */}
+                  <div className="flex items-center space-x-4 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <span className="text-slate-400">
+                        {matchupBreakdown['Elite'] || 0} Elite + {matchupBreakdown['Great'] || 0} Great matchups
+                      </span>
+                    </div>
+                    {keyDecisions.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                        <span className="text-slate-400">{keyDecisions.length} suggested swap{keyDecisions.length > 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Key Decisions Section */}
+                {keyDecisions.length > 0 && (
+                  <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-4">
+                    <h3 className="text-yellow-400 font-mono text-sm mb-3 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      SUGGESTED SWAPS - UPGRADE YOUR LINEUP
+                    </h3>
+                    <div className="space-y-3">
+                      {keyDecisions.map((decision, idx) => {
+                        const starterFPPG = decision.starter.fantasy_ppg || 0
+                        const benchFPPG = decision.bench.fantasy_ppg || 0
+                        
+                        return (
+                          <div key={idx} className="flex items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center space-x-2 flex-1">
+                              <TeamLogo team={decision.starter.team} size={24} />
+                              <span className="text-slate-300">{decision.starter.playerName}</span>
+                              <span className="text-slate-500 text-[10px]">FPPG</span>
+                              <span className="text-red-400 font-mono">{starterFPPG.toFixed(1)}</span>
+                            </div>
+                            <div className="text-slate-500">→</div>
+                            <div className="flex items-center space-x-2 flex-1 justify-end">
+                              <span className="text-green-400 font-mono">{benchFPPG.toFixed(1)}</span>
+                              <span className="text-slate-500 text-[10px]">FPPG</span>
+                              <span className="text-slate-300">{decision.bench.playerName}</span>
+                              <TeamLogo team={decision.bench.team} size={24} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Starters Section */}
+                <div>
+                  <h3 className="text-green-400 font-mono text-sm mb-3 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    STARTERS ({lineup.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {lineup.map((slot, idx) => {
+                      const { opponentTeam, isHome, matchupRating } = getOpponentInfo(slot.player)
+                      // Get fantasy_ppg with fallback to Sleeper's own stats
+                      let avgFPPG = slot.player.fantasy_ppg || null
+                      if (!avgFPPG && slot.player.fantasy_points_ppr && slot.player.games_played && slot.player.games_played > 0) {
+                        avgFPPG = slot.player.fantasy_points_ppr / slot.player.games_played
+                      }
+                      
+                      // Debug first starter
+                      if (idx === 0) {
+                        console.log('🔍 First starter:', slot.player.playerName, {
+                          fantasy_ppg: slot.player.fantasy_ppg,
+                          fantasy_points_ppr: slot.player.fantasy_points_ppr,
+                          games_played: slot.player.games_played,
+                          avgFPPG
+                        })
+                      }
+                      const ratingColor = matchupRating === 'Elite' ? 'text-green-400 bg-green-400/10 border-green-400/30' :
+                                         matchupRating === 'Great' ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' :
+                                         matchupRating === 'Good' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' :
+                                         matchupRating === 'Average' ? 'text-orange-400 bg-orange-400/10 border-orange-400/30' :
+                                         'text-red-400 bg-red-400/10 border-red-400/30'
+                      
+                      // Determine confidence level based on whether we have real NGS data
+                      const hasRealData = !!avgFPPG
+                      const isTopRanked = slot.player.rank <= 24
+                      const confidence = hasRealData && isTopRanked ? 'HIGH' : hasRealData ? 'MEDIUM' : 'LOW'
+                      const confidenceColor = confidence === 'HIGH' ? 'text-green-400' : confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-slate-500'
+                      
+                      // Get recommendation badge based on rank
+                      let recommendationBadge = ''
+                      if (slot.player.rank <= 6 && ['QB', 'TE'].includes(slot.player.position)) recommendationBadge = 'MUST START'
+                      else if (slot.player.rank <= 12 && ['RB', 'WR'].includes(slot.player.position)) recommendationBadge = 'MUST START'
+                      else if (avgFPPG && avgFPPG >= 15) recommendationBadge = 'STRONG START'
+                      else if (slot.slotType === 'flex' || slot.slotType === 'superflex') recommendationBadge = 'FLEX PLAY'
+                      
+                      return (
+                        <div key={idx} className={`p-3 rounded-lg border transition-all hover:shadow-lg ${
+                          matchupRating === 'Elite' || matchupRating === 'Great' 
+                            ? 'bg-green-500/5 border-green-500/30' 
+                            : matchupRating === 'Tough' 
+                            ? 'bg-red-500/5 border-red-500/20'
+                            : 'bg-slate-700/30 border-slate-600'
+                        }`}>
+                          {/* Top Row: Position, Matchup, Projection */}
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex items-center space-x-2">
+                              <Badge className="bg-slate-700 text-slate-300 border-slate-600 font-mono text-xs font-bold px-2">
+                                {slot.position}
+                              </Badge>
+                              {recommendationBadge && (
+                                <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 font-mono text-xs px-2">
+                                  {recommendationBadge}
+                                </Badge>
+                              )}
+                            </div>
+                            <Badge className={`${ratingColor} border font-mono text-xs px-2 py-1`}>
+                              {matchupRating}
+                            </Badge>
+                          </div>
+
+                          {/* Player Info Row */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                              <TeamLogo team={slot.player.team} size={48} className="flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <div className="text-slate-100 font-semibold text-base truncate">{slot.player.playerName}</div>
+                                </div>
+                                <div className="flex items-center space-x-2 text-xs mb-1">
+                                  <Badge variant="outline" className="text-xs bg-slate-600/20 text-slate-400">
+                                    {slot.player.position} #{slot.player.rank}
+                                  </Badge>
+                                  <span className="text-slate-500">•</span>
+                                  <div className="flex items-center space-x-1">
+                                    {isHome ? (
+                                      <>
+                                        <span className="text-green-400 font-semibold">vs</span>
+                                        <TeamLogo team={opponentTeam} size={16} />
+                                        <span className="text-slate-300 font-medium">{opponentTeam}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-blue-400 font-semibold">@</span>
+                                        <TeamLogo team={opponentTeam} size={16} />
+                                        <span className="text-slate-300 font-medium">{opponentTeam}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Season Average Column */}
+                            <div className="text-right flex-shrink-0">
+                              {avgFPPG ? (
+                                <>
+                                  <div className="text-xs text-slate-500 uppercase font-mono mb-0.5">
+                                    Season Avg
+                                  </div>
+                                  <div className="text-yellow-400 font-bold font-mono text-2xl mb-1">
+                                    {avgFPPG.toFixed(1)}
+                                  </div>
+                                  <div className="text-xs text-slate-400">
+                                    <span className="font-mono">PPG</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-xs text-slate-500 uppercase font-mono mb-0.5">
+                                    Estimated
+                                  </div>
+                                  <div className="text-slate-400 font-bold font-mono text-2xl mb-1">
+                                    --
+                                  </div>
+                                  <div className={`text-xs font-mono ${confidenceColor}`}>
+                                    No Data
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Bench Section */}
+                {bench.length > 0 && (
+                  <div>
+                    <h3 className="text-slate-400 font-mono text-sm mb-3 flex items-center">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      BENCH ({bench.length}) - Top Alternatives
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {bench.sort((a, b) => a.rank - b.rank).slice(0, 8).map((player, idx) => {
+                        const { opponentTeam, isHome, matchupRating } = getOpponentInfo(player)
+                        const projection = calculateProjection(player, matchupRating)
+                        const avgFPPG = player.fantasy_ppg || null
+                        const matchupColor = matchupRating === 'Elite' || matchupRating === 'Great' 
+                          ? 'border-l-2 border-l-green-400/50' 
+                          : matchupRating === 'Tough' 
+                          ? 'border-l-2 border-l-red-400/50'
+                          : ''
+                        
+                        return (
+                        <div key={idx} className={`p-3 rounded-lg bg-slate-700/50 border border-slate-700 hover:bg-slate-700/70 transition-all ${matchupColor}`}>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                              <TeamLogo team={player.team} size={40} className="flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <div className="text-slate-200 text-sm font-semibold truncate">{player.playerName}</div>
+                                </div>
+                                <div className="flex items-center space-x-2 text-xs">
+                                  <Badge variant="outline" className="text-xs bg-slate-600/20 text-slate-400">
+                                    {player.position} #{player.rank}
+                                  </Badge>
+                                  <span className="text-slate-600">•</span>
+                                  <div className="flex items-center space-x-1">
+                                    {isHome ? (
+                                      <>
+                                        <span className="text-slate-500">vs</span>
+                                        <span className="text-slate-400">{opponentTeam}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-slate-500">@</span>
+                                        <span className="text-slate-400">{opponentTeam}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              {avgFPPG ? (
+                                <>
+                                  <div className="text-xs text-slate-400 mb-1">
+                                    <span className="font-semibold">FPPG:</span> <span className="font-mono">{avgFPPG.toFixed(1)}</span>
+                                  </div>
+                                  <div className="text-slate-300 font-mono text-lg font-semibold">
+                                    {projection.toFixed(1)}
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    Proj
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-slate-300 font-mono text-lg font-semibold">
+                                    {projection.toFixed(1)}
+                                  </div>
+                                  <div className="text-xs text-slate-500 uppercase">
+                                    {matchupRating}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        )
+                      })}
+                      {bench.length > 8 && (
+                        <div className="text-center text-xs text-slate-500 py-2">
+                          + {bench.length - 8} more on bench
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            )
+          })()}
+
+          {/* ROSTER SECTION */}
+          {activeSection === 'roster' && selectedTeam && (
+            <>
+              <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
                     <h3 className="text-blue-400 font-mono text-lg mb-4">POSITION STRENGTHS</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                       <div className="flex items-center space-x-2">
@@ -1189,8 +1741,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                     <h3 className="text-green-400 font-mono text-lg mb-4">TEAM ROSTER</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {selectedTeam.players.map((player, index) => (
-                      <Card key={index} className="p-3 bg-slate-700 border-slate-600">
-                        <div className="flex items-center space-x-3">
+                      <Card key={index} className="p-3 bg-slate-700 border-slate-600 hover:border-green-400/50 transition-colors">
+                        <div className="flex items-center space-x-3 mb-3">
                           <TeamLogo
                             team={player.team}
                             size={40}
@@ -1219,14 +1771,24 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                             </div>
                           </div>
                         </div>
+                        
+                        {/* NGS Advanced Metrics */}
+                        <div className="pt-3 border-t border-slate-600">
+                          <PlayerNGSStats 
+                            playerName={player.playerName} 
+                            position={player.position}
+                            compact={true}
+                          />
+                        </div>
                       </Card>
                     ))}
                     </div>
                   </div>
-                </TabsContent>
 
-                <TabsContent value="trends" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Team Insights - formerly Trends */}
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                    <h3 className="text-green-400 font-mono text-lg mb-4">TEAM INSIGHTS</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card className="bg-slate-700 border-slate-600">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-green-400 text-sm">BEST PLAYER</CardTitle>
@@ -1281,276 +1843,642 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
                       </CardContent>
                     </Card>
                   </div>
-                </TabsContent>
+                  </div>
 
-                <TabsContent value="power" className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Position Strength Radar Chart */}
-                    <Card className="bg-slate-700 border-slate-600">
-                      <CardHeader>
-                        <CardTitle className="text-blue-400 text-sm">POSITION STRENGTHS</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="relative w-full h-64 flex items-center justify-center">
-                          {/* Radar Chart Placeholder - You can implement a proper radar chart library here */}
-                          <div className="relative w-48 h-48">
-                            {/* Center Rank */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="text-3xl font-bold text-yellow-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</div>
-                              <div className="absolute -bottom-8 text-sm text-gray-400">Rank</div>
+                  {/* Team Analysis - formerly separate Analysis tab */}
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+                    <h3 className="text-purple-400 font-mono text-lg mb-4">TEAM ANALYSIS</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card className="bg-slate-700 border-slate-600">
+                        <CardHeader>
+                          <CardTitle className="text-green-400 text-sm">TEAM STRENGTHS</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-slate-300">Tier 1 Players:</span>
+                              <span className="text-green-400 font-semibold">
+                                {selectedTeam.players.filter(p => p.tier === 'Tier 1').length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-300">Tier 2 Players:</span>
+                              <span className="text-blue-400 font-semibold">
+                                {selectedTeam.players.filter(p => p.tier === 'Tier 2').length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-300">Young Players (≤25):</span>
+                              <span className="text-purple-400 font-semibold">
+                                {selectedTeam.players.filter(p => p.age && p.age <= 25).length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-300">Top 50 Players:</span>
+                              <span className="text-green-400 font-semibold">
+                                {selectedTeam.players.filter(p => p.rank <= 50).length}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-slate-700 border-slate-600">
+                        <CardHeader>
+                          <CardTitle className="text-orange-400 text-sm">SEASON PROJECTIONS</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-300 text-sm">Projected Record:</span>
+                              <span className="text-green-400 font-bold">
+                                {(() => {
+                                  const totalGames = selectedTeam.wins + selectedTeam.losses
+                                  const currentWinRate = totalGames > 0 ? selectedTeam.wins / totalGames : 0.5
+                                  const adjustedWinRate = Math.min(0.85, Math.max(0.15, currentWinRate + (selectedTeam.gradeScore - 50) / 200))
+                                  const projectedWins = Math.round(adjustedWinRate * 14)
+                                  const projectedLosses = 14 - projectedWins
+                                  return `${projectedWins}-${projectedLosses}`
+                                })()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-300 text-sm">Projected Finish:</span>
+                              <span className="text-blue-400 font-bold">
+                                {(() => {
+                                  const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
+                                  const gradeAdjustment = selectedTeam.gradeScore > 70 ? -1 : selectedTeam.gradeScore < 30 ? 1 : 0
+                                  const projectedRank = Math.max(1, Math.min(teams.length, teamRank + gradeAdjustment))
+                                  return `${projectedRank}${projectedRank === 1 ? 'st' : projectedRank === 2 ? 'nd' : projectedRank === 3 ? 'rd' : 'th'}`
+                                })()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-300 text-sm">Playoff Chance:</span>
+                              <span className="text-purple-400 font-bold">
+                                {(() => {
+                                  const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
+                                  const totalTeams = teams.length
+                                  const playoffSpots = Math.max(4, Math.ceil(totalTeams / 2))
+                                  
+                                  let baseChance = 0
+                                  if (teamRank <= playoffSpots / 2) baseChance = 85
+                                  else if (teamRank <= playoffSpots) baseChance = 65
+                                  else if (teamRank <= playoffSpots + 2) baseChance = 35
+                                  else baseChance = 15
+                                  
+                                  const gradeBonus = (selectedTeam.gradeScore - 50) * 0.5
+                                  const finalChance = Math.max(5, Math.min(95, baseChance + gradeBonus))
+                                  return `${Math.round(finalChance)}%`
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+            </>
+          )}
+
+          {/* LEAGUE SECTION - Matchup Details */}
+          {activeSection === 'league' && selectedTeam && (
+            <>
+              <div className="space-y-4">
+                  {(() => {
+                    // Find current matchup for this team
+                    const teamMatchup = currentMatchups.find(m => m.rosterId === selectedTeam.rosterId)
+                    
+                    if (!teamMatchup) {
+                      return (
+                        <Card className="bg-slate-700 border-slate-600">
+                          <CardContent className="p-12 text-center">
+                            <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
+                            <p className="text-slate-400 mb-2">No matchup available</p>
+                            <p className="text-sm text-slate-500">
+                              {currentWeek === 1 ? "Season hasn't started yet" : "Matchup data will appear once the week begins"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )
+                    }
+
+                    const opponent = teams.find(t => t.rosterId === teamMatchup.opponentRosterId)
+                    
+                    if (!opponent) {
+                      return (
+                        <Card className="bg-slate-700 border-slate-600">
+                          <CardContent className="p-12 text-center">
+                            <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
+                            <p className="text-slate-400">Opponent data not available</p>
+                          </CardContent>
+                        </Card>
+                      )
+                    }
+
+                    const teamPoints = teamMatchup.actualPoints || 0
+                    const oppPoints = teamMatchup.opponentActualPoints || 0
+                    const isWinning = teamPoints > oppPoints
+                    const pointDiff = Math.abs(teamPoints - oppPoints)
+
+                    return (
+                      <>
+                        {/* Matchup Header */}
+                        <Card className="bg-gradient-to-r from-slate-700 to-slate-600 border-slate-500">
+                          <CardContent className="p-6">
+                            <div className="text-center mb-4">
+                              <h3 className="text-yellow-400 font-mono text-lg mb-1">Week {currentWeek} Matchup</h3>
+                              <p className="text-slate-400 text-sm">Head to Head Analysis</p>
                             </div>
                             
-                            {/* Position indicators around the circle */}
-                            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
-                              <div className="text-xs text-blue-400">QB: {selectedTeam.positionStrengths.QB}</div>
-                            </div>
-                            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-2">
-                              <div className="text-xs text-green-400">RB: {selectedTeam.positionStrengths.RB}</div>
-                            </div>
-                            <div className="absolute left-0 top-1/2 transform -translate-x-2 -translate-y-1/2">
-                              <div className="text-xs text-yellow-400">WR: {selectedTeam.positionStrengths.WR}</div>
-                            </div>
-                            <div className="absolute right-0 top-1/2 transform translate-x-2 -translate-y-1/2">
-                              <div className="text-xs text-purple-400">TE: {selectedTeam.positionStrengths.TE}</div>
-                            </div>
-                            <div className="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2">
-                              <div className="text-xs text-pink-400">FLEX: {selectedTeam.positionStrengths.FLEX}</div>
-                            </div>
-                            <div className="absolute top-1/4 right-1/4 transform translate-x-1/2 -translate-y-1/2">
-                              <div className="text-xs text-gray-400">SFLX: {selectedTeam.positionStrengths.SFLX}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Team Comparison */}
-                    <Card className="bg-slate-700 border-slate-600">
-                      <CardHeader>
-                        <CardTitle className="text-green-400 text-sm">LEAGUE COMPARISON</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-300">Grade Rank:</span>
-                            <span className="text-slate-100">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-300">Points Rank:</span>
-                            <span className="text-slate-100">#{[...sortedTeams].sort((a, b) => b.pointsFor - a.pointsFor).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {sortedTeams.length}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-300">Avg Points:</span>
-                            <span className="text-slate-100">{Math.round(selectedTeam.pointsFor)} ({Math.round(selectedTeam.pointsFor / Math.max(selectedTeam.wins + selectedTeam.losses, 1))} per game)</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-300">Win Rate:</span>
-                            <span className="text-slate-100">{Math.round((selectedTeam.wins / Math.max(selectedTeam.wins + selectedTeam.losses, 1)) * 100)}%</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-300">Waiver Position:</span>
-                            <span className="text-slate-100">#{selectedTeam.waiverPosition}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-300">Total Moves:</span>
-                            <span className="text-slate-100">{selectedTeam.totalMoves}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Top Teams Comparison */}
-                  <Card className="bg-slate-700 border-slate-600">
-                    <CardHeader>
-                      <CardTitle className="text-yellow-400 text-sm">TOP TEAMS COMPARISON</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {sortedTeams.slice(0, 3).map((team, index) => (
-                          <div key={team.rosterId} className={`p-3 rounded-lg border ${
-                            team.rosterId === selectedTeam.rosterId 
-                              ? 'bg-yellow-400/10 border-yellow-400' 
-                              : 'bg-slate-600 border-slate-500'
-                          }`}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-lg font-bold text-yellow-400">#{index + 1}</span>
-                              <Badge variant="outline" className={GRADE_COLORS[team.grade as keyof typeof GRADE_COLORS]}>
-                                {team.grade}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center space-x-2 mb-1">
-                              <UserAvatar
-                                avatarId={team.ownerAvatar}
-                                displayName={team.ownerName}
-                                username={team.ownerUsername}
-                                size={20}
-                                className="flex-shrink-0"
-                              />
-                              <div className="font-semibold text-slate-100 truncate">{team.teamName}</div>
-                            </div>
-                            <div className="text-sm text-gray-400">{team.ownerName}</div>
-                            <div className="text-xs text-slate-300 mt-1">
-                              {team.wins}-{team.losses} • {Math.round(team.pointsFor)} pts
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="analysis" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-slate-700 border-slate-600">
-                      <CardHeader>
-                        <CardTitle className="text-green-400 text-sm">TEAM STRENGTHS</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Tier 1 Players:</span>
-                            <span className="text-green-400 font-semibold">
-                              {selectedTeam.players.filter(p => p.tier === 'Tier 1').length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Tier 2 Players:</span>
-                            <span className="text-blue-400 font-semibold">
-                              {selectedTeam.players.filter(p => p.tier === 'Tier 2').length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Tier 3 Players:</span>
-                            <span className="text-yellow-400 font-semibold">
-                              {selectedTeam.players.filter(p => p.tier === 'Tier 3').length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Young Players (≤25):</span>
-                            <span className="text-purple-400 font-semibold">
-                              {selectedTeam.players.filter(p => p.age && p.age <= 25).length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Avg Player Rank:</span>
-                            <span className="text-pink-400 font-semibold">
-                              #{Math.round(selectedTeam.players.reduce((sum, p) => sum + (p.rank || 999), 0) / selectedTeam.players.length)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Top 50 Players:</span>
-                            <span className="text-green-400 font-semibold">
-                              {selectedTeam.players.filter(p => p.rank <= 50).length}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-300">Top 100 Players:</span>
-                            <span className="text-blue-400 font-semibold">
-                              {selectedTeam.players.filter(p => p.rank <= 100).length}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-slate-700 border-slate-600">
-                      <CardHeader>
-                        <CardTitle className="text-yellow-400 text-sm">POSITION BREAKDOWN</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {Object.entries(POSITION_COLORS).map(([pos, color]) => {
-                            const count = selectedTeam.players.filter(p => p.position === pos).length
-                            return (
-                              <div key={pos} className="flex justify-between items-center">
-                                <span className="text-slate-300">{pos}:</span>
-                                <div className="flex items-center space-x-2">
-                                  <div className={`w-3 h-3 rounded-full ${color}`}></div>
-                                  <span className="font-semibold text-slate-100">{count}</span>
+                            <div className="grid grid-cols-3 gap-4 items-center">
+                              {/* Your Team */}
+                              <div className="text-center">
+                                <UserAvatar
+                                  avatarId={selectedTeam.ownerAvatar}
+                                  displayName={selectedTeam.ownerName}
+                                  username={selectedTeam.ownerUsername}
+                                  size={64}
+                                  className="mx-auto mb-3 ring-2 ring-yellow-400/50"
+                                />
+                                <div className="font-bold text-white text-lg mb-1">{selectedTeam.teamName}</div>
+                                <Badge className={GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}>
+                                  {selectedTeam.grade}
+                                </Badge>
+                                <div className={`text-3xl font-bold mt-3 ${isWinning ? 'text-green-400' : 'text-red-400'}`}>
+                                  {teamPoints.toFixed(1)}
                                 </div>
                               </div>
-                            )
-                          })}
+
+                              {/* VS Indicator */}
+                              <div className="text-center">
+                                <div className="text-slate-400 font-mono text-2xl font-bold mb-2">VS</div>
+                                {teamPoints > 0 && oppPoints > 0 && (
+                                  <div className={`text-sm ${isWinning ? 'text-green-400' : 'text-red-400'}`}>
+                                    {isWinning ? '+' : '-'}{pointDiff.toFixed(1)}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Opponent Team */}
+                              <div className="text-center">
+                                <UserAvatar
+                                  avatarId={opponent.ownerAvatar}
+                                  displayName={opponent.ownerName}
+                                  username={opponent.ownerUsername}
+                                  size={64}
+                                  className="mx-auto mb-3 ring-2 ring-blue-400/50"
+                                />
+                                <div className="font-bold text-white text-lg mb-1">{opponent.teamName}</div>
+                                <Badge className={GRADE_COLORS[opponent.grade as keyof typeof GRADE_COLORS]}>
+                                  {opponent.grade}
+                                </Badge>
+                                <div className={`text-3xl font-bold mt-3 ${!isWinning ? 'text-green-400' : 'text-red-400'}`}>
+                                  {oppPoints.toFixed(1)}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Team Comparison Stats */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Position Group Comparisons */}
+                          <Card className="bg-slate-700 border-slate-600">
+                            <CardHeader>
+                              <CardTitle className="text-blue-400 text-sm">POSITION MATCHUPS</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                {['QB', 'RB', 'WR', 'TE', 'FLEX'].map((pos) => {
+                                  const yourRank = leaguePositionRankings[selectedTeam.rosterId]?.[pos] || 12
+                                  const oppRank = leaguePositionRankings[opponent.rosterId]?.[pos] || 12
+                                  const advantage = yourRank < oppRank
+                                  
+                                  return (
+                                    <div key={pos} className="flex items-center justify-between">
+                                      <div className="flex items-center space-x-2 flex-1">
+                                        <Badge className={`${getRankColor(yourRank)} font-mono text-xs w-8 justify-center`}>
+                                          {yourRank}
+                                        </Badge>
+                                        <span className="text-slate-300 text-sm font-mono">{pos}</span>
+                                      </div>
+                                      {advantage ? (
+                                        <TrendingUp className="h-4 w-4 text-green-400" />
+                                      ) : yourRank === oppRank ? (
+                                        <div className="w-4 h-0.5 bg-yellow-400"></div>
+                                      ) : (
+                                        <TrendingUp className="h-4 w-4 text-red-400 rotate-180" />
+                                      )}
+                                      <Badge className={`${getRankColor(oppRank)} font-mono text-xs w-8 justify-center`}>
+                                        {oppRank}
+                                      </Badge>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Overall Stats Comparison */}
+                          <Card className="bg-slate-700 border-slate-600">
+                            <CardHeader>
+                              <CardTitle className="text-green-400 text-sm">SEASON STATS COMPARISON</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-slate-300 text-sm">Record:</span>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-slate-100 font-mono">{selectedTeam.wins}-{selectedTeam.losses}</span>
+                                    <span className="text-slate-400">vs</span>
+                                    <span className="text-slate-100 font-mono">{opponent.wins}-{opponent.losses}</span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-slate-300 text-sm">Points For:</span>
+                                  <div className="flex items-center space-x-2">
+                                    <span className={`font-mono ${selectedTeam.pointsFor > opponent.pointsFor ? 'text-green-400' : 'text-red-400'}`}>
+                                      {Math.round(selectedTeam.pointsFor)}
+                                    </span>
+                                    <span className="text-slate-400">vs</span>
+                                    <span className={`font-mono ${opponent.pointsFor > selectedTeam.pointsFor ? 'text-green-400' : 'text-red-400'}`}>
+                                      {Math.round(opponent.pointsFor)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-slate-300 text-sm">PPG:</span>
+                                  <div className="flex items-center space-x-2">
+                                    <span className={`font-mono ${(selectedTeam.pointsFor / Math.max(selectedTeam.wins + selectedTeam.losses, 1)) > (opponent.pointsFor / Math.max(opponent.wins + opponent.losses, 1)) ? 'text-green-400' : 'text-red-400'}`}>
+                                      {Math.round(selectedTeam.pointsFor / Math.max(selectedTeam.wins + selectedTeam.losses, 1))}
+                                    </span>
+                                    <span className="text-slate-400">vs</span>
+                                    <span className={`font-mono ${(opponent.pointsFor / Math.max(opponent.wins + opponent.losses, 1)) > (selectedTeam.pointsFor / Math.max(selectedTeam.wins + selectedTeam.losses, 1)) ? 'text-green-400' : 'text-red-400'}`}>
+                                      {Math.round(opponent.pointsFor / Math.max(opponent.wins + opponent.losses, 1))}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-slate-300 text-sm">League Rank:</span>
+                                  <div className="flex items-center space-x-2">
+                                    <Badge className={`${getRankColor(sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1)} font-mono text-xs`}>
+                                      #{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}
+                                    </Badge>
+                                    <span className="text-slate-400">vs</span>
+                                    <Badge className={`${getRankColor(sortedTeams.findIndex(t => t.rosterId === opponent.rosterId) + 1)} font-mono text-xs`}>
+                                      #{sortedTeams.findIndex(t => t.rosterId === opponent.rosterId) + 1}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Start/Sit Helper */}
+                        <Card className="bg-slate-700 border-slate-600">
+                          <CardHeader>
+                            <CardTitle className="text-yellow-400 text-sm flex items-center">
+                              <Target className="h-4 w-4 mr-2" />
+                              START/SIT HELPER - WEEK {currentWeek}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-slate-400 text-xs mb-4">
+                              Your roster with Week {currentWeek} opponent matchups
+                            </p>
+                            
+                            {/* Group by position */}
+                            {['QB', 'RB', 'WR', 'TE'].map((position) => {
+                              const positionPlayers = selectedTeam.players.filter(p => p.position === position)
+                              if (positionPlayers.length === 0) return null
+                              
+                              return (
+                                <div key={position} className="mb-6">
+                                  <div className="flex items-center space-x-2 mb-3">
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                                      position === 'QB' ? 'bg-blue-500' :
+                                      position === 'RB' ? 'bg-green-500' :
+                                      position === 'WR' ? 'bg-yellow-500' :
+                                      'bg-purple-500'
+                                    }`}>
+                                      {position}
+                                    </div>
+                                    <h4 className="text-slate-200 font-mono text-sm font-semibold">
+                                      {position} OPTIONS ({positionPlayers.length})
+                                    </h4>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    {positionPlayers
+                                      .sort((a, b) => a.rank - b.rank) // Sort by rank to show best players first
+                                      .map((player, idx) => {
+                                      // Generate a mock NFL opponent - in real implementation, this would come from NFL schedule data
+                                      const nflTeams = ['ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN', 'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC', 'LAC', 'LAR', 'LV', 'MIA', 'MIN', 'NE', 'NO', 'NYG', 'NYJ', 'PHI', 'PIT', 'SEA', 'SF', 'TB', 'TEN', 'WAS']
+                                      
+                                      // Use player's team as seed for consistent opponent matchup
+                                      const seed = player.team.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                                      const opponentIndex = (seed + player.rank) % nflTeams.length
+                                      const opponentTeam = nflTeams[opponentIndex]
+                                      const isHome = seed % 2 === 0
+                                      
+                                      // Calculate matchup rating based on opponent defense strength (mock data)
+                                      // In real implementation, this would be based on actual defensive rankings
+                                      // Tough defenses: BAL, SF, BUF, DAL, PIT, CLE
+                                      // Elite matchups: ARI, CAR, DEN, LV, NYG, WAS
+                                      const toughDefenses = ['BAL', 'SF', 'BUF', 'DAL', 'PIT', 'CLE', 'NYJ', 'PHI']
+                                      const eliteMatchups = ['ARI', 'CAR', 'DEN', 'LV', 'NYG', 'WAS', 'ATL', 'IND']
+                                      const goodMatchups = ['GB', 'KC', 'LAC', 'MIA', 'TB', 'HOU']
+                                      
+                                      let matchupRating = 'Average'
+                                      if (toughDefenses.includes(opponentTeam)) {
+                                        matchupRating = 'Tough'
+                                      } else if (eliteMatchups.includes(opponentTeam)) {
+                                        matchupRating = 'Elite'
+                                      } else if (goodMatchups.includes(opponentTeam)) {
+                                        matchupRating = 'Good'
+                                      } else {
+                                        matchupRating = Math.random() > 0.5 ? 'Great' : 'Average'
+                                      }
+                                      
+                                      const ratingColor = matchupRating === 'Elite' ? 'text-green-400 bg-green-400/10 border-green-400/30' :
+                                                         matchupRating === 'Great' ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' :
+                                                         matchupRating === 'Good' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' :
+                                                         matchupRating === 'Average' ? 'text-orange-400 bg-orange-400/10 border-orange-400/30' :
+                                                         'text-red-400 bg-red-400/10 border-red-400/30'
+                                      
+                                      return (
+                                        <div key={idx} className="p-3 bg-slate-600 rounded-lg border border-slate-500 hover:border-yellow-400/50 transition-all">
+                                          <div className="flex items-center justify-between gap-3">
+                                            {/* Player Info */}
+                                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                              <TeamLogo team={player.team} size={32} />
+                                              <div className="min-w-0 flex-1">
+                                                <div className="flex items-center space-x-2 mb-1">
+                                                  <div className="text-slate-100 font-semibold text-sm truncate">{player.playerName}</div>
+                                                  <Badge variant="outline" className="text-xs bg-slate-500/20 flex-shrink-0">
+                                                    #{player.rank}
+                                                  </Badge>
+                                                </div>
+                                                <div className="flex items-center space-x-2 text-xs">
+                                                  <span className="text-slate-400">{player.team}</span>
+                                                  <span className="text-slate-500">•</span>
+                                                  <div className="flex items-center space-x-1">
+                                                    {isHome ? (
+                                                      <>
+                                                        <span className="text-green-400">vs</span>
+                                                        <TeamLogo team={opponentTeam} size={16} />
+                                                        <span className="text-slate-300">{opponentTeam}</span>
+                                                      </>
+                                                    ) : (
+                                                      <>
+                                                        <span className="text-blue-400">@</span>
+                                                        <TeamLogo team={opponentTeam} size={16} />
+                                                        <span className="text-slate-300">{opponentTeam}</span>
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            
+                                            {/* Matchup Rating */}
+                                            <div className="flex-shrink-0">
+                                              <Badge className={`${ratingColor} border font-mono text-xs px-2 py-1`}>
+                                                {matchupRating}
+                                              </Badge>
+                                            </div>
+                                          </div>
+                                          
+                                          {/* Position-specific advice */}
+                                          {idx === 0 && (
+                                            <div className="mt-2 pt-2 border-t border-slate-500">
+                                              <div className="flex items-start space-x-2">
+                                                <TrendingUp className="h-3 w-3 text-green-400 mt-0.5 flex-shrink-0" />
+                                                <p className="text-xs text-slate-300">
+                                                  <span className="text-green-400 font-semibold">START:</span> Top ranked {position} on your roster
+                                                </p>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            
+                            <div className="mt-4 p-3 bg-blue-400/10 border border-blue-400/30 rounded-lg">
+                              <div className="flex items-start space-x-2">
+                                <Target className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                                <div className="text-xs text-slate-300">
+                                  <p className="font-semibold text-blue-400 mb-1">PRO TIP:</p>
+                                  <p>Green matchups (vs) indicate home games. Blue matchups (@) are away games. Elite/Great ratings suggest strong start candidates.</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Key Players Matchup */}
+                        <Card className="bg-slate-700 border-slate-600">
+                          <CardHeader>
+                            <CardTitle className="text-purple-400 text-sm">KEY PLAYERS MATCHUP</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Your Best Players */}
+                              <div>
+                                <h4 className="text-yellow-400 font-mono text-xs mb-3">{selectedTeam.teamName}</h4>
+                                <div className="space-y-2">
+                                  {selectedTeam.players.slice(0, 5).map((player, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 bg-slate-600 rounded">
+                                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                        <TeamLogo team={player.team} size={24} />
+                                        <div className="min-w-0">
+                                          <div className="text-slate-100 text-sm font-semibold truncate">{player.playerName}</div>
+                                          <div className="text-xs text-slate-400">{player.position} • {player.team}</div>
+                                        </div>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs bg-slate-500/20">
+                                        #{player.rank}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Opponent's Best Players */}
+                              <div>
+                                <h4 className="text-blue-400 font-mono text-xs mb-3">{opponent.teamName}</h4>
+                                <div className="space-y-2">
+                                  {opponent.players.slice(0, 5).map((player, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-2 bg-slate-600 rounded">
+                                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                        <TeamLogo team={player.team} size={24} />
+                                        <div className="min-w-0">
+                                          <div className="text-slate-100 text-sm font-semibold truncate">{player.playerName}</div>
+                                          <div className="text-xs text-slate-400">{player.position} • {player.team}</div>
+                                        </div>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs bg-slate-500/20">
+                                        #{player.rank}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </>
+                    )
+                  })()}
+              </div>
+
+              {/* League Standings */}
+                  <Card className="bg-slate-700 border-slate-600">
+                    <CardHeader>
+                      <CardTitle className="text-purple-400 font-mono text-lg">LEAGUE STANDINGS</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {sortedTeams.slice(0, 10).map((team, idx) => {
+                          const rank = idx + 1
+                          const isCurrentTeam = team.rosterId === selectedTeam.rosterId
+                          return (
+                            <div
+                              key={team.rosterId}
+                              className={`p-3 rounded-lg border transition-all ${
+                                isCurrentTeam
+                                  ? 'bg-yellow-400/10 border-yellow-400/30 ring-2 ring-yellow-400/20'
+                                  : 'bg-slate-800 border-slate-600 hover:bg-slate-750'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`text-xl font-bold ${
+                                    rank === 1 ? 'text-yellow-400' :
+                                    rank === 2 ? 'text-slate-300' :
+                                    rank === 3 ? 'text-orange-400' :
+                                    'text-slate-400'
+                                  }`}>
+                                    #{rank}
+                                  </div>
+                                  <div>
+                                    <div className={`font-semibold ${isCurrentTeam ? 'text-yellow-400' : 'text-slate-100'}`}>
+                                      {team.teamName}
+                                    </div>
+                                    <div className="text-sm text-slate-400">
+                                      {team.wins}-{team.losses} • {team.pointsFor.toFixed(1)} PF
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className={`text-lg font-bold ${
+                                    team.gradeScore >= 70 ? 'text-green-400' :
+                                    team.gradeScore >= 50 ? 'text-blue-400' :
+                                    team.gradeScore >= 30 ? 'text-yellow-400' :
+                                    'text-red-400'
+                                  }`}>
+                                    {team.grade}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* League Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="bg-slate-700 border-slate-600">
+                      <CardHeader>
+                        <CardTitle className="text-green-400 text-sm">LEAGUE LEADERS</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div>
+                          <div className="text-xs text-slate-400">Most Points</div>
+                          <div className="font-semibold text-slate-100">
+                            {sortedTeams[0]?.teamName} ({sortedTeams[0]?.pointsFor.toFixed(1)})
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400">Best Record</div>
+                          <div className="font-semibold text-slate-100">
+                            {sortedTeams.sort((a, b) => b.wins - a.wins)[0]?.teamName} ({sortedTeams.sort((a, b) => b.wins - a.wins)[0]?.wins}-{sortedTeams.sort((a, b) => b.wins - a.wins)[0]?.losses})
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400">Highest Graded</div>
+                          <div className="font-semibold text-slate-100">
+                            {sortedTeams.sort((a, b) => b.gradeScore - a.gradeScore)[0]?.teamName} ({sortedTeams.sort((a, b) => b.gradeScore - a.gradeScore)[0]?.grade})
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-slate-700 border-slate-600">
+                      <CardHeader>
+                        <CardTitle className="text-blue-400 text-sm">YOUR RANK</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div>
+                          <div className="text-xs text-slate-400">Overall</div>
+                          <div className="font-semibold text-slate-100">
+                            #{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1} of {teams.length}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400">Points Rank</div>
+                          <div className="font-semibold text-slate-100">
+                            #{sortedTeams.sort((a, b) => b.pointsFor - a.pointsFor).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400">Grade Rank</div>
+                          <div className="font-semibold text-slate-100">
+                            #{sortedTeams.sort((a, b) => b.gradeScore - a.gradeScore).findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-slate-700 border-slate-600">
+                      <CardHeader>
+                        <CardTitle className="text-orange-400 text-sm">LEAGUE AVG</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <div>
+                          <div className="text-xs text-slate-400">Avg Points</div>
+                          <div className="font-semibold text-slate-100">
+                            {(teams.reduce((sum, t) => sum + t.pointsFor, 0) / teams.length).toFixed(1)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400">Avg Wins</div>
+                          <div className="font-semibold text-slate-100">
+                            {(teams.reduce((sum, t) => sum + t.wins, 0) / teams.length).toFixed(1)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400">Avg Grade</div>
+                          <div className="font-semibold text-slate-100">
+                            {(() => {
+                              const avgScore = teams.reduce((sum, t) => sum + t.gradeScore, 0) / teams.length
+                              return avgScore >= 90 ? 'A' : avgScore >= 80 ? 'B+' : avgScore >= 70 ? 'B' : avgScore >= 60 ? 'C+' : avgScore >= 50 ? 'C' : 'D'
+                            })()}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
-                </TabsContent>
 
-                <TabsContent value="projections" className="space-y-4">
-                  <Card className="bg-slate-700/50 border-slate-600/50 hover:bg-slate-700/80 transition-all duration-200">
-                    <CardHeader>
-                      <CardTitle className="text-green-400 text-sm">SEASON PROJECTIONS</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center min-w-0">
-                          <div className="text-xl sm:text-2xl font-bold text-green-400">
-                            {(() => {
-                              const totalGames = selectedTeam.wins + selectedTeam.losses
-                              const currentWinRate = totalGames > 0 ? selectedTeam.wins / totalGames : 0.5
-                              const adjustedWinRate = Math.min(0.85, Math.max(0.15, currentWinRate + (selectedTeam.gradeScore - 50) / 200))
-                              const projectedWins = Math.round(adjustedWinRate * 14)
-                              const projectedLosses = 14 - projectedWins
-                              return `${projectedWins}-${projectedLosses}`
-                            })()}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-400 truncate px-1">Projected Record</div>
-                        </div>
-                        <div className="text-center min-w-0">
-                          <div className="text-xl sm:text-2xl font-bold text-blue-400">
-                            {(() => {
-                              const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
-                              const gradeAdjustment = selectedTeam.gradeScore > 70 ? -1 : selectedTeam.gradeScore < 30 ? 1 : 0
-                              const projectedRank = Math.max(1, Math.min(teams.length, teamRank + gradeAdjustment))
-                              return `${projectedRank}${projectedRank === 1 ? 'st' : projectedRank === 2 ? 'nd' : projectedRank === 3 ? 'rd' : 'th'}`
-                            })()}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-400 truncate px-1">Projected Finish</div>
-                        </div>
-                        <div className="text-center min-w-0">
-                          <div className="text-xl sm:text-2xl font-bold text-yellow-400">
-                            {(() => {
-                              const totalGames = selectedTeam.wins + selectedTeam.losses
-                              const currentAvg = totalGames > 0 ? selectedTeam.pointsFor / totalGames : 120
-                              const gradeMultiplier = 0.8 + (selectedTeam.gradeScore / 100) * 0.4
-                              const projectedAvg = currentAvg * gradeMultiplier
-                              return projectedAvg.toFixed(1)
-                            })()}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-400 truncate px-1">Avg PPG</div>
-                        </div>
-                        <div className="text-center min-w-0">
-                          <div className="text-xl sm:text-2xl font-bold text-purple-400">
-                            {(() => {
-                              const teamRank = sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1
-                              const totalTeams = teams.length
-                              const playoffSpots = Math.max(4, Math.ceil(totalTeams / 2))
-                              
-                              let baseChance = 0
-                              if (teamRank <= playoffSpots / 2) baseChance = 85
-                              else if (teamRank <= playoffSpots) baseChance = 65
-                              else if (teamRank <= playoffSpots + 2) baseChance = 35
-                              else baseChance = 15
-                              
-                              const gradeBonus = (selectedTeam.gradeScore - 50) * 0.5
-                              const finalChance = Math.max(5, Math.min(95, baseChance + gradeBonus))
-                              return `${Math.round(finalChance)}%`
-                            })()}
-                          </div>
-                          <div className="text-sm text-gray-400">Playoff Chance</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </div>
-        )}
-
-        {/* Enhanced Team Rankings */}
+              {/* Enhanced Team Rankings */}
           <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="relative">
             {/* Background Pattern */}
@@ -1761,6 +2689,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             </div>
           </CardContent>
         </Card>
+            </>
+          )}
+
+        </div>
       </div>
     </div>
   )

@@ -79,7 +79,7 @@ export function LeagueBuddySidebar({
         {/* League Switcher */}
         {leagues.length > 1 && onLeagueChange && (
           <div className="mb-5">
-            <label className="text-[10px] text-slate-500 font-mono mb-2 block uppercase tracking-widest font-semibold">League</label>
+            <label className="text-[10px] text-yellow-400 font-mono mb-2 block uppercase tracking-widest font-semibold">League</label>
             <Select value={leagueId} onValueChange={onLeagueChange}>
               <SelectTrigger className="!bg-slate-700/50 !border-slate-600/50 !text-slate-100 hover:!bg-slate-600/50 hover:!border-yellow-400/30 !transition-all !duration-200 !h-11 !rounded-lg !shadow-sm">
                 <SelectValue placeholder="Select a league" />
@@ -89,7 +89,9 @@ export function LeagueBuddySidebar({
                   <SelectItem 
                     key={league.league_id} 
                     value={league.league_id}
-                    className="!text-slate-200 hover:!bg-slate-600 focus:!bg-slate-600"
+                    className={`!text-slate-200 hover:!bg-slate-600 focus:!bg-slate-600 ${
+                      league.league_id === leagueId ? '!bg-yellow-400/20 !text-yellow-400' : ''
+                    }`}
                   >
                     <div className="flex flex-col py-1">
                       <span className="font-semibold text-sm">{league.name}</span>
@@ -275,6 +277,60 @@ export function LeagueBuddySidebar({
                       </motion.div>
                     </SidebarMenuItem>
                   </motion.div>
+                  
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <SidebarMenuItem>
+                      <motion.div
+                        whileHover={{ scale: 1.015, x: 2 }}
+                        whileTap={{ scale: 0.985 }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 500, 
+                          damping: 25,
+                          mass: 0.5
+                        }}
+                      >
+                        <SidebarMenuButton
+                          onClick={handleScoutingPortalClick}
+                          className="!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50 font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="font-medium">Scouting</span>
+                        </SidebarMenuButton>
+                      </motion.div>
+                    </SidebarMenuItem>
+                  </motion.div>
+                  
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.25 }}
+                  >
+                    <SidebarMenuItem>
+                      <motion.div
+                        whileHover={{ scale: 1.015, x: 2 }}
+                        whileTap={{ scale: 0.985 }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 500, 
+                          damping: 25,
+                          mass: 0.5
+                        }}
+                      >
+                        <SidebarMenuButton
+                          onClick={handleTradeMarketClick}
+                          className="!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50 font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm"
+                        >
+                          <Trophy className="h-4 w-4" />
+                          <span className="font-medium">Trading</span>
+                        </SidebarMenuButton>
+                      </motion.div>
+                    </SidebarMenuItem>
+                  </motion.div>
                 </SidebarMenu>
               </SidebarGroupContent>
               </motion.div>
@@ -439,5 +495,6 @@ export function LeagueBuddySidebar({
     </Sidebar>
   )
 }
+
 
 

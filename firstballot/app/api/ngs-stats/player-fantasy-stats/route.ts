@@ -5,16 +5,7 @@ import { supabaseServer } from "@/lib/supabase-server"
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-/**
- * API Route: Aggregated Player Fantasy Stats from NGS
- * 
- * Fetches combined fantasy stats (passing + rushing + receiving) for players
- * Aggregates all stats into a single fantasy_ppg value per player
- * 
- * Query Parameters:
- * - player_ids: Comma-separated list of player IDs (required)
- * - season: Season year (default: 2025)
- */
+
 
 export async function GET(request: NextRequest) {
   try {

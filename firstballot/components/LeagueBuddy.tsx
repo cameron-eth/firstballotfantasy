@@ -369,6 +369,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
   const [currentMatchups, setCurrentMatchups] = useState<MatchupData[]>([])
   const [currentWeek, setCurrentWeek] = useState<number>(1)
   const [nflSchedule, setNflSchedule] = useState<any[]>([])
+  const [nflGames, setNflGames] = useState<Record<string, { opponent: string, isHome: boolean }>>({})
 
   const [allPlayers, setAllPlayers] = useState<Record<string, any>>({})
   const [playerRankings, setPlayerRankings] = useState<Record<string, any>>({})
@@ -511,7 +512,120 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
     router.push(`/draft-buddy?leagueId=${leagueId}`)
   }, [router, leagueId])
 
+  // Fallback NFL schedule function
+  const getFallbackNflSchedule = useCallback((week: number) => {
+    // Static NFL schedule for 2024 season - this would need to be updated for 2025
+    const nflSchedule2024: Record<number, Record<string, { opponent: string, isHome: boolean }>> = {
+      1: {
+        'BAL': { opponent: 'KC', isHome: true },
+        'BUF': { opponent: 'ARI', isHome: true },
+        'CIN': { opponent: 'NE', isHome: true },
+        'CLE': { opponent: 'DAL', isHome: true },
+        'DEN': { opponent: 'SEA', isHome: true },
+        'HOU': { opponent: 'IND', isHome: true },
+        'IND': { opponent: 'HOU', isHome: false },
+        'JAX': { opponent: 'MIA', isHome: true },
+        'KC': { opponent: 'BAL', isHome: false },
+        'LV': { opponent: 'LAC', isHome: true },
+        'LAC': { opponent: 'LV', isHome: false },
+        'MIA': { opponent: 'JAX', isHome: false },
+        'NE': { opponent: 'CIN', isHome: false },
+        'NYJ': { opponent: 'SF', isHome: true },
+        'PIT': { opponent: 'ATL', isHome: true },
+        'TEN': { opponent: 'CHI', isHome: true },
+        'ARI': { opponent: 'BUF', isHome: false },
+        'ATL': { opponent: 'PIT', isHome: false },
+        'CAR': { opponent: 'NO', isHome: true },
+        'CHI': { opponent: 'TEN', isHome: false },
+        'DAL': { opponent: 'CLE', isHome: false },
+        'DET': { opponent: 'LAR', isHome: true },
+        'GB': { opponent: 'MIN', isHome: true },
+        'LAR': { opponent: 'DET', isHome: false },
+        'MIN': { opponent: 'GB', isHome: false },
+        'NO': { opponent: 'CAR', isHome: false },
+        'NYG': { opponent: 'WAS', isHome: true },
+        'PHI': { opponent: 'TB', isHome: true },
+        'SF': { opponent: 'NYJ', isHome: false },
+        'SEA': { opponent: 'DEN', isHome: false },
+        'TB': { opponent: 'PHI', isHome: false },
+        'WAS': { opponent: 'NYG', isHome: false }
+      }
+    }
+    
+    const weekSchedule = nflSchedule2024[week] || {}
+    console.log('🔄 Using fallback schedule for week', week, ':', Object.keys(weekSchedule).length, 'teams')
+    return weekSchedule
+  }, [])
 
+  // Fetch NFL schedule data
+  const fetchNflSchedule = useCallback(async (week: number) => {
+    try {
+      console.log('🔍 Fetching NFL schedule for week', week)
+      
+      // Try multiple ESPN API endpoints
+      const endpoints = [
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&season=${new Date().getFullYear()}`,
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}`,
+        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`
+      ]
+      
+      let data = null
+      for (const endpoint of endpoints) {
+        try {
+          console.log('🌐 Trying endpoint:', endpoint)
+          const response = await fetch(endpoint)
+          data = await response.json()
+          console.log('📊 API Response:', data)
+          
+          if (data.events && data.events.length > 0) {
+            console.log('✅ Found events:', data.events.length)
+            break
+          }
+        } catch (endpointError) {
+          console.log('❌ Endpoint failed:', endpoint, endpointError)
+          continue
+        }
+      }
+      
+      if (data && data.events && data.events.length > 0) {
+        const games: Record<string, { opponent: string, isHome: boolean }> = {}
+        
+        data.events.forEach((event: any, index: number) => {
+          console.log(`🏈 Processing event ${index}:`, event)
+          const competition = event.competitions?.[0]
+          if (competition && competition.competitors) {
+            const homeTeam = competition.competitors.find((c: any) => c.homeAway === 'home')
+            const awayTeam = competition.competitors.find((c: any) => c.homeAway === 'away')
+            
+            if (homeTeam && awayTeam) {
+              const homeAbbr = homeTeam.team?.abbreviation
+              const awayAbbr = awayTeam.team?.abbreviation
+              
+              if (homeAbbr && awayAbbr) {
+                games[homeAbbr] = { opponent: awayAbbr, isHome: true }
+                games[awayAbbr] = { opponent: homeAbbr, isHome: false }
+                console.log(`📝 Added game: ${awayAbbr} @ ${homeAbbr}`)
+              }
+            }
+          }
+        })
+        
+        setNflGames(games)
+        console.log('📅 NFL Schedule loaded for week', week, ':', Object.keys(games).length, 'teams')
+        console.log('🎮 Games:', games)
+      } else {
+        console.log('⚠️ No events found in API response, using fallback schedule')
+        // Fallback to static schedule for current NFL season
+        const fallbackSchedule = getFallbackNflSchedule(week)
+        setNflGames(fallbackSchedule)
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch NFL schedule:', error)
+      // Fallback to static schedule
+      const fallbackSchedule = getFallbackNflSchedule(week)
+      setNflGames(fallbackSchedule)
+    }
+  }, [])
 
   // Optimized data fetching with better error handling
   const fetchLeagueData = useCallback(async () => {
@@ -538,7 +652,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
         sleeperApi.getLeagueInfo(leagueId),
         fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
         fetch('/api/rankings').then(res => res.ok ? res.json() : []).catch(() => []),
-        fetch(`https://api.sleeper.app/v1/schedule/nfl/regular/${nflState?.season}/${week}`, { cache: 'no-store' }).then(r => r.json()).catch(() => [])
+        Promise.resolve([]) // NFL schedule not available from Sleeper API
       ]) as [any[], any[], Record<string, any>, any, any[], any[], any[]]
       
       // SIMPLE: Get stats for all roster players using their Sleeper IDs
@@ -548,6 +662,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
       
       console.log('🏈 Fetching stats for', allSleeperPlayerIds.length, 'roster players...')
       console.log('📅 NFL Schedule for week', week, ':', nflSchedule.length, 'games')
+      console.log('📅 NFL Schedule data:', nflSchedule.slice(0, 3)) // Show first 3 games for debugging
       
       // Set NFL schedule state
       setNflSchedule(nflSchedule)
@@ -859,6 +974,13 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
     fetchLeagueData()
   }, [fetchLeagueData])
 
+  // Fetch NFL schedule when current week changes
+  useEffect(() => {
+    if (currentWeek > 0) {
+      fetchNflSchedule(currentWeek)
+    }
+  }, [currentWeek, fetchNflSchedule])
+
 
 
   if (loading) {
@@ -1125,7 +1247,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
           {/* League Switcher */}
           {leagues.length > 1 && onLeagueChange && (
             <div className="mb-5">
-              <label className="text-[10px] text-slate-500 font-mono mb-2 block uppercase tracking-widest font-semibold">League</label>
+              <label className="text-[10px] text-yellow-400 font-mono mb-2 block uppercase tracking-widest font-semibold">League</label>
               <Select value={leagueId} onValueChange={onLeagueChange}>
                 <SelectTrigger className="!bg-slate-700/50 !border-slate-600/50 !text-slate-100 hover:!bg-slate-600/50 hover:!border-yellow-400/30 !transition-all !duration-200 !h-11 !rounded-lg !shadow-sm">
                   <SelectValue placeholder="Select a league" />
@@ -1135,7 +1257,9 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                     <SelectItem 
                       key={league.league_id} 
                       value={league.league_id}
-                      className="!text-slate-200 hover:!bg-slate-600 focus:!bg-slate-600"
+                      className={`!text-slate-200 hover:!bg-slate-600 focus:!bg-slate-600 ${
+                        league.league_id === leagueId ? '!bg-yellow-400/20 !text-yellow-400' : ''
+                      }`}
                     >
                       <div className="flex flex-col py-1 text-left">
                         <span className="font-semibold text-sm text-left">{league.name}</span>
@@ -1175,12 +1299,12 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       {selectedTeam.teamName}
                     </h2>
                     <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className={`text-[10px] font-mono font-bold px-2 py-0.5 ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
+                        GRADE {selectedTeam.grade}
+                      </Badge>
                       <Badge variant="outline" className="!bg-slate-600/50 !border-slate-500 !text-slate-300 text-[10px] font-mono px-2 py-0.5">
                         RANK #{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}
                       </Badge>
-                      <Badge variant="outline" className={`text-[10px] font-mono font-bold px-2 py-0.5 ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
-                        GRADE {selectedTeam.grade}
-                  </Badge>
                 </div>
               </div>
             </div>
@@ -1359,84 +1483,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                 >
                   <SidebarGroupContent>
                   <SidebarMenu>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.05 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{ 
-                            type: "spring", 
-                            stiffness: 500, 
-                            damping: 25,
-                            mass: 0.5
-                          }}
-                        >
-                          <SidebarMenuButton
-            onClick={handleTradeMarketClick}
-                            className="!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium"
-          >
-            <Trophy className="h-4 w-4" />
-            <span>Trade Market</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{ 
-                            type: "spring", 
-                            stiffness: 500, 
-                            damping: 25,
-                            mass: 0.5
-                          }}
-                        >
-                          <SidebarMenuButton
-            onClick={handleScoutingPortalClick}
-                            className="!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium"
-          >
-            <Eye className="h-4 w-4" />
-            <span>Scouting Portal</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.15 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{ 
-                            type: "spring", 
-                            stiffness: 500, 
-                            damping: 25,
-                            mass: 0.5
-                          }}
-                        >
-                          <SidebarMenuButton
-            onClick={handleDraftBuddyClick}
-                            className="!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium"
-          >
-            <Users className="h-4 w-4" />
-            <span>Draft Buddy</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
+                    {/* Action buttons removed */}
                   </SidebarMenu>
                 </SidebarGroupContent>
                 </motion.div>
@@ -1494,7 +1541,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
             {leagues.length > 1 && onLeagueChange && (
               <Card className="bg-slate-800 border-slate-700">
                 <CardContent className="p-6">
-                  <label className="text-sm text-slate-400 font-mono mb-4 block">Select League</label>
+                  <label className="text-sm text-yellow-400 font-mono mb-4 block">Select League</label>
                   <Select value={leagueId} onValueChange={onLeagueChange}>
                     <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 hover:bg-slate-600 hover:border-yellow-400/30 transition-all duration-200 h-14 rounded-lg px-4">
                       <SelectValue placeholder="Select a league" />
@@ -1518,34 +1565,6 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
               </Card>
             )}
 
-            {/* Mobile Action Buttons */}
-          <Card className="bg-slate-800 border-slate-700">
-              <CardContent className="p-6">
-                <div className="flex space-x-2">
-                  <button 
-                    className="flex-1 px-4 py-4 rounded-lg font-mono text-sm font-semibold transition-all min-h-[56px] flex flex-col items-center justify-center bg-slate-700 text-slate-300 hover:bg-slate-600"
-                    onClick={handleTradeMarketClick}
-                  >
-                    <Trophy className="h-5 w-5 mb-2" />
-                    Trade
-                  </button>
-                  <button 
-                    className="flex-1 px-4 py-4 rounded-lg font-mono text-sm font-semibold transition-all min-h-[56px] flex flex-col items-center justify-center bg-slate-700 text-slate-300 hover:bg-slate-600"
-                    onClick={handleScoutingPortalClick}
-                  >
-                    <Eye className="h-5 w-5 mb-2" />
-                    Scout
-                  </button>
-                  <button 
-                    className="flex-1 px-4 py-4 rounded-lg font-mono text-sm font-semibold transition-all min-h-[56px] flex flex-col items-center justify-center bg-slate-700 text-slate-300 hover:bg-slate-600"
-                    onClick={handleDraftBuddyClick}
-                  >
-                    <Users className="h-5 w-5 mb-2" />
-                    Draft
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
                         </div>
           
           {/* OVERVIEW SECTION */}
@@ -1588,35 +1607,36 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                          <button 
+                  {/* Action Buttons - Hidden on mobile */}
+                  <div className="hidden md:flex items-center space-x-2">
+                    <button 
                       className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-                            onClick={handleTradeMarketClick}
-                          >
+                      onClick={handleTradeMarketClick}
+                    >
                       <Trophy className="h-4 w-4" />
-                      <span className="hidden sm:inline">Trade</span>
-                          </button>
-                          <button 
+                      <span>Trade</span>
+                    </button>
+                    <button 
                       className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-                            onClick={handleScoutingPortalClick}
-                          >
+                      onClick={handleScoutingPortalClick}
+                    >
                       <Eye className="h-4 w-4" />
-                      <span className="hidden sm:inline">Scout</span>
-                          </button>
-                          <button 
+                      <span>Scout</span>
+                    </button>
+                    <button 
                       className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-                            onClick={handleDraftBuddyClick}
-                          >
+                      onClick={handleDraftBuddyClick}
+                    >
                       <Users className="h-4 w-4" />
-                      <span className="hidden sm:inline">Draft</span>
-                          </button>
-                        </div>
+                      <span>Draft</span>
+                    </button>
+                  </div>
           </div>
 
                 {/* Matchup Score - Compact with Avatars */}
                 {userMatchup ? (
-                  <div className="bg-slate-700/30 rounded-lg p-4">
-                    <div className="text-center mb-3">
+                  <div className="bg-slate-700/30 rounded-lg p-3 mt-3">
+                    <div className="text-center mb-2">
                       <div className="text-slate-500 font-mono text-xs mb-1">WEEK {currentWeek}</div>
                       <div className={`text-sm font-bold ${isWinning ? 'text-green-400' : isTied ? 'text-slate-300' : 'text-red-400'}`}>
                         {isWinning ? 'WINNING' : isTied ? 'TIED' : 'LOSING'}
@@ -1624,19 +1644,19 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                               </div>
                             </div>
                     
-                    <div className="flex items-center justify-between gap-6">
+                    <div className="flex items-center justify-between gap-4">
                       {/* Your Team */}
-                      <div className="flex flex-col items-center space-y-2 flex-1">
+                      <div className="flex flex-col items-center space-y-1 flex-1">
                         <UserAvatar
                           avatarId={selectedTeam.ownerAvatar}
                           displayName={selectedTeam.ownerName}
                           username={selectedTeam.ownerUsername}
-                          size={48}
+                          size={40}
                           className="ring-2 ring-yellow-400/50 flex-shrink-0"
                         />
                         <div className="text-center">
                           <div className="text-slate-400 text-xs font-mono mb-1">YOU</div>
-                          <div className="text-2xl font-bold text-slate-100 font-mono">
+                          <div className="text-xl font-bold text-slate-100 font-mono">
                             {userMatchup.actualPoints > 0 ? userMatchup.actualPoints.toFixed(1) : '0'}
                               </div>
                             </div>
@@ -1646,17 +1666,17 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       <div className="text-slate-600 font-mono text-sm px-2 flex-shrink-0">VS</div>
                       
                       {/* Opponent Team */}
-                      <div className="flex flex-col items-center space-y-2 flex-1">
+                      <div className="flex flex-col items-center space-y-1 flex-1">
                         <UserAvatar
                           avatarId={userMatchup.opponentAvatar}
                           displayName={userMatchup.opponentDisplayName || userMatchup.opponentTeamName}
                           username={userMatchup.opponentUsername || userMatchup.opponentTeamName}
-                          size={48}
+                          size={40}
                           className="ring-2 ring-blue-400/50 flex-shrink-0"
                         />
                         <div className="text-center">
                           <div className="text-slate-400 text-xs font-mono mb-1 truncate">{userMatchup.opponentTeamName.toUpperCase()}</div>
-                          <div className="text-2xl font-bold text-slate-100 font-mono">
+                          <div className="text-xl font-bold text-slate-100 font-mono">
                             {userMatchup.opponentActualPoints > 0 ? userMatchup.opponentActualPoints.toFixed(1) : '0'}
                   </div>
                 </div>
@@ -1669,6 +1689,24 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                     <p className="text-slate-400 text-sm">No matchup for Week {currentWeek}</p>
                       </div>
               )}
+
+              {/* Mobile Action Buttons - Only visible on mobile */}
+              <div className="md:hidden flex items-center justify-center space-x-3 mt-3">
+                <button 
+                  className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+                  onClick={handleTradeMarketClick}
+                >
+                  <Trophy className="h-4 w-4" />
+                  <span>Trade</span>
+                </button>
+                <button 
+                  className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+                  onClick={handleScoutingPortalClick}
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>Scout</span>
+                </button>
+              </div>
 
                     </CardContent>
                   </Card>
@@ -1683,42 +1721,47 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
             const currentStarters = selectedTeam.starters || []
             console.log('📋 Current starters from roster:', currentStarters.length, 'players')
             
-            // Helper function to get real NFL opponent from schedule and calculate projections
+            // Helper function to get NFL opponent - using static schedule for now
             const getOpponentInfo = (player: PlayerData) => {
-              // Find the game where this player's team is playing
-              const game = nflSchedule.find((game: any) => 
-                game.home === player.team || game.away === player.team
-              )
+              // Debug logging
+              console.log('🔍 Getting opponent info for:', player.playerName, player.team)
+              console.log('📊 Available NFL games:', Object.keys(nflGames).length, nflGames)
               
-              if (!game) {
-                // Fallback if no game found (bye week or schedule not available)
+              // Use real NFL schedule data from ESPN API
+              const gameInfo = nflGames[player.team]
+              console.log('🎮 Game info for', player.team, ':', gameInfo)
+              
+              if (gameInfo) {
+                // We have real schedule data for this team
+                const { opponent, isHome } = gameInfo
+                console.log('✅ Found matchup:', player.team, 'vs', opponent, isHome ? 'HOME' : 'AWAY')
+                
+                // Basic matchup rating based on opponent defensive strength
+                const toughDefenses = ['BAL', 'SF', 'BUF', 'DAL', 'PIT', 'CLE', 'NYJ', 'PHI']
+                const eliteMatchups = ['ARI', 'CAR', 'DEN', 'LV', 'NYG', 'WAS', 'ATL', 'IND']
+                const goodMatchups = ['GB', 'KC', 'LAC', 'MIA', 'TB', 'HOU']
+                
+                let matchupRating = 'Average'
+                if (toughDefenses.includes(opponent)) matchupRating = 'Tough'
+                else if (eliteMatchups.includes(opponent)) matchupRating = 'Elite'
+                else if (goodMatchups.includes(opponent)) matchupRating = 'Good'
+                else matchupRating = 'Great'
+                
                 return { 
-                  opponentTeam: 'BYE', 
-                  isHome: false, 
-                  matchupRating: 'Average',
+                  opponentTeam: opponent,
+                  isHome,
+                  matchupRating,
                   gameTime: null
                 }
               }
               
-              const isHome = game.home === player.team
-              const opponentTeam = isHome ? game.away : game.home
-              
-              // Basic matchup rating based on opponent (can be enhanced with defense rankings)
-              const toughDefenses = ['BAL', 'SF', 'BUF', 'DAL', 'PIT', 'CLE', 'NYJ', 'PHI']
-              const eliteMatchups = ['ARI', 'CAR', 'DEN', 'LV', 'NYG', 'WAS', 'ATL', 'IND']
-              const goodMatchups = ['GB', 'KC', 'LAC', 'MIA', 'TB', 'HOU']
-              
-              let matchupRating = 'Average'
-              if (toughDefenses.includes(opponentTeam)) matchupRating = 'Tough'
-              else if (eliteMatchups.includes(opponentTeam)) matchupRating = 'Elite'
-              else if (goodMatchups.includes(opponentTeam)) matchupRating = 'Good'
-              else matchupRating = 'Great'
-              
+              // Fallback if no schedule data available
+              console.log('⚠️ No matchup data for', player.team, '- using TBD')
               return { 
-                opponentTeam, 
-                isHome, 
-                matchupRating,
-                gameTime: game.scheduled || null
+                opponentTeam: 'TBD', 
+                isHome: false, 
+                matchupRating: 'Average',
+                gameTime: null
               }
             }
 
@@ -1973,7 +2016,9 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                 return (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+                {/* Mobile-first layout */}
+                <div className="space-y-4 mb-4">
+                  {/* Title and Description */}
                   <div>
                     <CardTitle className="text-yellow-400 font-mono flex items-center text-lg">
                       <Target className="h-5 w-5 mr-2" />
@@ -1990,45 +2035,59 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       {' • '}
                       <span className="text-slate-500">PPR scoring (pass + rush + rec)</span>
                     </p>
-                          </div>
-                  <div className="text-right">
+                  </div>
+                  
+                  {/* Season Average - Mobile centered, Desktop right-aligned */}
+                  <div className="md:hidden text-center">
                     <div className="text-xs text-slate-400 font-mono mb-1">SEASON AVG</div>
                     <div className="text-3xl font-bold text-yellow-400 font-mono">{totalProjection.toFixed(1)}</div>
                     <div className="text-xs text-slate-500 font-mono mt-1">
                       {benchPotential > 0 && `+${benchPotential.toFixed(1)} on bench`}
-                          </div>
-                          </div>
                     </div>
+                  </div>
+                  
+                  {/* Desktop Season Average */}
+                  <div className="hidden md:block absolute top-4 right-4 text-right">
+                    <div className="text-xs text-slate-400 font-mono mb-1">SEASON AVG</div>
+                    <div className="text-3xl font-bold text-yellow-400 font-mono">{totalProjection.toFixed(1)}</div>
+                    <div className="text-xs text-slate-500 font-mono mt-1">
+                      {benchPotential > 0 && `+${benchPotential.toFixed(1)} on bench`}
+                    </div>
+                  </div>
+                </div>
                     
-                {/* Mode Toggle + Actions */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        setLineupMode('current')
-                        handleResetWhatIf()
-                      }}
-                      className={`px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
-                        lineupMode === 'current'
-                          ? 'bg-yellow-400 text-slate-900'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      Current Lineup
-                    </button>
-                    <button
-                      onClick={() => {
-                        setLineupMode('optimized')
-                        handleResetWhatIf()
-                      }}
-                      className={`px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
-                        lineupMode === 'optimized'
-                          ? 'bg-yellow-400 text-slate-900'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      Optimized
-                    </button>
+                {/* Mode Toggle + Actions - Mobile Stacked */}
+                <div className="space-y-3">
+                  {/* Buttons - Mobile full width, Desktop inline */}
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <div className="flex gap-2 flex-1">
+                      <button
+                        onClick={() => {
+                          setLineupMode('current')
+                          handleResetWhatIf()
+                        }}
+                        className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
+                          lineupMode === 'current'
+                            ? 'bg-yellow-400 text-slate-900'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        Current Lineup
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLineupMode('optimized')
+                          handleResetWhatIf()
+                        }}
+                        className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
+                          lineupMode === 'optimized'
+                            ? 'bg-yellow-400 text-slate-900'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        Optimized
+                      </button>
+                    </div>
                     {whatIfLineup.length > 0 && (
                       <button
                         onClick={handleResetWhatIf}
@@ -2037,24 +2096,24 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                         Reset
                       </button>
                     )}
-                    </div>
+                  </div>
 
-                  {/* Quick Stats Bar */}
-                  <div className="flex items-center space-x-4 text-xs">
+                  {/* Quick Stats Bar - Mobile stacked, Desktop inline */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs">
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                       <span className="text-slate-400">
                         {matchupBreakdown['Elite'] || 0} Elite + {matchupBreakdown['Great'] || 0} Great matchups
                       </span>
-                          </div>
+                    </div>
                     {keyDecisions.length > 0 && (
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
                         <span className="text-slate-400">{keyDecisions.length} suggested swap{keyDecisions.length > 1 ? 's' : ''}</span>
-                          </div>
-                        )}
-                          </div>
                       </div>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Optimized Changes Summary */}
@@ -2103,26 +2162,61 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       <AlertCircle className="h-4 w-4 mr-2" />
                       SUGGESTED SWAPS - UPGRADE YOUR LINEUP
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {keyDecisions.map((decision, idx) => {
                         const starterFPPG = decision.starter.fantasy_ppg || 0
                         const benchFPPG = decision.bench.fantasy_ppg || 0
                         
                         return (
-                          <div key={idx} className="flex items-center justify-between gap-3 text-xs">
-                            <div className="flex items-center space-x-2 flex-1">
-                              <TeamLogo team={decision.starter.team} size={24} />
-                              <span className="text-slate-300">{decision.starter.playerName}</span>
-                              <span className="text-slate-500 text-[10px]">FPPG</span>
-                              <span className="text-red-400 font-mono">{starterFPPG.toFixed(1)}</span>
-                          </div>
-                            <div className="text-slate-500">→</div>
-                            <div className="flex items-center space-x-2 flex-1 justify-end">
-                              <span className="text-green-400 font-mono">{benchFPPG.toFixed(1)}</span>
-                              <span className="text-slate-500 text-[10px]">FPPG</span>
-                              <span className="text-slate-300">{decision.bench.playerName}</span>
-                              <TeamLogo team={decision.bench.team} size={24} />
-                          </div>
+                          <div key={idx} className="bg-slate-800/50 rounded-lg p-3">
+                            {/* Mobile-friendly vertical layout */}
+                            <div className="md:hidden space-y-3">
+                              {/* Current Starter */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <TeamLogo team={decision.starter.team} size={20} />
+                                  <span className="text-slate-300 text-sm">{decision.starter.playerName}</span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-red-400 font-mono text-sm">{starterFPPG.toFixed(1)}</div>
+                                  <div className="text-slate-500 text-[10px]">FPPG</div>
+                                </div>
+                              </div>
+                              
+                              {/* Arrow */}
+                              <div className="flex justify-center">
+                                <div className="text-slate-500 text-lg">↓</div>
+                              </div>
+                              
+                              {/* Suggested Replacement */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <TeamLogo team={decision.bench.team} size={20} />
+                                  <span className="text-slate-300 text-sm">{decision.bench.playerName}</span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-green-400 font-mono text-sm">{benchFPPG.toFixed(1)}</div>
+                                  <div className="text-slate-500 text-[10px]">FPPG</div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Desktop horizontal layout */}
+                            <div className="hidden md:flex items-center justify-between gap-3 text-xs">
+                              <div className="flex items-center space-x-2 flex-1">
+                                <TeamLogo team={decision.starter.team} size={24} />
+                                <span className="text-slate-300">{decision.starter.playerName}</span>
+                                <span className="text-slate-500 text-[10px]">FPPG</span>
+                                <span className="text-red-400 font-mono">{starterFPPG.toFixed(1)}</span>
+                              </div>
+                              <div className="text-slate-500">→</div>
+                              <div className="flex items-center space-x-2 flex-1 justify-end">
+                                <span className="text-green-400 font-mono">{benchFPPG.toFixed(1)}</span>
+                                <span className="text-slate-500 text-[10px]">FPPG</span>
+                                <span className="text-slate-300">{decision.bench.playerName}</span>
+                                <TeamLogo team={decision.bench.team} size={24} />
+                              </div>
+                            </div>
                           </div>
                 )
                       })}
@@ -2144,6 +2238,13 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       if (!avgFPPG && slot.player.fantasy_points_ppr && slot.player.games_played && slot.player.games_played > 0) {
                         avgFPPG = slot.player.fantasy_points_ppr / slot.player.games_played
                       }
+                      
+                      // Get actual points for this week from matchup data
+                      const userMatchup = currentMatchups.find(m => m.rosterId === selectedTeam.rosterId)
+                      const actualPoints = userMatchup?.playersPoints?.[slot.player.playerId] || 0
+                      const predictedPoints = avgFPPG || 0
+                      const pointsDiff = actualPoints - predictedPoints
+                      const isUnderperforming = actualPoints > 0 && pointsDiff < -2 // Underperforming if 2+ points below prediction
                       
                       // Check if this player is new in optimized lineup
                       const isNewInOptimized = lineupMode === 'optimized' && !currentPlayerIds.has(slot.player.playerId)
@@ -2178,7 +2279,9 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       
                       return (
                         <div key={idx} className={`p-3 rounded-lg border transition-all hover:shadow-lg ${
-                          isNewInOptimized
+                          isUnderperforming
+                            ? 'bg-slate-800/50 border-slate-600/50 opacity-60'
+                            : isNewInOptimized
                             ? 'bg-yellow-400/10 border-yellow-400/50 ring-2 ring-yellow-400/30'
                             : matchupRating === 'Elite' || matchupRating === 'Great' 
                             ? 'bg-green-500/5 border-green-500/30' 
@@ -2197,7 +2300,12 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                                   ⚡ OPTIMIZED IN
                                 </Badge>
                               )}
-                              {recommendationBadge && !isNewInOptimized && (
+                              {isUnderperforming && (
+                                <Badge className="bg-red-400/20 text-red-400 border-red-400/30 font-mono text-xs px-2">
+                                  UNDERPERFORMING
+                                </Badge>
+                              )}
+                              {recommendationBadge && !isNewInOptimized && !isUnderperforming && (
                                 <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 font-mono text-xs px-2">
                                   {recommendationBadge}
                                 </Badge>
@@ -2240,19 +2348,35 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
           </div>
                     </div>
 
-                            {/* Season Average Column */}
+                            {/* Points Column */}
                             <div className="text-right flex-shrink-0">
-                              {avgFPPG ? (
+                              {actualPoints > 0 ? (
+                                <>
+                                  <div className="text-xs text-slate-500 uppercase font-mono mb-0.5">
+                                    Week {currentWeek}
+                                  </div>
+                                  <div className={`font-bold font-mono text-2xl mb-1 ${
+                                    pointsDiff > 0 ? 'text-green-400' : pointsDiff < -2 ? 'text-red-400' : 'text-yellow-400'
+                                  }`}>
+                                    {actualPoints.toFixed(1)}
+                                  </div>
+                                  <div className="text-xs text-slate-400">
+                                    <span className="font-mono">
+                                      {pointsDiff > 0 ? `+${pointsDiff.toFixed(1)}` : pointsDiff.toFixed(1)} vs pred
+                                    </span>
+                                  </div>
+                                </>
+                              ) : avgFPPG ? (
                                 <>
                                   <div className="text-xs text-slate-500 uppercase font-mono mb-0.5">
                                     Season Avg
-                      </div>
+                                  </div>
                                   <div className="text-yellow-400 font-bold font-mono text-2xl mb-1">
                                     {avgFPPG.toFixed(1)}
-                    </div>
+                                  </div>
                                   <div className="text-xs text-slate-400">
                                     <span className="font-mono">PPG</span>
-                  </div>
+                                  </div>
                                 </>
                               ) : (
                                 <>

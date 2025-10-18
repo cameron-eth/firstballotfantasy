@@ -15,9 +15,6 @@ interface LeagueOverviewTabProps {
   allPlayers: Record<string, any>
   userRosterId?: number
   playerProjections?: Record<string, number>
-  onTradeMarketClick: () => void
-  onScoutingPortalClick: () => void
-  onDraftBuddyClick: () => void
 }
 
 export const LeagueOverviewTab = memo(function LeagueOverviewTab({
@@ -27,10 +24,7 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
   teams,
   allPlayers,
   userRosterId,
-  playerProjections,
-  onTradeMarketClick,
-  onScoutingPortalClick,
-  onDraftBuddyClick
+  playerProjections
 }: LeagueOverviewTabProps) {
   // Find the user's current matchup
   const userMatchup = userRosterId ? currentMatchups.find(m => m.rosterId === userRosterId) : null
@@ -48,10 +42,11 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
             </div>
             <span className="text-xl font-bold">LEAGUE OVERVIEW</span>
           </div>
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Action Buttons - Hidden on mobile */}
+          <div className="hidden md:flex items-center space-x-2 sm:space-x-3">
             <button 
               className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/40 backdrop-blur-sm hover:bg-yellow-400/20 text-yellow-400 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 shadow-lg"
-              onClick={onTradeMarketClick}
+              onClick={() => window.location.href = '/trade-market'}
             >
               <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline font-semibold">Trade Market</span>
@@ -59,7 +54,7 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
             </button>
             <button 
               className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/40 backdrop-blur-sm hover:bg-yellow-400/20 text-yellow-400 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 shadow-lg"
-              onClick={onScoutingPortalClick}
+              onClick={() => window.location.href = '/scouting-portal'}
             >
               <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline font-semibold">Scouting Portal</span>
@@ -67,7 +62,7 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
             </button>
             <button 
               className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/40 backdrop-blur-sm hover:bg-yellow-400/20 text-yellow-400 font-mono text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-slate-600/50 hover:border-yellow-400/50 transition-all duration-200 shadow-lg"
-              onClick={onDraftBuddyClick}
+              onClick={() => window.location.href = '/draft-buddy'}
             >
               <Users className="h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline font-semibold">Draft Buddy</span>

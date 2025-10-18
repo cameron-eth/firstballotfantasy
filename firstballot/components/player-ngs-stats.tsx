@@ -245,3 +245,5 @@ export function PlayerNGSStats({ playerName, position, compact = false }: Player
   )
 }
 
+
+

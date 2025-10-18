@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
 async function middleware(request: NextRequest) {
-  // Only run on API routes that need auth (exclude webhooks and overview)
+  // Only run on API routes that need auth (exclude webhooks, overview, and public data endpoints)
   if (request.nextUrl.pathname.startsWith('/api/') && 
       !request.nextUrl.pathname.startsWith('/api/webhooks') &&
-      !request.nextUrl.pathname.startsWith('/api/overview')) {
+      !request.nextUrl.pathname.startsWith('/api/overview') &&
+      !request.nextUrl.pathname.startsWith('/api/ngs-stats') &&
+      !request.nextUrl.pathname.startsWith('/api/test-ngs')) {
         
     const authHeader = request.headers.get('authorization')
     

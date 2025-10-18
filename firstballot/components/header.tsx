@@ -24,12 +24,17 @@ export function Header() {
     <header className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         {/* Main Header */}
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 min-h-[64px]">
           {/* Logo and Brand */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-              <Shield className="h-6 w-6 text-yellow-400" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
+              <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-yellow-400" />
             </div>
+            {/* Mobile: Show abbreviated logo */}
+            <div className="block sm:hidden">
+              <h1 className="text-sm font-bold text-green-400 font-mono tracking-wide">FB</h1>
+            </div>
+            {/* Desktop: Show full logo */}
             <div className="hidden sm:block">
               <h1 className="text-lg font-bold text-green-400 font-mono tracking-wide">FIRST BALLOT</h1>
               <p className="text-xs text-gray-400 font-mono">FANTASY</p>
@@ -68,7 +73,7 @@ export function Header() {
           </nav>
 
           {/* User Section */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {user ? (
               <motion.div 
                 className="flex items-center space-x-2"
@@ -79,7 +84,7 @@ export function Header() {
                 {/* PRO User - Premium Design */}
                 {!membershipLoading && isMember && (
                   <motion.div 
-                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-sm rounded-lg p-2 border border-purple-500/30 shadow-lg shadow-purple-500/25"
+                    className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-sm rounded-lg p-1.5 sm:p-2 border border-purple-500/30 shadow-lg shadow-purple-500/25"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.2 }}
                   >
@@ -97,7 +102,7 @@ export function Header() {
                       <Crown className="h-3 w-3 text-purple-400" />
                     </div>
                     
-                    <span className="text-purple-300 text-sm font-mono hidden sm:block max-w-[120px] truncate">
+                    <span className="text-purple-300 text-xs sm:text-sm font-mono hidden sm:block max-w-[120px] truncate">
                       {user.email}
                     </span>
                     
@@ -116,7 +121,7 @@ export function Header() {
                 {/* FREE User - Standard Design */}
                 {!membershipLoading && !isMember && (
                   <motion.div 
-                    className="flex items-center space-x-2 bg-slate-700/50 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50"
+                    className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/50 backdrop-blur-sm rounded-lg p-1.5 sm:p-2 border border-slate-600/50"
                     whileHover={{ scale: 1.02 }}
                     transition={{ duration: 0.2 }}
                   >
@@ -129,7 +134,7 @@ export function Header() {
                       <User className="h-3 w-3 text-gray-400" />
                 </div>
                     
-                    <span className="text-gray-300 text-sm font-mono hidden sm:block max-w-[120px] truncate">
+                    <span className="text-gray-300 text-xs sm:text-sm font-mono hidden sm:block max-w-[120px] truncate">
                       {user.email}
                     </span>
                     
@@ -156,7 +161,7 @@ export function Header() {
                 {/* Loading State */}
                 {membershipLoading && (
                   <motion.div 
-                    className="flex items-center space-x-2 bg-slate-700/50 backdrop-blur-sm rounded-lg p-2 border border-slate-600/50"
+                    className="flex items-center space-x-1 sm:space-x-2 bg-slate-700/50 backdrop-blur-sm rounded-lg p-1.5 sm:p-2 border border-slate-600/50"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
@@ -177,7 +182,7 @@ export function Header() {
             {/* Mobile Menu Button */}
             <motion.button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+              className="md:hidden p-2 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >

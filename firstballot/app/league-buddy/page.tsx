@@ -128,6 +128,8 @@ export default function LeagueBuddyPage() {
                 sleeper_username: userData.username
               }
             );
+      
+      console.log('[League Buddy] Sleeper username saved:', userData.username, updateResponse.ok)
 
       // Cache the user data
       cacheUtils.set(keys.SLEEPER_USER, userData)
@@ -263,7 +265,12 @@ export default function LeagueBuddyPage() {
 
             {/* League Buddy Dashboard */}
             {user && selectedLeagueId && (
-              <LeagueBuddy leagueId={selectedLeagueId} user={user} />
+              <LeagueBuddy 
+                leagueId={selectedLeagueId} 
+                user={user} 
+                leagues={leagues}
+                onLeagueChange={setSelectedLeagueId}
+              />
             )}
 
             {/* Loading State */}

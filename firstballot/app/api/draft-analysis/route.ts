@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
     // Fetch traded picks with Next.js caching
     const tradedPicks = await sleeperApi.getDraftTradedPicks(draftId);
 
-    // Fetch league rosters and users with Next.js caching
+    // Fetch league rosters and users - Users without cache to get fresh team names
     const [rosters, users] = await Promise.all([
       sleeperApi.getLeagueRosters(draft.league_id),
-      sleeperApi.getLeagueUsers(draft.league_id)
+      fetch(`https://api.sleeper.app/v1/league/${draft.league_id}/users`, { cache: 'no-store' }).then(r => r.json())
     ]);
 
     // Fetch rankings for grading

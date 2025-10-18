@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
 
     const currentWeek = nflState.week || 1
 
-    // Fetch critical data in parallel with Next.js caching
+    // Fetch critical data in parallel - Users data without cache to get fresh team names
     const [rosters, users, allPlayers, rankingsResult] = await Promise.all([
       sleeperApi.getLeagueRosters(leagueId),
-      sleeperApi.getLeagueUsers(leagueId),
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(r => r.json()),
       sleeperApi.getAllPlayers(),
       supabaseServer.from('dynasty_sf_top_150').select('*').order('RK', { ascending: true })
     ])

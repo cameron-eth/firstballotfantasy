@@ -24,15 +24,15 @@ export const NEXTJS_CACHE_OPTIONS = {
   },
   ROSTERS: { 
     cache: 'force-cache' as const,
-    next: { revalidate: 900 } // 15 minutes
+    next: { revalidate: 300 } // 5 minutes - roster changes frequently
   },
   USERS: { 
     cache: 'force-cache' as const,
-    next: { revalidate: 900 } // 15 minutes
+    next: { revalidate: 1800 } // 30 minutes
   },
   MATCHUPS: { 
     cache: 'force-cache' as const,
-    next: { revalidate: 600 } // 10 minutes
+    next: { revalidate: 120 } // 2 minutes - live scoring data
   },
   
   // Static data (rarely changes) - Long revalidation
@@ -46,7 +46,7 @@ export const NEXTJS_CACHE_OPTIONS = {
   },
   NFL_STATE: { 
     cache: 'force-cache' as const,
-    next: { revalidate: 1800 } // 30 minutes
+    next: { revalidate: 300 } // 5 minutes
   },
   PROSPECTS: { 
     cache: 'force-cache' as const,

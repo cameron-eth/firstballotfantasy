@@ -1,320 +1,172 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PlayerCardHero } from "@/components/PlayerCardHero"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  Target, 
-  Trophy, 
-  BarChart3, 
   Zap, 
-  ArrowRight, 
-  Star, 
-  Award,
-  Brain,
-  Database,
-  LineChart,
-  Users2,
-  Target as TargetIcon,
-  CheckCircle,
-  Play,
-  Music
+  Users2, 
+  Trophy, 
+  Target,
+  ArrowRight,
+  Music,
+  Play
 } from "lucide-react"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth"
 
-interface OverviewData {
-  topPerformers: any[]
-  topPredictions: any[]
-  breakouts: any[]
-  busts: any[]
-  positionStats: any[]
-  overallStats: {
-    totalRecords: number
-    uniquePlayers: number
-    seasonsAnalyzed: number
-    overallR2: number
-    pipelineRuntime: number
-  }
-}
-
-export default function OverviewPage() {
-  const { user } = useAuth()
-  const [data, setData] = useState<OverviewData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchOverviewData()
-  }, [])
-
-  const fetchOverviewData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const response = await fetch("/api/overview")
-      if (!response.ok) {
-        throw new Error("Failed to fetch overview data")
-      }
-      const result = await response.json()
-
-      setData(result)
-    } catch (err) {
-      console.error("Error fetching overview data:", err)
-      setError("Failed to load overview data")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-900">
-        <Header />
-        <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-green-400 font-mono">LOADING OVERVIEW DATA...</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
-  if (error || !data) {
-    return (
-      <div className="min-h-screen bg-slate-900">
-        <Header />
-        <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <p className="text-red-400 font-mono mb-4">ERROR: {error || "Failed to load data"}</p>
-              <button
-                onClick={fetchOverviewData}
-                className="bg-yellow-400 text-slate-900 px-4 py-2 rounded-lg font-mono"
-              >
-                RETRY
-              </button>
-            </div>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-900">
       <Header />
 
-      <main className="w-full">
+      <main className="w-full px-3 sm:px-4 md:px-6 lg:px-8">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 px-4 sm:px-6 lg:px-8">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%239C92AC&quot; fill-opacity=&quot;0.05&quot;%3E%3Ccircle cx=&quot;30&quot; cy=&quot;30&quot; r=&quot;2&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50"></div>
-          
-          <div className="relative max-w-7xl mx-auto text-center">
-            <div className="flex items-center justify-center mb-6">
-              <Trophy className="h-12 w-12 text-yellow-400 mr-4 hidden sm:block" />
-              <h1 className="text-5xl md:text-7xl font-bold text-white font-mono">
-                FIRST BALLOT
+        <section className="max-w-7xl mx-auto py-8 sm:py-12 md:py-16 lg:py-24">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center space-x-2 text-xs font-mono text-yellow-400 uppercase tracking-wider mb-6 px-4 py-2 border border-yellow-400/30 rounded-full bg-yellow-400/5">
+              <Trophy className="h-3 w-3" />
+              <span>Dynasty Fantasy Football</span>
+        </div>
+            
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 tracking-tight font-mono">
+              FIRST BALLOT
               </h1>
-            </div>
-            <h2 className="text-2xl md:text-4xl font-bold text-green-400 font-mono mb-6">
-              BUILT BY DEGENS <br/> FOR DEGENS
-            </h2>
-           
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/draft-buddy">
-                <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 px-8 py-4 text-lg font-mono">
-                  <Zap className="h-5 w-5 mr-2" />
+            <p className="text-lg sm:text-xl md:text-2xl text-green-400 font-bold font-mono max-w-2xl mx-auto mb-8 sm:mb-12">
+              Built by degens, for degens
+            </p>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+              <Link href="/draft-buddy" className="w-full sm:w-auto">
+                <Button size="lg" className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 px-6 sm:px-8 font-mono w-full sm:w-auto min-h-[48px] text-sm sm:text-base">
+                  <Zap className="h-4 w-4 mr-2" />
                   DRAFT BUDDY
-                  <ArrowRight className="h-5 w-5 ml-2" />
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
-              <Link href="/league-buddy">
-                <Button variant="outline" className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900 px-8 py-4 text-lg font-mono">
-                  <Users2 className="h-5 w-5 mr-2" />
+              <Link href="/league-buddy" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900 px-6 sm:px-8 font-mono w-full sm:w-auto min-h-[48px] text-sm sm:text-base">
+                  <Users2 className="h-4 w-4 mr-2" />
                   LEAGUE BUDDY
-                  <ArrowRight className="h-5 w-5 ml-2" />
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
             </div>
-            
-            {!user && (
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4 max-w-md mx-auto mb-8">
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-300">
-                  <CheckCircle className="h-4 w-4 text-green-400" />
-                  <span className="font-mono">SIGN UP REQUIRED FOR LEAGUE & DRAFT BUDDY</span>
-                </div>
-                <p className="text-xs text-gray-400 text-center mt-2">
-                  Create a free account to access personalized league analysis and draft tools
-                </p>
               </div>
-            )}
 
-            {/* Social Media Links */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-12">
-              <a 
+          {/* Featured Player Card */}
+          <div className="mb-12 sm:mb-16 md:mb-24">
+            <PlayerCardHero
+              playerName="Malik Nabers"
+              position="WR"
+              team="NYG"
+              college="LSU"
+              rank={8}
+              projection="Elite WR1 upside with top-5 potential in year two"
+              imageUrl="/maliknabers.jpg"
+            />
+          </div>
+        </section>
+
+        {/* Features Grid */}
+        <section className="max-w-7xl mx-auto py-8 sm:py-12 md:py-16 border-t border-slate-700">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12 md:mb-16">
+            {/* Feature 1 */}
+            <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-slate-800/30 rounded-lg border border-slate-700/50 hover:border-yellow-400/30 transition-all">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-yellow-400/20 rounded-md">
+                  <Zap className="h-5 w-5 text-yellow-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white font-mono">Draft Buddy</h3>
+              </div>
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                Real-time draft board with rankings, tier analysis, and value calculations
+              </p>
+              <Link href="/draft-buddy">
+                <Button variant="ghost" size="sm" className="text-yellow-400 hover:text-yellow-300 font-mono p-0 h-auto hover:bg-transparent min-h-[44px] flex items-center">
+                  EXPLORE <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-slate-800/30 rounded-lg border border-slate-700/50 hover:border-yellow-400/30 transition-all">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-400/20 rounded-md">
+                  <Users2 className="h-5 w-5 text-green-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white font-mono">League Buddy</h3>
+              </div>
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                Deep team analysis, matchup projections, and dynasty roster grades
+              </p>
+              <Link href="/league-buddy">
+                <Button variant="ghost" size="sm" className="text-yellow-400 hover:text-yellow-300 font-mono p-0 h-auto hover:bg-transparent min-h-[44px] flex items-center">
+                  EXPLORE <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="space-y-3 sm:space-y-4 p-4 sm:p-6 bg-slate-800/30 rounded-lg border border-slate-700/50 hover:border-yellow-400/30 transition-all">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-yellow-400/20 rounded-md">
+                  <Target className="h-5 w-5 text-yellow-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white font-mono">Scouting Portal</h3>
+              </div>
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                2026 rookie rankings with college stats and dynasty projections
+              </p>
+              <Link href="/scouting-portal">
+                <Button variant="ghost" size="sm" className="text-yellow-400 hover:text-yellow-300 font-mono p-0 h-auto hover:bg-transparent min-h-[44px] flex items-center">
+                  EXPLORE <ArrowRight className="h-3 w-3 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Social Links */}
+        <section className="max-w-7xl mx-auto py-8 sm:py-12 md:py-16 border-t border-slate-700">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
+            <a 
                 href="https://www.tiktok.com/@firstballotfb" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 hover:border-pink-400 transition-all duration-300 hover:scale-105"
-              >
-                <div className="flex items-center justify-center mb-4">
-                  <Music className="h-8 w-8 text-pink-400 group-hover:scale-110 transition-transform" />
-                </div>
-                <div className="text-center">
-                  <h3 className="text-xl font-bold text-white font-mono mb-2">TikTok</h3>
-                  <p className="text-sm text-gray-400 mb-3">@firstballotfb</p>
-                  <p className="text-xs text-gray-500">Quick fantasy tips & insights</p>
-                </div>
-              </a>
+              className="group flex items-center space-x-3 sm:space-x-4 p-4 sm:p-6 border border-slate-700 rounded-lg hover:border-yellow-400/50 transition-all bg-slate-800/50 min-h-[64px] sm:min-h-[80px]"
+            >
+              <div className="p-2 sm:p-3 bg-yellow-400/10 rounded-md group-hover:bg-yellow-400/20 transition-colors flex-shrink-0">
+                <Music className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 font-mono">TikTok</h3>
+                <p className="text-xs sm:text-sm text-gray-400">@firstballotfb</p>
+              </div>
+              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-yellow-400 transition-colors flex-shrink-0" />
+            </a>
 
-              <a 
+            <a 
                 href="https://www.youtube.com/@FirstBallotPod" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="group bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 hover:border-red-400 transition-all duration-300 hover:scale-105"
-              >
-                <div className="flex items-center justify-center mb-4">
-                  <Play className="h-8 w-8 text-red-400 group-hover:scale-110 transition-transform" />
-                </div>
-                <div className="text-center">
-                  <h3 className="text-xl font-bold text-white font-mono mb-2">YouTube</h3>
-                  <p className="text-sm text-gray-400 mb-3">@FirstBallotPod</p>
-                  <p className="text-xs text-gray-500">In-depth analysis & podcasts</p>
-                </div>
-              </a>
-            </div>
-            
+              className="group flex items-center space-x-3 sm:space-x-4 p-4 sm:p-6 border border-slate-700 rounded-lg hover:border-yellow-400/50 transition-all bg-slate-800/50 min-h-[64px] sm:min-h-[80px]"
+            >
+              <div className="p-2 sm:p-3 bg-yellow-400/10 rounded-md group-hover:bg-yellow-400/20 transition-colors flex-shrink-0">
+                <Play className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-1 font-mono">YouTube</h3>
+                <p className="text-xs sm:text-sm text-gray-400">@FirstBallotPod</p>
+              </div>
+              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-yellow-400 transition-colors flex-shrink-0" />
+            </a>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-800">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white font-mono mb-4">
-                POWERFUL FANTASY FOOTBALL TOOLS
-              </h2>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                Everything you need to dominate your fantasy football league
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <Card className="bg-slate-700 border-slate-600 hover:border-yellow-400 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-yellow-400/20 rounded-lg">
-                      <Zap className="h-6 w-6 text-yellow-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-white font-mono">Draft Buddy</CardTitle>
-                      <p className="text-sm text-gray-400">Real-time draft analysis</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 mb-4">
-                    Live draft board with player rankings, tier analysis, and pick value calculations.
-                  </p>
-                  <Link href="/draft-buddy">
-                    <Button variant="outline" size="sm" className="w-full border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900">
-                      Launch Draft Buddy
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-slate-700 border-slate-600 hover:border-green-400 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-400/20 rounded-lg">
-                      <Users2 className="h-6 w-6 text-green-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-white font-mono">League Buddy</CardTitle>
-                      <p className="text-sm text-gray-400">Team analysis & insights</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 mb-4">
-                    Comprehensive league analysis with team grades, player insights, and transaction tracking.
-                  </p>
-                  <Link href="/league-buddy">
-                    <Button variant="outline" size="sm" className="w-full border-green-400 text-green-400 hover:bg-green-400 hover:text-slate-900">
-                      Launch League Buddy
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-slate-700 border-slate-600 hover:border-blue-400 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-400/20 rounded-lg">
-                      <BarChart3 className="h-6 w-6 text-blue-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-white font-mono">Player Tiers</CardTitle>
-                      <p className="text-sm text-gray-400">Position-based rankings</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 mb-4">
-                    Detailed player tier analysis with performance predictions and breakout/bust identification.
-                  </p>
-                  <Link href="/tiers">
-                    <Button variant="outline" size="sm" className="w-full border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-slate-900">
-                      View Player Tiers
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-             
-            </div>
-          </div>
-        </section>
-
-
-        {/* CTA Section */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-yellow-400/10 to-green-400/10">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white font-mono mb-6">
-              BUILT BY DEGENS FOR DEGENS
-            </h2>
-           
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/draft-buddy">
-                <Button className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 px-8 py-4 text-lg font-mono">
-                  <Trophy className="h-5 w-5 mr-2" />
-                  START DRAFTING
-                </Button>
-              </Link>
-              <Link href="/league-buddy">
-                <Button variant="outline" className="border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-slate-900 px-8 py-4 text-lg font-mono">
-                  <Users2 className="h-5 w-5 mr-2" />
-                  ANALYZE LEAGUE
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
+        {/* Footer Spacing */}
+        <div className="h-12 sm:h-16 md:h-24" />
       </main>
     </div>
   )

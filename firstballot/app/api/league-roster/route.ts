@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
+import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 import { sleeperApi } from '@/lib/nextjs-cache'
+
+// Force dynamic to always get fresh data
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,37 +17,50 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get authenticated user
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Get the userId and JWT token from headers (set by middleware after auth verification)
+    const userId = request.headers.get('x-user-id')
+    const userJwt = request.headers.get('x-user-jwt')
     
-    const token = authHeader.substring(7)
-    const { data: { user }, error: authError } = await supabaseServer.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    console.log('[league-roster] Auth headers:', { userId: !!userId, userJwt: !!userJwt })
+    
+    if (!userId || !userJwt) {
+      console.log('[league-roster] Missing auth headers')
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
-    // Get user's Sleeper username from their profile
-    const { data: userProfile } = await supabaseServer
+    // Create an authenticated Supabase client with the user's JWT token
+    const userSupabase = createAuthenticatedSupabaseClient(userJwt)
+
+    // Get user's Sleeper username from their profile (this query is now cached by Next.js)
+    const { data: userProfile, error: profileError } = await userSupabase
       .from('user_profiles')
       .select('sleeper_username')
-      .eq('auth_id', user.id)
+      .eq('auth_id', userId)
       .single()
 
-    if (!userProfile?.sleeper_username) {
+    console.log('[league-roster] Profile fetch:', { 
+      hasProfile: !!userProfile, 
+      hasSleeperUsername: !!userProfile?.sleeper_username,
+      sleeperUsername: userProfile?.sleeper_username,
+      profileError: profileError?.message 
+    })
+
+    if (profileError || !userProfile?.sleeper_username) {
       return NextResponse.json(
-        { error: 'User not connected to Sleeper' },
+        { 
+          error: 'Please connect your Sleeper account first',
+          message: 'Go to League Buddy and connect your Sleeper username',
+          debug: { profileError: profileError?.message, hasProfile: !!userProfile }
+        },
         { status: 400 }
       )
     }
 
-    // Fetch all data in parallel with Next.js caching
+    // Fetch all data in parallel - Users without cache to get fresh team names
     const [leagueData, rostersData, usersData, playersData] = await Promise.all([
       sleeperApi.getLeagueInfo(leagueId),
       sleeperApi.getLeagueRosters(leagueId),
-      sleeperApi.getLeagueUsers(leagueId),
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(r => r.json()),
       sleeperApi.getAllPlayers()
     ])
 

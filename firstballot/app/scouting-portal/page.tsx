@@ -632,12 +632,12 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-white font-mono mb-2">SCOUTING PORTAL</h1>
-                <p className="text-gray-400 font-mono">League ID: {leagueId} • Dynasty SF 2026 Rookie Rankings</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white font-mono mb-2 truncate">SCOUTING PORTAL</h1>
+                <p className="text-gray-400 font-mono text-sm sm:text-base break-words">League ID: {leagueId} • Dynasty SF 2026 Rookie Rankings</p>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 flex-shrink-0">
                 <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30">
                   <Users className="h-3 w-3 mr-1" />
                   {roster.length} Players
@@ -647,36 +647,41 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-slate-800 border border-slate-700">
-              <TabsTrigger
-                value="roster"
-                className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Roster & Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="prospects"
-                className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Prospects
-              </TabsTrigger>
-              <TabsTrigger
-                value="team-builder"
-                className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30"
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Team Builder
-              </TabsTrigger>
-              <TabsTrigger
-                value="draftboard"
-                className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30"
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Draft Board
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="grid w-full grid-cols-4 bg-slate-800 border border-slate-700 min-w-max">
+                <TabsTrigger
+                  value="roster"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                >
+                  <Users className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Roster & Overview</span>
+                  <span className="sm:hidden">Roster</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="prospects"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                >
+                  <Eye className="h-4 w-4 mr-1 sm:mr-2" />
+                  Prospects
+                </TabsTrigger>
+                <TabsTrigger
+                  value="team-builder"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                >
+                  <TrendingUp className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Team Builder</span>
+                  <span className="sm:hidden">Builder</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="draftboard"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                >
+                  <TrendingUp className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Draft Board</span>
+                  <span className="sm:hidden">Draft</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Combined Roster & Overview Tab */}
             <TabsContent value="roster" className="mt-6">
@@ -961,43 +966,45 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
               <div className="relative">
                 <Card className="bg-slate-800 border border-slate-700">
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center justify-between">
+                    <CardTitle className="text-white flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                       <span>College Prospects</span>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                           <Input
                             placeholder="Search prospects..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 bg-slate-700 border-slate-600 text-white"
+                            className="pl-10 bg-slate-700 border-slate-600 text-white w-full sm:w-auto"
                           />
                         </div>
-                        <Select value={positionFilter} onValueChange={setPositionFilter}>
-                          <SelectTrigger className="w-32 bg-slate-700 border-slate-600">
-                            <SelectValue placeholder="Position" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-slate-700 border-slate-600">
-                            <SelectItem value="all">All Positions</SelectItem>
-                            <SelectItem value="QB">QB</SelectItem>
-                            <SelectItem value="RB">RB</SelectItem>
-                            <SelectItem value="WR">WR</SelectItem>
-                            <SelectItem value="TE">TE</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={schoolFilter} onValueChange={setSchoolFilter}>
-                          <SelectTrigger className="w-40 bg-slate-700 border-slate-600">
-                            <SelectValue placeholder="School" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-slate-700 border-slate-600">
-                            <SelectItem value="all">All Schools</SelectItem>
-                            {schools.map((school) => (
-                              <SelectItem key={school} value={school}>
-                                {school}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex space-x-2">
+                          <Select value={positionFilter} onValueChange={setPositionFilter}>
+                            <SelectTrigger className="w-full sm:w-32 bg-slate-700 border-slate-600">
+                              <SelectValue placeholder="Position" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-700 border-slate-600">
+                              <SelectItem value="all">All Positions</SelectItem>
+                              <SelectItem value="QB">QB</SelectItem>
+                              <SelectItem value="RB">RB</SelectItem>
+                              <SelectItem value="WR">WR</SelectItem>
+                              <SelectItem value="TE">TE</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select value={schoolFilter} onValueChange={setSchoolFilter}>
+                            <SelectTrigger className="w-full sm:w-40 bg-slate-700 border-slate-600">
+                              <SelectValue placeholder="School" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-700 border-slate-600">
+                              <SelectItem value="all">All Schools</SelectItem>
+                              {schools.map((school) => (
+                                <SelectItem key={school} value={school}>
+                                  {school}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </CardTitle>
                   </CardHeader>

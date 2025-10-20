@@ -1262,8 +1262,12 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       }`}
                     >
                       <div className="flex flex-col py-1 text-left">
-                        <span className="font-semibold text-sm text-left">{league.name}</span>
-                        <span className="text-xs text-slate-400 text-left">{league.total_rosters} teams • {league.season}</span>
+                        <span className={`font-semibold text-sm text-left ${
+                          league.league_id === leagueId ? 'text-yellow-400' : ''
+                        }`}>{league.name}</span>
+                        <span className={`text-xs text-left ${
+                          league.league_id === leagueId ? 'text-yellow-400/70' : 'text-slate-400'
+                        }`}>{league.total_rosters} teams • {league.season}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -1536,14 +1540,14 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
         <div className="pl-2 pr-6 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8 max-w-md sm:max-w-none mx-auto sm:mx-0">
           
           {/* Mobile Navigation & League Switcher - Only visible on mobile */}
-          <div className="md:hidden mb-10 space-y-8">
+          <div className="md:hidden mb-6 space-y-6">
             {/* Mobile League Switcher */}
             {leagues.length > 1 && onLeagueChange && (
               <Card className="bg-slate-800 border-slate-700">
-                <CardContent className="p-6">
-                  <label className="text-sm text-yellow-400 font-mono mb-4 block">Select League</label>
+                <CardContent className="p-4">
+                  <label className="text-sm text-yellow-400 font-mono mb-3 block">Select League</label>
                   <Select value={leagueId} onValueChange={onLeagueChange}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 hover:bg-slate-600 hover:border-yellow-400/30 transition-all duration-200 h-14 rounded-lg px-4">
+                    <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 hover:bg-slate-600 hover:border-yellow-400/30 transition-all duration-200 h-12 rounded-lg px-4">
                       <SelectValue placeholder="Select a league" />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-700 border-slate-600">
@@ -1554,8 +1558,12 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                           className="text-slate-200 hover:bg-slate-600 focus:bg-slate-600"
                         >
                           <div className="flex flex-col py-2 text-left">
-                            <span className="font-semibold text-sm text-left">{league.name}</span>
-                            <span className="text-xs text-slate-400 text-left">{league.total_rosters} teams • {league.season}</span>
+                            <span className={`font-semibold text-sm text-left ${
+                              league.league_id === leagueId ? 'text-yellow-400' : ''
+                            }`}>{league.name}</span>
+                            <span className={`text-xs text-left ${
+                              league.league_id === leagueId ? 'text-yellow-400/70' : 'text-slate-400'
+                            }`}>{league.total_rosters} teams • {league.season}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -1564,8 +1572,7 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                 </CardContent>
               </Card>
             )}
-
-                        </div>
+          </div>
           
           {/* OVERVIEW SECTION */}
           {activeSection === 'overview' && selectedTeam && leagueOverview && (() => {
@@ -1597,12 +1604,22 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                     <div>
                       <h2 className="text-xl font-bold text-yellow-400 font-mono mb-1">{selectedTeam.teamName}</h2>
                       <div className="flex items-center space-x-3 text-sm">
-                        <span className="text-slate-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
                         <Badge variant="outline" className={`text-xs font-mono ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}>
                           {selectedTeam.grade}
                         </Badge>
+                        <span className="text-slate-400">#{sortedTeams.findIndex(t => t.rosterId === selectedTeam.rosterId) + 1}</span>
                         <span className="text-slate-500">•</span>
                         <span className="text-slate-400">{selectedTeam.wins}-{selectedTeam.losses}</span>
+                        <span className="text-slate-500">•</span>
+                        <span className="text-yellow-400 font-mono text-xs">
+                          {(() => {
+                            const totalProjection = selectedTeam.players.reduce((sum, player) => {
+                              const playerRank = playerRankings[`${player.playerName}` as keyof typeof playerRankings]
+                              return sum + (playerRank?.projection || 0)
+                            }, 0)
+                            return `${totalProjection.toFixed(1)} avg`
+                          })()}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1988,130 +2005,57 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
               return acc
             }, {} as Record<string, number>)
 
-            // Identify suggested swaps (bench player has better FPPG than starter)
-            const keyDecisions: Array<{ starter: PlayerData, bench: PlayerData, difference: number }> = []
-            lineup.forEach(slot => {
-              const starterFPPG = slot.player.fantasy_ppg || 0
-              
-              // Find best bench player at same position or flex eligible (exclude 0 PPG players)
-              const eligibleBench = bench.filter(b => 
-                (b.position === slot.player.position || 
-                (slot.position === 'FLEX' && ['RB', 'WR', 'TE'].includes(b.position)) ||
-                (slot.position === 'SUPER_FLEX' && ['QB', 'RB', 'WR', 'TE'].includes(b.position))) &&
-                (b.fantasy_ppg || 0) > 0  // Only suggest players with actual PPG
-              )
-              
-              if (eligibleBench.length > 0) {
-                const bestBench = eligibleBench[0]
-                const benchFPPG = bestBench.fantasy_ppg || 0
-                
-                // Only suggest swap if bench player has better FPPG
-                if (benchFPPG > starterFPPG) {
-                  const diff = benchFPPG - starterFPPG
-                  keyDecisions.push({ starter: slot.player, bench: bestBench, difference: diff })
-                }
-              }
-            })
 
                 return (
-            <Card className="bg-slate-800 border-slate-700">
+            <Card className="bg-slate-800 border-slate-700 mt-6">
               <CardHeader>
                 {/* Mobile-first layout */}
-                <div className="space-y-4 mb-4">
-                  {/* Title and Description */}
+                <div className="space-y-3 mb-4">
+                  {/* Title and Description - Simplified for mobile */}
                   <div>
                     <CardTitle className="text-yellow-400 font-mono flex items-center text-lg">
                       <Target className="h-5 w-5 mr-2" />
                       {lineupMode === 'current' ? 'CURRENT' : 'OPTIMIZED'} LINEUP - WEEK {currentWeek}
-                      {whatIfLineup.length > 0 && <span className="ml-2 text-blue-400 text-sm">(What-If)</span>}
                     </CardTitle>
                     <p className="text-slate-400 text-sm mt-1">
                       {lineupMode === 'current' 
-                        ? whatIfLineup.length > 0 
-                          ? 'Testing custom lineup changes' 
-                          : 'Your active lineup on Sleeper'
+                        ? 'Your active lineup on Sleeper'
                         : 'AI-optimized based on rankings, stats, and matchups'
                       }
-                      {' • '}
-                      <span className="text-slate-500">PPR scoring (pass + rush + rec)</span>
                     </p>
-                  </div>
-                  
-                  {/* Season Average - Mobile centered, Desktop right-aligned */}
-                  <div className="md:hidden text-center">
-                    <div className="text-xs text-slate-400 font-mono mb-1">SEASON AVG</div>
-                    <div className="text-3xl font-bold text-yellow-400 font-mono">{totalProjection.toFixed(1)}</div>
-                    <div className="text-xs text-slate-500 font-mono mt-1">
-                      {benchPotential > 0 && `+${benchPotential.toFixed(1)} on bench`}
-                    </div>
-                  </div>
-                  
-                  {/* Desktop Season Average */}
-                  <div className="hidden md:block absolute top-4 right-4 text-right">
-                    <div className="text-xs text-slate-400 font-mono mb-1">SEASON AVG</div>
-                    <div className="text-3xl font-bold text-yellow-400 font-mono">{totalProjection.toFixed(1)}</div>
-                    <div className="text-xs text-slate-500 font-mono mt-1">
-                      {benchPotential > 0 && `+${benchPotential.toFixed(1)} on bench`}
-                    </div>
                   </div>
                 </div>
                     
-                {/* Mode Toggle + Actions - Mobile Stacked */}
-                <div className="space-y-3">
+                {/* Mode Toggle - Simplified for mobile */}
+                <div className="space-y-2">
                   {/* Buttons - Mobile full width, Desktop inline */}
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    <div className="flex gap-2 flex-1">
-                      <button
-                        onClick={() => {
-                          setLineupMode('current')
-                          handleResetWhatIf()
-                        }}
-                        className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
-                          lineupMode === 'current'
-                            ? 'bg-yellow-400 text-slate-900'
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        Current Lineup
-                      </button>
-                      <button
-                        onClick={() => {
-                          setLineupMode('optimized')
-                          handleResetWhatIf()
-                        }}
-                        className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
-                          lineupMode === 'optimized'
-                            ? 'bg-yellow-400 text-slate-900'
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        Optimized
-                      </button>
-                    </div>
-                    {whatIfLineup.length > 0 && (
-                      <button
-                        onClick={handleResetWhatIf}
-                        className="px-3 py-2 rounded-lg font-mono text-xs bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all"
-                      >
-                        Reset
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Quick Stats Bar - Mobile stacked, Desktop inline */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                      <span className="text-slate-400">
-                        {matchupBreakdown['Elite'] || 0} Elite + {matchupBreakdown['Great'] || 0} Great matchups
-                      </span>
-                    </div>
-                    {keyDecisions.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                        <span className="text-slate-400">{keyDecisions.length} suggested swap{keyDecisions.length > 1 ? 's' : ''}</span>
-                      </div>
-                    )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setLineupMode('current')
+                        handleResetWhatIf()
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
+                        lineupMode === 'current'
+                          ? 'bg-yellow-400 text-slate-900'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      Current
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLineupMode('optimized')
+                        handleResetWhatIf()
+                      }}
+                      className={`flex-1 px-3 py-2 rounded-lg font-mono text-xs font-semibold transition-all ${
+                        lineupMode === 'optimized'
+                          ? 'bg-yellow-400 text-slate-900'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      Optimized
+                    </button>
                   </div>
                 </div>
               </CardHeader>
@@ -2155,74 +2099,6 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       </div>
                     )}
 
-                {/* Key Decisions Section */}
-                {keyDecisions.length > 0 && lineupMode === 'current' && (
-                  <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-4">
-                    <h3 className="text-yellow-400 font-mono text-sm mb-3 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-2" />
-                      SUGGESTED SWAPS - UPGRADE YOUR LINEUP
-                    </h3>
-                    <div className="space-y-4">
-                      {keyDecisions.map((decision, idx) => {
-                        const starterFPPG = decision.starter.fantasy_ppg || 0
-                        const benchFPPG = decision.bench.fantasy_ppg || 0
-                        
-                        return (
-                          <div key={idx} className="bg-slate-800/50 rounded-lg p-3">
-                            {/* Mobile-friendly vertical layout */}
-                            <div className="md:hidden space-y-3">
-                              {/* Current Starter */}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <TeamLogo team={decision.starter.team} size={20} />
-                                  <span className="text-slate-300 text-sm">{decision.starter.playerName}</span>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-red-400 font-mono text-sm">{starterFPPG.toFixed(1)}</div>
-                                  <div className="text-slate-500 text-[10px]">FPPG</div>
-                                </div>
-                              </div>
-                              
-                              {/* Arrow */}
-                              <div className="flex justify-center">
-                                <div className="text-slate-500 text-lg">↓</div>
-                              </div>
-                              
-                              {/* Suggested Replacement */}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <TeamLogo team={decision.bench.team} size={20} />
-                                  <span className="text-slate-300 text-sm">{decision.bench.playerName}</span>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-green-400 font-mono text-sm">{benchFPPG.toFixed(1)}</div>
-                                  <div className="text-slate-500 text-[10px]">FPPG</div>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Desktop horizontal layout */}
-                            <div className="hidden md:flex items-center justify-between gap-3 text-xs">
-                              <div className="flex items-center space-x-2 flex-1">
-                                <TeamLogo team={decision.starter.team} size={24} />
-                                <span className="text-slate-300">{decision.starter.playerName}</span>
-                                <span className="text-slate-500 text-[10px]">FPPG</span>
-                                <span className="text-red-400 font-mono">{starterFPPG.toFixed(1)}</span>
-                              </div>
-                              <div className="text-slate-500">→</div>
-                              <div className="flex items-center space-x-2 flex-1 justify-end">
-                                <span className="text-green-400 font-mono">{benchFPPG.toFixed(1)}</span>
-                                <span className="text-slate-500 text-[10px]">FPPG</span>
-                                <span className="text-slate-300">{decision.bench.playerName}</span>
-                                <TeamLogo team={decision.bench.team} size={24} />
-                              </div>
-                            </div>
-                          </div>
-                )
-                      })}
-          </div>
-                      </div>
-                    )}
 
                 {/* Starters Section */}
                 <div>
@@ -2230,7 +2106,8 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                     <TrendingUp className="h-4 w-4 mr-2" />
                     STARTERS ({lineup.length})
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Mobile: Compact horizontal rows, Desktop: Grid cards */}
+                  <div className="md:hidden space-y-2">
                     {lineup.map((slot, idx) => {
                       const { opponentTeam, isHome, matchupRating } = getOpponentInfo(slot.player)
                       // Get fantasy_ppg with fallback to Sleeper's own stats
@@ -2244,20 +2121,160 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       const actualPoints = userMatchup?.playersPoints?.[slot.player.playerId] || 0
                       const predictedPoints = avgFPPG || 0
                       const pointsDiff = actualPoints - predictedPoints
-                      const isUnderperforming = actualPoints > 0 && pointsDiff < -2 // Underperforming if 2+ points below prediction
+                      const isUnderperforming = actualPoints > 0 && pointsDiff < -2
                       
                       // Check if this player is new in optimized lineup
                       const isNewInOptimized = lineupMode === 'optimized' && !currentPlayerIds.has(slot.player.playerId)
                       
-                      // Debug first starter
-                      if (idx === 0) {
-                        console.log('🔍 First starter:', slot.player.playerName, {
-                          fantasy_ppg: slot.player.fantasy_ppg,
-                          fantasy_points_ppr: slot.player.fantasy_points_ppr,
-                          games_played: slot.player.games_played,
-                          avgFPPG
-                        })
+                      // Check if this starter has a better bench alternative
+                      const starterFPPG = slot.player.fantasy_ppg || 0
+                      const eligibleBench = bench.filter(b => 
+                        (b.position === slot.position || 
+                         (slot.position === 'FLEX' && ['RB', 'WR', 'TE'].includes(b.position)) ||
+                         (slot.position === 'SUPERFLEX' && ['QB', 'RB', 'WR', 'TE'].includes(b.position))) &&
+                        (b.fantasy_ppg || 0) > 0
+                      )
+                      const bestBench = eligibleBench.reduce((best, current) => 
+                        (current.fantasy_ppg || 0) > (best.fantasy_ppg || 0) ? current : best, 
+                        eligibleBench[0] || slot.player
+                      )
+                      const hasBetterBench = bestBench && (bestBench.fantasy_ppg || 0) > starterFPPG
+                      const benchFPPG = bestBench?.fantasy_ppg || 0
+                      
+                      const ratingColor = matchupRating === 'Elite' ? 'text-green-400' :
+                                         matchupRating === 'Great' ? 'text-blue-400' :
+                                         matchupRating === 'Good' ? 'text-yellow-400' :
+                                         matchupRating === 'Average' ? 'text-orange-400' :
+                                         'text-red-400'
+                      
+                      return (
+                        <div key={idx} className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                          hasBetterBench && lineupMode === 'current'
+                            ? 'bg-yellow-400/10 border-yellow-400/50 ring-2 ring-yellow-400/30'
+                            : isUnderperforming
+                            ? 'bg-slate-800/50 border-slate-600/50 opacity-60'
+                            : isNewInOptimized
+                            ? 'bg-yellow-400/10 border-yellow-400/50'
+                            : matchupRating === 'Elite' || matchupRating === 'Great' 
+                            ? 'bg-green-500/5 border-green-500/30' 
+                            : matchupRating === 'Tough' 
+                            ? 'bg-red-500/5 border-red-500/20'
+                            : 'bg-slate-700/30 border-slate-600'
+                        }`}>
+                          {/* Left: Position + Player Info */}
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <Badge className={`text-xs font-bold px-1.5 py-0.5 ${
+                              slot.position === 'QB' ? 'bg-pink-500/20 text-pink-400' :
+                              slot.position === 'RB' ? 'bg-teal-500/20 text-teal-400' :
+                              slot.position === 'WR' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-purple-500/20 text-purple-400'
+                            }`}>
+                              {slot.position}
+                            </Badge>
+                            <TeamLogo team={slot.player.team} size={24} className="flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-slate-100 truncate">
+                                {slot.player.playerName}
+                              </div>
+                              <div className="text-xs text-slate-400">
+                                {slot.position} #{slot.player.rank} • {slot.player.team}
+                                {isNewInOptimized && <span className="text-yellow-400 ml-1">⚡</span>}
+                                {isUnderperforming && <span className="text-red-400 ml-1">⚠️</span>}
+                              </div>
+                              {hasBetterBench && lineupMode === 'current' && (
+                                <div className="mt-1 p-1.5 bg-yellow-400/10 border border-yellow-400/30 rounded-md">
+                                  <div className="flex items-center space-x-1">
+                                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                                    <span className="text-xs text-yellow-400 font-semibold">SWAP SUGGESTION</span>
+                                  </div>
+                                  <div className="text-xs text-slate-300 mt-0.5">
+                                    <span className="text-yellow-400 font-semibold">{bestBench.playerName}</span> 
+                                    <span className="text-slate-400"> ({benchFPPG.toFixed(1)} FPPG)</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Center: Matchup Info */}
+                          <div className="flex items-center space-x-2 px-2">
+                            <div className="text-center">
+                              <div className="text-xs text-slate-400">
+                                {isHome ? 'vs' : '@'} {opponentTeam}
+                              </div>
+                              <div className={`text-xs font-semibold ${ratingColor}`}>
+                                {matchupRating}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Right: Points */}
+                          <div className="text-right flex-shrink-0">
+                            {actualPoints > 0 ? (
+                              <>
+                                <div className={`text-lg font-bold font-mono ${
+                                  pointsDiff > 0 ? 'text-green-400' : pointsDiff < -2 ? 'text-red-400' : 'text-yellow-400'
+                                }`}>
+                                  {actualPoints.toFixed(1)}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  {pointsDiff > 0 ? `+${pointsDiff.toFixed(1)}` : pointsDiff.toFixed(1)}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-lg font-bold font-mono text-yellow-400">
+                                  {avgFPPG ? avgFPPG.toFixed(1) : '--'}
+                                </div>
+                                <div className="text-xs text-slate-400">proj</div>
+                              </>
+                            )}
+                            {hasBetterBench && lineupMode === 'current' && (
+                              <div className="mt-1 text-xs text-yellow-400 font-semibold">
+                                +{(benchFPPG - starterFPPG).toFixed(1)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Desktop: Original grid layout */}
+                  <div className="hidden md:grid grid-cols-2 gap-3">
+                    {lineup.map((slot, idx) => {
+                      const { opponentTeam, isHome, matchupRating } = getOpponentInfo(slot.player)
+                      // Get fantasy_ppg with fallback to Sleeper's own stats
+                      let avgFPPG = slot.player.fantasy_ppg || null
+                      if (!avgFPPG && slot.player.fantasy_points_ppr && slot.player.games_played && slot.player.games_played > 0) {
+                        avgFPPG = slot.player.fantasy_points_ppr / slot.player.games_played
                       }
+                      
+                      // Get actual points for this week from matchup data
+                      const userMatchup = currentMatchups.find(m => m.rosterId === selectedTeam.rosterId)
+                      const actualPoints = userMatchup?.playersPoints?.[slot.player.playerId] || 0
+                      const predictedPoints = avgFPPG || 0
+                      const pointsDiff = actualPoints - predictedPoints
+                      const isUnderperforming = actualPoints > 0 && pointsDiff < -2
+                      
+                      // Check if this player is new in optimized lineup
+                      const isNewInOptimized = lineupMode === 'optimized' && !currentPlayerIds.has(slot.player.playerId)
+                      
+                      // Check if this starter has a better bench alternative
+                      const starterFPPG = slot.player.fantasy_ppg || 0
+                      const eligibleBench = bench.filter(b => 
+                        (b.position === slot.position || 
+                         (slot.position === 'FLEX' && ['RB', 'WR', 'TE'].includes(b.position)) ||
+                         (slot.position === 'SUPERFLEX' && ['QB', 'RB', 'WR', 'TE'].includes(b.position))) &&
+                        (b.fantasy_ppg || 0) > 0
+                      )
+                      const bestBench = eligibleBench.reduce((best, current) => 
+                        (current.fantasy_ppg || 0) > (best.fantasy_ppg || 0) ? current : best, 
+                        eligibleBench[0] || slot.player
+                      )
+                      const hasBetterBench = bestBench && (bestBench.fantasy_ppg || 0) > starterFPPG
+                      const benchFPPG = bestBench?.fantasy_ppg || 0
+                      
                       const ratingColor = matchupRating === 'Elite' ? 'text-green-400 bg-green-400/10 border-green-400/30' :
                                          matchupRating === 'Great' ? 'text-blue-400 bg-blue-400/10 border-blue-400/30' :
                                          matchupRating === 'Good' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' :
@@ -2279,7 +2296,9 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                       
                       return (
                         <div key={idx} className={`p-3 rounded-lg border transition-all hover:shadow-lg ${
-                          isUnderperforming
+                          hasBetterBench && lineupMode === 'current'
+                            ? 'bg-yellow-400/10 border-yellow-400/50 ring-2 ring-yellow-400/30'
+                            : isUnderperforming
                             ? 'bg-slate-800/50 border-slate-600/50 opacity-60'
                             : isNewInOptimized
                             ? 'bg-yellow-400/10 border-yellow-400/50 ring-2 ring-yellow-400/30'
@@ -2305,7 +2324,15 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                                   UNDERPERFORMING
                                 </Badge>
                               )}
-                              {recommendationBadge && !isNewInOptimized && !isUnderperforming && (
+                              {hasBetterBench && lineupMode === 'current' && (
+                                <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 font-mono text-xs px-2 animate-pulse">
+                                  <div className="flex items-center space-x-1">
+                                    <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
+                                    <span>SWAP: {bestBench.playerName} ({benchFPPG.toFixed(1)})</span>
+                                  </div>
+                                </Badge>
+                              )}
+                              {recommendationBadge && !isNewInOptimized && !isUnderperforming && !hasBetterBench && (
                                 <Badge className="bg-yellow-400/20 text-yellow-400 border-yellow-400/30 font-mono text-xs px-2">
                                   {recommendationBadge}
                                 </Badge>
@@ -2396,8 +2423,8 @@ export default function LeagueBuddy({ leagueId, user, leagues = [], onLeagueChan
                         </div>
                       )
                     })}
-                          </div>
-                        </div>
+                  </div>
+                </div>
 
                 {/* Bench Section */}
                 {bench.length > 0 && (

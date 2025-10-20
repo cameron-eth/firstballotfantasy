@@ -25,6 +25,7 @@ import {
   type TraderStats
 } from "@/lib/trade-utils"
 import { TradeCharts } from "@/components/trade-charts"
+import { TeamValueGraph } from "@/components/TeamValueGraph"
 import { leagueCache } from '@/lib/league-cache'
 
 // Component that uses useSearchParams - needs to be wrapped in Suspense
@@ -510,7 +511,7 @@ function TradeMarketContent() {
 
         {/* Enhanced Navigation Tabs */}
         <Tabs defaultValue="leaderboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-700/50 backdrop-blur-sm p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-5 bg-slate-800/50 border-slate-700/50 backdrop-blur-sm p-1 rounded-xl">
             <TabsTrigger 
               value="leaderboard" 
               className="text-slate-300 data-[state=active]:bg-yellow-400/10 data-[state=active]:text-yellow-400 data-[state=active]:border-yellow-400/30 text-xs sm:text-sm px-2 sm:px-4 py-2 rounded-lg border border-transparent transition-all duration-200 hover:text-yellow-400/70"
@@ -526,6 +527,14 @@ function TradeMarketContent() {
               <BarChart3 className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Charts</span>
               <span className="sm:hidden">Charts</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="trends" 
+              className="text-slate-300 data-[state=active]:bg-purple-400/10 data-[state=active]:text-purple-400 data-[state=active]:border-purple-400/30 text-xs sm:text-sm px-2 sm:px-4 py-2 rounded-lg border border-transparent transition-all duration-200 hover:text-purple-400/70"
+            >
+              <TrendingUp className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Trends</span>
+              <span className="sm:hidden">Trends</span>
             </TabsTrigger>
             <TabsTrigger 
               value="trades" 
@@ -725,6 +734,15 @@ function TradeMarketContent() {
 
           <TabsContent value="charts" className="space-y-6">
             <TradeCharts traderStats={traderStats} teams={teams} tradeAnalysis={tradeAnalysis} />
+          </TabsContent>
+
+          <TabsContent value="trends" className="space-y-6">
+            <TeamValueGraph 
+              teams={teams}
+              transactions={transactions}
+              allPlayers={allPlayers}
+              dynastyRankings={dynastyRankings}
+            />
           </TabsContent>
 
           <TabsContent value="trades" className="space-y-6">

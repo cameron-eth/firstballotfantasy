@@ -58,19 +58,46 @@ export async function GET(request: NextRequest) {
       }, {})
     }
 
-    // Fetch transactions more efficiently - only fetch current week and previous week
-    const weeksToFetch = [currentWeek, currentWeek - 1].filter(week => week > 0)
+    // Fetch transactions strategically - include preseason and recent weeks
+    const currentYear = new Date().getFullYear()
+    const weeksToFetch = []
     
-    const [currentTransactions, previousTransactions] = await Promise.all([
-      sleeperApi.getTransactions(leagueId, currentWeek).catch(() => []),
-      currentWeek > 1 ? sleeperApi.getTransactions(leagueId, currentWeek - 1).catch(() => []) : Promise.resolve([])
-    ])
+    // Always include preseason weeks (0-3) for draft pick trades and early season moves
+    for (let week = 0; week <= 3; week++) {
+      weeksToFetch.push(week)
+    }
+    
+    // Include recent weeks (last 4 weeks) for current activity
+    const recentWeeks = Math.max(1, currentWeek - 3)
+    for (let week = recentWeeks; week <= currentWeek; week++) {
+      if (!weeksToFetch.includes(week)) {
+        weeksToFetch.push(week)
+      }
+    }
+    
+    // Fetch transactions in smaller batches to avoid API limits
+    const batchSize = 3
+    const allTransactions = []
+    
+    for (let i = 0; i < weeksToFetch.length; i += batchSize) {
+      const batch = weeksToFetch.slice(i, i + batchSize)
+      const batchPromises = batch.map(week => 
+        sleeperApi.getTransactions(leagueId, week).catch(() => [])
+      )
+      
+      const batchResults = await Promise.all(batchPromises)
+      allTransactions.push(...batchResults.flat())
+      
+      // Small delay between batches to be respectful to the API
+      if (i + batchSize < weeksToFetch.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
 
     // Fetch traded picks with Next.js caching
     const tradedPicks = await sleeperApi.getTradedPicks(leagueId).catch(() => [])
 
-    // Combine and filter transactions
-    const allTransactions = [currentTransactions, previousTransactions].flat()
+    // Filter transactions to only include trades
     const trades = allTransactions.filter((tx: any) => tx.type === 'trade')
 
     const responseData = {
@@ -90,7 +117,11 @@ export async function GET(request: NextRequest) {
         lastUpdated: new Date().toISOString(),
         dataVersion: '1.2',
         weeksAnalyzed: weeksToFetch,
-        totalTransactionsAnalyzed: allTransactions.length
+        totalTransactionsAnalyzed: allTransactions.length,
+        yearAnalyzed: currentYear,
+        includesPreseason: true,
+        fetchStrategy: 'preseason + recent weeks',
+        batchSize: batchSize
       }
     }
 

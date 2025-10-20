@@ -94,8 +94,12 @@ export function LeagueBuddySidebar({
                     }`}
                   >
                     <div className="flex flex-col py-1">
-                      <span className="font-semibold text-sm">{league.name}</span>
-                      <span className="text-xs text-slate-400">{league.total_rosters} teams • {league.season}</span>
+                      <span className={`font-semibold text-sm ${
+                        league.league_id === leagueId ? 'text-yellow-400' : ''
+                      }`}>{league.name}</span>
+                      <span className={`text-xs ${
+                        league.league_id === leagueId ? 'text-yellow-400/70' : 'text-slate-400'
+                      }`}>{league.total_rosters} teams • {league.season}</span>
                     </div>
                   </SelectItem>
                 ))}

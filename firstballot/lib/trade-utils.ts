@@ -10,6 +10,10 @@ export interface PlayerValue {
   value: number
   tier: string
   isRanked: boolean
+  fantasyPpg?: number
+  gamesPlayed?: number
+  totalFantasyPoints?: number
+  valueWithPpg?: number
 }
 
 export interface DraftPickValue {
@@ -63,7 +67,17 @@ export interface TraderStats {
 // Dynasty Player Valuation System
 // Based on Dynasty SF Rankings with 150+ top players
 
-export const getPlayerValue = (rank: number): { value: number; tier: string; isRanked: boolean } => {
+export const getPlayerValue = (
+  rank: number, 
+  fantasyPpg?: number, 
+  gamesPlayed?: number
+): { 
+  value: number; 
+  tier: string; 
+  isRanked: boolean; 
+  valueWithPpg?: number;
+  ppgMultiplier?: number;
+} => {
   if (!rank || rank <= 0 || rank > 1000) {
     // Unranked or out-of-bounds: assign lowest value
     return {
@@ -78,7 +92,7 @@ export const getPlayerValue = (rank: number): { value: number; tier: string; isR
   const B = 0.5; // decrement per rank
   const minValue = 5;
 
-  const value = Math.max(A - B * (rank - 1), minValue);
+  const baseValue = Math.max(A - B * (rank - 1), minValue);
 
   // Assign tier based on rank
   let tier = '';
@@ -88,10 +102,35 @@ export const getPlayerValue = (rank: number): { value: number; tier: string; isR
   else if (rank <= 120) tier = 'Tier 4';
   else tier = 'Tier 5';
 
+  // PPG-based value adjustment
+  let valueWithPpg = baseValue;
+  let ppgMultiplier = 1;
+
+  if (fantasyPpg && gamesPlayed && gamesPlayed >= 3) {
+    // Only apply PPG adjustments for players with meaningful sample size
+    const positionMultipliers = {
+      'QB': { baseline: 20, multiplier: 0.8 },
+      'RB': { baseline: 15, multiplier: 1.0 },
+      'WR': { baseline: 12, multiplier: 1.2 },
+      'TE': { baseline: 8, multiplier: 1.5 }
+    };
+
+    // Get position-specific baseline (this would need to be passed in or determined)
+    // For now, use a general baseline
+    const baseline = 15;
+    const ppgRatio = fantasyPpg / baseline;
+    
+    // Apply PPG multiplier (capped between 0.5x and 2.0x)
+    ppgMultiplier = Math.max(0.5, Math.min(2.0, ppgRatio));
+    valueWithPpg = baseValue * ppgMultiplier;
+  }
+
   return {
-    value: Math.round(value * 100) / 100,
+    value: Math.round(baseValue * 100) / 100,
     tier,
-    isRanked: true
+    isRanked: true,
+    valueWithPpg: Math.round(valueWithPpg * 100) / 100,
+    ppgMultiplier: Math.round(ppgMultiplier * 100) / 100
   }
 }
 
@@ -227,14 +266,22 @@ export const matchPlayerToRankings = (
 export const processPlayerForTrade = (
   playerId: string,
   allPlayers: Record<string, any>,
-  dynastyRankings: Record<string, any>
+  dynastyRankings: Record<string, any>,
+  playerStats?: Record<string, any>
 ): PlayerValue | null => {
   const player = allPlayers[playerId]
   if (!player) return null
   
   const playerName = `${player.first_name} ${player.last_name}`
   const ranking = matchPlayerToRankings(playerName, dynastyRankings)
-  const valueData = getPlayerValue(ranking.rank)
+  
+  // Get PPG data from player stats if available
+  const stats = playerStats?.[playerId]
+  const fantasyPpg = stats?.fantasy_ppg || player.fantasy_ppg
+  const gamesPlayed = stats?.games_played || player.games_played
+  const totalFantasyPoints = stats?.total_fantasy_points || player.fantasy_points_ppr
+  
+  const valueData = getPlayerValue(ranking.rank, fantasyPpg, gamesPlayed)
   
   return {
     playerId,
@@ -244,7 +291,11 @@ export const processPlayerForTrade = (
     rank: ranking.rank,
     value: valueData.value,
     tier: valueData.tier,
-    isRanked: valueData.isRanked
+    isRanked: valueData.isRanked,
+    fantasyPpg,
+    gamesPlayed,
+    totalFantasyPoints,
+    valueWithPpg: valueData.valueWithPpg
   }
 }
 

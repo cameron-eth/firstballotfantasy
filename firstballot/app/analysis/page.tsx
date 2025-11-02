@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TeamLogo } from "@/components/team-logo"
+import { useState, useEffect } from 'react'
+import { Header } from '@/components/header'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TeamLogo } from '@/components/team-logo'
 
 import {
   BarChart,
@@ -21,7 +21,7 @@ import {
   Scatter,
   Area,
   AreaChart,
-} from "recharts"
+} from 'recharts'
 
 interface ModelPerformance {
   model: string
@@ -94,10 +94,18 @@ export default function AnalysisPage() {
   // Sort state for each chart
   const [positionSort, setPositionSort] = useState<'avgPPG' | 'totalPlayers' | 'avgError'>('avgPPG')
   const [tierSort, setTierSort] = useState<'value' | 'avgPPG'>('value')
-  const [draftSort, setDraftSort] = useState<'eliteRate' | 'tier1PlusRate' | 'totalPlayers'>('eliteRate')
-  const [prospectSort, setProspectSort] = useState<'hitRate' | 'successRate' | 'totalCount'>('hitRate')
-  const [breakoutSort, setBreakoutSort] = useState<'surprise_factor' | 'fantasy_ppg' | 'performance_ratio'>('surprise_factor')
-  const [bustSort, setBustSort] = useState<'surprise_factor' | 'fantasy_ppg' | 'performance_ratio'>('surprise_factor')
+  const [draftSort, setDraftSort] = useState<'eliteRate' | 'tier1PlusRate' | 'totalPlayers'>(
+    'eliteRate'
+  )
+  const [prospectSort, setProspectSort] = useState<'hitRate' | 'successRate' | 'totalCount'>(
+    'hitRate'
+  )
+  const [breakoutSort, setBreakoutSort] = useState<
+    'surprise_factor' | 'fantasy_ppg' | 'performance_ratio'
+  >('surprise_factor')
+  const [bustSort, setBustSort] = useState<'surprise_factor' | 'fantasy_ppg' | 'performance_ratio'>(
+    'surprise_factor'
+  )
 
   useEffect(() => {
     async function fetchData() {
@@ -106,9 +114,9 @@ export default function AnalysisPage() {
         setError(null)
 
         // Fetch all analysis data from API
-        const response = await fetch("/api/analysis?type=all")
+        const response = await fetch('/api/analysis?type=all')
         if (!response.ok) {
-          throw new Error("Failed to fetch analysis data")
+          throw new Error('Failed to fetch analysis data')
         }
         const result = await response.json()
 
@@ -118,8 +126,8 @@ export default function AnalysisPage() {
         setBreakoutBust(result.breakoutBust || [])
         setProspectAnalysis(result.prospectAnalysis || [])
       } catch (err) {
-        console.error("Error fetching data:", err)
-        setError("Failed to load analytics data")
+        console.error('Error fetching data:', err)
+        setError('Failed to load analytics data')
       } finally {
         setLoading(false)
       }
@@ -185,7 +193,7 @@ export default function AnalysisPage() {
         }
         return acc
       },
-      [] as { position: string; avgPPG: number; totalPlayers: number; avgError: number }[],
+      [] as { position: string; avgPPG: number; totalPlayers: number; avgError: number }[]
     )
     .sort((a, b) => {
       if (positionSort === 'avgPPG') return b.avgPPG - a.avgPPG
@@ -211,7 +219,7 @@ export default function AnalysisPage() {
         }
         return acc
       },
-      [] as { name: string; value: number; avgPPG: number; color: string }[],
+      [] as { name: string; value: number; avgPPG: number; color: string }[]
     )
     .sort((a, b) => {
       if (tierSort === 'value') return b.value - a.value
@@ -219,7 +227,7 @@ export default function AnalysisPage() {
     })
 
   const seasonalTrends = aggregatedStats
-    .filter((stat) => ["Elite", "WR1/RB1", "Tier1"].includes(stat.tier))
+    .filter((stat) => ['Elite', 'WR1/RB1', 'Tier1'].includes(stat.tier))
     .reduce(
       (acc, stat) => {
         const existing = acc.find((s) => s.season === stat.season)
@@ -235,13 +243,13 @@ export default function AnalysisPage() {
         }
         return acc
       },
-      [] as { season: number; avgPPG: number; playerCount: number }[],
+      [] as { season: number; avgPPG: number; playerCount: number }[]
     )
     .sort((a, b) => a.season - b.season) // Keep chronological order for trends
 
   const draftRoundSuccess = draftSuccess
     .map((draft) => ({
-      round: draft.draft_round.replace("Round ", "R"),
+      round: draft.draft_round.replace('Round ', 'R'),
       eliteRate: Number((draft.elite_hit_rate * 100).toFixed(1)),
       tier1Rate: Number((draft.tier1_hit_rate * 100).toFixed(1)),
       tier1PlusRate: Number((draft.tier1_plus_hit_rate * 100).toFixed(1)),
@@ -269,7 +277,7 @@ export default function AnalysisPage() {
     })
 
   const topBreakouts = breakoutBust
-    .filter((player) => player.analysis_type === "breakout")
+    .filter((player) => player.analysis_type === 'breakout')
     .sort((a, b) => {
       if (breakoutSort === 'surprise_factor') return b.surprise_factor - a.surprise_factor
       if (breakoutSort === 'fantasy_ppg') return b.fantasy_ppg - a.fantasy_ppg
@@ -278,7 +286,7 @@ export default function AnalysisPage() {
     .slice(0, 12)
 
   const topBusts = breakoutBust
-    .filter((player) => player.analysis_type === "bust")
+    .filter((player) => player.analysis_type === 'bust')
     .sort((a, b) => {
       if (bustSort === 'surprise_factor') return a.surprise_factor - b.surprise_factor // Most negative first
       if (bustSort === 'fantasy_ppg') return a.fantasy_ppg - b.fantasy_ppg
@@ -298,23 +306,23 @@ export default function AnalysisPage() {
 
   function getTierColor(tier: string): string {
     const colors: { [key: string]: string } = {
-      Elite: "#8B5CF6",
-      "WR1/RB1": "#10B981",
-      Tier1: "#10B981",
-      QB1: "#10B981",
-      RB1: "#10B981",
-      TE1: "#10B981",
-      "WR2/RB2": "#F59E0B",
-      Tier2: "#F59E0B",
-      QB2: "#F59E0B",
-      RB2: "#F59E0B",
-      TE2: "#F59E0B",
-      Startable: "#F97316",
-      "Flex/Streamer": "#6B7280",
-      Streamer: "#6B7280",
-      Flex: "#6B7280",
+      Elite: '#8B5CF6',
+      'WR1/RB1': '#10B981',
+      Tier1: '#10B981',
+      QB1: '#10B981',
+      RB1: '#10B981',
+      TE1: '#10B981',
+      'WR2/RB2': '#F59E0B',
+      Tier2: '#F59E0B',
+      QB2: '#F59E0B',
+      RB2: '#F59E0B',
+      TE2: '#F59E0B',
+      Startable: '#F97316',
+      'Flex/Streamer': '#6B7280',
+      Streamer: '#6B7280',
+      Flex: '#6B7280',
     }
-    return colors[tier] || "#6B7280"
+    return colors[tier] || '#6B7280'
   }
 
   return (
@@ -323,8 +331,12 @@ export default function AnalysisPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-mono font-bold text-yellow-400 mb-2">COMPREHENSIVE ANALYSIS</h1>
-          <p className="text-green-400">Advanced analytics from master data pipeline • Live Database</p>
+          <h1 className="text-3xl font-mono font-bold text-yellow-400 mb-2">
+            COMPREHENSIVE ANALYSIS
+          </h1>
+          <p className="text-green-400">
+            Advanced analytics from master data pipeline • Live Database
+          </p>
         </div>
 
         {/* Enhanced Model Performance Summary */}
@@ -333,36 +345,47 @@ export default function AnalysisPage() {
             <CardHeader>
               <CardTitle className="text-yellow-400 font-mono">MASTER MODEL PERFORMANCE</CardTitle>
               <p className="text-green-400 text-sm">
-                {modelPerformance[0].model} • {modelPerformance[0].feature_count} features • Cross-validated
+                {modelPerformance[0].model} • {modelPerformance[0].feature_count} features •
+                Cross-validated
               </p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">{(modelPerformance[0].r2 * 100).toFixed(1)}%</div>
+                  <div className="text-3xl font-bold text-green-400">
+                    {(modelPerformance[0].r2 * 100).toFixed(1)}%
+                  </div>
                   <div className="text-sm text-gray-400">R² Score</div>
-                  <div className="text-xs text-gray-500">CV: {(modelPerformance[0].cv_r2_mean * 100).toFixed(1)}%</div>
+                  <div className="text-xs text-gray-500">
+                    CV: {(modelPerformance[0].cv_r2_mean * 100).toFixed(1)}%
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-yellow-400">{modelPerformance[0].rmse.toFixed(2)}</div>
+                  <div className="text-3xl font-bold text-yellow-400">
+                    {modelPerformance[0].rmse.toFixed(2)}
+                  </div>
                   <div className="text-sm text-gray-400">RMSE</div>
-                  <div className="text-xs text-gray-500">CV: {modelPerformance[0].cv_rmse_mean.toFixed(2)}</div>
+                  <div className="text-xs text-gray-500">
+                    CV: {modelPerformance[0].cv_rmse_mean.toFixed(2)}
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-400">{modelPerformance[0].feature_count}</div>
+                  <div className="text-3xl font-bold text-purple-400">
+                    {modelPerformance[0].feature_count}
+                  </div>
                   <div className="text-sm text-gray-400">Features</div>
                   <div className="text-xs text-gray-500">Optimized</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-blue-400">
-                    {modelPerformance[0].total_players?.toLocaleString() || "N/A"}
+                    {modelPerformance[0].total_players?.toLocaleString() || 'N/A'}
                   </div>
                   <div className="text-sm text-gray-400">Players</div>
                   <div className="text-xs text-gray-500">2015-2024</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-400">
-                    {modelPerformance[0].avg_actual_ppg?.toFixed(1) || "N/A"}
+                    {modelPerformance[0].avg_actual_ppg?.toFixed(1) || 'N/A'}
                   </div>
                   <div className="text-sm text-gray-400">Avg PPG</div>
                   <div className="text-xs text-gray-500">Actual</div>
@@ -372,7 +395,9 @@ export default function AnalysisPage() {
               {/* Top Features */}
               {modelPerformance[0].top_features && (
                 <div className="mt-6 p-4 bg-slate-700 rounded-lg">
-                  <h4 className="text-yellow-400 font-mono text-sm mb-2">TOP PREDICTIVE FEATURES</h4>
+                  <h4 className="text-yellow-400 font-mono text-sm mb-2">
+                    TOP PREDICTIVE FEATURES
+                  </h4>
                   <p className="text-gray-300 text-sm">{modelPerformance[0].top_features}</p>
                 </div>
               )}
@@ -396,12 +421,18 @@ export default function AnalysisPage() {
                   <YAxis stroke="#9CA3AF" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
                     }}
                   />
-                  <Area type="monotone" dataKey="avgPPG" stroke="#FFD700" fill="#FFD700" fillOpacity={0.3} />
+                  <Area
+                    type="monotone"
+                    dataKey="avgPPG"
+                    stroke="#FFD700"
+                    fill="#FFD700"
+                    fillOpacity={0.3}
+                  />
                   <Line type="monotone" dataKey="playerCount" stroke="#2CFF94" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -424,9 +455,9 @@ export default function AnalysisPage() {
                   <YAxis dataKey="actual" stroke="#9CA3AF" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
                     }}
                   />
                   <Scatter dataKey="actual" fill="#2CFF94" fillOpacity={0.6} />
@@ -439,7 +470,7 @@ export default function AnalysisPage() {
         {/* Draft Analysis Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Enhanced Draft Success */}
-          <Card 
+          <Card
             className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
             onClick={() => {
               if (draftSort === 'eliteRate') setDraftSort('tier1PlusRate')
@@ -451,7 +482,12 @@ export default function AnalysisPage() {
               <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
                 DRAFT ROUND SUCCESS RATES
                 <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort: {draftSort === 'eliteRate' ? 'Elite Rate' : draftSort === 'tier1PlusRate' ? 'Tier 1+ Rate' : 'Total Players'}
+                  Sort:{' '}
+                  {draftSort === 'eliteRate'
+                    ? 'Elite Rate'
+                    : draftSort === 'tier1PlusRate'
+                      ? 'Tier 1+ Rate'
+                      : 'Total Players'}
                 </span>
               </CardTitle>
               <p className="text-green-400 text-sm">Click to sort • Hit rates by draft position</p>
@@ -464,9 +500,9 @@ export default function AnalysisPage() {
                   <YAxis stroke="#9CA3AF" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
                     }}
                   />
                   <Bar dataKey="eliteRate" fill="#8B5CF6" name="Elite Rate %" />
@@ -477,7 +513,7 @@ export default function AnalysisPage() {
           </Card>
 
           {/* Prospect Tier Analysis */}
-          <Card 
+          <Card
             className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
             onClick={() => {
               if (prospectSort === 'hitRate') setProspectSort('successRate')
@@ -489,10 +525,17 @@ export default function AnalysisPage() {
               <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
                 PROSPECT TIER ANALYSIS
                 <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort: {prospectSort === 'hitRate' ? 'Hit Rate' : prospectSort === 'successRate' ? 'Success Rate' : 'Total Count'}
+                  Sort:{' '}
+                  {prospectSort === 'hitRate'
+                    ? 'Hit Rate'
+                    : prospectSort === 'successRate'
+                      ? 'Success Rate'
+                      : 'Total Count'}
                 </span>
               </CardTitle>
-              <p className="text-green-400 text-sm">Click to sort • Success rates by prospect grade</p>
+              <p className="text-green-400 text-sm">
+                Click to sort • Success rates by prospect grade
+              </p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -502,9 +545,9 @@ export default function AnalysisPage() {
                   <YAxis stroke="#9CA3AF" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
                     }}
                   />
                   <Bar dataKey="hitRate" fill="#FFD700" name="Hit Rate %" />
@@ -518,7 +561,7 @@ export default function AnalysisPage() {
         {/* Position Performance & Tier Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Enhanced Position Performance */}
-          <Card 
+          <Card
             className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
             onClick={() => {
               if (positionSort === 'avgPPG') setPositionSort('totalPlayers')
@@ -530,10 +573,17 @@ export default function AnalysisPage() {
               <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
                 2024 POSITION PERFORMANCE
                 <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort: {positionSort === 'avgPPG' ? 'Avg PPG' : positionSort === 'totalPlayers' ? 'Total Players' : 'Avg Error'}
+                  Sort:{' '}
+                  {positionSort === 'avgPPG'
+                    ? 'Avg PPG'
+                    : positionSort === 'totalPlayers'
+                      ? 'Total Players'
+                      : 'Avg Error'}
                 </span>
               </CardTitle>
-              <p className="text-green-400 text-sm">Click to sort • Average PPG and prediction accuracy</p>
+              <p className="text-green-400 text-sm">
+                Click to sort • Average PPG and prediction accuracy
+              </p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -543,9 +593,9 @@ export default function AnalysisPage() {
                   <YAxis stroke="#9CA3AF" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "8px",
+                      backgroundColor: '#1F2937',
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
                     }}
                   />
                   <Bar dataKey="avgPPG" fill="#2CFF94" name="Avg PPG" />
@@ -555,7 +605,7 @@ export default function AnalysisPage() {
           </Card>
 
           {/* Enhanced Tier Distribution */}
-          <Card 
+          <Card
             className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
             onClick={() => {
               if (tierSort === 'value') setTierSort('avgPPG')
@@ -569,7 +619,9 @@ export default function AnalysisPage() {
                   Sort: {tierSort === 'value' ? 'Player Count' : 'Avg PPG'}
                 </span>
               </CardTitle>
-              <p className="text-green-400 text-sm">Click to sort • Player count by performance tier</p>
+              <p className="text-green-400 text-sm">
+                Click to sort • Player count by performance tier
+              </p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -598,7 +650,7 @@ export default function AnalysisPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Enhanced Breakouts and Busts */}
             {/* Top Breakouts with Surprise Factor */}
-            <Card 
+            <Card
               className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
               onClick={() => {
                 if (breakoutSort === 'surprise_factor') setBreakoutSort('fantasy_ppg')
@@ -610,18 +662,28 @@ export default function AnalysisPage() {
                 <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
                   TOP BREAKOUTS
                   <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                    Sort: {breakoutSort === 'surprise_factor' ? 'Surprise Factor' : breakoutSort === 'fantasy_ppg' ? 'Fantasy PPG' : 'Performance Ratio'}
+                    Sort:{' '}
+                    {breakoutSort === 'surprise_factor'
+                      ? 'Surprise Factor'
+                      : breakoutSort === 'fantasy_ppg'
+                        ? 'Fantasy PPG'
+                        : 'Performance Ratio'}
                   </span>
                 </CardTitle>
-                <p className="text-green-400 text-sm">Click to sort • Highest surprise factor players</p>
+                <p className="text-green-400 text-sm">
+                  Click to sort • Highest surprise factor players
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {topBreakouts.map((player, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-slate-700 rounded">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center p-3 bg-slate-700 rounded"
+                    >
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          team={player.recent_team || "NFL"}
+                          team={player.recent_team || 'NFL'}
                           size={32}
                           className="flex-shrink-0"
                         />
@@ -629,17 +691,25 @@ export default function AnalysisPage() {
                           <div className="text-white font-medium">{player.player_name}</div>
                           <div className="text-sm text-gray-400">
                             {player.position} • {player.season}
-                            {player.tier_upgrade && <span className="text-green-400 ml-2">↗ TIER UP</span>}
+                            {player.tier_upgrade && (
+                              <span className="text-green-400 ml-2">↗ TIER UP</span>
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">
-                            Ratio: {player.performance_ratio?.toFixed(2) || "N/A"}
+                            Ratio: {player.performance_ratio?.toFixed(2) || 'N/A'}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-green-400 font-bold">+{player.surprise_factor.toFixed(1)}</div>
-                        <div className="text-xs text-gray-400">{player.fantasy_ppg.toFixed(1)} PPG</div>
-                        <div className="text-xs text-gray-500">vs {player.predicted_fantasy_ppg.toFixed(1)} pred</div>
+                        <div className="text-green-400 font-bold">
+                          +{player.surprise_factor.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {player.fantasy_ppg.toFixed(1)} PPG
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          vs {player.predicted_fantasy_ppg.toFixed(1)} pred
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -648,7 +718,7 @@ export default function AnalysisPage() {
             </Card>
 
             {/* Top Busts with Surprise Factor */}
-            <Card 
+            <Card
               className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
               onClick={() => {
                 if (bustSort === 'surprise_factor') setBustSort('fantasy_ppg')
@@ -660,7 +730,12 @@ export default function AnalysisPage() {
                 <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
                   TOP BUSTS
                   <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                    Sort: {bustSort === 'surprise_factor' ? 'Surprise Factor' : bustSort === 'fantasy_ppg' ? 'Fantasy PPG' : 'Performance Ratio'}
+                    Sort:{' '}
+                    {bustSort === 'surprise_factor'
+                      ? 'Surprise Factor'
+                      : bustSort === 'fantasy_ppg'
+                        ? 'Fantasy PPG'
+                        : 'Performance Ratio'}
                   </span>
                 </CardTitle>
                 <p className="text-green-400 text-sm">Click to sort • Biggest disappointments</p>
@@ -668,10 +743,13 @@ export default function AnalysisPage() {
               <CardContent>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {topBusts.map((player, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-slate-700 rounded">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center p-3 bg-slate-700 rounded"
+                    >
                       <div className="flex items-center space-x-3">
                         <TeamLogo
-                          team={player.recent_team || "NFL"}
+                          team={player.recent_team || 'NFL'}
                           size={32}
                           className="flex-shrink-0"
                         />
@@ -679,17 +757,25 @@ export default function AnalysisPage() {
                           <div className="text-white font-medium">{player.player_name}</div>
                           <div className="text-sm text-gray-400">
                             {player.position} • {player.season}
-                            {player.tier_downgrade && <span className="text-red-400 ml-2">↘ TIER DOWN</span>}
+                            {player.tier_downgrade && (
+                              <span className="text-red-400 ml-2">↘ TIER DOWN</span>
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">
-                            Ratio: {player.performance_ratio?.toFixed(2) || "N/A"}
+                            Ratio: {player.performance_ratio?.toFixed(2) || 'N/A'}
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-red-400 font-bold">{player.surprise_factor.toFixed(1)}</div>
-                        <div className="text-xs text-gray-400">{player.fantasy_ppg.toFixed(1)} PPG</div>
-                        <div className="text-xs text-gray-500">vs {player.predicted_fantasy_ppg.toFixed(1)} pred</div>
+                        <div className="text-red-400 font-bold">
+                          {player.surprise_factor.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {player.fantasy_ppg.toFixed(1)} PPG
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          vs {player.predicted_fantasy_ppg.toFixed(1)} pred
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -712,7 +798,7 @@ export default function AnalysisPage() {
                   <h3 className="text-green-400 font-mono text-sm mb-2">MODEL EXCELLENCE</h3>
                   <p className="text-gray-300 text-sm">
                     {modelPerformance.length > 0 &&
-                      `${(modelPerformance[0].r2 * 100).toFixed(1)}% R² with ${modelPerformance[0].feature_count} optimized features across ${modelPerformance[0].total_players?.toLocaleString() || "N/A"} player seasons`}
+                      `${(modelPerformance[0].r2 * 100).toFixed(1)}% R² with ${modelPerformance[0].feature_count} optimized features across ${modelPerformance[0].total_players?.toLocaleString() || 'N/A'} player seasons`}
                   </p>
                 </div>
               </div>
@@ -721,7 +807,7 @@ export default function AnalysisPage() {
                   <h3 className="text-green-400 font-mono text-sm mb-2">DRAFT INTELLIGENCE</h3>
                   <p className="text-gray-300 text-sm">
                     {draftRoundSuccess.length > 0 &&
-                      `Round 1: ${draftRoundSuccess[0]?.eliteRate}% elite rate, Round 7: ${draftRoundSuccess[6]?.eliteRate || "0"}% elite rate - clear draft capital value`}
+                      `Round 1: ${draftRoundSuccess[0]?.eliteRate}% elite rate, Round 7: ${draftRoundSuccess[6]?.eliteRate || '0'}% elite rate - clear draft capital value`}
                   </p>
                 </div>
               </div>

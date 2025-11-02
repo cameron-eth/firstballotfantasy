@@ -1,13 +1,13 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { createContext, useContext, useEffect, useState } from "react"
-import type { User } from "@supabase/supabase-js"
-import { supabase } from "./supabase"
-import { setupFetchWithAuth } from "./setup-fetch-with-auth"
-import { userApi } from "./user-api"
-import { cacheUtils } from "./cache-utils"
+import { createContext, useContext, useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { supabase } from './supabase'
+import { setupFetchWithAuth } from './setup-fetch-with-auth'
+import { userApi } from './user-api'
+import { cacheUtils } from './cache-utils'
 
 interface AuthContextType {
   user: User | null
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
-      
+
       // Set up fetch interceptor after auth is initialized
       if (typeof window !== 'undefined') {
         setupFetchWithAuth()
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    cacheUtils.clear(); 
+    cacheUtils.clear()
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -70,17 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // If signup is successful and we have a user, create their profile
     if (data.user) {
       try {
-        const response = await userApi.addUserProfile(JSON.stringify({
+        const response = await userApi.addUserProfile(
+          JSON.stringify({
             authId: data.user.id,
             email: data.user.email,
             username: username,
-          }));
+          })
+        )
 
         if (!response.ok) {
-          console.error('Failed to create user profile during signup');
+          console.error('Failed to create user profile during signup')
         }
       } catch (profileError) {
-        console.error('Error creating user profile:', profileError);
+        console.error('Error creating user profile:', profileError)
       }
     }
   }
@@ -104,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
 }

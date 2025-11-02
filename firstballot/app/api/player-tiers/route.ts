@@ -1,19 +1,20 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseServer } from "@/lib/supabase-server"
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("API route called")
+    console.log('API route called')
     const { searchParams } = new URL(request.url)
-    const position = searchParams.get("position") || "QB"
-    const season = parseInt(searchParams.get("season") || "2024")
+    const position = searchParams.get('position') || 'QB'
+    const season = parseInt(searchParams.get('season') || '2024')
 
-    console.log("Query params:", { position, season })
+    console.log('Query params:', { position, season })
 
     // Get all players for the position and season
     const { data, error } = await supabaseServer
-      .from("master_player_dataset")
-      .select(`
+      .from('master_player_dataset')
+      .select(
+        `
         player_name,
         position,
         season,
@@ -25,17 +26,18 @@ export async function GET(request: NextRequest) {
         position_tier,
         games_played,
         player_name_std
-      `)
-      .eq("position", position)
-      .eq("season", season)
-      .not("fantasy_ppg", "is", null)
-      .gte("games_played", 6)
-      .order("season", { ascending: false })
-      .order("fantasy_ppg", { ascending: false })
+      `
+      )
+      .eq('position', position)
+      .eq('season', season)
+      .not('fantasy_ppg', 'is', null)
+      .gte('games_played', 6)
+      .order('season', { ascending: false })
+      .order('fantasy_ppg', { ascending: false })
 
     if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 })
+      console.error('Database error:', error)
+      return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
     }
 
     // Process data with proper type casting
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
       season: Number(item.season) || 0,
       games_played: Number(item.games_played) || 0,
       // Use player_name_std as player_id for headshots
-      player_id: item.player_name_std?.replace(/\s+/g, '-').toLowerCase()
+      player_id: item.player_name_std?.replace(/\s+/g, '-').toLowerCase(),
     }))
 
     // Remove duplicate players - keep only the most recent record for each player
@@ -63,9 +65,9 @@ export async function GET(request: NextRequest) {
 
     // Group by tier and get top 10 in each tier
     const tierGroups: { [key: string]: any[] } = {}
-    
+
     deduplicatedData.forEach((player: any) => {
-      const tier = player.tier || player.position_tier || "Unknown"
+      const tier = player.tier || player.position_tier || 'Unknown'
       if (!tierGroups[tier]) {
         tierGroups[tier] = []
       }
@@ -73,14 +75,16 @@ export async function GET(request: NextRequest) {
     })
 
     // Get top 10 players from each tier
-    const topPlayersByTier = Object.entries(tierGroups).map(([tier, players]) => {
-      return players.slice(0, 10) // Top 10 in each tier
-    }).flat()
+    const topPlayersByTier = Object.entries(tierGroups)
+      .map(([tier, players]) => {
+        return players.slice(0, 10) // Top 10 in each tier
+      })
+      .flat()
 
-    console.log("Top players by tier count:", topPlayersByTier.length)
+    console.log('Top players by tier count:', topPlayersByTier.length)
     return NextResponse.json({ data: topPlayersByTier })
   } catch (error) {
-    console.error("API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error('API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

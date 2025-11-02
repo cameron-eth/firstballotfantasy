@@ -6,14 +6,14 @@ export async function GET(request: NextRequest) {
     // Get the userId and JWT token from headers (set by middleware after auth verification)
     const userId = request.headers.get('x-user-id')
     const userJwt = request.headers.get('x-user-jwt')
-    
+
     if (!userId || !userJwt) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
     // Create an authenticated Supabase client with the user's JWT token
     const userSupabase = createAuthenticatedSupabaseClient(userJwt)
-    
+
     // Fetch the user profile using the authenticated client (respects RLS)
     const { data: profile, error } = await userSupabase
       .from('user_profiles')
@@ -26,8 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(profile || {})
-
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

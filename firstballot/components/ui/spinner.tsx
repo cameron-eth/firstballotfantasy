@@ -1,4 +1,3 @@
-
 import { Card } from './card'
 import { IconLogo } from './icons'
 export const Spinner = () => (

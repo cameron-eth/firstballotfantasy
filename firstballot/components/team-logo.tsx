@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import Image from "next/image"
-import { useState } from "react"
+import Image from 'next/image'
+import { useState } from 'react'
 
 interface TeamLogoProps {
   team: string
@@ -10,43 +10,43 @@ interface TeamLogoProps {
 }
 
 const teamAbbreviations: { [key: string]: string } = {
-  "Arizona Cardinals": "ARI",
-  "Atlanta Falcons": "ATL",
-  "Baltimore Ravens": "BAL",
-  "Buffalo Bills": "BUF",
-  "Carolina Panthers": "CAR",
-  "Chicago Bears": "CHI",
-  "Cincinnati Bengals": "CIN",
-  "Cleveland Browns": "CLE",
-  "Dallas Cowboys": "DAL",
-  "Denver Broncos": "DEN",
-  "Detroit Lions": "DET",
-  "Green Bay Packers": "GB",
-  "Houston Texans": "HOU",
-  "Indianapolis Colts": "IND",
-  "Jacksonville Jaguars": "JAX",
-  "Kansas City Chiefs": "KC",
-  "Las Vegas Raiders": "LV",
-  "Los Angeles Chargers": "LAC",
-  "Los Angeles Rams": "LAR",
-  "Miami Dolphins": "MIA",
-  "Minnesota Vikings": "MIN",
-  "New England Patriots": "NE",
-  "New Orleans Saints": "NO",
-  "New York Giants": "NYG",
-  "New York Jets": "NYJ",
-  "Philadelphia Eagles": "PHI",
-  "Pittsburgh Steelers": "PIT",
-  "San Francisco 49ers": "SF",
-  "Seattle Seahawks": "SEA",
-  "Tampa Bay Buccaneers": "TB",
-  "Tennessee Titans": "TEN",
-  "Washington Commanders": "WAS",
+  'Arizona Cardinals': 'ARI',
+  'Atlanta Falcons': 'ATL',
+  'Baltimore Ravens': 'BAL',
+  'Buffalo Bills': 'BUF',
+  'Carolina Panthers': 'CAR',
+  'Chicago Bears': 'CHI',
+  'Cincinnati Bengals': 'CIN',
+  'Cleveland Browns': 'CLE',
+  'Dallas Cowboys': 'DAL',
+  'Denver Broncos': 'DEN',
+  'Detroit Lions': 'DET',
+  'Green Bay Packers': 'GB',
+  'Houston Texans': 'HOU',
+  'Indianapolis Colts': 'IND',
+  'Jacksonville Jaguars': 'JAX',
+  'Kansas City Chiefs': 'KC',
+  'Las Vegas Raiders': 'LV',
+  'Los Angeles Chargers': 'LAC',
+  'Los Angeles Rams': 'LAR',
+  'Miami Dolphins': 'MIA',
+  'Minnesota Vikings': 'MIN',
+  'New England Patriots': 'NE',
+  'New Orleans Saints': 'NO',
+  'New York Giants': 'NYG',
+  'New York Jets': 'NYJ',
+  'Philadelphia Eagles': 'PHI',
+  'Pittsburgh Steelers': 'PIT',
+  'San Francisco 49ers': 'SF',
+  'Seattle Seahawks': 'SEA',
+  'Tampa Bay Buccaneers': 'TB',
+  'Tennessee Titans': 'TEN',
+  'Washington Commanders': 'WAS',
 }
 
-export function TeamLogo({ team, size = 32, className = "" }: TeamLogoProps) {
+export function TeamLogo({ team, size = 32, className = '' }: TeamLogoProps) {
   const [imageError, setImageError] = useState(false)
-  
+
   // Add null safety checks
   if (!team) {
     return (
@@ -58,7 +58,7 @@ export function TeamLogo({ team, size = 32, className = "" }: TeamLogoProps) {
       </div>
     )
   }
-  
+
   const teamAbbr = teamAbbreviations[team] || team
 
   if (imageError || !teamAbbr) {
@@ -90,4 +90,4 @@ export function TeamLogo({ team, size = 32, className = "" }: TeamLogoProps) {
       />
     </div>
   )
-} 
+}

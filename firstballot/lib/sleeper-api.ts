@@ -75,43 +75,45 @@ class SleeperAPI {
         const response = await fetch(`${this.baseUrl}${endpoint}`, {
           method: 'GET',
           headers: {
-            'Accept': 'application/json',
+            Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           // Add timeout
-          signal: AbortSignal.timeout(10000) // 10 second timeout
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         })
-        
+
         if (!response.ok) {
           if (response.status === 429) {
             // Rate limited - wait and retry
             if (attempt < retries) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+              await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
               continue
             }
           }
           throw new Error(`Sleeper API error: ${response.status} ${response.statusText}`)
         }
-        
+
         return response.json()
       } catch (error) {
         console.error(`Sleeper API attempt ${attempt} failed:`, error)
-        
+
         if (attempt === retries) {
           if (error instanceof Error) {
             if (error.name === 'AbortError') {
               throw new Error('Sleeper API request timed out. Please try again.')
             }
             if (error.message.includes('Failed to fetch')) {
-              throw new Error('Network error connecting to Sleeper API. Please check your internet connection and try again.')
+              throw new Error(
+                'Network error connecting to Sleeper API. Please check your internet connection and try again.'
+              )
             }
             throw error
           }
           throw new Error('Unknown error occurred while fetching data from Sleeper API')
         }
-        
+
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt))
       }
     }
   }
@@ -120,7 +122,11 @@ class SleeperAPI {
     return this.fetch(`/user/${userId}`)
   }
 
-  async getUserLeagues(userId: string, sport: string = 'nfl', season: string = '2025'): Promise<SleeperLeague[]> {
+  async getUserLeagues(
+    userId: string,
+    sport: string = 'nfl',
+    season: string = '2025'
+  ): Promise<SleeperLeague[]> {
     return this.fetch(`/user/${userId}/leagues/${sport}/${season}`)
   }
 
@@ -157,4 +163,4 @@ class SleeperAPI {
   }
 }
 
-export const sleeperAPI = new SleeperAPI() 
+export const sleeperAPI = new SleeperAPI()

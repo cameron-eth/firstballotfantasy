@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
 import { ReactNode } from 'react'
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Crown, CheckCircle } from "lucide-react"
-import { UpgradePrompt } from "./upgrade-prompt"
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Crown, CheckCircle } from 'lucide-react'
+import { UpgradePrompt } from './upgrade-prompt'
 
 interface LeagueAccessControlProps {
   leagueIndex: number
@@ -21,9 +21,9 @@ export function LeagueAccessControl({
   canAccess,
   isMember,
   children,
-  className = "",
+  className = '',
   onClick,
-  leagueName
+  leagueName,
 }: LeagueAccessControlProps) {
   const handleClick = () => {
     if (canAccess && onClick) {
@@ -32,8 +32,8 @@ export function LeagueAccessControl({
   }
 
   const baseClasses = `p-5 transition-all duration-200 ${
-    canAccess 
-      ? 'cursor-pointer hover:border-yellow-400 hover:bg-slate-700/80' 
+    canAccess
+      ? 'cursor-pointer hover:border-yellow-400 hover:bg-slate-700/80'
       : 'cursor-not-allowed opacity-50 grayscale'
   } ${className}`
 
@@ -59,12 +59,8 @@ export function LeagueAccessControl({
         </div>
       )}
 
-
-
       {/* League Content */}
-      <div className="relative">
-        {children}
-      </div>
+      <div className="relative">{children}</div>
     </Card>
   )
 }
@@ -85,14 +81,16 @@ export function LeagueCard({
   canAccess,
   isMember,
   isSelected = false,
-  onClick
+  onClick,
 }: LeagueCardProps) {
-  
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-400/20 text-green-400 border-green-400'
-      case 'pre_draft': return 'bg-blue-400/20 text-blue-400 border-blue-400'
-      default: return 'bg-gray-400/20 text-gray-400 border-gray-400'
+      case 'active':
+        return 'bg-green-400/20 text-green-400 border-green-400'
+      case 'pre_draft':
+        return 'bg-blue-400/20 text-blue-400 border-blue-400'
+      default:
+        return 'bg-gray-400/20 text-gray-400 border-gray-400'
     }
   }
 
@@ -103,15 +101,15 @@ export function LeagueCard({
       isMember={isMember}
       onClick={onClick}
       className={`${
-        isSelected ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700' : 'bg-slate-800 border-slate-700'
+        isSelected
+          ? 'border-yellow-400 ring-2 ring-yellow-400 bg-slate-700'
+          : 'bg-slate-800 border-slate-700'
       }`}
       leagueName={league.name}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="text-2xl font-bold text-yellow-400">
-            #{league.league_id.slice(-2)}
-          </div>
+          <div className="text-2xl font-bold text-yellow-400">#{league.league_id.slice(-2)}</div>
           <div>
             <h3 className="font-semibold text-slate-100 text-lg">{league.name}</h3>
             <p className="text-sm text-slate-400">
@@ -119,14 +117,11 @@ export function LeagueCard({
             </p>
           </div>
         </div>
-        <Badge 
-          variant="outline" 
-          className={`text-xs px-2 py-1 ${getStatusColor(league.status)}`}
-        >
+        <Badge variant="outline" className={`text-xs px-2 py-1 ${getStatusColor(league.status)}`}>
           {league.status}
         </Badge>
       </div>
-      
+
       <div className="space-y-3 text-sm">
         <div className="flex justify-between items-center">
           <span className="text-slate-400">Teams:</span>
@@ -134,7 +129,9 @@ export function LeagueCard({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-slate-400">Sport:</span>
-          <span className="text-slate-100 font-semibold">{league.sport?.toUpperCase() || 'NFL'}</span>
+          <span className="text-slate-100 font-semibold">
+            {league.sport?.toUpperCase() || 'NFL'}
+          </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-slate-400">Season:</span>
@@ -142,7 +139,9 @@ export function LeagueCard({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-slate-400">Draft ID:</span>
-          <span className="text-slate-100 font-semibold">{league.draft_id ? 'Available' : 'N/A'}</span>
+          <span className="text-slate-100 font-semibold">
+            {league.draft_id ? 'Available' : 'N/A'}
+          </span>
         </div>
       </div>
 
@@ -154,4 +153,4 @@ export function LeagueCard({
       </div>
     </LeagueAccessControl>
   )
-} 
+}

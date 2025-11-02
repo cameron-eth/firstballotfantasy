@@ -1,88 +1,95 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Maximize2, Minimize2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Maximize2, Minimize2, ChevronLeft, ChevronRight } from 'lucide-react'
 
-import { UserAvatar } from "@/components/user-avatar"
+import { UserAvatar } from '@/components/user-avatar'
 
 interface DraftAnalysisProps {
-  draftId: string;
+  draftId: string
 }
 
 interface TeamGrade {
-  rosterId: number;
-  teamName: string;
-  ownerName?: string;
-  ownerAvatar?: string;
-  ownerUsername?: string;
-  picks: any[];
-  totalPicks: number;
-  rankedPicks: number;
-  averageRank: number;
-  totalValue: number;
-  averageValue: number;
-  steals: number;
-  reaches: number;
-  stealRatio: number;
-  reachRatio: number;
-  gradeScore: number;
+  rosterId: number
+  teamName: string
+  ownerName?: string
+  ownerAvatar?: string
+  ownerUsername?: string
+  picks: any[]
+  totalPicks: number
+  rankedPicks: number
+  averageRank: number
+  totalValue: number
+  averageValue: number
+  steals: number
+  reaches: number
+  stealRatio: number
+  reachRatio: number
+  gradeScore: number
   tierBreakdown: {
-    tier1: number;
-    tier2: number;
-    tier3: number;
-    tier4: number;
-  };
+    tier1: number
+    tier2: number
+    tier3: number
+    tier4: number
+  }
   positions: {
-    QB: number;
-    RB: number;
-    WR: number;
-    TE: number;
-    K: number;
-    DEF: number;
-  };
-  grade: string;
+    QB: number
+    RB: number
+    WR: number
+    TE: number
+    K: number
+    DEF: number
+  }
+  grade: string
 }
 
 interface DraftAnalysisData {
-  draft: any;
-  picks: any[];
-  tradedPicks: any[];
-  rosters: any[];
-  users: any[];
-  pickOwnership: any;
-  teamPicks: any;
-  teamGrades: TeamGrade[];
-  playerRankings: any;
+  draft: any
+  picks: any[]
+  tradedPicks: any[]
+  rosters: any[]
+  users: any[]
+  pickOwnership: any
+  teamPicks: any
+  teamGrades: TeamGrade[]
+  playerRankings: any
 }
 
 const gradeColors = {
   'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  'A': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
+  A: 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
   'A-': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
   'B+': 'bg-green-400/20 text-green-400 border-green-400',
-  'B': 'bg-green-400/20 text-green-400 border-green-400',
+  B: 'bg-green-400/20 text-green-400 border-green-400',
   'B-': 'bg-green-400/20 text-green-400 border-green-400',
   'C+': 'bg-blue-400/20 text-blue-400 border-blue-400',
-  'C': 'bg-blue-400/20 text-blue-400 border-blue-400',
+  C: 'bg-blue-400/20 text-blue-400 border-blue-400',
   'C-': 'bg-blue-400/20 text-blue-400 border-blue-400',
-  'D': 'bg-red-400/20 text-red-400 border-red-400',
-  'F': 'bg-red-400/20 text-red-400 border-red-400',
-};
+  D: 'bg-red-400/20 text-red-400 border-red-400',
+  F: 'bg-red-400/20 text-red-400 border-red-400',
+}
 
 export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
-  const [data, setData] = useState<DraftAnalysisData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<'grade' | 'team'>('grade');
-  const [picksPage, setPicksPage] = useState(1);
-  const PICKS_PER_PAGE = 50;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [chartsIndex, setChartsIndex] = useState(0);
+  const [data, setData] = useState<DraftAnalysisData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [sortMode, setSortMode] = useState<'grade' | 'team'>('grade')
+  const [picksPage, setPicksPage] = useState(1)
+  const PICKS_PER_PAGE = 50
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [chartsIndex, setChartsIndex] = useState(0)
   const charts = [
     {
       key: 'comprehensiveRankings',
@@ -95,25 +102,25 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
         // Calculate comprehensive score for each team
         const teamsWithScores = teamGrades.map((tg: TeamGrade) => {
           // Normalize each metric to 0-100 scale
-          const avgRankScore = Math.max(0, 100 - (tg.averageRank - 1) * 2); // Lower rank = higher score
-          const totalValueScore = Math.min(100, (tg.totalValue / 1000) * 10); // Normalize to 1000 max
-          const valuePerPickScore = Math.min(100, (tg.averageValue / 100) * 10); // Normalize to 100 max
-          const stealScore = Math.min(100, tg.stealRatio * 2); // Steal ratio * 2 (max 100%)
-          const reachPenalty = Math.max(0, 100 - (tg.reachRatio * 2)); // Reach penalty
-          const tier1Bonus = tg.tierBreakdown.tier1 * 10; // 10 points per tier 1 pick
-          const tier2Bonus = tg.tierBreakdown.tier2 * 5; // 5 points per tier 2 pick
-          
+          const avgRankScore = Math.max(0, 100 - (tg.averageRank - 1) * 2) // Lower rank = higher score
+          const totalValueScore = Math.min(100, (tg.totalValue / 1000) * 10) // Normalize to 1000 max
+          const valuePerPickScore = Math.min(100, (tg.averageValue / 100) * 10) // Normalize to 100 max
+          const stealScore = Math.min(100, tg.stealRatio * 2) // Steal ratio * 2 (max 100%)
+          const reachPenalty = Math.max(0, 100 - tg.reachRatio * 2) // Reach penalty
+          const tier1Bonus = tg.tierBreakdown.tier1 * 10 // 10 points per tier 1 pick
+          const tier2Bonus = tg.tierBreakdown.tier2 * 5 // 5 points per tier 2 pick
+
           // Weighted composite score
           const comprehensiveScore = Math.round(
-            (avgRankScore * 0.25) + // 25% weight
-            (totalValueScore * 0.20) + // 20% weight
-            (valuePerPickScore * 0.20) + // 20% weight
-            (stealScore * 0.15) + // 15% weight
-            (reachPenalty * 0.10) + // 10% weight
-            (tier1Bonus * 0.07) + // 7% weight
-            (tier2Bonus * 0.03) // 3% weight
-          );
-          
+            avgRankScore * 0.25 + // 25% weight
+              totalValueScore * 0.2 + // 20% weight
+              valuePerPickScore * 0.2 + // 20% weight
+              stealScore * 0.15 + // 15% weight
+              reachPenalty * 0.1 + // 10% weight
+              tier1Bonus * 0.07 + // 7% weight
+              tier2Bonus * 0.03 // 3% weight
+          )
+
           return {
             label: tg.teamName,
             value: comprehensiveScore,
@@ -125,34 +132,34 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
               reaches: tg.reaches,
               tier1: tg.tierBreakdown.tier1,
               tier2: tg.tierBreakdown.tier2,
-              grade: tg.grade
-            }
-          };
-        });
-        
-        return teamsWithScores;
+              grade: tg.grade,
+            },
+          }
+        })
+
+        return teamsWithScores
       },
       getLeaderboard: (teamGrades: TeamGrade[]) => {
         // Same calculation as getData but return sorted leaderboard
         const teamsWithScores = teamGrades.map((tg: TeamGrade) => {
-          const avgRankScore = Math.max(0, 100 - (tg.averageRank - 1) * 2);
-          const totalValueScore = Math.min(100, (tg.totalValue / 1000) * 10);
-          const valuePerPickScore = Math.min(100, (tg.averageValue / 100) * 10);
-          const stealScore = Math.min(100, tg.stealRatio * 2);
-          const reachPenalty = Math.max(0, 100 - (tg.reachRatio * 2));
-          const tier1Bonus = tg.tierBreakdown.tier1 * 10;
-          const tier2Bonus = tg.tierBreakdown.tier2 * 5;
-          
+          const avgRankScore = Math.max(0, 100 - (tg.averageRank - 1) * 2)
+          const totalValueScore = Math.min(100, (tg.totalValue / 1000) * 10)
+          const valuePerPickScore = Math.min(100, (tg.averageValue / 100) * 10)
+          const stealScore = Math.min(100, tg.stealRatio * 2)
+          const reachPenalty = Math.max(0, 100 - tg.reachRatio * 2)
+          const tier1Bonus = tg.tierBreakdown.tier1 * 10
+          const tier2Bonus = tg.tierBreakdown.tier2 * 5
+
           const comprehensiveScore = Math.round(
-            (avgRankScore * 0.25) +
-            (totalValueScore * 0.20) +
-            (valuePerPickScore * 0.20) +
-            (stealScore * 0.15) +
-            (reachPenalty * 0.10) +
-            (tier1Bonus * 0.07) +
-            (tier2Bonus * 0.03)
-          );
-          
+            avgRankScore * 0.25 +
+              totalValueScore * 0.2 +
+              valuePerPickScore * 0.2 +
+              stealScore * 0.15 +
+              reachPenalty * 0.1 +
+              tier1Bonus * 0.07 +
+              tier2Bonus * 0.03
+          )
+
           return {
             label: tg.teamName,
             value: comprehensiveScore,
@@ -164,12 +171,12 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
               reaches: tg.reaches,
               tier1: tg.tierBreakdown.tier1,
               tier2: tg.tierBreakdown.tier2,
-              grade: tg.grade
-            }
-          };
-        });
-        
-        return teamsWithScores.sort((a: any, b: any) => b.value - a.value);
+              grade: tg.grade,
+            },
+          }
+        })
+
+        return teamsWithScores.sort((a: any, b: any) => b.value - a.value)
       },
     },
     {
@@ -179,8 +186,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#f87171',
       valueKey: 'reaches',
       leaderboardColor: 'text-red-400',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.reaches })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.reaches - a.reaches).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.reaches })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.reaches })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.reaches - a.reaches)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.reaches })),
     },
     {
       key: 'steals',
@@ -189,8 +201,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#34d399',
       valueKey: 'steals',
       leaderboardColor: 'text-green-400',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.steals })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.steals - a.steals).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.steals })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.steals })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.steals - a.steals)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.steals })),
     },
     {
       key: 'tier1',
@@ -199,8 +216,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#fde68a',
       valueKey: 'tier1',
       leaderboardColor: 'text-yellow-300',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.tierBreakdown.tier1 - a.tierBreakdown.tier1).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.tierBreakdown.tier1 - a.tierBreakdown.tier1)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.tierBreakdown.tier1 })),
     },
     {
       key: 'totalValue',
@@ -209,8 +231,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#60a5fa',
       valueKey: 'totalValue',
       leaderboardColor: 'text-blue-400',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.totalValue })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.totalValue - a.totalValue).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.totalValue })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.totalValue })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.totalValue - a.totalValue)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.totalValue })),
     },
     {
       key: 'bestWR',
@@ -219,8 +246,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#a78bfa',
       valueKey: 'WR',
       leaderboardColor: 'text-purple-400',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.WR })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.WR - a.positions.WR).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.WR })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.WR })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.positions.WR - a.positions.WR)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.WR })),
     },
     {
       key: 'bestRB',
@@ -229,8 +261,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#10b981',
       valueKey: 'RB',
       leaderboardColor: 'text-emerald-500',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.RB })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.RB - a.positions.RB).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.RB })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.RB })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.positions.RB - a.positions.RB)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.RB })),
     },
     {
       key: 'bestQB',
@@ -239,8 +276,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#3b82f6',
       valueKey: 'QB',
       leaderboardColor: 'text-blue-500',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.QB })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.QB - a.positions.QB).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.QB })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.QB })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.positions.QB - a.positions.QB)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.QB })),
     },
     {
       key: 'bestTE',
@@ -249,8 +291,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#8b5cf6',
       valueKey: 'TE',
       leaderboardColor: 'text-violet-500',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.TE })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => b.positions.TE - a.positions.TE).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.TE })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.TE })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => b.positions.TE - a.positions.TE)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.positions.TE })),
     },
     {
       key: 'avgRank',
@@ -259,37 +306,42 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       labelColor: '#38bdf8',
       valueKey: 'averageRank',
       leaderboardColor: 'text-sky-400',
-      getData: (teamGrades: TeamGrade[]) => teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.averageRank })),
-      getLeaderboard: (teamGrades: TeamGrade[]) => teamGrades.slice().sort((a: TeamGrade, b: TeamGrade) => a.averageRank - b.averageRank).map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.averageRank })),
+      getData: (teamGrades: TeamGrade[]) =>
+        teamGrades.map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.averageRank })),
+      getLeaderboard: (teamGrades: TeamGrade[]) =>
+        teamGrades
+          .slice()
+          .sort((a: TeamGrade, b: TeamGrade) => a.averageRank - b.averageRank)
+          .map((tg: TeamGrade) => ({ label: tg.teamName, value: tg.averageRank })),
     },
-  ];
-  const currentChart = charts[chartsIndex];
+  ]
+  const currentChart = charts[chartsIndex]
 
   useEffect(() => {
-    setPicksPage(1); // Reset page on new draft
-  }, [draftId]);
+    setPicksPage(1) // Reset page on new draft
+  }, [draftId])
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        setLoading(true);
-        const response = await fetch(`/api/draft-analysis?draftId=${draftId}`);
+        setLoading(true)
+        const response = await fetch(`/api/draft-analysis?draftId=${draftId}`)
         if (!response.ok) {
-          throw new Error('Failed to fetch draft analysis');
+          throw new Error('Failed to fetch draft analysis')
         }
-        const analysisData = await response.json();
-        setData(analysisData);
+        const analysisData = await response.json()
+        setData(analysisData)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setError(err instanceof Error ? err.message : 'An error occurred')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     if (draftId) {
-      fetchAnalysis();
+      fetchAnalysis()
     }
-  }, [draftId]);
+  }, [draftId])
 
   if (loading) {
     return (
@@ -299,7 +351,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
           <p className="mt-2 text-sm text-gray-600">Analyzing draft...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -307,7 +359,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       <div className="p-4 text-center">
         <p className="text-red-600">Error: {error}</p>
       </div>
-    );
+    )
   }
 
   if (!data) {
@@ -315,53 +367,65 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       <div className="p-4 text-center">
         <p className="text-slate-200">No draft analysis available</p>
       </div>
-    );
+    )
   }
 
   // Sorting logic for team grades
-  let sortedTeamGrades = [...(data.teamGrades || [])];
+  let sortedTeamGrades = [...(data.teamGrades || [])]
   if (sortMode === 'grade') {
-    sortedTeamGrades.sort((a, b) => (b.gradeScore || 0) - (a.gradeScore || 0));
+    sortedTeamGrades.sort((a, b) => (b.gradeScore || 0) - (a.gradeScore || 0))
   } else {
-    sortedTeamGrades.sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''));
+    sortedTeamGrades.sort((a, b) => (a.teamName || '').localeCompare(b.teamName || ''))
   }
 
   // After you have all teamGrades and before rendering, assign grades by percentile
   if (data && data.teamGrades && data.teamGrades.length > 0) {
-    const scores = data.teamGrades.map(t => t.gradeScore || 0).filter(score => !isNaN(score));
+    const scores = data.teamGrades.map((t) => t.gradeScore || 0).filter((score) => !isNaN(score))
     if (scores.length > 0) {
-      const sortedScores = [...scores].sort((a, b) => a - b);
+      const sortedScores = [...scores].sort((a, b) => a - b)
       function getPercentile(score: number) {
-        const below = sortedScores.filter(s => s < score).length;
-        return (below / sortedScores.length) * 100;
+        const below = sortedScores.filter((s) => s < score).length
+        return (below / sortedScores.length) * 100
       }
-      data.teamGrades = data.teamGrades.map(team => {
-        const percentile = getPercentile(team.gradeScore || 0);
-        let letter = 'D';
-        if (percentile >= 90) letter = 'A+';
-        else if (percentile >= 80) letter = 'A';
-        else if (percentile >= 70) letter = 'A-';
-        else if (percentile >= 60) letter = 'B+';
-        else if (percentile >= 50) letter = 'B';
-        else if (percentile >= 40) letter = 'B-';
-        else if (percentile >= 30) letter = 'C+';
-        else if (percentile >= 20) letter = 'C';
-        else if (percentile >= 10) letter = 'C-';
+      data.teamGrades = data.teamGrades.map((team) => {
+        const percentile = getPercentile(team.gradeScore || 0)
+        let letter = 'D'
+        if (percentile >= 90) letter = 'A+'
+        else if (percentile >= 80) letter = 'A'
+        else if (percentile >= 70) letter = 'A-'
+        else if (percentile >= 60) letter = 'B+'
+        else if (percentile >= 50) letter = 'B'
+        else if (percentile >= 40) letter = 'B-'
+        else if (percentile >= 30) letter = 'C+'
+        else if (percentile >= 20) letter = 'C'
+        else if (percentile >= 10) letter = 'C-'
         // else D
-        return { ...team, grade: letter };
-      });
+        return { ...team, grade: letter }
+      })
     }
   }
 
   // Pagination logic for picks
-  const totalPicks = data.picks.length;
-  const totalPages = Math.ceil(totalPicks / PICKS_PER_PAGE);
-  const pagedPicks = data.picks.slice((picksPage - 1) * PICKS_PER_PAGE, picksPage * PICKS_PER_PAGE);
+  const totalPicks = data.picks.length
+  const totalPages = Math.ceil(totalPicks / PICKS_PER_PAGE)
+  const pagedPicks = data.picks.slice((picksPage - 1) * PICKS_PER_PAGE, picksPage * PICKS_PER_PAGE)
 
   return (
-    <div className={isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none bg-slate-800 border border-slate-700 overflow-y-auto' : 'space-y-6'}>
+    <div
+      className={
+        isExpanded
+          ? 'fixed inset-0 z-50 m-0 rounded-none bg-slate-800 border border-slate-700 overflow-y-auto'
+          : 'space-y-6'
+      }
+    >
       {/* Draft Overview */}
-      <Card className={isExpanded ? 'bg-slate-800 border-slate-700 rounded-none' : 'bg-slate-800 border-slate-700'}>
+      <Card
+        className={
+          isExpanded
+            ? 'bg-slate-800 border-slate-700 rounded-none'
+            : 'bg-slate-800 border-slate-700'
+        }
+      >
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-slate-100 flex items-center gap-4">
             Draft Overview
@@ -436,7 +500,10 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
         <CardContent>
           <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-2">
             {sortedTeamGrades.map((team) => (
-              <div key={team.rosterId} className="p-3 sm:p-4 bg-slate-700 border border-slate-600 rounded-lg min-w-[280px] sm:min-w-0 flex-shrink-0">
+              <div
+                key={team.rosterId}
+                className="p-3 sm:p-4 bg-slate-700 border border-slate-600 rounded-lg min-w-[280px] sm:min-w-0 flex-shrink-0"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     <UserAvatar
@@ -448,7 +515,13 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     />
                     <h3 className="font-semibold text-slate-100">{team.teamName}</h3>
                   </div>
-                  <Badge variant="outline" className={(gradeColors[team.grade as keyof typeof gradeColors] || gradeColors['D']) + " text-sm px-2 py-1 border"}>
+                  <Badge
+                    variant="outline"
+                    className={
+                      (gradeColors[team.grade as keyof typeof gradeColors] || gradeColors['D']) +
+                      ' text-sm px-2 py-1 border'
+                    }
+                  >
                     {team.grade}
                   </Badge>
                 </div>
@@ -467,32 +540,48 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                   </div>
                   <div className="flex justify-between">
                     <span>Steals:</span>
-                    <span className="text-green-400">{team.steals || 0} ({team.stealRatio || 0}%)</span>
+                    <span className="text-green-400">
+                      {team.steals || 0} ({team.stealRatio || 0}%)
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Reaches:</span>
-                    <span className="text-red-400">{team.reaches || 0} ({team.reachRatio || 0}%)</span>
+                    <span className="text-red-400">
+                      {team.reaches || 0} ({team.reachRatio || 0}%)
+                    </span>
                   </div>
                   <div className="pt-1.5 sm:pt-2 border-t border-slate-600">
                     <p className="text-xs text-slate-400 mb-1">Tier Breakdown:</p>
                     <div className="flex flex-wrap gap-0.5 sm:gap-1">
                       {(team.tierBreakdown?.tier1 || 0) > 0 && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-green-400/20 text-green-400 border-green-400" >
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1.5 py-0.5 bg-green-400/20 text-green-400 border-green-400"
+                        >
                           T1: {team.tierBreakdown?.tier1 || 0}
                         </Badge>
                       )}
                       {(team.tierBreakdown?.tier2 || 0) > 0 && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-blue-400/20 text-blue-400 border-blue-400" >
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1.5 py-0.5 bg-blue-400/20 text-blue-400 border-blue-400"
+                        >
                           T2: {team.tierBreakdown?.tier2 || 0}
                         </Badge>
                       )}
                       {(team.tierBreakdown?.tier3 || 0) > 0 && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-yellow-400/20 text-yellow-400 border-yellow-400" >
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1.5 py-0.5 bg-yellow-400/20 text-yellow-400 border-yellow-400"
+                        >
                           T3: {team.tierBreakdown?.tier3 || 0}
                         </Badge>
                       )}
                       {(team.tierBreakdown?.tier4 || 0) > 0 && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 bg-slate-400/20 text-slate-400 border-slate-400" >
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1.5 py-0.5 bg-slate-400/20 text-slate-400 border-slate-400"
+                        >
                           T4: {team.tierBreakdown?.tier4 || 0}
                         </Badge>
                       )}
@@ -501,23 +590,32 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                   <div className="pt-1.5 sm:pt-2 border-t border-slate-600">
                     <p className="text-xs text-slate-400 mb-1">Position Breakdown:</p>
                     <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                      {Object.entries(team.positions || {}).map(([pos, count]) => (
-                        (count as number) > 0 && (
-                          <Badge key={pos} variant="outline" className={
-                            `text-xs px-1.5 py-0.5 border ${
-                              pos === 'QB' ? 'bg-blue-400/20 text-blue-400 border-blue-400' :
-                              pos === 'RB' ? 'bg-green-400/20 text-green-400 border-green-400' :
-                              pos === 'WR' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' :
-                              pos === 'TE' ? 'bg-purple-400/20 text-purple-400 border-purple-400' :
-                              pos === 'K' ? 'bg-pink-400/20 text-pink-400 border-pink-400' :
-                              pos === 'DEF' ? 'bg-slate-400/20 text-slate-400 border-slate-400' :
-                              'bg-slate-700/20 text-slate-400 border-slate-700'
-                            }`
-                          }>
-                            {pos}: {count}
-                          </Badge>
-                        )
-                      ))}
+                      {Object.entries(team.positions || {}).map(
+                        ([pos, count]) =>
+                          (count as number) > 0 && (
+                            <Badge
+                              key={pos}
+                              variant="outline"
+                              className={`text-xs px-1.5 py-0.5 border ${
+                                pos === 'QB'
+                                  ? 'bg-blue-400/20 text-blue-400 border-blue-400'
+                                  : pos === 'RB'
+                                    ? 'bg-green-400/20 text-green-400 border-green-400'
+                                    : pos === 'WR'
+                                      ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400'
+                                      : pos === 'TE'
+                                        ? 'bg-purple-400/20 text-purple-400 border-purple-400'
+                                        : pos === 'K'
+                                          ? 'bg-pink-400/20 text-pink-400 border-pink-400'
+                                          : pos === 'DEF'
+                                            ? 'bg-slate-400/20 text-slate-400 border-slate-400'
+                                            : 'bg-slate-700/20 text-slate-400 border-slate-700'
+                              }`}
+                            >
+                              {pos}: {count}
+                            </Badge>
+                          )
+                      )}
                     </div>
                   </div>
                 </div>
@@ -530,10 +628,30 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
       {/* Detailed Analysis */}
       <Tabs defaultValue="picks" className="w-full bg-slate-800 border border-slate-700 rounded-lg">
         <TabsList className="grid w-full grid-cols-4 bg-slate-800 border-b border-slate-700">
-          <TabsTrigger value="picks" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">All Picks</TabsTrigger>
-          <TabsTrigger value="trades" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">Traded Picks</TabsTrigger>
-          <TabsTrigger value="ownership" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">Pick Ownership</TabsTrigger>
-          <TabsTrigger value="charts" className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400">Charts</TabsTrigger>
+          <TabsTrigger
+            value="picks"
+            className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400"
+          >
+            All Picks
+          </TabsTrigger>
+          <TabsTrigger
+            value="trades"
+            className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400"
+          >
+            Traded Picks
+          </TabsTrigger>
+          <TabsTrigger
+            value="ownership"
+            className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400"
+          >
+            Pick Ownership
+          </TabsTrigger>
+          <TabsTrigger
+            value="charts"
+            className="text-slate-200 data-[state=active]:bg-slate-700 data-[state=active]:text-yellow-400"
+          >
+            Charts
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="picks" className="space-y-4">
@@ -555,7 +673,18 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                 </TableHeader>
                 <TableBody>
                   {pagedPicks.map((pick, index) => {
-                    const pickTeam = data.users?.find((u: any) => u?.user_id === data.rosters?.find((r: any) => r.roster_id === pick.roster_id)?.owner_id)?.metadata?.team_name || data.users?.find((u: any) => u?.user_id === data.rosters?.find((r: any) => r.roster_id === pick.roster_id)?.owner_id)?.display_name || `Team ${pick.roster_id}`;
+                    const pickTeam =
+                      data.users?.find(
+                        (u: any) =>
+                          u?.user_id ===
+                          data.rosters?.find((r: any) => r.roster_id === pick.roster_id)?.owner_id
+                      )?.metadata?.team_name ||
+                      data.users?.find(
+                        (u: any) =>
+                          u?.user_id ===
+                          data.rosters?.find((r: any) => r.roster_id === pick.roster_id)?.owner_id
+                      )?.display_name ||
+                      `Team ${pick.roster_id}`
                     return (
                       <TableRow key={index}>
                         <TableCell className="text-slate-200">{pick.round}</TableCell>
@@ -565,23 +694,38 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                         </TableCell>
                         <TableCell className="text-slate-200">{pick.metadata?.position}</TableCell>
                         <TableCell className="text-slate-200">{pick.metadata?.team}</TableCell>
-                        <TableCell className="text-slate-200">{data.users?.find((u: any) => u?.user_id === data.rosters?.find((r: any) => r.roster_id === pick.roster_id)?.owner_id)?.metadata?.team_name || data.users?.find((u: any) => u?.user_id === data.rosters?.find((r: any) => r.roster_id === pick.roster_id)?.owner_id)?.display_name || `Team ${pick.roster_id}`}</TableCell>
+                        <TableCell className="text-slate-200">
+                          {data.users?.find(
+                            (u: any) =>
+                              u?.user_id ===
+                              data.rosters?.find((r: any) => r.roster_id === pick.roster_id)
+                                ?.owner_id
+                          )?.metadata?.team_name ||
+                            data.users?.find(
+                              (u: any) =>
+                                u?.user_id ===
+                                data.rosters?.find((r: any) => r.roster_id === pick.roster_id)
+                                  ?.owner_id
+                            )?.display_name ||
+                            `Team ${pick.roster_id}`}
+                        </TableCell>
                       </TableRow>
-                    );
+                    )
                   })}
                 </TableBody>
               </Table>
               {/* Pagination Controls */}
               <div className="flex items-center justify-between mt-4">
                 <span className="text-slate-400 text-xs">
-                  Showing {((picksPage - 1) * PICKS_PER_PAGE) + 1} - {Math.min(picksPage * PICKS_PER_PAGE, totalPicks)} of {totalPicks} picks
+                  Showing {(picksPage - 1) * PICKS_PER_PAGE + 1} -{' '}
+                  {Math.min(picksPage * PICKS_PER_PAGE, totalPicks)} of {totalPicks} picks
                 </span>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     className="bg-slate-700 text-slate-200 border-slate-600 px-3 py-1 text-xs"
                     disabled={picksPage === 1}
-                    onClick={() => setPicksPage(p => Math.max(1, p - 1))}
+                    onClick={() => setPicksPage((p) => Math.max(1, p - 1))}
                   >
                     Prev
                   </Button>
@@ -589,7 +733,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     variant="outline"
                     className="bg-slate-700 text-slate-200 border-slate-600 px-3 py-1 text-xs"
                     disabled={picksPage === totalPages}
-                    onClick={() => setPicksPage(p => Math.min(totalPages, p + 1))}
+                    onClick={() => setPicksPage((p) => Math.min(totalPages, p + 1))}
                   >
                     Next
                   </Button>
@@ -645,7 +789,9 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     <TableRow>
                       <TableHead className="text-slate-300">Round</TableHead>
                       {Array.from({ length: data.draft.settings.teams }, (_, i) => (
-                        <TableHead key={i + 1} className="text-slate-300">Slot {i + 1}</TableHead>
+                        <TableHead key={i + 1} className="text-slate-300">
+                          Slot {i + 1}
+                        </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -677,7 +823,9 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <CardTitle className="text-slate-100 text-center flex-1">{currentChart.title}</CardTitle>
+              <CardTitle className="text-slate-100 text-center flex-1">
+                {currentChart.title}
+              </CardTitle>
               <button
                 onClick={() => setChartsIndex((chartsIndex + 1) % charts.length)}
                 className="p-1 text-slate-400 hover:text-yellow-400"
@@ -698,7 +846,10 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                 <ol className="list-decimal pl-6 text-slate-300">
                   {currentChart.getLeaderboard(data.teamGrades).map((row, i) => (
                     <li key={row.label} className="mb-1">
-                      <span className={`font-bold ${currentChart.leaderboardColor}`}>{row.value}</span> — {row.label}
+                      <span className={`font-bold ${currentChart.leaderboardColor}`}>
+                        {row.value}
+                      </span>{' '}
+                      — {row.label}
                       {currentChart.key === 'comprehensiveRankings' && (row as any).details && (
                         <div className="ml-4 mt-1 text-xs text-slate-400">
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -717,7 +868,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                   ))}
                 </ol>
               </div>
-              
+
               {/* Algorithm Explanation for Comprehensive Rankings */}
               {currentChart.key === 'comprehensiveRankings' && (
                 <div className="mt-6 p-4 bg-slate-700 rounded-lg">
@@ -726,13 +877,28 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     <div>
                       <h6 className="text-amber-300 font-semibold mb-2">Score Components:</h6>
                       <ul className="space-y-1">
-                        <li>• <span className="text-amber-400">25%</span> Average Pick Rank (lower = better)</li>
-                        <li>• <span className="text-amber-400">20%</span> Total Value</li>
-                        <li>• <span className="text-amber-400">20%</span> Value per Pick</li>
-                        <li>• <span className="text-amber-400">15%</span> Steal Ratio</li>
-                        <li>• <span className="text-amber-400">10%</span> Reach Penalty</li>
-                        <li>• <span className="text-amber-400">7%</span> Tier 1 Bonus</li>
-                        <li>• <span className="text-amber-400">3%</span> Tier 2 Bonus</li>
+                        <li>
+                          • <span className="text-amber-400">25%</span> Average Pick Rank (lower =
+                          better)
+                        </li>
+                        <li>
+                          • <span className="text-amber-400">20%</span> Total Value
+                        </li>
+                        <li>
+                          • <span className="text-amber-400">20%</span> Value per Pick
+                        </li>
+                        <li>
+                          • <span className="text-amber-400">15%</span> Steal Ratio
+                        </li>
+                        <li>
+                          • <span className="text-amber-400">10%</span> Reach Penalty
+                        </li>
+                        <li>
+                          • <span className="text-amber-400">7%</span> Tier 1 Bonus
+                        </li>
+                        <li>
+                          • <span className="text-amber-400">3%</span> Tier 2 Bonus
+                        </li>
                       </ul>
                     </div>
                     <div>
@@ -753,22 +919,32 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }
 
 // BarChart component (simple SVG bar chart)
-function BarChart({ data, barColor, labelColor, maxBarWidth = 300 }: { 
-  data: Array<{ label: string; value: number }>; 
-  barColor: string; 
-  labelColor: string; 
-  maxBarWidth?: number; 
+function BarChart({
+  data,
+  barColor,
+  labelColor,
+  maxBarWidth = 300,
+}: {
+  data: Array<{ label: string; value: number }>
+  barColor: string
+  labelColor: string
+  maxBarWidth?: number
 }) {
-  const maxValue = useMemo(() => Math.max(...data.map((d: { label: string; value: number }) => d.value)), [data]);
+  const maxValue = useMemo(
+    () => Math.max(...data.map((d: { label: string; value: number }) => d.value)),
+    [data]
+  )
   return (
     <div className="space-y-1">
       {data.map((d: { label: string; value: number }, i: number) => (
         <div key={d.label} className="flex items-center gap-2">
-          <span className="w-32 truncate text-xs" style={{ color: labelColor }}>{d.label}</span>
+          <span className="w-32 truncate text-xs" style={{ color: labelColor }}>
+            {d.label}
+          </span>
           <div className="flex-1 bg-slate-700 rounded h-4 relative">
             <div
               className="h-4 rounded"
@@ -778,10 +954,15 @@ function BarChart({ data, barColor, labelColor, maxBarWidth = 300 }: {
                 transition: 'width 0.3s',
               }}
             />
-            <span className="absolute left-2 top-0 text-xs text-slate-900 font-bold" style={{ lineHeight: '1rem' }}>{d.value}</span>
+            <span
+              className="absolute left-2 top-0 text-xs text-slate-900 font-bold"
+              style={{ lineHeight: '1rem' }}
+            >
+              {d.value}
+            </span>
           </div>
         </div>
       ))}
     </div>
-  );
-} 
+  )
+}

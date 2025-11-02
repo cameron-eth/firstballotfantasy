@@ -1,13 +1,13 @@
-"use client"
+'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { UserAvatar } from "@/components/user-avatar"
-import { TrendingUp, TrendingDown, Trophy, Users, Target, BarChart3 } from "lucide-react"
-import { TraderStats, GRADE_COLORS, formatValue } from "@/lib/trade-utils"
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { AreaChart, Area, XAxis, CartesianGrid } from 'recharts';
-import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { UserAvatar } from '@/components/user-avatar'
+import { TrendingUp, TrendingDown, Trophy, Users, Target, BarChart3 } from 'lucide-react'
+import { TraderStats, GRADE_COLORS, formatValue } from '@/lib/trade-utils'
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, CartesianGrid } from 'recharts'
+import React from 'react'
 
 interface TradeChartsProps {
   traderStats: TraderStats[]
@@ -28,24 +28,24 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
   }
 
   // Find max values for scaling
-  const maxValueGained = Math.max(...traderStats.map(t => t.totalValueGained))
-  const maxValueMoved = Math.max(...traderStats.map(t => t.totalValueMoved))
-  const maxTrades = Math.max(...traderStats.map(t => t.totalTrades))
+  const maxValueGained = Math.max(...traderStats.map((t) => t.totalValueGained))
+  const maxValueMoved = Math.max(...traderStats.map((t) => t.totalValueMoved))
+  const maxTrades = Math.max(...traderStats.map((t) => t.totalTrades))
 
   // Aggregate daily trade volume
   const dailyVolume = React.useMemo(() => {
-    const volumeMap: Record<string, number> = {};
-    if (!Array.isArray(tradeAnalysis)) return [];
-    tradeAnalysis.forEach(trade => {
-      const date = trade.date; // already formatted as locale date string
-      if (!volumeMap[date]) volumeMap[date] = 0;
-      volumeMap[date] += trade.totalTradeValue;
-    });
+    const volumeMap: Record<string, number> = {}
+    if (!Array.isArray(tradeAnalysis)) return []
+    tradeAnalysis.forEach((trade) => {
+      const date = trade.date // already formatted as locale date string
+      if (!volumeMap[date]) volumeMap[date] = 0
+      volumeMap[date] += trade.totalTradeValue
+    })
     // Convert to sorted array
     return Object.entries(volumeMap)
       .map(([date, value]) => ({ date, value }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [tradeAnalysis]);
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }, [tradeAnalysis])
 
   return (
     <div className="space-y-6">
@@ -63,14 +63,29 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
               <AreaChart data={dailyVolume} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00bcd4" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#00bcd4" stopOpacity={0.1}/>
+                    <stop offset="5%" stopColor="#00bcd4" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#00bcd4" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
-                <Tooltip formatter={(value: any) => [`${value} value`, 'Total Value']} labelFormatter={label => `Date: ${label}`}/>
-                <Area type="monotone" dataKey="value" stroke="#00bcd4" fillOpacity={1} fill="url(#colorVolume)" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={24}
+                />
+                <Tooltip
+                  formatter={(value: any) => [`${value} value`, 'Total Value']}
+                  labelFormatter={(label) => `Date: ${label}`}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#00bcd4"
+                  fillOpacity={1}
+                  fill="url(#colorVolume)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -87,14 +102,17 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
         <CardContent>
           <div className="space-y-4">
             {traderStats.map((trader, index) => {
-              const team = teams.find(t => t.rosterId === trader.rosterId)
-              const percentage = maxValueGained > 0 ? (trader.totalValueGained / maxValueGained) * 100 : 0
+              const team = teams.find((t) => t.rosterId === trader.rosterId)
+              const percentage =
+                maxValueGained > 0 ? (trader.totalValueGained / maxValueGained) * 100 : 0
               const isPositive = trader.totalValueGained >= 0
-              
+
               return (
                 <div key={trader.rosterId} className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
+                    <div className="text-lg font-bold text-purple-400 min-w-[2rem]">
+                      #{index + 1}
+                    </div>
                     <UserAvatar
                       avatarId={team?.ownerAvatar}
                       displayName={trader.ownerName}
@@ -107,31 +125,36 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                       <div className="text-sm text-gray-400 truncate">{trader.ownerName}</div>
                     </div>
                   </div>
-                  
-                                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
-                     <div className="text-right min-w-0">
-                       <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                         {formatValue(trader.totalValueGained)}
-                       </div>
-                       <div className="text-xs text-gray-400">{trader.totalTrades} trades</div>
-                     </div>
-                     
-                     <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                       <div 
-                         className={`h-full rounded-full transition-all duration-500 ${
-                           isPositive ? 'bg-green-400' : 'bg-red-400'
-                         }`}
-                         style={{ 
-                           width: `${Math.abs(percentage)}%`,
-                           maxWidth: '100%'
-                         }}
-                       />
-                     </div>
-                     
-                     <Badge variant="outline" className={`text-xs px-2 py-1 ${GRADE_COLORS[trader.grade as keyof typeof GRADE_COLORS]}`}>
-                       {trader.grade}
-                     </Badge>
-                   </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
+                    <div className="text-right min-w-0">
+                      <div
+                        className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}
+                      >
+                        {formatValue(trader.totalValueGained)}
+                      </div>
+                      <div className="text-xs text-gray-400">{trader.totalTrades} trades</div>
+                    </div>
+
+                    <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isPositive ? 'bg-green-400' : 'bg-red-400'
+                        }`}
+                        style={{
+                          width: `${Math.abs(percentage)}%`,
+                          maxWidth: '100%',
+                        }}
+                      />
+                    </div>
+
+                    <Badge
+                      variant="outline"
+                      className={`text-xs px-2 py-1 ${GRADE_COLORS[trader.grade as keyof typeof GRADE_COLORS]}`}
+                    >
+                      {trader.grade}
+                    </Badge>
+                  </div>
                 </div>
               )
             })}
@@ -150,13 +173,16 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
         <CardContent>
           <div className="space-y-4">
             {traderStats.map((trader, index) => {
-              const team = teams.find(t => t.rosterId === trader.rosterId)
-              const percentage = maxValueMoved > 0 ? (trader.totalValueMoved / maxValueMoved) * 100 : 0
-              
+              const team = teams.find((t) => t.rosterId === trader.rosterId)
+              const percentage =
+                maxValueMoved > 0 ? (trader.totalValueMoved / maxValueMoved) * 100 : 0
+
               return (
                 <div key={trader.rosterId} className="flex items-center space-x-4">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
-                    <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
+                    <div className="text-lg font-bold text-purple-400 min-w-[2rem]">
+                      #{index + 1}
+                    </div>
                     <UserAvatar
                       avatarId={team?.ownerAvatar}
                       displayName={trader.ownerName}
@@ -169,29 +195,29 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                       <div className="text-sm text-gray-400 truncate">{trader.ownerName}</div>
                     </div>
                   </div>
-                  
-                                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
-                     <div className="text-right min-w-0">
-                       <div className="font-semibold text-blue-400">
-                         {Math.round(trader.totalValueMoved)}
-                       </div>
-                       <div className="text-xs text-gray-400">value moved</div>
-                     </div>
-                     
-                     <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                       <div 
-                         className="h-full bg-blue-400 rounded-full transition-all duration-500"
-                         style={{ 
-                           width: `${percentage}%`,
-                           maxWidth: '100%'
-                         }}
-                       />
-                     </div>
-                     
-                     <div className="text-xs text-gray-400 min-w-[3rem]">
-                       {trader.totalTrades} trades
-                     </div>
-                   </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
+                    <div className="text-right min-w-0">
+                      <div className="font-semibold text-blue-400">
+                        {Math.round(trader.totalValueMoved)}
+                      </div>
+                      <div className="text-xs text-gray-400">value moved</div>
+                    </div>
+
+                    <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-400 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${percentage}%`,
+                          maxWidth: '100%',
+                        }}
+                      />
+                    </div>
+
+                    <div className="text-xs text-gray-400 min-w-[3rem]">
+                      {trader.totalTrades} trades
+                    </div>
+                  </div>
                 </div>
               )
             })}
@@ -210,18 +236,22 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
         <CardContent>
           <div className="space-y-4">
             {traderStats
-              .filter(trader => trader.totalTrades > 0)
+              .filter((trader) => trader.totalTrades > 0)
               .sort((a, b) => b.avgValuePerTrade - a.avgValuePerTrade)
               .map((trader, index) => {
-                const team = teams.find(t => t.rosterId === trader.rosterId)
-                const maxAvg = Math.max(...traderStats.filter(t => t.totalTrades > 0).map(t => t.avgValuePerTrade))
+                const team = teams.find((t) => t.rosterId === trader.rosterId)
+                const maxAvg = Math.max(
+                  ...traderStats.filter((t) => t.totalTrades > 0).map((t) => t.avgValuePerTrade)
+                )
                 const percentage = maxAvg > 0 ? (trader.avgValuePerTrade / maxAvg) * 100 : 0
                 const isPositive = trader.avgValuePerTrade >= 0
-                
+
                 return (
                   <div key={trader.rosterId} className="flex items-center space-x-4">
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
+                      <div className="text-lg font-bold text-purple-400 min-w-[2rem]">
+                        #{index + 1}
+                      </div>
                       <UserAvatar
                         avatarId={team?.ownerAvatar}
                         displayName={trader.ownerName}
@@ -230,35 +260,39 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                         className="flex-shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-100 truncate">{trader.teamName}</div>
+                        <div className="font-semibold text-slate-100 truncate">
+                          {trader.teamName}
+                        </div>
                         <div className="text-sm text-gray-400 truncate">{trader.ownerName}</div>
                       </div>
                     </div>
-                    
-                                         <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
-                       <div className="text-right min-w-0">
-                         <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                           {formatValue(trader.avgValuePerTrade)}
-                         </div>
-                         <div className="text-xs text-gray-400">per trade</div>
-                       </div>
-                       
-                       <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                         <div 
-                           className={`h-full rounded-full transition-all duration-500 ${
-                             isPositive ? 'bg-green-400' : 'bg-red-400'
-                           }`}
-                           style={{ 
-                             width: `${Math.abs(percentage)}%`,
-                             maxWidth: '100%'
-                           }}
-                         />
-                       </div>
-                       
-                       <div className="text-xs text-gray-400 min-w-[3rem]">
-                         {trader.totalTrades} trades
-                       </div>
-                     </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
+                      <div className="text-right min-w-0">
+                        <div
+                          className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}
+                        >
+                          {formatValue(trader.avgValuePerTrade)}
+                        </div>
+                        <div className="text-xs text-gray-400">per trade</div>
+                      </div>
+
+                      <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isPositive ? 'bg-green-400' : 'bg-red-400'
+                          }`}
+                          style={{
+                            width: `${Math.abs(percentage)}%`,
+                            maxWidth: '100%',
+                          }}
+                        />
+                      </div>
+
+                      <div className="text-xs text-gray-400 min-w-[3rem]">
+                        {trader.totalTrades} trades
+                      </div>
+                    </div>
                   </div>
                 )
               })}
@@ -279,13 +313,15 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
             {traderStats
               .sort((a, b) => b.totalTrades - a.totalTrades)
               .map((trader, index) => {
-                const team = teams.find(t => t.rosterId === trader.rosterId)
+                const team = teams.find((t) => t.rosterId === trader.rosterId)
                 const percentage = maxTrades > 0 ? (trader.totalTrades / maxTrades) * 100 : 0
-                
+
                 return (
                   <div key={trader.rosterId} className="flex items-center space-x-4">
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="text-lg font-bold text-purple-400 min-w-[2rem]">#{index + 1}</div>
+                      <div className="text-lg font-bold text-purple-400 min-w-[2rem]">
+                        #{index + 1}
+                      </div>
                       <UserAvatar
                         avatarId={team?.ownerAvatar}
                         displayName={trader.ownerName}
@@ -294,29 +330,29 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
                         className="flex-shrink-0"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-slate-100 truncate">{trader.teamName}</div>
+                        <div className="font-semibold text-slate-100 truncate">
+                          {trader.teamName}
+                        </div>
                         <div className="text-sm text-gray-400 truncate">{trader.ownerName}</div>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 min-w-0">
                       <div className="text-right min-w-0">
-                        <div className="font-semibold text-purple-400">
-                          {trader.totalTrades}
-                        </div>
+                        <div className="font-semibold text-purple-400">{trader.totalTrades}</div>
                         <div className="text-xs text-gray-400">trades</div>
                       </div>
-                      
+
                       <div className="w-full sm:w-32 h-6 bg-slate-700 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-purple-400 rounded-full transition-all duration-500"
-                          style={{ 
+                          style={{
                             width: `${percentage}%`,
-                            maxWidth: '100%'
+                            maxWidth: '100%',
                           }}
                         />
                       </div>
-                      
+
                       <div className="text-xs text-gray-400 min-w-[4rem]">
                         {formatValue(trader.totalValueGained)}
                       </div>
@@ -329,4 +365,4 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
       </Card>
     </div>
   )
-} 
+}

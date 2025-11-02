@@ -6,7 +6,7 @@ export const cacheUtils = {
     try {
       const cached = localStorage.getItem(key)
       if (!cached) return null
-      
+
       const data = JSON.parse(cached)
       return data
     } catch (error) {
@@ -30,7 +30,7 @@ export const cacheUtils = {
       const item = {
         data,
         timestamp: Date.now(),
-        ttl
+        ttl,
       }
       localStorage.setItem(key, JSON.stringify(item))
     } catch (error) {
@@ -43,13 +43,13 @@ export const cacheUtils = {
     try {
       const item = localStorage.getItem(key)
       if (!item) return null
-      
+
       const parsed = JSON.parse(item)
       if (parsed.timestamp && Date.now() - parsed.timestamp > parsed.ttl) {
         localStorage.removeItem(key)
         return null
       }
-      
+
       return parsed.data
     } catch (error) {
       console.error('Error reading from cache with expiry:', error)
@@ -105,8 +105,8 @@ export const cacheUtils = {
     try {
       const keys = Object.keys(localStorage)
       let cleanedCount = 0
-      
-      keys.forEach(key => {
+
+      keys.forEach((key) => {
         if (key.startsWith('firstballot_') || key === 'cachedLeagueId') {
           try {
             const item = localStorage.getItem(key)
@@ -124,7 +124,7 @@ export const cacheUtils = {
           }
         }
       })
-      
+
       return cleanedCount
     } catch (error) {
       console.error('Error cleaning cache:', error)
@@ -138,6 +138,6 @@ export const cacheUtils = {
     SLEEPER_USER: 'firstballot_sleeper_user',
     SLEEPER_LEAGUES: 'firstballot_sleeper_leagues',
     CACHE_EXPIRY: 'firstballot_cache_expiry',
-    LEAGUE_ID: 'cachedLeagueId'
-  }
-} 
+    LEAGUE_ID: 'cachedLeagueId',
+  },
+}

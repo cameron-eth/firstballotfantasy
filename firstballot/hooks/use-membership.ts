@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth';
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth'
 
 export interface MembershipStatus {
-  isMember: boolean;
-  loading: boolean;
-  error: string | null;
+  isMember: boolean
+  loading: boolean
+  error: string | null
 }
 
 export function useMembership(): MembershipStatus {
-  const { user } = useAuth();
-  const [isMember, setIsMember] = useState(true); // Always true - bypassing checks
-  const [loading, setLoading] = useState(false); // No loading needed
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth()
+  const [isMember, setIsMember] = useState(true) // Always true - bypassing checks
+  const [loading, setLoading] = useState(false) // No loading needed
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // TEMPORARILY BYPASSING MEMBERSHIP CHECKS - ALL USERS ARE TREATED AS MEMBERS
-    setIsMember(true);
-    setLoading(false);
-    setError(null);
-    
+    setIsMember(true)
+    setLoading(false)
+    setError(null)
+
     /* ORIGINAL CODE - COMMENTED OUT FOR BYPASS
     if (!user) {
       setIsMember(false);
@@ -51,22 +51,22 @@ export function useMembership(): MembershipStatus {
 
     checkMembership();
     */
-  }, [user]);
+  }, [user])
 
-  return { isMember, loading, error };
+  return { isMember, loading, error }
 }
 
 export function useMembershipCheck(): {
-  canAccessLeague: (leagueIndex: number) => boolean;
-  isMember: boolean;
-  loading: boolean;
+  canAccessLeague: (leagueIndex: number) => boolean
+  isMember: boolean
+  loading: boolean
 } {
-  const { isMember, loading } = useMembership();
+  const { isMember, loading } = useMembership()
 
   const canAccessLeague = (leagueIndex: number): boolean => {
     // TEMPORARILY BYPASSING ACCESS CHECKS - ALL USERS CAN ACCESS ALL LEAGUES
-    return true;
-    
+    return true
+
     /* ORIGINAL CODE - COMMENTED OUT FOR BYPASS
     // Free users can only access the first league (index 0)
     // Members can access all leagues
@@ -74,11 +74,11 @@ export function useMembershipCheck(): {
     if (leagueIndex === 0) return true;
     return false;
     */
-  };
+  }
 
   return {
     canAccessLeague,
     isMember,
-    loading
-  };
-} 
+    loading,
+  }
+}

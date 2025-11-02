@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Shield, Lock, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Shield, Lock, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -19,7 +19,7 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login")
+      router.push('/login')
     }
   }, [user, loading, router])
 
@@ -32,7 +32,9 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
               <div className="flex items-center justify-center space-x-2">
                 <Shield className="h-8 w-8 text-yellow-400" />
                 <div>
-                  <h1 className="text-xl font-bold text-green-400 font-mono">FIRST BALLOT FANTASY</h1>
+                  <h1 className="text-xl font-bold text-green-400 font-mono">
+                    FIRST BALLOT FANTASY
+                  </h1>
                   <p className="text-xs text-gray-400">VERIFYING ACCESS</p>
                 </div>
               </div>
@@ -71,10 +73,11 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
                   You must be signed in to access this feature.
                 </p>
                 <p className="text-gray-400 text-sm">
-                  League Buddy and Draft Buddy require authentication to protect your data and provide personalized analytics.
+                  League Buddy and Draft Buddy require authentication to protect your data and
+                  provide personalized analytics.
                 </p>
               </div>
-              
+
               <div className="space-y-3">
                 <Link href="/login">
                   <Button className="w-full bg-yellow-400 text-slate-900 hover:bg-yellow-300 font-mono font-bold">
@@ -82,15 +85,18 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
                     SIGN IN TO CONTINUE
                   </Button>
                 </Link>
-                
+
                 <Link href="/">
-                  <Button variant="outline" className="w-full border-slate-600 text-gray-300 hover:bg-slate-700 font-mono">
+                  <Button
+                    variant="outline"
+                    className="w-full border-slate-600 text-gray-300 hover:bg-slate-700 font-mono"
+                  >
                     RETURN TO HOME
                   </Button>
                 </Link>
               </div>
             </CardContent>
-            
+
             <div className="px-6 pb-6">
               <div className="gradient-border">
                 <div className="gradient-border-content text-center">
@@ -107,4 +113,4 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
   }
 
   return <>{children}</>
-} 
+}

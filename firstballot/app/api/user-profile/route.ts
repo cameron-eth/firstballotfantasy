@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     // Get the userId and JWT token from headers (set by middleware after auth verification)
     const userId = request.headers.get('x-user-id')
     const userJwt = request.headers.get('x-user-jwt')
-    
+
     if (!userId || !userJwt) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
     // Get user profile by auth_id using authenticated client (respects RLS)
     const { data, error } = await userSupabase
       .from('user_profiles')
-      .select('id, auth_id, username, email, sleeper_username, sleeper_id, membership_status, created_at, updated_at')
+      .select(
+        'id, auth_id, username, email, sleeper_username, sleeper_id, membership_status, created_at, updated_at'
+      )
       .eq('auth_id', userId)
       .single()
 
@@ -35,22 +37,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { email, username } = await request.json()
-    const authId = request.headers.get('x-user-id');
-    const userJwt = request.headers.get('x-user-jwt');
+    const authId = request.headers.get('x-user-id')
+    const userJwt = request.headers.get('x-user-jwt')
 
     if (!authId || !email || !username) {
-      return NextResponse.json({ error: 'Auth ID, email, and username are required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Auth ID, email, and username are required' },
+        { status: 400 }
+      )
     }
 
     // Try using the user's JWT token for profile creation
-    let serviceClient;
+    let serviceClient
     if (userJwt) {
-      serviceClient = createAuthenticatedSupabaseClient(userJwt);
+      serviceClient = createAuthenticatedSupabaseClient(userJwt)
     } else {
       serviceClient = createClient(
-        "https://aanoqbjauukcczrlnxka.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhbm9xYmphdXVrY2N6cmxueGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MzM1NjQsImV4cCI6MjA1NjEwOTU2NH0.5QMnDzOI-y_XiIRGTmnLfzZ6i8vDbBXfO5sHuxqd0EU"
-      );
+        'https://aanoqbjauukcczrlnxka.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhbm9xYmphdXVrY2N6cmxueGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MzM1NjQsImV4cCI6MjA1NjEwOTU2NH0.5QMnDzOI-y_XiIRGTmnLfzZ6i8vDbBXfO5sHuxqd0EU'
+      )
     }
 
     // Check if profile already exists
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
         sleeper_username: null,
         favorite_team: null,
         sleeper_league_id: null,
-        membership_status: false
+        membership_status: false,
       })
       .select()
       .single()
@@ -87,14 +92,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}
 
 export async function PATCH(request: NextRequest) {
   try {
     // Get the userId and JWT token from headers (set by middleware after auth verification)
     const userId = request.headers.get('x-user-id')
     const userJwt = request.headers.get('x-user-jwt')
-    
+
     if (!userId || !userJwt) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
@@ -103,7 +108,7 @@ export async function PATCH(request: NextRequest) {
     const userSupabase = createAuthenticatedSupabaseClient(userJwt)
 
     const { sleeper_username } = await request.json()
-    
+
     if (!sleeper_username) {
       return NextResponse.json({ error: 'sleeper_username is required' }, { status: 400 })
     }
@@ -124,4 +129,4 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

@@ -7,6 +7,7 @@ FirstBallotFF is a comprehensive fantasy football analytics platform built with 
 ## Getting Started
 
 ### Initial Setup
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/cameron-eth/firstballotfantasy.git
@@ -22,6 +23,7 @@ bun dev
 ```
 
 ### Git Workflow for Changes
+
 ```bash
 # 1. Create feature branch from target branch (main)
 git checkout main
@@ -39,6 +41,7 @@ git push origin feature/your-feature-name
 ```
 
 ### Additional Commands (Optional)
+
 ```bash
 # Build for production
 bun run build
@@ -53,6 +56,7 @@ bun run type-check
 ## Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
@@ -63,6 +67,7 @@ bun run type-check
 - **State Management**: React Hooks (useState, useContext)
 
 ### Backend & Services
+
 - **Runtime**: Bun (development)
 - **Database**: Supabase (PostgreSQL)
 - **Authentication**: Supabase Auth
@@ -72,6 +77,7 @@ bun run type-check
 - **Deployment**: Vercel
 
 ### Key Dependencies
+
 ```json
 {
   "next": "15.2.4",
@@ -126,9 +132,11 @@ firstballotfantasy/firstballot/
 ## Authentication Flow
 
 ### Overview
+
 The app uses **Supabase Auth** with email/password authentication and custom user profiles.
 
 ### Auth Architecture
+
 ```typescript
 // 1. Auth Context Provider (lib/auth.tsx)
 const AuthContext = createContext<AuthContextType>()
@@ -144,12 +152,14 @@ export function useMembership(): MembershipStatus
 ```
 
 ### Authentication Process
+
 1. **Sign Up**: User creates account → Supabase Auth → User Profile created
 2. **Sign In**: Email/password → Supabase session → Auth context updated
 3. **Session Management**: Auto-refresh tokens, persistent sessions
 4. **Profile Sync**: Auth ID linked to user profile in database
 
 ### Protected Routes
+
 ```typescript
 // Use AuthGuard component for protected pages
 <AuthGuard fallback={<LoginPrompt />}>
@@ -164,33 +174,35 @@ if (!user) return <LoginPage />
 ## Subscription & Billing
 
 ### Stripe Integration
+
 - **Payment Links**: Personalized checkout URLs
 - **Webhooks**: Automatic membership updates
 - **Subscription Management**: Self-service portal
 
 ### Membership Tiers
+
 - **Free**: 1 league connection, basic features
 - **Pro Monthly**: $7/month, unlimited access
 - **Pro Yearly**: $15/year, all features + 2 months free
 
 ### Implementation
+
 ```typescript
 // Check membership status
 const { isMember, canAccessLeague } = useMembershipCheck()
 
 // Create payment link
-const paymentLink = await StripePaymentLinks.createPersonalizedLink(
-  user.email, 
-  'monthly'
-)
+const paymentLink = await StripePaymentLinks.createPersonalizedLink(user.email, 'monthly')
 ```
 
 ## Core Features
 
 ### 1. League Buddy (`/league-buddy`)
+
 **Main league analysis and management tool**
 
 **Key Components:**
+
 - `LeagueBuddy.tsx` - Main component (1,628 lines)
 - League overview dashboard
 - Team rankings with tier system (Powerhouse/Contender/Pretender/Rebuilder)
@@ -199,14 +211,17 @@ const paymentLink = await StripePaymentLinks.createPersonalizedLink(
 - Position-based rankings
 
 **Data Sources:**
+
 - Sleeper API for league/roster data
 - Custom player rankings
 - Real-time transaction data
 
 ### 2. Draft Buddy (`/draft-buddy`)
+
 **Live draft analysis and recommendations**
 
 **Features:**
+
 - Real-time draft board
 - Player tier analysis
 - Pick value calculations
@@ -214,9 +229,11 @@ const paymentLink = await StripePaymentLinks.createPersonalizedLink(
 - Team roster building
 
 ### 3. Trade Market (`/trade-market`)
+
 **Advanced trade evaluation and analysis**
 
 **Features:**
+
 - Player value calculations
 - Trade analysis with win/loss tracking
 - Market trends
@@ -224,9 +241,11 @@ const paymentLink = await StripePaymentLinks.createPersonalizedLink(
 - Historical trade data
 
 ### 4. Scouting Portal (`/scouting-portal`)
+
 **Player research and prospect analysis**
 
 **Features:**
+
 - Prospect database
 - Player comparisons
 - Draft board integration
@@ -235,6 +254,7 @@ const paymentLink = await StripePaymentLinks.createPersonalizedLink(
 ## Data Flow & APIs
 
 ### External APIs
+
 ```typescript
 // Sleeper API Integration (lib/sleeper-api.ts)
 class SleeperAPI {
@@ -246,6 +266,7 @@ class SleeperAPI {
 ```
 
 ### Caching Strategy
+
 ```typescript
 // Multi-layer caching (lib/cache-utils.ts)
 const cacheUtils = {
@@ -259,6 +280,7 @@ export const revalidate = 300 // 5 minutes
 ```
 
 ### Database Schema (Supabase)
+
 ```sql
 -- Core tables
 user_profiles (id, auth_id, email, username, membership_status)
@@ -269,11 +291,13 @@ player_rankings (player_name, rank, position, tier)
 ## UI/UX Patterns
 
 ### Design System
+
 - **Colors**: Slate backgrounds, Yellow accents, Green success, Red danger
 - **Typography**: Mono font for headers, Sans for body
 - **Components**: Consistent card layouts, badge systems, hover effects
 
 ### Key UI Components
+
 ```typescript
 // Reusable patterns
 <Card className="bg-slate-800 border-slate-700">
@@ -282,6 +306,7 @@ player_rankings (player_name, rank, position, tier)
 ```
 
 ### Responsive Design
+
 - Mobile-first approach
 - Collapsible navigation
 - Touch-friendly controls
@@ -290,6 +315,7 @@ player_rankings (player_name, rank, position, tier)
 ## Development Workflow
 
 ### Environment Variables
+
 ```bash
 # Required environment variables
 SUPABASE_URL=your_supabase_url
@@ -301,6 +327,7 @@ NEXT_PUBLIC_BASE_URL=your_app_url
 ```
 
 ### Code Standards
+
 - **TypeScript**: Strict mode enabled
 - **ESLint**: Configured for Next.js
 - **Prettier**: Auto-formatting
@@ -309,12 +336,14 @@ NEXT_PUBLIC_BASE_URL=your_app_url
 ## Testing & Debugging
 
 ### Development Tools
+
 - **React DevTools**: Component inspection
 - **Supabase Dashboard**: Database management
 - **Stripe Dashboard**: Payment testing
 - **Vercel Analytics**: Performance monitoring
 
 ### Common Debug Patterns
+
 ```typescript
 // Logging with context
 console.log('Debug info:', { user, league, data })
@@ -331,12 +360,14 @@ try {
 ## Deployment
 
 ### Vercel Deployment
+
 - **Platform**: Vercel (recommended)
 - **Build Command**: `bun run build`
 - **Environment**: Production variables required
 - **Domain**: Custom domain configured
 
 ### Performance Optimizations
+
 - **Image Optimization**: Next.js Image component
 - **Code Splitting**: Automatic route-based splitting
 - **Caching**: Multi-layer caching strategy
@@ -345,6 +376,7 @@ try {
 ## Key Utilities & Helpers
 
 ### Cache Management
+
 ```typescript
 // lib/cache-utils.ts
 export const cacheUtils = {
@@ -355,6 +387,7 @@ export const cacheUtils = {
 ```
 
 ### API Utilities
+
 ```typescript
 // lib/nextjs-cache.ts
 export const sleeperApi = {
@@ -364,6 +397,7 @@ export const sleeperApi = {
 ```
 
 ### Type Definitions
+
 ```typescript
 // Key interfaces
 interface TeamData {
@@ -386,6 +420,7 @@ interface PlayerData {
 ## Common Issues & Solutions
 
 ### 1. Supabase Connection Issues
+
 ```typescript
 // Check environment variables
 if (!process.env.SUPABASE_URL) {
@@ -394,6 +429,7 @@ if (!process.env.SUPABASE_URL) {
 ```
 
 ### 2. Stripe Webhook Verification
+
 ```typescript
 // Verify webhook signature
 const sig = headers['stripe-signature']
@@ -401,6 +437,7 @@ const event = stripe.webhooks.constructEvent(body, sig, secret)
 ```
 
 ### 3. Sleeper API Rate Limits
+
 ```typescript
 // Implement caching and rate limiting
 const cachedData = await cacheUtils.get(`sleeper:${leagueId}`)
@@ -410,6 +447,7 @@ if (cachedData) return cachedData
 ## Additional Resources
 
 ### Documentation Links
+
 - [Next.js 15 Docs](https://nextjs.org/docs)
 - [Supabase Docs](https://supabase.com/docs)
 - [Stripe API](https://stripe.com/docs/api)
@@ -417,6 +455,7 @@ if (cachedData) return cachedData
 - [Tailwind CSS](https://tailwindcss.com/docs)
 
 ### Development Tools
+
 - **VS Code**: Recommended editor
 - **Extensions**: ES7+ React/Redux/React-Native snippets, Tailwind CSS IntelliSense
 - **Database**: Supabase Studio
@@ -430,4 +469,3 @@ if (cachedData) return cachedData
 2. **Testing**: Test major features before deployment
 3. **Documentation**: Update docs for significant changes
 4. **Performance**: Monitor bundle size and performance metrics
-

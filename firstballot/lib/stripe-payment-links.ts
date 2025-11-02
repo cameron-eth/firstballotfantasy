@@ -4,28 +4,28 @@
 export const PAYMENT_LINKS = {
   monthly: 'https://buy.stripe.com/test_dRm3cvdadbi5fdV3oZeAg00',
   yearly: 'https://buy.stripe.com/test_9B600jdaddqdfdV3oZeAg01',
-} as const;
+} as const
 
 export class StripePaymentLinks {
   static getMonthlyLink(): string {
-    return PAYMENT_LINKS.monthly;
+    return PAYMENT_LINKS.monthly
   }
 
   static getYearlyLink(): string {
-    return PAYMENT_LINKS.yearly;
+    return PAYMENT_LINKS.yearly
   }
 
   static getAllLinks() {
-    return PAYMENT_LINKS;
+    return PAYMENT_LINKS
   }
 
   /**
    * Validate email format
    */
   static isValidEmail(email: string): boolean {
-    if (!email || typeof email !== 'string') return false;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
+    if (!email || typeof email !== 'string') return false
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email.trim())
   }
 
   /**
@@ -36,18 +36,18 @@ export class StripePaymentLinks {
    */
   static getPersonalizedLink(baseLink: string, email: string): string {
     if (!email || !this.isValidEmail(email)) {
-      console.warn('Invalid email provided for payment link:', email);
-      return baseLink;
+      console.warn('Invalid email provided for payment link:', email)
+      return baseLink
     }
-    
+
     try {
-      const sanitizedEmail = email.trim().toLowerCase();
-      const url = new URL(baseLink);
-      url.searchParams.set('prefilled_email', sanitizedEmail);
-      return url.toString();
+      const sanitizedEmail = email.trim().toLowerCase()
+      const url = new URL(baseLink)
+      url.searchParams.set('prefilled_email', sanitizedEmail)
+      return url.toString()
     } catch (error) {
-      console.error('Error creating personalized payment link:', error);
-      return baseLink;
+      console.error('Error creating personalized payment link:', error)
+      return baseLink
     }
   }
 
@@ -55,13 +55,13 @@ export class StripePaymentLinks {
    * Get monthly payment link with user's email pre-filled
    */
   static getMonthlyLinkWithEmail(email: string): string {
-    return this.getPersonalizedLink(PAYMENT_LINKS.monthly, email);
+    return this.getPersonalizedLink(PAYMENT_LINKS.monthly, email)
   }
 
   /**
    * Get yearly payment link with user's email pre-filled
    */
   static getYearlyLinkWithEmail(email: string): string {
-    return this.getPersonalizedLink(PAYMENT_LINKS.yearly, email);
+    return this.getPersonalizedLink(PAYMENT_LINKS.yearly, email)
   }
-} 
+}

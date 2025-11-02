@@ -1,70 +1,72 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase-server';
-import { sleeperApi } from '@/lib/nextjs-cache';
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseServer } from '@/lib/supabase-server'
+import { sleeperApi } from '@/lib/nextjs-cache'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const draftId = searchParams.get('draftId');
-    
+    const { searchParams } = new URL(request.url)
+    const draftId = searchParams.get('draftId')
+
     if (!draftId) {
-      return NextResponse.json({ error: 'Draft ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Draft ID is required' }, { status: 400 })
     }
 
     // Fetch draft data with Next.js caching
-    const draft = await sleeperApi.getDraft(draftId);
+    const draft = await sleeperApi.getDraft(draftId)
 
     // Fetch picks with Next.js caching
-    const picks = await sleeperApi.getDraftPicks(draftId);
+    const picks = await sleeperApi.getDraftPicks(draftId)
 
     // Fetch traded picks with Next.js caching
-    const tradedPicks = await sleeperApi.getDraftTradedPicks(draftId);
+    const tradedPicks = await sleeperApi.getDraftTradedPicks(draftId)
 
-    // Fetch league rosters and users with Next.js caching
+    // Fetch league rosters and users - Users without cache to get fresh team names
     const [rosters, users] = await Promise.all([
       sleeperApi.getLeagueRosters(draft.league_id),
-      sleeperApi.getLeagueUsers(draft.league_id)
-    ]);
+      fetch(`https://api.sleeper.app/v1/league/${draft.league_id}/users`, {
+        cache: 'no-store',
+      }).then((r) => r.json()),
+    ])
 
     // Fetch rankings for grading
     const { data: rankingsData, error: rankingsError } = await supabaseServer
       .from('dynasty_sf_top_150')
       .select('*')
-      .order('RK', { ascending: true });
+      .order('RK', { ascending: true })
 
     if (rankingsError) {
-      throw rankingsError;
+      throw rankingsError
     }
 
     // Create player rankings lookup and tier mapping
     const playerRankings = rankingsData.reduce((acc: any, player: any) => {
-      const playerName = player['PLAYER NAME'];
+      const playerName = player['PLAYER NAME']
       if (playerName) {
         // Determine tier based on rank
-        let tier = 4; // Default tier
-        if (player.RK <= 12) tier = 1;
-        else if (player.RK <= 24) tier = 2;
-        else if (player.RK <= 48) tier = 3;
-        
+        let tier = 4 // Default tier
+        if (player.RK <= 12) tier = 1
+        else if (player.RK <= 24) tier = 2
+        else if (player.RK <= 48) tier = 3
+
         acc[playerName] = {
           rank: player.RK,
           position: player.POS,
           team: player.TEAM,
           name: playerName,
           tier: tier,
-        };
+        }
       }
-      return acc;
-    }, {});
+      return acc
+    }, {})
 
     // Build pick ownership map
-    const pickOwnership: { [round: number]: { [slot: number]: number } } = {};
-    
+    const pickOwnership: { [round: number]: { [slot: number]: number } } = {}
+
     // Initialize with default ownership
     for (let round = 1; round <= draft.settings.rounds; round++) {
-      pickOwnership[round] = {};
+      pickOwnership[round] = {}
       for (let slot = 1; slot <= draft.settings.teams; slot++) {
-        pickOwnership[round][slot] = draft.slot_to_roster_id[slot];
+        pickOwnership[round][slot] = draft.slot_to_roster_id[slot]
       }
     }
 
@@ -72,121 +74,121 @@ export async function GET(request: NextRequest) {
     for (const trade of tradedPicks) {
       // Find the draft slot that originally belonged to the previous owner
       const originalSlot = Object.keys(draft.slot_to_roster_id).find(
-        slot => draft.slot_to_roster_id[slot] === trade.previous_owner_id
-      );
-      
+        (slot) => draft.slot_to_roster_id[slot] === trade.previous_owner_id
+      )
+
       if (originalSlot && pickOwnership[trade.round]) {
-        pickOwnership[trade.round][parseInt(originalSlot)] = trade.owner_id;
+        pickOwnership[trade.round][parseInt(originalSlot)] = trade.owner_id
       }
     }
 
     // Assign picks to teams
-    const teamPicks: { [rosterId: number]: any[] } = {};
-    
+    const teamPicks: { [rosterId: number]: any[] } = {}
+
     for (const pick of picks) {
-      const round = pick.round;
-      const slot = pick.draft_slot;
-      const rosterId = pickOwnership[round]?.[slot] || pick.roster_id;
-      
+      const round = pick.round
+      const slot = pick.draft_slot
+      const rosterId = pickOwnership[round]?.[slot] || pick.roster_id
+
       if (!teamPicks[rosterId]) {
-        teamPicks[rosterId] = [];
+        teamPicks[rosterId] = []
       }
-      teamPicks[rosterId].push(pick);
+      teamPicks[rosterId].push(pick)
     }
 
     // Fetch all players for age lookup with Next.js caching
-    const allPlayers = await sleeperApi.getAllPlayers();
+    const allPlayers = await sleeperApi.getAllPlayers()
 
     // Grade each team's draft with enhanced logic
-    const teamGrades = [];
-    
+    const teamGrades = []
+
     for (const [rosterId, picks] of Object.entries(teamPicks)) {
-      let totalValue = 0;
-      let totalRank = 0;
-      let rankedPicks = 0;
-      let steals = 0;
-      let reaches = 0;
-      let tier1Picks = 0;
-      let tier2Picks = 0;
-      let tier3Picks = 0;
-      let tier4Picks = 0;
-      let totalAge = 0;
-      let ageCount = 0;
+      let totalValue = 0
+      let totalRank = 0
+      let rankedPicks = 0
+      let steals = 0
+      let reaches = 0
+      let tier1Picks = 0
+      let tier2Picks = 0
+      let tier3Picks = 0
+      let tier4Picks = 0
+      let totalAge = 0
+      let ageCount = 0
 
       // Calculate value based on rankings and analyze reach/steal
       for (const pick of picks) {
-        const playerName = `${pick.metadata?.first_name} ${pick.metadata?.last_name}`;
-        const ranking = playerRankings[playerName];
-        const playerData = allPlayers[pick.player_id];
+        const playerName = `${pick.metadata?.first_name} ${pick.metadata?.last_name}`
+        const ranking = playerRankings[playerName]
+        const playerData = allPlayers[pick.player_id]
         if (playerData && playerData.age) {
-          totalAge += Number(playerData.age);
-          ageCount++;
+          totalAge += Number(playerData.age)
+          ageCount++
         }
         if (ranking) {
-          const pickDiff = pick.pick_no - ranking.rank;
-          if (pickDiff >= 10) steals++;
-          else if (pickDiff <= -10) reaches++;
-          if (ranking.tier === 1) tier1Picks++;
-          else if (ranking.tier === 2) tier2Picks++;
-          else if (ranking.tier === 3) tier3Picks++;
-          else tier4Picks++;
-          let pickValue = 151 - ranking.rank;
+          const pickDiff = pick.pick_no - ranking.rank
+          if (pickDiff >= 10) steals++
+          else if (pickDiff <= -10) reaches++
+          if (ranking.tier === 1) tier1Picks++
+          else if (ranking.tier === 2) tier2Picks++
+          else if (ranking.tier === 3) tier3Picks++
+          else tier4Picks++
+          let pickValue = 151 - ranking.rank
           if (ranking.tier <= 2) {
-            pickValue *= 1.5;
+            pickValue *= 1.5
           }
-          totalValue += pickValue;
-          totalRank += ranking.rank;
-          rankedPicks++;
+          totalValue += pickValue
+          totalRank += ranking.rank
+          rankedPicks++
         }
       }
-      const averageRank = rankedPicks > 0 ? totalRank / rankedPicks : 0;
-      const averageValue = rankedPicks > 0 ? totalValue / rankedPicks : 0;
-      const stealRatio = rankedPicks > 0 ? steals / rankedPicks : 0;
-      const reachRatio = rankedPicks > 0 ? reaches / rankedPicks : 0;
-      const averageAge = ageCount > 0 ? totalAge / ageCount : 0;
+      const averageRank = rankedPicks > 0 ? totalRank / rankedPicks : 0
+      const averageValue = rankedPicks > 0 ? totalValue / rankedPicks : 0
+      const stealRatio = rankedPicks > 0 ? steals / rankedPicks : 0
+      const reachRatio = rankedPicks > 0 ? reaches / rankedPicks : 0
+      const averageAge = ageCount > 0 ? totalAge / ageCount : 0
 
       // Enhanced grading based on multiple factors
-      let grade = 'C';
-      let gradeScore = 0;
-      if (averageRank <= 30) gradeScore += 40;
-      else if (averageRank <= 50) gradeScore += 35;
-      else if (averageRank <= 70) gradeScore += 25;
-      else if (averageRank <= 90) gradeScore += 15;
-      else gradeScore += 5;
-      if (stealRatio >= 0.4) gradeScore += 25;
-      else if (stealRatio >= 0.3) gradeScore += 20;
-      else if (stealRatio >= 0.2) gradeScore += 15;
-      else if (stealRatio >= 0.1) gradeScore += 10;
-      else gradeScore += 5;
-      if (reachRatio <= 0.1) gradeScore += 15;
-      else if (reachRatio <= 0.2) gradeScore += 10;
-      else if (reachRatio <= 0.3) gradeScore += 5;
-      else gradeScore += 0;
-      const topTierRatio = (tier1Picks + tier2Picks) / rankedPicks;
-      if (topTierRatio >= 0.6) gradeScore += 20;
-      else if (topTierRatio >= 0.4) gradeScore += 15;
-      else if (topTierRatio >= 0.2) gradeScore += 10;
-      else gradeScore += 5;
+      let grade = 'C'
+      let gradeScore = 0
+      if (averageRank <= 30) gradeScore += 40
+      else if (averageRank <= 50) gradeScore += 35
+      else if (averageRank <= 70) gradeScore += 25
+      else if (averageRank <= 90) gradeScore += 15
+      else gradeScore += 5
+      if (stealRatio >= 0.4) gradeScore += 25
+      else if (stealRatio >= 0.3) gradeScore += 20
+      else if (stealRatio >= 0.2) gradeScore += 15
+      else if (stealRatio >= 0.1) gradeScore += 10
+      else gradeScore += 5
+      if (reachRatio <= 0.1) gradeScore += 15
+      else if (reachRatio <= 0.2) gradeScore += 10
+      else if (reachRatio <= 0.3) gradeScore += 5
+      else gradeScore += 0
+      const topTierRatio = (tier1Picks + tier2Picks) / rankedPicks
+      if (topTierRatio >= 0.6) gradeScore += 20
+      else if (topTierRatio >= 0.4) gradeScore += 15
+      else if (topTierRatio >= 0.2) gradeScore += 10
+      else gradeScore += 5
       // Age penalty: -2 points for every year over 26
       if (averageAge > 26) {
-        gradeScore -= Math.round((averageAge - 26) * 2);
+        gradeScore -= Math.round((averageAge - 26) * 2)
       }
       // Stricter curve for letter grades
-      if (gradeScore >= 92) grade = 'A+';
-      else if (gradeScore >= 85) grade = 'A';
-      else if (gradeScore >= 78) grade = 'A-';
-      else if (gradeScore >= 70) grade = 'B+';
-      else if (gradeScore >= 62) grade = 'B';
-      else if (gradeScore >= 54) grade = 'B-';
-      else if (gradeScore >= 46) grade = 'C+';
-      else if (gradeScore >= 38) grade = 'C';
-      else if (gradeScore >= 30) grade = 'C-';
-      else grade = 'D';
+      if (gradeScore >= 92) grade = 'A+'
+      else if (gradeScore >= 85) grade = 'A'
+      else if (gradeScore >= 78) grade = 'A-'
+      else if (gradeScore >= 70) grade = 'B+'
+      else if (gradeScore >= 62) grade = 'B'
+      else if (gradeScore >= 54) grade = 'B-'
+      else if (gradeScore >= 46) grade = 'C+'
+      else if (gradeScore >= 38) grade = 'C'
+      else if (gradeScore >= 30) grade = 'C-'
+      else grade = 'D'
 
       // Find team name from rosters and users
-      const roster = rosters.find((r: any) => r.roster_id === parseInt(rosterId));
-      const user = users.find((u: any) => u.user_id === roster?.owner_id);
-      const teamName = user?.metadata?.team_name || user?.display_name || `Team ${rosterId}`;
+      const roster = rosters.find((r: any) => r.roster_id === parseInt(rosterId))
+      const user = users.find((u: any) => u.user_id === roster?.owner_id)
+      const teamName = user?.metadata?.team_name || user?.display_name || `Team ${rosterId}`
 
       const teamGrade = {
         rosterId: parseInt(rosterId),
@@ -218,9 +220,9 @@ export async function GET(request: NextRequest) {
           DEF: picks.filter((p: any) => p.metadata?.position === 'DEF').length,
         },
         grade: grade,
-      };
-      
-      teamGrades.push(teamGrade);
+      }
+
+      teamGrades.push(teamGrade)
     }
 
     return NextResponse.json({
@@ -239,14 +241,10 @@ export async function GET(request: NextRequest) {
         teams: draft.settings.teams,
         rounds: draft.settings.rounds,
         slotToRosterId: draft.slot_to_roster_id,
-      }
-    });
-
+      },
+    })
   } catch (error) {
-    console.error('Error analyzing draft:', error);
-    return NextResponse.json(
-      { error: 'Failed to analyze draft' },
-      { status: 500 }
-    );
+    console.error('Error analyzing draft:', error)
+    return NextResponse.json({ error: 'Failed to analyze draft' }, { status: 500 })
   }
-} 
+}

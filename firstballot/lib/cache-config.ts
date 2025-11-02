@@ -3,31 +3,31 @@
 // Cache TTL values in milliseconds
 export const CACHE_TTL = {
   // Critical data (frequently changing) - Short TTL
-  CURRENT_WEEK: 2 * 60 * 1000,        // 2 minutes
-  TRANSACTIONS: 5 * 60 * 1000,        // 5 minutes
-  LIVE_DATA: 1 * 60 * 1000,           // 1 minute
-  
+  CURRENT_WEEK: 2 * 60 * 1000, // 2 minutes
+  TRANSACTIONS: 5 * 60 * 1000, // 5 minutes
+  LIVE_DATA: 1 * 60 * 1000, // 1 minute
+
   // League data (moderately stable) - Medium TTL
-  LEAGUE_INFO: 10 * 60 * 1000,        // 10 minutes
-  ROSTERS: 15 * 60 * 1000,            // 15 minutes
-  USERS: 15 * 60 * 1000,              // 15 minutes
-  MATCHUPS: 10 * 60 * 1000,           // 10 minutes
-  
+  LEAGUE_INFO: 10 * 60 * 1000, // 10 minutes
+  ROSTERS: 15 * 60 * 1000, // 15 minutes
+  USERS: 15 * 60 * 1000, // 15 minutes
+  MATCHUPS: 10 * 60 * 1000, // 10 minutes
+
   // Static data (rarely changes) - Long TTL
-  PLAYERS: 60 * 60 * 1000,            // 1 hour
-  RANKINGS: 60 * 60 * 1000,           // 1 hour
-  NFL_STATE: 30 * 60 * 1000,          // 30 minutes
-  PROSPECTS: 24 * 60 * 60 * 1000,     // 24 hours
-  
+  PLAYERS: 60 * 60 * 1000, // 1 hour
+  RANKINGS: 60 * 60 * 1000, // 1 hour
+  NFL_STATE: 30 * 60 * 1000, // 30 minutes
+  PROSPECTS: 24 * 60 * 60 * 1000, // 24 hours
+
   // User data (session-based) - Session TTL
-  USER_PROFILE: 30 * 60 * 1000,       // 30 minutes
+  USER_PROFILE: 30 * 60 * 1000, // 30 minutes
   USER_SETTINGS: 24 * 60 * 60 * 1000, // 24 hours
-  LEAGUE_ID: 24 * 60 * 60 * 1000,     // 24 hours
-  
+  LEAGUE_ID: 24 * 60 * 60 * 1000, // 24 hours
+
   // Analysis data (computed) - Medium TTL
-  TRADE_ANALYSIS: 15 * 60 * 1000,     // 15 minutes
-  DRAFT_ANALYSIS: 30 * 60 * 1000,     // 30 minutes
-  TEAM_GRADES: 10 * 60 * 1000,        // 10 minutes
+  TRADE_ANALYSIS: 15 * 60 * 1000, // 15 minutes
+  DRAFT_ANALYSIS: 30 * 60 * 1000, // 30 minutes
+  TEAM_GRADES: 10 * 60 * 1000, // 10 minutes
 } as const
 
 // Cache key prefixes for organization
@@ -70,7 +70,7 @@ export const CACHE_KEYS = {
     SLEEPER_PLAYERS: 'sleeper-players',
     NFL_STATE: 'nfl-state',
     TRENDING_PLAYERS: 'trending-players',
-    
+
     // Parameterized keys
     TRADE_MARKET_DATA: (leagueId: string) => `trade_market_${leagueId}`,
     LEAGUE_ROSTER_DATA: (leagueId: string) => `league_roster_${leagueId}`,
@@ -83,7 +83,7 @@ export const CACHE_KEYS = {
     DYNASTY_RANKINGS: 'dynasty_rankings',
     USER_PROFILE: (userId: string) => `user_profile_${userId}`,
   },
-  
+
   // Local Storage Keys
   LOCAL: {
     SLEEPER_USERNAME: 'firstballot_sleeper_username',
@@ -92,11 +92,11 @@ export const CACHE_KEYS = {
     CACHE_EXPIRY: 'firstballot_cache_expiry',
     LEAGUE_ID: 'cachedLeagueId',
   },
-  
+
   // Session Storage Keys
   SESSION: {
     LEAGUE_ID: 'currentLeagueId',
-  }
+  },
 } as const
 
 // Cache configuration for different data types
@@ -107,33 +107,33 @@ export const CACHE_CONFIG = {
     cleanupInterval: 5 * 60 * 1000, // 5 minutes
     maxSize: 50 * 1024 * 1024, // 50MB
   },
-  
+
   // Local storage configuration
   LOCAL_STORAGE: {
     defaultTTL: CACHE_TTL.USER_SETTINGS,
     cleanupInterval: 60 * 60 * 1000, // 1 hour
     maxSize: 10 * 1024 * 1024, // 10MB
   },
-  
+
   // Session storage configuration
   SESSION_STORAGE: {
     defaultTTL: CACHE_TTL.USER_PROFILE,
     cleanupInterval: 30 * 60 * 1000, // 30 minutes
     maxSize: 5 * 1024 * 1024, // 5MB
-  }
+  },
 } as const
 
 // Cache validation rules
 export const CACHE_VALIDATION = {
   // Required fields for cache entries
   requiredFields: ['data', 'timestamp', 'ttl'],
-  
+
   // Maximum cache entry size (5MB)
   maxEntrySize: 5 * 1024 * 1024,
-  
+
   // Maximum number of cache entries
   maxEntries: 1000,
-  
+
   // Cache entry validation
   isValidEntry: (entry: any): boolean => {
     return (
@@ -144,5 +144,5 @@ export const CACHE_VALIDATION = {
       entry.timestamp > 0 &&
       entry.ttl > 0
     )
-  }
-} as const 
+  },
+} as const

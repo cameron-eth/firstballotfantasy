@@ -1,17 +1,23 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { NGSStatsTable } from "@/components/ngs-stats-table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useState, useEffect } from 'react'
+import { NGSStatsTable } from '@/components/ngs-stats-table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
-type StatType = "passing" | "rushing" | "receiving"
+type StatType = 'passing' | 'rushing' | 'receiving'
 
 export default function StatsDashboardPage() {
-  const [statType, setStatType] = useState<StatType>("passing")
-  const [season, setSeason] = useState("2025")
+  const [statType, setStatType] = useState<StatType>('passing')
+  const [season, setSeason] = useState('2025')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,15 +33,15 @@ export default function StatsDashboardPage() {
       const response = await fetch(
         `/api/ngs-stats?type=${statType}&season=${season}&limit=100&sort=fantasy_points&order=desc`
       )
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.statusText}`)
       }
-      
+
       const result = await response.json()
       setData(result.data || [])
     } catch (error: any) {
-      console.error("Failed to fetch stats:", error)
+      console.error('Failed to fetch stats:', error)
       setError(error.message)
     } finally {
       setLoading(false)
@@ -161,8 +167,8 @@ export default function StatsDashboardPage() {
 
       <div className="text-sm text-muted-foreground">
         <p>
-          Stats updated every 8 hours via automated pipeline.
-          Values calculated based on fantasy PPR scoring and position scarcity.
+          Stats updated every 8 hours via automated pipeline. Values calculated based on fantasy PPR
+          scoring and position scarcity.
         </p>
       </div>
     </div>

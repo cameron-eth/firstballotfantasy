@@ -22,7 +22,7 @@ export function useNGSStats(params: NGSStatsParams) {
     const fetchStats = async () => {
       setLoading(true)
       setError(null)
-      
+
       try {
         const searchParams = new URLSearchParams({
           type: params.type,
@@ -36,7 +36,7 @@ export function useNGSStats(params: NGSStatsParams) {
         })
 
         const response = await fetch(`/api/ngs-stats?${searchParams}`)
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
           console.error('API error response:', errorData)
@@ -63,9 +63,8 @@ export function useNGSStats(params: NGSStatsParams) {
     params.player_id,
     params.limit,
     params.sort,
-    params.order
+    params.order,
   ])
 
   return { data, loading, error }
 }
-

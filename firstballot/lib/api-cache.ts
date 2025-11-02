@@ -14,7 +14,11 @@ class ApiCache {
   private misses = 0
 
   // Get cached data or fetch if not cached
-  async getOrFetch<T>(key: string, fetchFn: () => Promise<T>, ttl: number = 5 * 60 * 1000): Promise<T> {
+  async getOrFetch<T>(
+    key: string,
+    fetchFn: () => Promise<T>,
+    ttl: number = 5 * 60 * 1000
+  ): Promise<T> {
     // Check if we have a pending request
     if (this.pendingRequests.has(key)) {
       return this.pendingRequests.get(key) as Promise<T>
@@ -30,18 +34,20 @@ class ApiCache {
     this.misses++
 
     // Fetch new data
-    const fetchPromise = fetchFn().then(data => {
-      this.cache.set(key, {
-        data,
-        timestamp: Date.now(),
-        ttl
+    const fetchPromise = fetchFn()
+      .then((data) => {
+        this.cache.set(key, {
+          data,
+          timestamp: Date.now(),
+          ttl,
+        })
+        this.pendingRequests.delete(key)
+        return data
       })
-      this.pendingRequests.delete(key)
-      return data
-    }).catch(error => {
-      this.pendingRequests.delete(key)
-      throw error
-    })
+      .catch((error) => {
+        this.pendingRequests.delete(key)
+        throw error
+      })
 
     this.pendingRequests.set(key, fetchPromise)
     return fetchPromise
@@ -71,7 +77,7 @@ class ApiCache {
       memoryUsage: this.getMemoryUsage(),
       hitRate: this.getHitRate(),
       hits: this.hits,
-      misses: this.misses
+      misses: this.misses,
     }
   }
 
@@ -80,7 +86,7 @@ class ApiCache {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl
+      ttl,
     })
   }
 
@@ -88,17 +94,17 @@ class ApiCache {
   cleanup() {
     const now = Date.now()
     const keysToDelete: string[] = []
-    
+
     this.cache.forEach((entry, key) => {
       if (now - entry.timestamp > entry.ttl) {
         keysToDelete.push(key)
       }
     })
-    
-    keysToDelete.forEach(key => {
+
+    keysToDelete.forEach((key) => {
       this.cache.delete(key)
     })
-    
+
     return keysToDelete.length
   }
 
@@ -119,9 +125,12 @@ class ApiCache {
 
   // Start auto-cleanup every 5 minutes
   startAutoCleanup() {
-    setInterval(() => {
-      this.cleanup()
-    }, 5 * 60 * 1000)
+    setInterval(
+      () => {
+        this.cleanup()
+      },
+      5 * 60 * 1000
+    )
   }
 }
 
@@ -133,4 +142,4 @@ if (typeof window !== 'undefined') {
 }
 
 // Re-export cache keys for backward compatibility
-export { CACHE_KEYS } from './cache-config' 
+export { CACHE_KEYS } from './cache-config'

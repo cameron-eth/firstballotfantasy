@@ -1,9 +1,8 @@
-"use client"
+'use client'
 
-import { Card, CardContent } from "@/components/ui/card"
-import { TrendingUp, TrendingDown } from "lucide-react"
-import { TeamLogo } from "./team-logo"
-
+import { Card, CardContent } from '@/components/ui/card'
+import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TeamLogo } from './team-logo'
 
 interface Player {
   name: string
@@ -20,26 +19,26 @@ interface PlayerCardProps {
 }
 
 const tierColors = {
-  Elite: "bg-purple-500",
-  "Tier 1": "bg-green-500",
-  "Tier 2": "bg-yellow-500",
-  Startable: "bg-orange-500",
-  Flex: "bg-gray-500",
-  Streamer: "bg-gray-400",
+  Elite: 'bg-purple-500',
+  'Tier 1': 'bg-green-500',
+  'Tier 2': 'bg-yellow-500',
+  Startable: 'bg-orange-500',
+  Flex: 'bg-gray-500',
+  Streamer: 'bg-gray-400',
   // Legacy tier names for backward compatibility
-  QB1: "bg-green-500",
-  RB1: "bg-green-500",
-  WR1: "bg-green-500",
-  TE1: "bg-green-500",
-  QB2: "bg-yellow-500",
-  RB2: "bg-yellow-500",
-  WR2: "bg-yellow-500",
-  TE2: "bg-yellow-500",
+  QB1: 'bg-green-500',
+  RB1: 'bg-green-500',
+  WR1: 'bg-green-500',
+  TE1: 'bg-green-500',
+  QB2: 'bg-yellow-500',
+  RB2: 'bg-yellow-500',
+  WR2: 'bg-yellow-500',
+  TE2: 'bg-yellow-500',
 }
 
 export function PlayerCard({ player }: PlayerCardProps) {
-  const isPositive = player.error.startsWith("+")
-  const tierColor = tierColors[player.tier as keyof typeof tierColors] || "bg-gray-500"
+  const isPositive = player.error.startsWith('+')
+  const tierColor = tierColors[player.tier as keyof typeof tierColors] || 'bg-gray-500'
 
   return (
     <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
@@ -52,7 +51,9 @@ export function PlayerCard({ player }: PlayerCardProps) {
               <p className="text-sm text-gray-400">{player.team}</p>
             </div>
           </div>
-          <div className={`px-2 py-1 rounded-full text-xs font-mono text-white ${tierColor}`}>{player.tier}</div>
+          <div className={`px-2 py-1 rounded-full text-xs font-mono text-white ${tierColor}`}>
+            {player.tier}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -75,7 +76,9 @@ export function PlayerCard({ player }: PlayerCardProps) {
               ) : (
                 <TrendingDown className="h-3 w-3 text-red-400" />
               )}
-              <span className={`font-mono text-sm ${isPositive ? "text-green-400" : "text-red-400"}`}>
+              <span
+                className={`font-mono text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}
+              >
                 {player.error}
               </span>
             </div>

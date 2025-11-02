@@ -1,7 +1,7 @@
-"use client"
-import { Header } from "@/components/header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+'use client'
+import { Header } from '@/components/header'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   LineChart,
   Line,
@@ -12,9 +12,9 @@ import {
   ResponsiveContainer,
   ScatterChart,
   Scatter,
-} from "recharts"
-import { supabase } from "@/lib/supabase"
-import { useState, useEffect } from "react"
+} from 'recharts'
+import { supabase } from '@/lib/supabase'
+import { useState, useEffect } from 'react'
 
 // Fantasy Production Trends data (based on the declining trend shown in your image)
 const fantasyProductionTrends = [
@@ -41,20 +41,22 @@ const modelPerformanceData = Array.from({ length: 200 }, (_, i) => {
 })
 
 export default function ChartsPage() {
-  const [draftPositionData, setDraftPositionData] = useState<Array<{ draftPick: number; fantasyPPG: number }>>([])
+  const [draftPositionData, setDraftPositionData] = useState<
+    Array<{ draftPick: number; fantasyPPG: number }>
+  >([])
   const [leagueData, setLeagueData] = useState<any>(null)
 
   useEffect(() => {
     async function fetchDraftPositionData() {
       try {
         const { data } = await supabase
-          .from("master_player_dataset")
-          .select("draft_pick, fantasy_ppg")
-          .not("draft_pick", "is", null)
-          .not("fantasy_ppg", "is", null)
-          .gte("fantasy_ppg", 0)
-          .lte("draft_pick", 300)
-          .order("draft_pick")
+          .from('master_player_dataset')
+          .select('draft_pick, fantasy_ppg')
+          .not('draft_pick', 'is', null)
+          .not('fantasy_ppg', 'is', null)
+          .gte('fantasy_ppg', 0)
+          .lte('draft_pick', 300)
+          .order('draft_pick')
           .limit(500)
 
         if (data) {
@@ -62,11 +64,11 @@ export default function ChartsPage() {
             data.map((row) => ({
               draftPick: row.draft_pick,
               fantasyPPG: row.fantasy_ppg,
-            })),
+            }))
           )
         }
       } catch (error) {
-        console.error("Error fetching draft position data:", error)
+        console.error('Error fetching draft position data:', error)
       }
     }
 
@@ -80,21 +82,35 @@ export default function ChartsPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-mono font-bold text-yellow-400 mb-2">KEY VISUALIZATIONS</h1>
-          <p className="text-green-400">Core insights from the fantasy football analytics pipeline</p>
+          <p className="text-green-400">
+            Core insights from the fantasy football analytics pipeline
+          </p>
         </div>
 
         <Tabs defaultValue="production-trends" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 bg-slate-800 border-slate-700">
-            <TabsTrigger value="production-trends" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+            <TabsTrigger
+              value="production-trends"
+              className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900"
+            >
               Production Trends
             </TabsTrigger>
-            <TabsTrigger value="draft-analysis" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+            <TabsTrigger
+              value="draft-analysis"
+              className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900"
+            >
               Draft Analysis
             </TabsTrigger>
-            <TabsTrigger value="trade-analysis" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+            <TabsTrigger
+              value="trade-analysis"
+              className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900"
+            >
               Trade Analysis
             </TabsTrigger>
-            <TabsTrigger value="insights" className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900">
+            <TabsTrigger
+              value="insights"
+              className="text-slate-300 data-[state=active]:bg-yellow-400 data-[state=active]:text-slate-900"
+            >
               Insights
             </TabsTrigger>
           </TabsList>
@@ -103,23 +119,28 @@ export default function ChartsPage() {
             {/* Fantasy Production Trends */}
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono">FANTASY PRODUCTION TRENDS</CardTitle>
+                <CardTitle className="text-yellow-400 font-mono">
+                  FANTASY PRODUCTION TRENDS
+                </CardTitle>
                 <p className="text-green-400 text-sm">Average fantasy PPG by season (2016-2024)</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={fantasyProductionTrends}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="season" stroke="#9CA3AF" domain={["dataMin", "dataMax"]} />
+                    <XAxis dataKey="season" stroke="#9CA3AF" domain={['dataMin', 'dataMax']} />
                     <YAxis stroke="#9CA3AF" domain={[6.6, 7.8]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1F2937",
-                        border: "1px solid #374151",
-                        borderRadius: "8px",
-                        color: "#F3F4F6",
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F3F4F6',
                       }}
-                      formatter={(value, name) => [`${Number(value).toFixed(2)} PPG`, "Average Fantasy PPG"]}
+                      formatter={(value, name) => [
+                        `${Number(value).toFixed(2)} PPG`,
+                        'Average Fantasy PPG',
+                      ]}
                       labelFormatter={(label) => `Season: ${label}`}
                     />
                     <Line
@@ -127,7 +148,7 @@ export default function ChartsPage() {
                       dataKey="avgPPG"
                       stroke="#EF4444"
                       strokeWidth={3}
-                      dot={{ fill: "#EF4444", strokeWidth: 2, r: 4 }}
+                      dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -139,8 +160,12 @@ export default function ChartsPage() {
             {/* Performance vs Draft Position - Full Width */}
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono">PERFORMANCE VS DRAFT POSITION</CardTitle>
-                <p className="text-green-400 text-sm">Fantasy PPG by draft pick number • Live Data</p>
+                <CardTitle className="text-yellow-400 font-mono">
+                  PERFORMANCE VS DRAFT POSITION
+                </CardTitle>
+                <p className="text-green-400 text-sm">
+                  Fantasy PPG by draft pick number • Live Data
+                </p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={500}>
@@ -150,32 +175,32 @@ export default function ChartsPage() {
                       dataKey="draftPick"
                       stroke="#9CA3AF"
                       label={{
-                        value: "Draft Pick",
-                        position: "insideBottom",
+                        value: 'Draft Pick',
+                        position: 'insideBottom',
                         offset: -10,
-                        style: { textAnchor: "middle", fill: "#9CA3AF" },
+                        style: { textAnchor: 'middle', fill: '#9CA3AF' },
                       }}
                     />
                     <YAxis
                       dataKey="fantasyPPG"
                       stroke="#9CA3AF"
                       label={{
-                        value: "Fantasy PPG",
+                        value: 'Fantasy PPG',
                         angle: -90,
-                        position: "insideLeft",
-                        style: { textAnchor: "middle", fill: "#9CA3AF" },
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle', fill: '#9CA3AF' },
                       }}
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1F2937",
-                        border: "1px solid #374151",
-                        borderRadius: "8px",
-                        color: "#F3F4F6",
+                        backgroundColor: '#1F2937',
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#F3F4F6',
                       }}
                       formatter={(value, name) => [
-                        name === "fantasyPPG" ? `${Number(value).toFixed(2)} PPG` : value,
-                        name === "fantasyPPG" ? "Fantasy PPG" : "Draft Pick",
+                        name === 'fantasyPPG' ? `${Number(value).toFixed(2)} PPG` : value,
+                        name === 'fantasyPPG' ? 'Fantasy PPG' : 'Draft Pick',
                       ]}
                       labelFormatter={(label) => `Draft Pick: ${label}`}
                     />
@@ -190,7 +215,9 @@ export default function ChartsPage() {
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-yellow-400 font-mono">TRADE MARKET ANALYSIS</CardTitle>
-                <p className="text-green-400 text-sm">Trade value distribution and team performance in the market</p>
+                <p className="text-green-400 text-sm">
+                  Trade value distribution and team performance in the market
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
@@ -210,10 +237,12 @@ export default function ChartsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="gradient-border">
                     <div className="gradient-border-content">
-                      <h3 className="text-green-400 font-mono text-sm mb-2">DECLINING PRODUCTION</h3>
+                      <h3 className="text-green-400 font-mono text-sm mb-2">
+                        DECLINING PRODUCTION
+                      </h3>
                       <p className="text-gray-300 text-sm">
-                        Fantasy production has generally declined from 2016-2024, likely due to rule changes, increased
-                        parity, and defensive evolution.
+                        Fantasy production has generally declined from 2016-2024, likely due to rule
+                        changes, increased parity, and defensive evolution.
                       </p>
                     </div>
                   </div>
@@ -221,8 +250,8 @@ export default function ChartsPage() {
                     <div className="gradient-border-content">
                       <h3 className="text-green-400 font-mono text-sm mb-2">STRONG MODEL FIT</h3>
                       <p className="text-gray-300 text-sm">
-                        R² of 0.72 demonstrates strong predictive capability, with most predictions clustering around the
-                        diagonal trend line.
+                        R² of 0.72 demonstrates strong predictive capability, with most predictions
+                        clustering around the diagonal trend line.
                       </p>
                     </div>
                   </div>
@@ -230,8 +259,8 @@ export default function ChartsPage() {
                     <div className="gradient-border-content">
                       <h3 className="text-green-400 font-mono text-sm mb-2">DRAFT CAPITAL VALUE</h3>
                       <p className="text-gray-300 text-sm">
-                        Clear inverse relationship between draft position and fantasy performance, with early picks showing
-                        significantly higher upside.
+                        Clear inverse relationship between draft position and fantasy performance,
+                        with early picks showing significantly higher upside.
                       </p>
                     </div>
                   </div>

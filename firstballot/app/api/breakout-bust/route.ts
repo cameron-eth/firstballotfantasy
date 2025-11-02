@@ -1,16 +1,17 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseServer } from "@/lib/supabase-server"
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const analysisType = searchParams.get("type") || "breakout"
-    const limit = parseInt(searchParams.get("limit") || "50")
+    const analysisType = searchParams.get('type') || 'breakout'
+    const limit = parseInt(searchParams.get('limit') || '50')
 
     // Query the main player dataset and filter for breakout/bust players
     const { data, error } = await supabaseServer
-      .from("master_player_dataset")
-      .select(`
+      .from('master_player_dataset')
+      .select(
+        `
         player_name,
         position,
         season,
@@ -27,17 +28,18 @@ export async function GET(request: NextRequest) {
         is_breakout,
         is_bust,
         prediction_accuracy
-      `)
-      .eq("position", "QB") // We'll filter by position later if needed
-      .gte("season", 2020)
-      .not("fantasy_ppg", "is", null)
-      .gte("games_played", 6)
-      .order("prediction_accuracy", { ascending: analysisType === "breakout" ? false : true })
+      `
+      )
+      .eq('position', 'QB') // We'll filter by position later if needed
+      .gte('season', 2020)
+      .not('fantasy_ppg', 'is', null)
+      .gte('games_played', 6)
+      .order('prediction_accuracy', { ascending: analysisType === 'breakout' ? false : true })
       .limit(100)
 
     if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 })
+      console.error('Database error:', error)
+      return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
     }
 
     // Process data and filter for breakout/bust players
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
       const prediction_error = Number(item.prediction_error) || 0
       const surprise_factor = Math.abs(prediction_error)
       const performance_ratio = fantasy_ppg / predicted_ppg || 0
-      
+
       return {
         ...item,
         fantasy_ppg,
@@ -59,16 +61,16 @@ export async function GET(request: NextRequest) {
         season: Number(item.season) || 0,
         tier_upgrade: Boolean(item.is_breakout),
         tier_downgrade: Boolean(item.is_bust),
-        draft_round: item.round || "Undrafted",
-        player_id: item.player_name_std?.replace(/\s+/g, '-').toLowerCase()
+        draft_round: item.round || 'Undrafted',
+        player_id: item.player_name_std?.replace(/\s+/g, '-').toLowerCase(),
       }
     })
 
     // Filter based on analysis type
     const filteredData = processedData.filter((player: any) => {
-      if (analysisType === "breakout") {
+      if (analysisType === 'breakout') {
         return player.is_breakout || player.prediction_error > 0
-      } else if (analysisType === "bust") {
+      } else if (analysisType === 'bust') {
         return player.is_bust || player.prediction_error < 0
       }
       return true
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     // Sort by surprise factor (absolute prediction error)
     const sortedData = filteredData.sort((a: any, b: any) => {
-      if (analysisType === "breakout") {
+      if (analysisType === 'breakout') {
         return b.surprise_factor - a.surprise_factor
       } else {
         return a.surprise_factor - b.surprise_factor
@@ -85,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: sortedData.slice(0, limit) })
   } catch (error) {
-    console.error("API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error('API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

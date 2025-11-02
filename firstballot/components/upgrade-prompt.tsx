@@ -1,13 +1,19 @@
-"use client"
+'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Crown, Lock, Zap, Users, Trophy, CheckCircle } from "lucide-react"
-import { PAYMENT_LINKS } from "@/lib/stripe-payment-links"
-import { Spinner } from "@/components/ui/spinner"
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Crown, Lock, Zap, Users, Trophy, CheckCircle } from 'lucide-react'
+import { PAYMENT_LINKS } from '@/lib/stripe-payment-links'
+import { Spinner } from '@/components/ui/spinner'
 
 interface UpgradePromptProps {
   trigger?: React.ReactNode
@@ -17,12 +23,12 @@ interface UpgradePromptProps {
   className?: string
 }
 
-export function UpgradePrompt({ 
-  trigger, 
-  title = "Unlock All Leagues", 
-  description = "Get unlimited access to all your leagues and premium features",
+export function UpgradePrompt({
+  trigger,
+  title = 'Unlock All Leagues',
+  description = 'Get unlimited access to all your leagues and premium features',
   variant = 'dialog',
-  className = ""
+  className = '',
 }: UpgradePromptProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -30,7 +36,7 @@ export function UpgradePrompt({
     try {
       setIsProcessing(true)
       const paymentLink = PAYMENT_LINKS[planType]
-      
+
       if (paymentLink && paymentLink.trim() !== '') {
         // Try both methods
         window.location.href = paymentLink
@@ -49,29 +55,29 @@ export function UpgradePrompt({
   }
 
   const features = [
-    "Unlimited league access",
-    "Advanced analytics",
-    "Priority support",
-    "Premium features"
+    'Unlimited league access',
+    'Advanced analytics',
+    'Priority support',
+    'Premium features',
   ]
 
   const plans = [
     {
-      name: "Monthly",
-      price: "$7",
-      period: "month",
-      savings: "",
+      name: 'Monthly',
+      price: '$7',
+      period: 'month',
+      savings: '',
       popular: false,
-      planType: 'monthly' as const
+      planType: 'monthly' as const,
     },
     {
-      name: "Yearly",
-      price: "$15",
-      period: "year",
-      savings: "Save 82%",
+      name: 'Yearly',
+      price: '$15',
+      period: 'year',
+      savings: 'Save 82%',
       popular: true,
-      planType: 'yearly' as const
-    }
+      planType: 'yearly' as const,
+    },
   ]
 
   const content = (
@@ -101,12 +107,10 @@ export function UpgradePrompt({
       {/* Pricing Plans */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {plans.map((plan) => (
-          <Card 
+          <Card
             key={plan.name}
             className={`relative p-4 cursor-pointer transition-all hover:border-yellow-400 ${
-              plan.popular 
-                ? 'border-yellow-400 bg-slate-700/50' 
-                : 'border-slate-600 bg-slate-800'
+              plan.popular ? 'border-yellow-400 bg-slate-700/50' : 'border-slate-600 bg-slate-800'
             }`}
             onClick={() => handleUpgrade(plan.planType)}
           >
@@ -118,17 +122,13 @@ export function UpgradePrompt({
             <div className="text-center space-y-2">
               <h3 className="font-semibold text-white">{plan.name}</h3>
               <div className="space-y-1">
-                <div className="text-3xl font-bold text-yellow-400">
-                  {plan.price}
-                </div>
+                <div className="text-3xl font-bold text-yellow-400">{plan.price}</div>
                 <div className="text-sm text-gray-400">per {plan.period}</div>
                 {plan.savings && (
-                  <div className="text-xs text-green-400 font-semibold">
-                    {plan.savings}
-                  </div>
+                  <div className="text-xs text-green-400 font-semibold">{plan.savings}</div>
                 )}
               </div>
-              <Button 
+              <Button
                 className="w-full bg-yellow-400 text-slate-900 hover:bg-yellow-300"
                 disabled={isProcessing}
               >
@@ -186,9 +186,7 @@ export function UpgradePrompt({
             <span>UPGRADE TO PRO</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {content}
-        </CardContent>
+        <CardContent>{content}</CardContent>
       </Card>
     )
   }
@@ -204,4 +202,4 @@ export function UpgradePrompt({
       )}
     </div>
   )
-} 
+}

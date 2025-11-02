@@ -129,4 +129,3 @@ export interface Transaction {
   consenterIds: number[]
   metadata: any
 }
-

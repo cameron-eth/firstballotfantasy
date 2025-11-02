@@ -1,19 +1,19 @@
-"use client"
+'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { TeamLogo } from "@/components/team-logo"
-import { PlayerNGSStats } from "@/components/player-ngs-stats"
-import { Star, Flame, ShoppingCart, TrendingDown, Activity } from "lucide-react"
-import { NGSMetricsOverview } from "./NGSMetricsOverview"
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { TeamLogo } from '@/components/team-logo'
+import { PlayerNGSStats } from '@/components/player-ngs-stats'
+import { Star, Flame, ShoppingCart, TrendingDown, Activity } from 'lucide-react'
+import { NGSMetricsOverview } from './NGSMetricsOverview'
 
 const POSITION_COLORS = {
-  'QB': 'bg-red-500',
-  'RB': 'bg-green-500',
-  'WR': 'bg-blue-500',
-  'TE': 'bg-yellow-500',
-  'K': 'bg-purple-500',
-  'DEF': 'bg-gray-500',
+  QB: 'bg-red-500',
+  RB: 'bg-green-500',
+  WR: 'bg-blue-500',
+  TE: 'bg-yellow-500',
+  K: 'bg-purple-500',
+  DEF: 'bg-gray-500',
 }
 
 interface RosterSectionProps {
@@ -74,7 +74,6 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
 
         {/* Insights Categories Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          
           {/* Most Efficient Players */}
           <Card className="bg-gradient-to-br from-green-900/20 to-slate-700 border-green-500/30">
             <CardHeader className="pb-3">
@@ -89,22 +88,34 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                 .sort((a: any, b: any) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
                 .slice(0, 3)
                 .map((player: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
+                  >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-slate-100 font-semibold text-sm truncate">{player.playerName}</div>
-                        <div className="text-xs text-slate-400">{player.position} • #{player.rank}</div>
+                        <div className="text-slate-100 font-semibold text-sm truncate">
+                          {player.playerName}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {player.position} • #{player.rank}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-green-400 font-bold font-mono">{player.fantasy_ppg?.toFixed(1)}</div>
+                      <div className="text-green-400 font-bold font-mono">
+                        {player.fantasy_ppg?.toFixed(1)}
+                      </div>
                       <div className="text-[10px] text-slate-500">PPG</div>
                     </div>
                   </div>
                 ))}
-              {selectedTeam.players.filter((p: any) => p.fantasy_ppg && p.fantasy_ppg > 8).length === 0 && (
-                <div className="text-slate-500 text-sm text-center py-4">No high performers yet</div>
+              {selectedTeam.players.filter((p: any) => p.fantasy_ppg && p.fantasy_ppg > 8)
+                .length === 0 && (
+                <div className="text-slate-500 text-sm text-center py-4">
+                  No high performers yet
+                </div>
               )}
             </CardContent>
           </Card>
@@ -119,16 +130,25 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
             </CardHeader>
             <CardContent className="space-y-2">
               {selectedTeam.players
-                .filter((p: any) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5)
+                .filter(
+                  (p: any) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5
+                )
                 .sort((a: any, b: any) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
                 .slice(0, 3)
                 .map((player: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
+                  >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-slate-100 font-semibold text-sm truncate">{player.playerName}</div>
-                        <div className="text-xs text-slate-400">{player.position} • #{player.rank}</div>
+                        <div className="text-slate-100 font-semibold text-sm truncate">
+                          {player.playerName}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {player.position} • #{player.rank}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -136,7 +156,9 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                     </div>
                   </div>
                 ))}
-              {selectedTeam.players.filter((p: any) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5).length === 0 && (
+              {selectedTeam.players.filter(
+                (p: any) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5
+              ).length === 0 && (
                 <div className="text-slate-500 text-sm text-center py-4">No trade targets</div>
               )}
             </CardContent>
@@ -156,12 +178,19 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                 .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
                 .slice(0, 3)
                 .map((player: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
+                  >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-slate-100 font-semibold text-sm truncate">{player.playerName}</div>
-                        <div className="text-xs text-slate-400">{player.position} • {player.age}yo</div>
+                        <div className="text-slate-100 font-semibold text-sm truncate">
+                          {player.playerName}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {player.position} • {player.age}yo
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -169,7 +198,8 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                     </div>
                   </div>
                 ))}
-              {selectedTeam.players.filter((p: any) => p.age && p.age <= 24 && p.rank <= 150).length === 0 && (
+              {selectedTeam.players.filter((p: any) => p.age && p.age <= 24 && p.rank <= 150)
+                .length === 0 && (
                 <div className="text-slate-500 text-sm text-center py-4">No young talent</div>
               )}
             </CardContent>
@@ -189,26 +219,36 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                 .sort((a: any, b: any) => (a.fantasy_ppg || 0) - (b.fantasy_ppg || 0))
                 .slice(0, 3)
                 .map((player: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
+                  >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-slate-100 font-semibold text-sm truncate">{player.playerName}</div>
-                        <div className="text-xs text-slate-400">{player.position} • #{player.rank}</div>
+                        <div className="text-slate-100 font-semibold text-sm truncate">
+                          {player.playerName}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {player.position} • #{player.rank}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className="text-red-400 font-bold font-mono">{player.fantasy_ppg?.toFixed(1)}</div>
+                      <div className="text-red-400 font-bold font-mono">
+                        {player.fantasy_ppg?.toFixed(1)}
+                      </div>
                       <div className="text-[10px] text-slate-500">PPG</div>
                     </div>
                   </div>
                 ))}
-              {selectedTeam.players.filter((p: any) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8).length === 0 && (
+              {selectedTeam.players.filter(
+                (p: any) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8
+              ).length === 0 && (
                 <div className="text-slate-500 text-sm text-center py-4">All performing well!</div>
               )}
             </CardContent>
           </Card>
-
         </div>
       </div>
 
@@ -216,48 +256,56 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h3 className="text-green-400 font-mono text-lg mb-4">FULL ROSTER</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {selectedTeam.players.map((player: any, index: number) => (
-          <Card key={index} className="p-3 bg-slate-700 border-slate-600 hover:border-green-400/50 transition-colors">
-            <div className="flex items-center space-x-3 mb-3">
-              <TeamLogo
-                team={player.team}
-                size={40}
-                className="flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h4 className="font-semibold text-slate-100 truncate">{player.playerName}</h4>
-                  <Badge variant="secondary" className={`text-xs px-1 py-0 ${POSITION_COLORS[player.position as keyof typeof POSITION_COLORS]} text-white`}>
-                    {player.position}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>{player.team}</span>
-                  <span>#{player.rank}</span>
-                </div>
-                <div className="flex items-center space-x-2 mt-1">
-                  <Badge variant="outline" className="text-xs bg-slate-600/20 text-slate-300 border-slate-600">
-                    {player.tier}
-                  </Badge>
-                  {player.age && (
-                    <Badge variant="outline" className="text-xs bg-blue-400/20 text-blue-400 border-blue-400">
-                      {player.age}yo
+          {selectedTeam.players.map((player: any, index: number) => (
+            <Card
+              key={index}
+              className="p-3 bg-slate-700 border-slate-600 hover:border-green-400/50 transition-colors"
+            >
+              <div className="flex items-center space-x-3 mb-3">
+                <TeamLogo team={player.team} size={40} className="flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h4 className="font-semibold text-slate-100 truncate">{player.playerName}</h4>
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs px-1 py-0 ${POSITION_COLORS[player.position as keyof typeof POSITION_COLORS]} text-white`}
+                    >
+                      {player.position}
                     </Badge>
-                  )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>{player.team}</span>
+                    <span>#{player.rank}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-slate-600/20 text-slate-300 border-slate-600"
+                    >
+                      {player.tier}
+                    </Badge>
+                    {player.age && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-blue-400/20 text-blue-400 border-blue-400"
+                      >
+                        {player.age}yo
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            {/* NGS Advanced Metrics */}
-            <div className="pt-3 border-t border-slate-600">
-              <PlayerNGSStats 
-                playerName={player.playerName} 
-                position={player.position}
-                compact={true}
-              />
-            </div>
-          </Card>
-        ))}
+
+              {/* NGS Advanced Metrics */}
+              <div className="pt-3 border-t border-slate-600">
+                <PlayerNGSStats
+                  playerName={player.playerName}
+                  position={player.position}
+                  compact={true}
+                />
+              </div>
+            </Card>
+          ))}
         </div>
       </div>
 
@@ -265,60 +313,66 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h3 className="text-green-400 font-mono text-lg mb-4">TEAM INSIGHTS</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-slate-700 border-slate-600">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-green-400 text-sm">BEST PLAYER</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-3">
-              <TeamLogo
-                team={selectedTeam.trends.bestPlayer.team}
-                size={48}
-              />
-              <div>
-                <h4 className="font-semibold text-slate-100">{selectedTeam.trends.bestPlayer.playerName}</h4>
-                <p className="text-sm text-gray-400">#{selectedTeam.trends.bestPlayer.rank} • {selectedTeam.trends.bestPlayer.position}</p>
+          <Card className="bg-slate-700 border-slate-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-green-400 text-sm">BEST PLAYER</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-3">
+                <TeamLogo team={selectedTeam.trends.bestPlayer.team} size={48} />
+                <div>
+                  <h4 className="font-semibold text-slate-100">
+                    {selectedTeam.trends.bestPlayer.playerName}
+                  </h4>
+                  <p className="text-sm text-gray-400">
+                    #{selectedTeam.trends.bestPlayer.rank} •{' '}
+                    {selectedTeam.trends.bestPlayer.position}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-slate-700 border-slate-600">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-yellow-400 text-sm">BREAKOUT CANDIDATE</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-3">
-              <TeamLogo
-                team={selectedTeam.trends.breakoutCandidate.team}
-                size={48}
-              />
-              <div>
-                <h4 className="font-semibold text-slate-100">{selectedTeam.trends.breakoutCandidate.playerName}</h4>
-                <p className="text-sm text-gray-400">#{selectedTeam.trends.breakoutCandidate.rank} • {selectedTeam.trends.breakoutCandidate.position}</p>
+          <Card className="bg-slate-700 border-slate-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-yellow-400 text-sm">BREAKOUT CANDIDATE</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-3">
+                <TeamLogo team={selectedTeam.trends.breakoutCandidate.team} size={48} />
+                <div>
+                  <h4 className="font-semibold text-slate-100">
+                    {selectedTeam.trends.breakoutCandidate.playerName}
+                  </h4>
+                  <p className="text-sm text-gray-400">
+                    #{selectedTeam.trends.breakoutCandidate.rank} •{' '}
+                    {selectedTeam.trends.breakoutCandidate.position}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-slate-700 border-slate-600">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-purple-400 text-sm">SLEEPER PICK</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-3">
-              <TeamLogo
-                team={selectedTeam.trends.sleeperPick.team}
-                size={48}
-              />
-              <div>
-                <h4 className="font-semibold text-slate-100">{selectedTeam.trends.sleeperPick.playerName}</h4>
-                <p className="text-sm text-gray-400">#{selectedTeam.trends.sleeperPick.rank} • {selectedTeam.trends.sleeperPick.position}</p>
+          <Card className="bg-slate-700 border-slate-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-purple-400 text-sm">SLEEPER PICK</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-3">
+                <TeamLogo team={selectedTeam.trends.sleeperPick.team} size={48} />
+                <div>
+                  <h4 className="font-semibold text-slate-100">
+                    {selectedTeam.trends.sleeperPick.playerName}
+                  </h4>
+                  <p className="text-sm text-gray-400">
+                    #{selectedTeam.trends.sleeperPick.rank} •{' '}
+                    {selectedTeam.trends.sleeperPick.position}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Team Analysis */}
@@ -371,7 +425,10 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                     {(() => {
                       const totalGames = selectedTeam.wins + selectedTeam.losses
                       const currentWinRate = totalGames > 0 ? selectedTeam.wins / totalGames : 0.5
-                      const adjustedWinRate = Math.min(0.85, Math.max(0.15, currentWinRate + (selectedTeam.gradeScore - 50) / 200))
+                      const adjustedWinRate = Math.min(
+                        0.85,
+                        Math.max(0.15, currentWinRate + (selectedTeam.gradeScore - 50) / 200)
+                      )
                       const projectedWins = Math.round(adjustedWinRate * 14)
                       const projectedLosses = 14 - projectedWins
                       return `${projectedWins}-${projectedLosses}`
@@ -386,4 +443,3 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
     </>
   )
 }
-

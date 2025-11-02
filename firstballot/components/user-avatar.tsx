@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import Image from "next/image"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { useState } from 'react'
+import Image from 'next/image'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 interface UserAvatarProps {
   avatarId?: string
@@ -12,16 +12,22 @@ interface UserAvatarProps {
   className?: string
 }
 
-export function UserAvatar({ avatarId, displayName, username, size = 32, className = "" }: UserAvatarProps) {
+export function UserAvatar({
+  avatarId,
+  displayName,
+  username,
+  size = 32,
+  className = '',
+}: UserAvatarProps) {
   const [imageError, setImageError] = useState(false)
-  
+
   // Get initials from display name or username
   const getInitials = () => {
-    const name = displayName || username || "User"
+    const name = displayName || username || 'User'
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .slice(0, 2)
       .toUpperCase()
   }
@@ -41,7 +47,7 @@ export function UserAvatar({ avatarId, displayName, username, size = 32, classNa
     <Avatar className={className} style={{ width: size, height: size }}>
       <AvatarImage
         src={`https://sleepercdn.com/avatars/${avatarId}`}
-        alt={displayName || username || "User avatar"}
+        alt={displayName || username || 'User avatar'}
         onError={() => setImageError(true)}
       />
       <AvatarFallback className="bg-slate-700 text-slate-300 text-xs font-bold">
@@ -49,4 +55,4 @@ export function UserAvatar({ avatarId, displayName, username, size = 32, classNa
       </AvatarFallback>
     </Avatar>
   )
-} 
+}

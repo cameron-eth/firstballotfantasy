@@ -1,20 +1,38 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useState, useEffect, Suspense, useCallback, useMemo } from "react"
-import { useSearchParams } from "next/navigation"
-import { Header } from "@/components/header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Eye, Users, TrendingUp, Star, School, User, Crown, X, GripVertical, Wrench } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import { PlayerNGSStats } from "@/components/player-ngs-stats"
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Header } from '@/components/header'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Search,
+  Eye,
+  Users,
+  TrendingUp,
+  Star,
+  School,
+  User,
+  Crown,
+  X,
+  GripVertical,
+  Wrench,
+} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { PlayerNGSStats } from '@/components/player-ngs-stats'
 
 interface Prospect {
   rank: number
@@ -56,10 +74,10 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
   const [loading, setLoading] = useState(true)
   const [rosterLoading, setRosterLoading] = useState(true)
   const [rosterError, setRosterError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [positionFilter, setPositionFilter] = useState("all")
-  const [schoolFilter, setSchoolFilter] = useState("all")
-  const [activeTab, setActiveTab] = useState("roster")
+  const [searchTerm, setSearchTerm] = useState('')
+  const [positionFilter, setPositionFilter] = useState('all')
+  const [schoolFilter, setSchoolFilter] = useState('all')
+  const [activeTab, setActiveTab] = useState('roster')
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [draggedProspect, setDraggedProspect] = useState<Prospect | null>(null)
   const [dragOverPosition, setDragOverPosition] = useState<string | null>(null)
@@ -67,8 +85,10 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
   const [showCompsModal, setShowCompsModal] = useState(false)
   const [selectedProspectForComps, setSelectedProspectForComps] = useState<Prospect | null>(null)
   const [draftBoard, setDraftBoard] = useState<Prospect[]>([])
-  const [draggedBoardProspect, setDraggedBoardProspect] = useState<{ prospect: Prospect; index: number } | null>(null)
-
+  const [draggedBoardProspect, setDraggedBoardProspect] = useState<{
+    prospect: Prospect
+    index: number
+  } | null>(null)
 
   // Memoized expensive computations
   const positionNeeds = useMemo(() => {
@@ -144,56 +164,55 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
       filtered = filtered.filter(
         (prospect) =>
           prospect.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          prospect.school.toLowerCase().includes(searchTerm.toLowerCase()),
+          prospect.school.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
-    if (positionFilter !== "all") {
+    if (positionFilter !== 'all') {
       filtered = filtered.filter((prospect) => prospect.position === positionFilter)
     }
 
-    if (schoolFilter !== "all") {
+    if (schoolFilter !== 'all') {
       filtered = filtered.filter((prospect) => prospect.school === schoolFilter)
     }
 
     return filtered
   }, [prospects, searchTerm, positionFilter, schoolFilter])
 
-
   // Memoized utility functions
   const getProspectGrade = useCallback((prospect: Prospect): string => {
-    return prospect.grade || "C"
+    return prospect.grade || 'C'
   }, [])
 
   const getGradeColor = useCallback((grade: string): string => {
     const gradeColors: Record<string, string> = {
-      "A+": "text-green-400",
-      A: "text-green-400",
-      "A-": "text-green-400",
-      "B+": "text-blue-400",
-      B: "text-blue-400",
-      "B-": "text-blue-400",
-      "C+": "text-yellow-400",
-      C: "text-yellow-400",
-      "C-": "text-yellow-400",
-      "D+": "text-orange-400",
-      D: "text-orange-400",
-      "D-": "text-orange-400",
-      F: "text-red-400",
+      'A+': 'text-green-400',
+      A: 'text-green-400',
+      'A-': 'text-green-400',
+      'B+': 'text-blue-400',
+      B: 'text-blue-400',
+      'B-': 'text-blue-400',
+      'C+': 'text-yellow-400',
+      C: 'text-yellow-400',
+      'C-': 'text-yellow-400',
+      'D+': 'text-orange-400',
+      D: 'text-orange-400',
+      'D-': 'text-orange-400',
+      F: 'text-red-400',
     }
-    return gradeColors[grade] || "text-gray-400"
+    return gradeColors[grade] || 'text-gray-400'
   }, [])
 
   const getPositionColor = useCallback((position: string): string => {
     const colors: Record<string, string> = {
-      QB: "bg-slate-500",
-      RB: "bg-slate-500",
-      WR: "bg-slate-500",
-      TE: "bg-slate-500",
-      K: "bg-slate-500",
-      DEF: "bg-slate-500",
+      QB: 'bg-slate-500',
+      RB: 'bg-slate-500',
+      WR: 'bg-slate-500',
+      TE: 'bg-slate-500',
+      K: 'bg-slate-500',
+      DEF: 'bg-slate-500',
     }
-    return colors[position] || "bg-slate-500"
+    return colors[position] || 'bg-slate-500'
   }, [])
 
   // Prospect Valuation System - Hybrid Exponential-Tiered Value Curve
@@ -256,26 +275,28 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
   }, [])
 
   const getProspectTier = useCallback((rank: number): string => {
-    if (rank <= 12) return "Elite Prospect"
-    if (rank <= 36) return "First Round"
-    if (rank <= 72) return "Second Round"
-    if (rank <= 120) return "Third Round"
-    if (rank <= 200) return "Mid Round"
-    if (rank <= 300) return "Late Round"
-    return "Undrafted"
+    if (rank <= 12) return 'Elite Prospect'
+    if (rank <= 36) return 'First Round'
+    if (rank <= 72) return 'Second Round'
+    if (rank <= 120) return 'Third Round'
+    if (rank <= 200) return 'Mid Round'
+    if (rank <= 300) return 'Late Round'
+    return 'Undrafted'
   }, [])
 
   const getTierColor = useCallback((tier: string): string => {
     const tierColors: Record<string, string> = {
-      "Elite Prospect": "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-bold",
-      "First Round": "bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold",
-      "Second Round": "bg-green-500/20 text-green-300 border border-green-500/30 font-semibold",
-      "Third Round": "bg-purple-500/20 text-purple-300 border border-purple-500/30 font-medium",
-      "Mid Round": "bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium",
-      "Late Round": "bg-slate-500/20 text-slate-300 border border-slate-500/30 font-normal",
-      Undrafted: "bg-gray-500/20 text-gray-300 border border-gray-500/30 font-normal",
+      'Elite Prospect': 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-bold',
+      'First Round': 'bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold',
+      'Second Round': 'bg-green-500/20 text-green-300 border border-green-500/30 font-semibold',
+      'Third Round': 'bg-purple-500/20 text-purple-300 border border-purple-500/30 font-medium',
+      'Mid Round': 'bg-orange-500/20 text-orange-300 border border-orange-500/30 font-medium',
+      'Late Round': 'bg-slate-500/20 text-slate-300 border border-slate-500/30 font-normal',
+      Undrafted: 'bg-gray-500/20 text-gray-300 border border-gray-500/30 font-normal',
     }
-    return tierColors[tier] || "bg-slate-500/20 text-slate-300 border border-slate-500/30 font-normal"
+    return (
+      tierColors[tier] || 'bg-slate-500/20 text-slate-300 border border-slate-500/30 font-normal'
+    )
   }, [])
 
   // Hit rate data based on position_prospect_tier_breakdown
@@ -283,46 +304,49 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
     () =>
       ({
         QB: {
-          "Elite Prospect": { elite: 17.4, tier1: 60.9, tier2: 17.4, startable: 0, streamer: 4.3 },
-          "First Round": { elite: 0, tier1: 37.5, tier2: 50, startable: 12.5, streamer: 0 },
-          "Second Round": { elite: 0, tier1: 0, tier2: 80, startable: 0, streamer: 20 },
-          "Third Round": { elite: 0, tier1: 0, tier2: 16.7, startable: 41.7, streamer: 41.7 },
-          "Mid Round": { elite: 0, tier1: 0, tier2: 4.2, startable: 20.8, streamer: 75 },
-          "Late Round": { elite: 0, tier1: 0, tier2: 16.7, startable: 11.1, streamer: 72.2 },
+          'Elite Prospect': { elite: 17.4, tier1: 60.9, tier2: 17.4, startable: 0, streamer: 4.3 },
+          'First Round': { elite: 0, tier1: 37.5, tier2: 50, startable: 12.5, streamer: 0 },
+          'Second Round': { elite: 0, tier1: 0, tier2: 80, startable: 0, streamer: 20 },
+          'Third Round': { elite: 0, tier1: 0, tier2: 16.7, startable: 41.7, streamer: 41.7 },
+          'Mid Round': { elite: 0, tier1: 0, tier2: 4.2, startable: 20.8, streamer: 75 },
+          'Late Round': { elite: 0, tier1: 0, tier2: 16.7, startable: 11.1, streamer: 72.2 },
           Undrafted: { elite: 0, tier1: 0, tier2: 59, startable: 9.6, streamer: 31.3 },
         },
         RB: {
-          "Elite Prospect": { elite: 60, tier1: 40, tier2: 0, startable: 0, streamer: 0 },
-          "First Round": { elite: 0, tier1: 62.5, tier2: 37.5, startable: 0, streamer: 0 },
-          "Second Round": { elite: 0, tier1: 23.5, tier2: 58.8, startable: 17.6, streamer: 0 },
-          "Third Round": { elite: 0, tier1: 3.7, tier2: 29.6, startable: 51.9, streamer: 14.8 },
-          "Mid Round": { elite: 0, tier1: 0, tier2: 9.8, startable: 52.5, streamer: 37.7 },
-          "Late Round": { elite: 0, tier1: 0, tier2: 2.6, startable: 12.8, streamer: 84.6 },
+          'Elite Prospect': { elite: 60, tier1: 40, tier2: 0, startable: 0, streamer: 0 },
+          'First Round': { elite: 0, tier1: 62.5, tier2: 37.5, startable: 0, streamer: 0 },
+          'Second Round': { elite: 0, tier1: 23.5, tier2: 58.8, startable: 17.6, streamer: 0 },
+          'Third Round': { elite: 0, tier1: 3.7, tier2: 29.6, startable: 51.9, streamer: 14.8 },
+          'Mid Round': { elite: 0, tier1: 0, tier2: 9.8, startable: 52.5, streamer: 37.7 },
+          'Late Round': { elite: 0, tier1: 0, tier2: 2.6, startable: 12.8, streamer: 84.6 },
           Undrafted: { elite: 0, tier1: 0, tier2: 0.5, startable: 62.8, streamer: 36.6 },
         },
         WR: {
-          "Elite Prospect": { elite: 10, tier1: 30, tier2: 60, startable: 0, streamer: 0 },
-          "First Round": { elite: 0, tier1: 10.3, tier2: 69, startable: 13.8, streamer: 6.9 },
-          "Second Round": { elite: 0, tier1: 2.3, tier2: 44.2, startable: 46.5, streamer: 7 },
-          "Third Round": { elite: 0, tier1: 0, tier2: 11.4, startable: 51.4, streamer: 37.1 },
-          "Mid Round": { elite: 0, tier1: 0, tier2: 1.5, startable: 35.3, streamer: 63.2 },
-          "Late Round": { elite: 0, tier1: 0, tier2: 0, startable: 14.3, streamer: 85.7 },
+          'Elite Prospect': { elite: 10, tier1: 30, tier2: 60, startable: 0, streamer: 0 },
+          'First Round': { elite: 0, tier1: 10.3, tier2: 69, startable: 13.8, streamer: 6.9 },
+          'Second Round': { elite: 0, tier1: 2.3, tier2: 44.2, startable: 46.5, streamer: 7 },
+          'Third Round': { elite: 0, tier1: 0, tier2: 11.4, startable: 51.4, streamer: 37.1 },
+          'Mid Round': { elite: 0, tier1: 0, tier2: 1.5, startable: 35.3, streamer: 63.2 },
+          'Late Round': { elite: 0, tier1: 0, tier2: 0, startable: 14.3, streamer: 85.7 },
           Undrafted: { elite: 0, tier1: 0, tier2: 0, startable: 58.3, streamer: 41.7 },
         },
         TE: {
-          "Elite Prospect": { elite: 0, tier1: 50, tier2: 0, startable: 50, streamer: 0 },
-          "First Round": { elite: 0, tier1: 12.5, tier2: 25, startable: 62.5, streamer: 0 },
-          "Second Round": { elite: 0, tier1: 0, tier2: 12.5, startable: 62.5, streamer: 25 },
-          "Third Round": { elite: 0, tier1: 0, tier2: 0, startable: 16.7, streamer: 83.3 },
-          "Mid Round": { elite: 0, tier1: 0, tier2: 0, startable: 22.4, streamer: 77.6 },
-          "Late Round": { elite: 0, tier1: 0, tier2: 0, startable: 3.3, streamer: 96.7 },
+          'Elite Prospect': { elite: 0, tier1: 50, tier2: 0, startable: 50, streamer: 0 },
+          'First Round': { elite: 0, tier1: 12.5, tier2: 25, startable: 62.5, streamer: 0 },
+          'Second Round': { elite: 0, tier1: 0, tier2: 12.5, startable: 62.5, streamer: 25 },
+          'Third Round': { elite: 0, tier1: 0, tier2: 0, startable: 16.7, streamer: 83.3 },
+          'Mid Round': { elite: 0, tier1: 0, tier2: 0, startable: 22.4, streamer: 77.6 },
+          'Late Round': { elite: 0, tier1: 0, tier2: 0, startable: 3.3, streamer: 96.7 },
           Undrafted: { elite: 0, tier1: 0, tier2: 0, startable: 0, streamer: 100 },
         },
       }) as Record<
         string,
-        Record<string, { elite: number; tier1: number; tier2: number; startable: number; streamer: number }>
+        Record<
+          string,
+          { elite: number; tier1: number; tier2: number; startable: number; streamer: number }
+        >
       >,
-    [],
+    []
   )
 
   // Player Valuation System (for roster players) - Hybrid Exponential-Tiered Value Curve
@@ -387,20 +411,20 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
   }, [])
 
   const getDraftPick = useCallback((prospect: Prospect): string => {
-    const round = prospect.projectedRound || "UDFA"
-    if (round === "UDFA") return "UDFA"
+    const round = prospect.projectedRound || 'UDFA'
+    if (round === 'UDFA') return 'UDFA'
     return `${round}`
   }, [])
 
   // Memoized event handlers
   const handleDragStart = useCallback((e: React.DragEvent, prospect: Prospect) => {
     setDraggedProspect(prospect)
-    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.effectAllowed = 'move'
   }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
+    e.dataTransfer.dropEffect = 'move'
   }, [])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
@@ -415,7 +439,7 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
           id: `prospect-${draggedProspect.rank}`,
           name: draggedProspect.name,
           position: draggedProspect.position,
-          team: "ROOKIE",
+          team: 'ROOKIE',
           age: 21,
           experience: 0,
           value: calculateProspectValue(draggedProspect.rank, draggedProspect.position), // Use calculated value
@@ -426,7 +450,7 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
         setDraggedProspect(null)
       }
     },
-    [draggedProspect, calculateProspectValue],
+    [draggedProspect, calculateProspectValue]
   )
 
   const resetRoster = useCallback(() => {
@@ -466,30 +490,33 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
     setDraftBoard((prev) => prev.filter((p) => p.rank !== prospectRank))
   }, [])
 
-  const handleBoardDragStart = useCallback((e: React.DragEvent, prospect: Prospect, index: number) => {
-    setDraggedBoardProspect({ prospect, index })
-    e.dataTransfer.effectAllowed = "move"
-  }, [])
+  const handleBoardDragStart = useCallback(
+    (e: React.DragEvent, prospect: Prospect, index: number) => {
+      setDraggedBoardProspect({ prospect, index })
+      e.dataTransfer.effectAllowed = 'move'
+    },
+    []
+  )
 
   const handleBoardDragOver = useCallback((e: React.DragEvent, index: number) => {
     e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
+    e.dataTransfer.dropEffect = 'move'
   }, [])
 
   const handleBoardDrop = useCallback(
     (e: React.DragEvent, dropIndex: number) => {
       e.preventDefault()
-      
+
       if (draggedBoardProspect) {
         const { prospect, index: dragIndex } = draggedBoardProspect
-        
+
         setDraftBoard((prev) => {
           const newBoard = [...prev]
           newBoard.splice(dragIndex, 1)
           newBoard.splice(dropIndex, 0, prospect)
           return newBoard
         })
-        
+
         setDraggedBoardProspect(null)
       }
     },
@@ -514,44 +541,47 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
           data: { session },
         } = await supabase.auth.getSession()
         if (!session?.access_token) {
-          setRosterError("Please log in to view your roster")
+          setRosterError('Please log in to view your roster')
           return
         }
 
         const response = await fetch(`/api/league-roster?leagueId=${leagueId}`, {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
         })
 
         if (response.ok) {
           const data = await response.json()
-          
+
           // Fetch stats for all roster players using Sleeper IDs (SAME PATTERN AS LEAGUE BUDDY)
           const allSleeperPlayerIds = data.roster.map((p: any) => p.player_id).filter(Boolean)
-          const rosterStatsMap: Record<string, { fantasy_ppg: number, total_fantasy_points: number, games_played: number }> = {}
-          
+          const rosterStatsMap: Record<
+            string,
+            { fantasy_ppg: number; total_fantasy_points: number; games_played: number }
+          > = {}
+
           if (allSleeperPlayerIds.length > 0) {
             try {
               const playerIdsParam = allSleeperPlayerIds.join(',')
-              const statsResponse = await fetch(`/api/roster-stats?player_ids=${playerIdsParam}`, { 
-                cache: 'no-store'
+              const statsResponse = await fetch(`/api/roster-stats?player_ids=${playerIdsParam}`, {
+                cache: 'no-store',
               })
-              
+
               if (statsResponse.ok) {
                 const result = await statsResponse.json()
                 console.log('📊 Scouting Portal - Roster Stats Response:', result.count, 'players')
-                
+
                 // Map by Sleeper player ID
                 result.data.forEach((playerStats: any) => {
                   rosterStatsMap[playerStats.sleeper_player_id] = {
                     fantasy_ppg: parseFloat(playerStats.fantasy_ppg) || 0,
                     total_fantasy_points: parseFloat(playerStats.total_fantasy_points) || 0,
-                    games_played: playerStats.games_played || 0
+                    games_played: playerStats.games_played || 0,
                   }
                 })
-                
+
                 console.log('✅ Loaded stats for', Object.keys(rosterStatsMap).length, 'players')
               } else {
                 console.error('❌ Failed to fetch stats:', statsResponse.statusText)
@@ -560,11 +590,11 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
               console.error('❌ Failed to fetch stats:', err)
             }
           }
-          
+
           const rosterPlayers: RosterPlayer[] = data.roster.map((player: any) => {
             const playerName = `${player.first_name} ${player.last_name}`
             const stats = rosterStatsMap[player.player_id] || {}
-            
+
             return {
               id: player.player_id,
               name: playerName,
@@ -585,11 +615,11 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
           setOriginalRoster(rosterPlayers)
         } else {
           const errorData = await response.json()
-          setRosterError(errorData.error || "Failed to fetch your roster")
+          setRosterError(errorData.error || 'Failed to fetch your roster')
         }
       } catch (error) {
-        console.error("Error fetching roster:", error)
-        setRosterError("Failed to load your roster. Please try again.")
+        console.error('Error fetching roster:', error)
+        setRosterError('Failed to load your roster. Please try again.')
       } finally {
         setRosterLoading(false)
       }
@@ -603,19 +633,19 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await fetch("/api/prospects")
+        const response = await fetch('/api/prospects')
         if (response.ok) {
           const data = await response.json()
           // Add mock grades
           const prospectsWithGrades = data.map((prospect: Prospect) => ({
             ...prospect,
             grade: getProspectGrade(prospect),
-            notes: "",
+            notes: '',
           }))
           setProspects(prospectsWithGrades)
         }
       } catch (error) {
-        console.error("Error fetching data:", error)
+        console.error('Error fetching data:', error)
       } finally {
         setLoading(false)
       }
@@ -634,8 +664,12 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white font-mono mb-2 truncate">SCOUTING PORTAL</h1>
-                <p className="text-gray-400 font-mono text-sm sm:text-base break-words">League ID: {leagueId} • Dynasty SF 2026 Rookie Rankings</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white font-mono mb-2 truncate">
+                  SCOUTING PORTAL
+                </h1>
+                <p className="text-gray-400 font-mono text-sm sm:text-base break-words">
+                  League ID: {leagueId} • Dynasty SF 2026 Rookie Rankings
+                </p>
               </div>
               <div className="flex items-center space-x-3 flex-shrink-0">
                 <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30">
@@ -699,19 +733,25 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {["QB", "RB", "WR", "TE"].map((pos) => {
+                        {['QB', 'RB', 'WR', 'TE'].map((pos) => {
                           const count = roster.filter((p) => p.position === pos).length
                           const avgAge =
-                            roster.filter((p) => p.position === pos).reduce((sum, p) => sum + p.age, 0) / count || 0
+                            roster
+                              .filter((p) => p.position === pos)
+                              .reduce((sum, p) => sum + p.age, 0) / count || 0
                           const avgValue =
-                            roster.filter((p) => p.position === pos).reduce((sum, p) => sum + p.value, 0) / count || 0
+                            roster
+                              .filter((p) => p.position === pos)
+                              .reduce((sum, p) => sum + p.value, 0) / count || 0
                           return (
                             <div key={pos} className="bg-slate-700 rounded-lg p-3 text-center">
                               <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-500 text-white text-xs font-bold mb-2">
                                 {pos}
                               </div>
                               <div className="text-white font-bold text-lg">{count}</div>
-                              <div className="text-gray-400 text-xs">Avg Age: {avgAge.toFixed(1)}</div>
+                              <div className="text-gray-400 text-xs">
+                                Avg Age: {avgAge.toFixed(1)}
+                              </div>
                               <div className="text-blue-400 text-xs font-semibold">
                                 Avg Value: {avgValue.toFixed(0)}
                               </div>
@@ -727,7 +767,7 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                           {Object.entries(positionNeeds).map(([pos, need]) => (
                             <Badge
                               key={pos}
-                              className={`${need > 0 ? "bg-red-500/20 text-red-300 border-red-500/30" : "bg-green-500/20 text-green-300 border-green-500/30"} text-xs`}
+                              className={`${need > 0 ? 'bg-red-500/20 text-red-300 border-red-500/30' : 'bg-green-500/20 text-green-300 border-green-500/30'} text-xs`}
                             >
                               {pos}: {need}
                             </Badge>
@@ -739,24 +779,34 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                       <div className="mt-4 bg-slate-700 rounded-lg p-3">
                         <h3 className="text-white font-semibold text-sm mb-2">Roster Strength</h3>
                         <div className="space-y-2">
-                          {["QB", "RB", "WR", "TE"].map((position) => {
-                            const positionPlayers = rosterWithPositionalRanks.filter((p) => p.position === position)
+                          {['QB', 'RB', 'WR', 'TE'].map((position) => {
+                            const positionPlayers = rosterWithPositionalRanks.filter(
+                              (p) => p.position === position
+                            )
                             if (positionPlayers.length === 0) return null
 
                             const totalValue = positionPlayers.reduce((sum, p) => sum + p.value, 0)
                             const avgRank =
-                              positionPlayers.reduce((sum, p) => sum + p.positionalRank, 0) / positionPlayers.length
+                              positionPlayers.reduce((sum, p) => sum + p.positionalRank, 0) /
+                              positionPlayers.length
                             const topPlayer = positionPlayers.sort((a, b) => b.value - a.value)[0]
 
                             return (
-                              <div key={position} className="flex items-center justify-between text-xs">
+                              <div
+                                key={position}
+                                className="flex items-center justify-between text-xs"
+                              >
                                 <div className="flex items-center space-x-2">
                                   <div className="w-3 h-3 rounded-full bg-slate-500"></div>
                                   <span className="text-gray-300">{position}</span>
                                 </div>
                                 <div className="flex items-center space-x-3">
-                                  <span className="text-blue-400">Total: {totalValue.toFixed(0)}</span>
-                                  <span className="text-slate-300">Avg Rank: {avgRank.toFixed(1)}</span>
+                                  <span className="text-blue-400">
+                                    Total: {totalValue.toFixed(0)}
+                                  </span>
+                                  <span className="text-slate-300">
+                                    Avg Rank: {avgRank.toFixed(1)}
+                                  </span>
                                   <span className="text-gray-400">Top: {topPlayer.name}</span>
                                 </div>
                               </div>
@@ -767,9 +817,11 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
 
                       {/* Top Players by Position */}
                       <div className="mt-4">
-                        <h3 className="text-white font-semibold text-sm mb-2">Top Players by Position</h3>
+                        <h3 className="text-white font-semibold text-sm mb-2">
+                          Top Players by Position
+                        </h3>
                         <div className="space-y-2">
-                          {["QB", "RB", "WR", "TE"].map((position) => {
+                          {['QB', 'RB', 'WR', 'TE'].map((position) => {
                             const topPlayer = rosterWithPositionalRanks
                               .filter((p) => p.position === position)
                               .sort((a, b) => b.value - a.value)[0]
@@ -780,7 +832,10 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                               <div
                                 key={position}
                                 className="flex items-center justify-between p-2 bg-slate-700 rounded text-xs hover:bg-slate-600 transition-colors cursor-pointer"
-                                onClick={() => topPlayer.isProspect && handleProspectSelect(topPlayer.prospectData!)}
+                                onClick={() =>
+                                  topPlayer.isProspect &&
+                                  handleProspectSelect(topPlayer.prospectData!)
+                                }
                               >
                                 <div className="flex items-center space-x-2 flex-1 min-w-0">
                                   <Badge className="bg-slate-500/30 text-slate-200 text-xs border border-slate-500/30">
@@ -802,7 +857,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                   </div>
                                 </div>
                                 <div className="text-right flex-shrink-0">
-                                  <div className="text-blue-400 font-mono font-semibold">{topPlayer.value}</div>
+                                  <div className="text-blue-400 font-mono font-semibold">
+                                    {topPlayer.value}
+                                  </div>
                                   <div className="text-gray-400 text-xs">Value</div>
                                 </div>
                               </div>
@@ -837,7 +894,7 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => (window.location.href = "/login")} // Redirect to login if not connected
+                            onClick={() => (window.location.href = '/login')} // Redirect to login if not connected
                             className="border-red-400 text-red-400 hover:border-red-300 mt-4"
                           >
                             Connect to Sleeper
@@ -845,8 +902,10 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                         </div>
                       ) : (
                         <div className="space-y-6">
-                          {["QB", "RB", "WR", "TE"].map((position) => {
-                            const positionPlayers = rosterWithPositionalRanks.filter((p) => p.position === position)
+                          {['QB', 'RB', 'WR', 'TE'].map((position) => {
+                            const positionPlayers = rosterWithPositionalRanks.filter(
+                              (p) => p.position === position
+                            )
                             return (
                               <div key={position} className="bg-slate-700 rounded-lg p-4">
                                 <div className="flex items-center justify-between mb-4">
@@ -858,16 +917,20 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                   </h3>
                                   <div className="flex items-center space-x-2">
                                     <Badge variant="outline" className="text-gray-400 text-xs">
-                                      Avg Age:{" "}
+                                      Avg Age:{' '}
                                       {(
-                                        positionPlayers.reduce((sum, p) => sum + p.age, 0) / positionPlayers.length || 0
+                                        positionPlayers.reduce((sum, p) => sum + p.age, 0) /
+                                          positionPlayers.length || 0
                                       ).toFixed(1)}
                                     </Badge>
-                                    <Badge variant="outline" className="text-blue-400 text-xs border-blue-400/40">
-                                      Avg Value:{" "}
+                                    <Badge
+                                      variant="outline"
+                                      className="text-blue-400 text-xs border-blue-400/40"
+                                    >
+                                      Avg Value:{' '}
                                       {(
-                                        positionPlayers.reduce((sum, p) => sum + p.value, 0) / positionPlayers.length ||
-                                        0
+                                        positionPlayers.reduce((sum, p) => sum + p.value, 0) /
+                                          positionPlayers.length || 0
                                       ).toFixed(0)}
                                     </Badge>
                                   </div>
@@ -877,8 +940,8 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                 <div
                                   className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 min-h-[80px] p-3 rounded-lg border-2 border-dashed transition-colors ${
                                     dragOverPosition === position
-                                      ? "border-blue-400 bg-blue-400/5"
-                                      : "border-slate-600 border-dashed"
+                                      ? 'border-blue-400 bg-blue-400/5'
+                                      : 'border-slate-600 border-dashed'
                                   }`}
                                   onDragOver={handleDragOver}
                                   onDragLeave={handleDragLeave}
@@ -919,22 +982,28 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                             </div>
                                             <div className="text-gray-400 text-xs">
                                               {player.team} • Age {player.age}
-                                              {player.isProspect && ` • ${player.prospectData?.school}`}
-                                              {player.search_rank && ` • Rank #${player.search_rank}`}
-                                              {!player.isProspect && player.games_played && ` • ${player.games_played} GP`}
+                                              {player.isProspect &&
+                                                ` • ${player.prospectData?.school}`}
+                                              {player.search_rank &&
+                                                ` • Rank #${player.search_rank}`}
+                                              {!player.isProspect &&
+                                                player.games_played &&
+                                                ` • ${player.games_played} GP`}
                                             </div>
                                           </div>
                                         </div>
                                         <div className="text-right">
-                                          <div className="text-blue-400 text-sm font-bold">{player.value}</div>
+                                          <div className="text-blue-400 text-sm font-bold">
+                                            {player.value}
+                                          </div>
                                           <div className="text-gray-400 text-xs">Value</div>
                                         </div>
                                       </div>
                                       {/* NGS Stats */}
                                       {!player.isProspect && (
                                         <div className="mt-2 pt-2 border-t border-slate-500">
-                                          <PlayerNGSStats 
-                                            playerName={player.name} 
+                                          <PlayerNGSStats
+                                            playerName={player.name}
                                             position={player.position}
                                             compact={true}
                                           />
@@ -1058,7 +1127,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
 
                                 {/* Player name and school */}
                                 <div className="mb-4">
-                                  <h3 className="text-white font-bold text-lg mb-1 leading-tight">{prospect.name}</h3>
+                                  <h3 className="text-white font-bold text-lg mb-1 leading-tight">
+                                    {prospect.name}
+                                  </h3>
                                   <div className="flex items-center text-gray-400 text-sm">
                                     <School className="h-3 w-3 mr-1" />
                                     <span>{prospect.school}</span>
@@ -1075,7 +1146,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                       <div className="text-gray-400 text-xs">Dynasty Value</div>
                                     </div>
                                     <div className="text-right">
-                                      <div className="text-slate-300 text-lg font-bold">#{prospect.rank}</div>
+                                      <div className="text-slate-300 text-lg font-bold">
+                                        #{prospect.rank}
+                                      </div>
                                       <div className="text-gray-400 text-xs">Rank</div>
                                     </div>
                                   </div>
@@ -1159,7 +1232,7 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                               </SelectContent>
                             </Select>
                           </div>
-                          
+
                           {loading ? (
                             <div className="text-center py-8">
                               <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -1197,8 +1270,12 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                         <GripVertical className="h-4 w-4 text-gray-400" />
                                       </div>
                                       <div className="mb-2">
-                                        <div className="text-white font-semibold text-sm">{prospect.name}</div>
-                                        <div className="text-gray-400 text-xs">{prospect.school} • #{prospect.rank}</div>
+                                        <div className="text-white font-semibold text-sm">
+                                          {prospect.name}
+                                        </div>
+                                        <div className="text-gray-400 text-xs">
+                                          {prospect.school} • #{prospect.rank}
+                                        </div>
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <div className="text-blue-400 text-sm font-bold">
@@ -1225,10 +1302,14 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                             Current Roster Composition
                           </h3>
                           <div className="grid grid-cols-2 gap-4 mb-6">
-                            {["QB", "RB", "WR", "TE"].map((pos) => {
+                            {['QB', 'RB', 'WR', 'TE'].map((pos) => {
                               const posPlayers = roster.filter((p) => p.position === pos)
-                              const avgAge = posPlayers.reduce((sum, p) => sum + p.age, 0) / posPlayers.length || 0
-                              const avgValue = posPlayers.reduce((sum, p) => sum + p.value, 0) / posPlayers.length || 0
+                              const avgAge =
+                                posPlayers.reduce((sum, p) => sum + p.age, 0) / posPlayers.length ||
+                                0
+                              const avgValue =
+                                posPlayers.reduce((sum, p) => sum + p.value, 0) /
+                                  posPlayers.length || 0
                               const prospectCount = posPlayers.filter((p) => p.isProspect).length
 
                               return (
@@ -1238,7 +1319,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                       <Badge className="bg-slate-500/30 text-slate-200 border border-slate-500/30">
                                         {pos}
                                       </Badge>
-                                      <span className="text-white font-bold text-lg">{posPlayers.length}</span>
+                                      <span className="text-white font-bold text-lg">
+                                        {posPlayers.length}
+                                      </span>
                                     </div>
                                     <div className="space-y-1 text-xs">
                                       <div className="flex items-center justify-between">
@@ -1247,7 +1330,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <span className="text-slate-400">Avg Value:</span>
-                                        <span className="text-blue-400 font-semibold">{avgValue.toFixed(0)}</span>
+                                        <span className="text-blue-400 font-semibold">
+                                          {avgValue.toFixed(0)}
+                                        </span>
                                       </div>
                                       {prospectCount > 0 && (
                                         <div className="flex items-center justify-between">
@@ -1273,17 +1358,20 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                           </h3>
                           <div className="space-y-3">
                             <p className="text-sm text-slate-400 mb-4">
-                              Drag college prospects from above to add them to your what-if scenario.
+                              Drag college prospects from above to add them to your what-if
+                              scenario.
                             </p>
-                            
+
                             {/* Show full roster by position */}
-                            <div 
+                            <div
                               className="space-y-4 min-h-[400px] border-2 border-dashed border-slate-600 rounded-lg p-4"
                               onDragOver={handleDragOver}
                               onDrop={handleDrop}
                             >
-                              {["QB", "RB", "WR", "TE"].map((position) => {
-                                const positionPlayers = roster.filter((p) => p.position === position)
+                              {['QB', 'RB', 'WR', 'TE'].map((position) => {
+                                const positionPlayers = roster.filter(
+                                  (p) => p.position === position
+                                )
                                 if (positionPlayers.length === 0) return null
 
                                 return (
@@ -1293,16 +1381,19 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                         <Badge className="bg-slate-500/30 text-slate-200 border border-slate-500/30">
                                           {position}
                                         </Badge>
-                                        <span className="text-slate-400 text-sm">({positionPlayers.length} players)</span>
+                                        <span className="text-slate-400 text-sm">
+                                          ({positionPlayers.length} players)
+                                        </span>
                                       </div>
                                     </div>
                                     <div className="space-y-2">
                                       {positionPlayers.map((player) => (
-                                        <Card 
-                                          key={player.id} 
-                                          className={player.isProspect 
-                                            ? "bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30"
-                                            : "bg-slate-700 border-slate-600"
+                                        <Card
+                                          key={player.id}
+                                          className={
+                                            player.isProspect
+                                              ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/30'
+                                              : 'bg-slate-700 border-slate-600'
                                           }
                                         >
                                           <CardContent className="p-3">
@@ -1320,7 +1411,8 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                                     {player.name}
                                                     {player.isProspect && (
                                                       <Badge className="ml-2 bg-yellow-500/20 text-yellow-300 text-xs border-yellow-500/30">
-                                                        {player.prospectData && getProspectGrade(player.prospectData)}
+                                                        {player.prospectData &&
+                                                          getProspectGrade(player.prospectData)}
                                                       </Badge>
                                                     )}
                                                     {!player.isProspect && player.fantasy_ppg && (
@@ -1332,20 +1424,25 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                                   <div className="text-gray-400 text-xs">
                                                     {player.isProspect ? (
                                                       <>
-                                                        {player.prospectData?.school} • Rank #{player.prospectData?.rank} • 2026 Prospect
+                                                        {player.prospectData?.school} • Rank #
+                                                        {player.prospectData?.rank} • 2026 Prospect
                                                       </>
                                                     ) : (
                                                       <>
                                                         {player.team} • Age {player.age}
-                                                        {player.search_rank && ` • Rank #${player.search_rank}`}
-                                                        {player.games_played && ` • ${player.games_played} GP`}
+                                                        {player.search_rank &&
+                                                          ` • Rank #${player.search_rank}`}
+                                                        {player.games_played &&
+                                                          ` • ${player.games_played} GP`}
                                                       </>
                                                     )}
                                                   </div>
                                                 </div>
                                               </div>
                                               <div className="text-right">
-                                                <div className="text-blue-400 text-sm font-bold">{player.value}</div>
+                                                <div className="text-blue-400 text-sm font-bold">
+                                                  {player.value}
+                                                </div>
                                                 <div className="text-gray-400 text-xs">Value</div>
                                               </div>
                                             </div>
@@ -1383,7 +1480,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                             <div className="bg-slate-600/50 p-4 rounded-lg">
                               <div className="text-slate-400 text-xs mb-1">Average Age</div>
                               <div className="text-2xl font-bold text-white font-mono">
-                                {(roster.reduce((sum, p) => sum + p.age, 0) / roster.length || 0).toFixed(1)}
+                                {(
+                                  roster.reduce((sum, p) => sum + p.age, 0) / roster.length || 0
+                                ).toFixed(1)}
                               </div>
                             </div>
 
@@ -1397,25 +1496,33 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                 {roster.filter((p) => p.isProspect).length} Prospects
                               </div>
                               <div className="text-xs text-yellow-400/70 mt-1">
-                                {((roster.filter((p) => p.isProspect).length / roster.length) * 100).toFixed(0)}% of roster
+                                {(
+                                  (roster.filter((p) => p.isProspect).length / roster.length) *
+                                  100
+                                ).toFixed(0)}
+                                % of roster
                               </div>
                             </div>
 
                             {/* Position Breakdown */}
                             <div>
-                              <div className="text-slate-400 text-xs mb-2">Position Distribution</div>
+                              <div className="text-slate-400 text-xs mb-2">
+                                Position Distribution
+                              </div>
                               <div className="space-y-2">
-                                {["QB", "RB", "WR", "TE"].map((pos) => {
+                                {['QB', 'RB', 'WR', 'TE'].map((pos) => {
                                   const count = roster.filter((p) => p.position === pos).length
                                   const percentage = (count / roster.length) * 100
                                   return (
                                     <div key={pos}>
                                       <div className="flex items-center justify-between text-xs mb-1">
                                         <span className="text-slate-300">{pos}</span>
-                                        <span className="text-slate-400">{count} ({percentage.toFixed(0)}%)</span>
+                                        <span className="text-slate-400">
+                                          {count} ({percentage.toFixed(0)}%)
+                                        </span>
                                       </div>
                                       <div className="h-1.5 bg-slate-600 rounded-full overflow-hidden">
-                                        <div 
+                                        <div
                                           className="h-full bg-blue-500 rounded-full transition-all"
                                           style={{ width: `${percentage}%` }}
                                         />
@@ -1504,8 +1611,8 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                   key={prospect.rank}
                                   className={`${
                                     isOnBoard
-                                      ? "bg-slate-600 border-blue-400 opacity-50"
-                                      : "bg-slate-700 border-slate-600 hover:border-yellow-400"
+                                      ? 'bg-slate-600 border-blue-400 opacity-50'
+                                      : 'bg-slate-700 border-slate-600 hover:border-yellow-400'
                                   } transition-all cursor-pointer`}
                                   onClick={() => !isOnBoard && handleAddToDraftBoard(prospect)}
                                 >
@@ -1518,7 +1625,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                         #{prospect.rank}
                                       </Badge>
                                     </div>
-                                    <div className="text-white font-semibold text-sm">{prospect.name}</div>
+                                    <div className="text-white font-semibold text-sm">
+                                      {prospect.name}
+                                    </div>
                                     <div className="text-gray-400 text-xs">{prospect.school}</div>
                                     {isOnBoard && (
                                       <div className="text-blue-400 text-xs mt-1">✓ On Board</div>
@@ -1545,7 +1654,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                           <Card className="bg-slate-700 border-2 border-dashed border-slate-600">
                             <CardContent className="p-12 text-center">
                               <TrendingUp className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-                              <p className="text-slate-400 mb-2 text-lg">Your draft board is empty</p>
+                              <p className="text-slate-400 mb-2 text-lg">
+                                Your draft board is empty
+                              </p>
                               <p className="text-slate-500 text-sm">
                                 Click on prospects from the left to add them to your custom board
                               </p>
@@ -1573,7 +1684,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                       </div>
                                       <div>
                                         <div className="flex items-center space-x-2 mb-1">
-                                          <div className="text-white font-bold text-lg">{prospect.name}</div>
+                                          <div className="text-white font-bold text-lg">
+                                            {prospect.name}
+                                          </div>
                                           <Badge className="bg-slate-500/30 text-slate-200">
                                             {prospect.position}
                                           </Badge>
@@ -1585,7 +1698,8 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                                           </Badge>
                                         </div>
                                         <div className="text-gray-400 text-sm">
-                                          {prospect.school} • Consensus Rank #{prospect.rank} • Value:{" "}
+                                          {prospect.school} • Consensus Rank #{prospect.rank} •
+                                          Value:{' '}
                                           {calculateProspectValue(prospect.rank, prospect.position)}
                                         </div>
                                       </div>
@@ -1650,16 +1764,23 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Dynasty Value</span>
                             <span className="text-blue-400 font-bold">
-                              {calculateProspectValue(selectedProspect.rank, selectedProspect.position)}
+                              {calculateProspectValue(
+                                selectedProspect.rank,
+                                selectedProspect.position
+                              )}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Rank</span>
-                            <span className="text-blue-400 font-bold">#{selectedProspect.rank}</span>
+                            <span className="text-blue-400 font-bold">
+                              #{selectedProspect.rank}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Tier</span>
-                            <span className="text-green-400">{getProspectTier(selectedProspect.rank)}</span>
+                            <span className="text-green-400">
+                              {getProspectTier(selectedProspect.rank)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1692,11 +1813,11 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                             <Badge
                               className={
                                 positionNeeds[selectedProspect.position] > 0
-                                  ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                                  : "bg-green-500/20 text-green-300 border border-green-500/30"
+                                  ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                  : 'bg-green-500/20 text-green-300 border border-green-500/30'
                               }
                             >
-                              {positionNeeds[selectedProspect.position] > 0 ? "High" : "Low"}
+                              {positionNeeds[selectedProspect.position] > 0 ? 'High' : 'Low'}
                             </Badge>
                           </div>
                           <div className="flex items-center justify-between">
@@ -1711,7 +1832,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Projected Round</span>
-                            <span className="text-purple-400 font-bold">{getDraftPick(selectedProspect)}</span>
+                            <span className="text-purple-400 font-bold">
+                              {getDraftPick(selectedProspect)}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-gray-400">Position Rank</span>
@@ -1762,7 +1885,9 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                       >
                         {selectedProspectForComps.position}
                       </Badge>
-                      <Badge className={`${getTierColor(getProspectTier(selectedProspectForComps.rank))}`}>
+                      <Badge
+                        className={`${getTierColor(getProspectTier(selectedProspectForComps.rank))}`}
+                      >
                         {getProspectTier(selectedProspectForComps.rank)}
                       </Badge>
                       <span className="text-gray-400">{selectedProspectForComps.school}</span>
@@ -1783,29 +1908,41 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                             <div className="space-y-2">
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Elite:</span>
-                                <span className="text-yellow-400 font-semibold">{hitRate.elite}%</span>
+                                <span className="text-yellow-400 font-semibold">
+                                  {hitRate.elite}%
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Tier 1:</span>
-                                <span className="text-blue-400 font-semibold">{hitRate.tier1}%</span>
+                                <span className="text-blue-400 font-semibold">
+                                  {hitRate.tier1}%
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Tier 2:</span>
-                                <span className="text-green-400 font-semibold">{hitRate.tier2}%</span>
+                                <span className="text-green-400 font-semibold">
+                                  {hitRate.tier2}%
+                                </span>
                               </div>
                             </div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Startable:</span>
-                                <span className="text-orange-400 font-semibold">{hitRate.startable}%</span>
+                                <span className="text-orange-400 font-semibold">
+                                  {hitRate.startable}%
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Streamer:</span>
-                                <span className="text-slate-400 font-semibold">{hitRate.streamer}%</span>
+                                <span className="text-slate-400 font-semibold">
+                                  {hitRate.streamer}%
+                                </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Tier 1+:</span>
-                                <span className="text-yellow-400 font-bold">{hitRate.elite + hitRate.tier1}%</span>
+                                <span className="text-yellow-400 font-bold">
+                                  {hitRate.elite + hitRate.tier1}%
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -1824,73 +1961,85 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
                           // Mock NFL comps based on position and tier
                           const comps: Record<
                             string,
-                            Record<string, Array<{ name: string; similarity: number; outcome: string }>>
+                            Record<
+                              string,
+                              Array<{ name: string; similarity: number; outcome: string }>
+                            >
                           > = {
                             QB: {
-                              "Elite Prospect": [
-                                { name: "Patrick Mahomes", similarity: 85, outcome: "hit" },
-                                { name: "Josh Allen", similarity: 82, outcome: "hit" },
-                                { name: "Justin Herbert", similarity: 78, outcome: "hit" },
+                              'Elite Prospect': [
+                                { name: 'Patrick Mahomes', similarity: 85, outcome: 'hit' },
+                                { name: 'Josh Allen', similarity: 82, outcome: 'hit' },
+                                { name: 'Justin Herbert', similarity: 78, outcome: 'hit' },
                               ],
-                              "First Round": [
-                                { name: "Baker Mayfield", similarity: 72, outcome: "miss" },
-                                { name: "Sam Darnold", similarity: 68, outcome: "bust" },
+                              'First Round': [
+                                { name: 'Baker Mayfield', similarity: 72, outcome: 'miss' },
+                                { name: 'Sam Darnold', similarity: 68, outcome: 'bust' },
                               ],
                             },
                             RB: {
-                              "Elite Prospect": [
-                                { name: "Christian McCaffrey", similarity: 88, outcome: "hit" },
-                                { name: "Saquon Barkley", similarity: 85, outcome: "hit" },
+                              'Elite Prospect': [
+                                { name: 'Christian McCaffrey', similarity: 88, outcome: 'hit' },
+                                { name: 'Saquon Barkley', similarity: 85, outcome: 'hit' },
                               ],
-                              "First Round": [
-                                { name: "Clyde Edwards-Helaire", similarity: 75, outcome: "miss" },
-                                { name: "Rashaad Penny", similarity: 70, outcome: "bust" },
+                              'First Round': [
+                                { name: 'Clyde Edwards-Helaire', similarity: 75, outcome: 'miss' },
+                                { name: 'Rashaad Penny', similarity: 70, outcome: 'bust' },
                               ],
                             },
                             WR: {
-                              "Elite Prospect": [
-                                { name: "Justin Jefferson", similarity: 90, outcome: "hit" },
-                                { name: "Ja'Marr Chase", similarity: 87, outcome: "hit" },
+                              'Elite Prospect': [
+                                { name: 'Justin Jefferson', similarity: 90, outcome: 'hit' },
+                                { name: "Ja'Marr Chase", similarity: 87, outcome: 'hit' },
                               ],
-                              "First Round": [
-                                { name: "Henry Ruggs", similarity: 73, outcome: "bust" },
-                                { name: "Jalen Reagor", similarity: 68, outcome: "bust" },
+                              'First Round': [
+                                { name: 'Henry Ruggs', similarity: 73, outcome: 'bust' },
+                                { name: 'Jalen Reagor', similarity: 68, outcome: 'bust' },
                               ],
                             },
                             TE: {
-                              "Elite Prospect": [
-                                { name: "Kyle Pitts", similarity: 82, outcome: "hit" },
-                                { name: "T.J. Hockenson", similarity: 78, outcome: "hit" },
+                              'Elite Prospect': [
+                                { name: 'Kyle Pitts', similarity: 82, outcome: 'hit' },
+                                { name: 'T.J. Hockenson', similarity: 78, outcome: 'hit' },
                               ],
-                              "First Round": [
-                                { name: "Noah Fant", similarity: 75, outcome: "miss" },
-                                { name: "O.J. Howard", similarity: 70, outcome: "bust" },
+                              'First Round': [
+                                { name: 'Noah Fant', similarity: 75, outcome: 'miss' },
+                                { name: 'O.J. Howard', similarity: 70, outcome: 'bust' },
                               ],
                             },
                           }
 
-                          const positionComps = comps[position]?.[tier] || comps[position]?.["First Round"] || []
+                          const positionComps =
+                            comps[position]?.[tier] || comps[position]?.['First Round'] || []
 
                           return positionComps.map(
-                            (comp: { name: string; similarity: number; outcome: string }, index: number) => (
-                              <div key={index} className="flex items-center justify-between p-2 bg-slate-600 rounded">
+                            (
+                              comp: { name: string; similarity: number; outcome: string },
+                              index: number
+                            ) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-2 bg-slate-600 rounded"
+                              >
                                 <span className="text-white font-medium">{comp.name}</span>
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-gray-400 text-sm">{comp.similarity}% similar</span>
+                                  <span className="text-gray-400 text-sm">
+                                    {comp.similarity}% similar
+                                  </span>
                                   <Badge
                                     className={
-                                      comp.outcome === "hit"
-                                        ? "bg-green-400/20 text-green-400"
-                                        : comp.outcome === "miss"
-                                          ? "bg-yellow-400/20 text-yellow-400"
-                                          : "bg-red-400/20 text-red-400"
+                                      comp.outcome === 'hit'
+                                        ? 'bg-green-400/20 text-green-400'
+                                        : comp.outcome === 'miss'
+                                          ? 'bg-yellow-400/20 text-yellow-400'
+                                          : 'bg-red-400/20 text-red-400'
                                     }
                                   >
                                     {comp.outcome}
                                   </Badge>
                                 </div>
                               </div>
-                            ),
+                            )
                           )
                         })()}
                       </div>
@@ -1919,7 +2068,7 @@ function ScoutingPortalContent({ leagueId }: ScoutingPortalContentProps) {
 
 function ScoutingPortalWrapper() {
   const searchParams = useSearchParams()
-  const leagueId = searchParams.get("leagueId") || ""
+  const leagueId = searchParams.get('leagueId') || ''
 
   return <ScoutingPortalContent leagueId={leagueId} />
 }

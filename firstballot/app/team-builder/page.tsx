@@ -1,10 +1,20 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { Header } from "@/components/header"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Star, TrendingUp, Target, Zap, Shield, Users, Crown, Gamepad2, BarChart3 } from "lucide-react"
+import { useState, useEffect } from 'react'
+import { Header } from '@/components/header'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Star,
+  TrendingUp,
+  Target,
+  Zap,
+  Shield,
+  Users,
+  Crown,
+  Gamepad2,
+  BarChart3,
+} from 'lucide-react'
 
 interface TeamBuilderData {
   tierDistribution: any
@@ -25,16 +35,16 @@ export default function TeamBuilderPage() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch("/api/team-archetypes")
+      const response = await fetch('/api/team-archetypes')
       if (!response.ok) {
-        throw new Error("Failed to fetch team builder data")
+        throw new Error('Failed to fetch team builder data')
       }
       const result = await response.json()
 
       setData(result)
     } catch (err) {
-      console.error("Error fetching team builder data:", err)
-      setError("Failed to load team builder data")
+      console.error('Error fetching team builder data:', err)
+      setError('Failed to load team builder data')
     } finally {
       setLoading(false)
     }
@@ -63,7 +73,7 @@ export default function TeamBuilderPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <p className="text-red-400 font-mono mb-4">ERROR: {error || "Failed to load data"}</p>
+              <p className="text-red-400 font-mono mb-4">ERROR: {error || 'Failed to load data'}</p>
               <button
                 onClick={fetchTeamBuilderData}
                 className="bg-yellow-400 text-slate-900 px-4 py-2 rounded-lg font-mono"
@@ -81,22 +91,22 @@ export default function TeamBuilderPage() {
   const tierDistribution = data.tierDistribution
 
   const getProbabilityColor = (probability: string) => {
-    const num = parseInt(probability.replace("%", ""))
-    if (num >= 60) return "bg-green-500"
-    if (num >= 40) return "bg-yellow-500"
-    return "bg-red-500"
+    const num = parseInt(probability.replace('%', ''))
+    if (num >= 60) return 'bg-green-500'
+    if (num >= 40) return 'bg-yellow-500'
+    return 'bg-red-500'
   }
 
   const getRiskColor = (risk: string) => {
     switch (risk.toLowerCase()) {
-      case "low":
-        return "bg-green-500"
-      case "medium":
-        return "bg-yellow-500"
-      case "high":
-        return "bg-red-500"
+      case 'low':
+        return 'bg-green-500'
+      case 'medium':
+        return 'bg-yellow-500'
+      case 'high':
+        return 'bg-red-500'
       default:
-        return "bg-gray-500"
+        return 'bg-gray-500'
     }
   }
 
@@ -163,7 +173,9 @@ export default function TeamBuilderPage() {
                     {Object.entries(archetype.roster).map(([position, player]: [string, any]) => (
                       <div key={position} className="flex justify-between">
                         <span className="text-gray-400 font-mono">{position}:</span>
-                        <span className="text-white font-mono">{player.tier} ({player.ppg} PPG)</span>
+                        <span className="text-white font-mono">
+                          {player.tier} ({player.ppg} PPG)
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -174,7 +186,9 @@ export default function TeamBuilderPage() {
                     <h4 className="text-white font-mono mb-2">PROS</h4>
                     <ul className="text-sm text-green-400 space-y-1">
                       {archetype.pros.map((pro: string, index: number) => (
-                        <li key={index} className="font-mono">• {pro}</li>
+                        <li key={index} className="font-mono">
+                          • {pro}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -182,7 +196,9 @@ export default function TeamBuilderPage() {
                     <h4 className="text-white font-mono mb-2">CONS</h4>
                     <ul className="text-sm text-red-400 space-y-1">
                       {archetype.cons.map((con: string, index: number) => (
-                        <li key={index} className="font-mono">• {con}</li>
+                        <li key={index} className="font-mono">
+                          • {con}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -192,7 +208,9 @@ export default function TeamBuilderPage() {
                   <h4 className="text-white font-mono mb-2">DRAFT STRATEGY</h4>
                   <ul className="text-sm text-yellow-400 space-y-1">
                     {archetype.draftStrategy.map((strategy: string, index: number) => (
-                      <li key={index} className="font-mono">• {strategy}</li>
+                      <li key={index} className="font-mono">
+                        • {strategy}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -200,7 +218,9 @@ export default function TeamBuilderPage() {
                 <div className="pt-4 border-t border-slate-700">
                   <div className="flex justify-between items-center">
                     <span className="text-white font-mono">Expected PPG:</span>
-                    <span className="text-yellow-400 font-mono text-lg">{archetype.expectedPPG}</span>
+                    <span className="text-yellow-400 font-mono text-lg">
+                      {archetype.expectedPPG}
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -210,4 +230,4 @@ export default function TeamBuilderPage() {
       </main>
     </div>
   )
-} 
+}

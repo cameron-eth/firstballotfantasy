@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import { useState, useEffect, useMemo, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { RefreshCw, Clock, Maximize2, Minimize2, Sparkles } from "lucide-react"
-import { SleeperPick, SleeperDraft, SleeperPlayer } from "@/lib/sleeper-api"
-import { userApi } from "@/lib/user-api"
-import { cacheUtils } from "@/lib/cache-utils"
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { RefreshCw, Clock, Maximize2, Minimize2, Sparkles } from 'lucide-react'
+import { SleeperPick, SleeperDraft, SleeperPlayer } from '@/lib/sleeper-api'
+import { userApi } from '@/lib/user-api'
+import { cacheUtils } from '@/lib/cache-utils'
 
 interface DraftBoardGridProps {
   draft: SleeperDraft
@@ -16,7 +16,13 @@ interface DraftBoardGridProps {
   lastRefresh: Date
 }
 
-export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }: DraftBoardGridProps) {
+export function DraftBoardGrid({
+  draft,
+  picks,
+  players,
+  onRefresh,
+  lastRefresh,
+}: DraftBoardGridProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [rankings, setRankings] = useState<any[]>([])
   const [rankingsLoading, setRankingsLoading] = useState(true)
@@ -29,7 +35,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
   // Memoized computed values
   const rounds = useMemo(() => draft.settings.rounds, [draft.settings.rounds])
   const teams = useMemo(() => draft.settings.teams || 12, [draft.settings.teams])
-  
+
   // Memoized player rank map for efficient lookups
   const playerRankMap = useMemo(() => {
     return rankings.reduce((acc: Record<string, number>, player: any) => {
@@ -42,9 +48,12 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
   }, [rankings])
 
   // Memoized utility functions
-  const findPlayerRank = useCallback((playerName: string): number | null => {
-    return playerRankMap[playerName] || null
-  }, [playerRankMap])
+  const findPlayerRank = useCallback(
+    (playerName: string): number | null => {
+      return playerRankMap[playerName] || null
+    },
+    [playerRankMap]
+  )
 
   const getPickValueStyle = useCallback((diff: number) => {
     if (diff <= -10) return { background: '#10b981' } // green-500 - steal
@@ -57,41 +66,53 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
 
   const getPositionColor = useCallback((position: string) => {
     switch (position) {
-      case 'QB': return 'bg-blue-500'
-      case 'RB': return 'bg-green-500'
-      case 'WR': return 'bg-purple-500'
-      case 'TE': return 'bg-orange-500'
-      case 'K': return 'bg-yellow-500'
-      case 'DEF': return 'bg-red-500'
-      default: return 'bg-gray-500'
+      case 'QB':
+        return 'bg-blue-500'
+      case 'RB':
+        return 'bg-green-500'
+      case 'WR':
+        return 'bg-purple-500'
+      case 'TE':
+        return 'bg-orange-500'
+      case 'K':
+        return 'bg-yellow-500'
+      case 'DEF':
+        return 'bg-red-500'
+      default:
+        return 'bg-gray-500'
     }
   }, [])
- 
+
   // On mount, get the current user and auto-select their team if available
   useEffect(() => {
-    userApi.getUserProfile().then(profile => {
-      const sleeperUser = cacheUtils.get(cacheUtils.keys.SLEEPER_USER);
-      if (profile?.sleeper_username || sleeperUser.user_id) {
-        setUserId(profile.sleeper_id)
-        // Find the roster for this user
-        const userPick = picks.find(p => p.picked_by === (profile.sleeper_id ?? sleeperUser.user_id));
-        if (userPick) {
-          setUserRosterId(userPick.roster_id)
-          setHighlightTeam(userPick.roster_id)
-          setLoggedInUserId(userPick.roster_id)
+    userApi
+      .getUserProfile()
+      .then((profile) => {
+        const sleeperUser = cacheUtils.get(cacheUtils.keys.SLEEPER_USER)
+        if (profile?.sleeper_username || sleeperUser.user_id) {
+          setUserId(profile.sleeper_id)
+          // Find the roster for this user
+          const userPick = picks.find(
+            (p) => p.picked_by === (profile.sleeper_id ?? sleeperUser.user_id)
+          )
+          if (userPick) {
+            setUserRosterId(userPick.roster_id)
+            setHighlightTeam(userPick.roster_id)
+            setLoggedInUserId(userPick.roster_id)
+          }
         }
-      }
-    }).catch(()=> {
-      console.error('Error fetching user profile');
-    })
+      })
+      .catch(() => {
+        console.error('Error fetching user profile')
+      })
   }, [picks])
 
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const response = await fetch("/api/rankings", {
+        const response = await fetch('/api/rankings', {
           cache: 'force-cache',
-          next: { revalidate: 3600 } // 1 hour
+          next: { revalidate: 3600 }, // 1 hour
         })
         if (response.ok) {
           const data = await response.json()
@@ -109,18 +130,21 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
   // Memoized event handlers
   const toggleExpand = useCallback(() => setIsExpanded(!isExpanded), [isExpanded])
   const toggleHighlight = useCallback(() => {
-    setHighlightUser(!highlightUser);
-    setHighlightTeam(highlightUser ? null : loggedInUserId);
+    setHighlightUser(!highlightUser)
+    setHighlightTeam(highlightUser ? null : loggedInUserId)
   }, [highlightUser, loggedInUserId])
 
   // Memoized grid items
   const gridItems = useMemo(() => {
     return Array.from({ length: rounds * teams }, (_, i) => {
-      const pickNo = i + 1;
-      const pick = picks.find(p => p.pick_no === pickNo)
+      const pickNo = i + 1
+      const pick = picks.find((p) => p.pick_no === pickNo)
       if (!pick) {
         return (
-          <div key={pickNo} className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}>
+          <div
+            key={pickNo}
+            className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}
+          >
             <span className="text-gray-400 text-xs font-mono">#{pickNo}</span>
           </div>
         )
@@ -128,20 +152,27 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
       const player = players[pick.player_id]
       if (!player) {
         return (
-          <div key={pickNo} className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}>
+          <div
+            key={pickNo}
+            className={`${isExpanded ? 'h-16' : 'h-16'} bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center`}
+          >
             <span className="text-gray-400 text-xs font-mono">Unknown</span>
-      </div>
-    )
-  }
+          </div>
+        )
+      }
       const playerName = `${player.first_name} ${player.last_name}`
       const rank = findPlayerRank(playerName)
       const diff = rank ? pick.pick_no - rank : null
       const style = diff !== null ? getPickValueStyle(diff) : { background: '#334155' }
       const position = player.position || pick.metadata?.position || 'UNK'
-      const pickRosterId = pick.roster_id;
-      const shouldHighlight = highlightUser && ((userRosterId && pickRosterId === userRosterId && highlightTeam === userRosterId) || (highlightTeam && highlightTeam === pickRosterId))
+      const pickRosterId = pick.roster_id
+      const shouldHighlight =
+        highlightUser &&
+        ((userRosterId && pickRosterId === userRosterId && highlightTeam === userRosterId) ||
+          (highlightTeam && highlightTeam === pickRosterId))
       return (
-        <div key={pickNo}
+        <div
+          key={pickNo}
           className={`${isExpanded ? 'h-16' : 'h-16'} border border-slate-600 rounded-lg p-1 relative overflow-hidden ${shouldHighlight ? 'ring-2 ring-yellow-400 animate-pulse' : ''}`}
           style={style}
         >
@@ -160,9 +191,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
                   </Badge>
                 )}
               </div>
-              <p className="text-white font-mono text-xs truncate">
-                {playerName}
-              </p>
+              <p className="text-white font-mono text-xs truncate">{playerName}</p>
               <p className="text-gray-300 text-xs truncate">
                 {player.team} • #{pick.pick_no}
               </p>
@@ -171,10 +200,24 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
         </div>
       )
     })
-  }, [rounds, teams, picks, players, findPlayerRank, getPickValueStyle, getPositionColor, highlightUser, userRosterId, highlightTeam, isExpanded])
+  }, [
+    rounds,
+    teams,
+    picks,
+    players,
+    findPlayerRank,
+    getPickValueStyle,
+    getPositionColor,
+    highlightUser,
+    userRosterId,
+    highlightTeam,
+    isExpanded,
+  ])
 
   return (
-    <Card className={`${isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none' : ''} bg-slate-800 border-slate-700`}>
+    <Card
+      className={`${isExpanded ? 'fixed inset-0 z-50 m-0 rounded-none' : ''} bg-slate-800 border-slate-700`}
+    >
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-yellow-400 font-mono">DRAFT BOARD</CardTitle>
@@ -187,14 +230,10 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
               <button
                 onClick={toggleExpand}
                 className="bg-slate-700 text-white px-3 py-1 rounded-lg font-mono text-sm hover:bg-slate-600 transition-colors flex items-center space-x-1"
-                title={isExpanded ? "Minimize" : "Expand to full screen"}
+                title={isExpanded ? 'Minimize' : 'Expand to full screen'}
               >
-                {isExpanded ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
-                )}
-                <span>{isExpanded ? "MINIMIZE" : "EXPAND"}</span>
+                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                <span>{isExpanded ? 'MINIMIZE' : 'EXPAND'}</span>
               </button>
               <button
                 onClick={onRefresh}
@@ -211,13 +250,13 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
                 <Sparkles className="h-4 w-4" />
                 <span>HIGHLIGHT MY PICKS</span>
               </button>
-              { highlightUser && (
+              {highlightUser && (
                 <select
                   value={highlightTeam || ''}
-                  onChange={e => setHighlightTeam(parseInt(e.target.value || '0'))}
+                  onChange={(e) => setHighlightTeam(parseInt(e.target.value || '0'))}
                   className="bg-slate-800 border border-yellow-400 text-yellow-400 rounded px-2 py-1 text-xs font-mono"
                 >
-                  {Array.from(new Set(picks.map(p => p.roster_id))).map(rid => (
+                  {Array.from(new Set(picks.map((p) => p.roster_id))).map((rid) => (
                     <option key={rid} value={rid}>{`Team ${rid}`}</option>
                   ))}
                 </select>
@@ -226,11 +265,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
           </div>
         </div>
       </CardHeader>
-      <CardContent className={
-        isExpanded
-          ? 'h-[calc(100vh-64px)] overflow-auto'
-          : ''
-      }>
+      <CardContent className={isExpanded ? 'h-[calc(100vh-64px)] overflow-auto' : ''}>
         <div
           className={
             isExpanded
@@ -242,7 +277,7 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
             className="grid gap-1"
             style={{
               gridTemplateColumns: `repeat(${teams}, minmax(180px, 1fr))`,
-              gridTemplateRows: `repeat(${rounds}, 64px)`
+              gridTemplateRows: `repeat(${rounds}, 64px)`,
             }}
           >
             {gridItems}
@@ -251,4 +286,4 @@ export function DraftBoardGrid({ draft, picks, players, onRefresh, lastRefresh }
       </CardContent>
     </Card>
   )
-} 
+}

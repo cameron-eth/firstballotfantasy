@@ -1,17 +1,18 @@
-import { NextRequest, NextResponse } from "next/server"
-import { supabaseServer } from "@/lib/supabase-server"
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const position = searchParams.get("position") || "ALL"
-    const season = parseInt(searchParams.get("season") || "2024")
+    const position = searchParams.get('position') || 'ALL'
+    const season = parseInt(searchParams.get('season') || '2024')
 
-    console.log("Conversion examples query params:", { position, season })
+    console.log('Conversion examples query params:', { position, season })
 
     let query = supabaseServer
-      .from("master_player_dataset")
-      .select(`
+      .from('master_player_dataset')
+      .select(
+        `
         player_name,
         position,
         season,
@@ -23,22 +24,23 @@ export async function GET(request: NextRequest) {
         position_tier,
         games_played,
         player_name_std
-      `)
-      .eq("season", season)
-      .not("fantasy_ppg", "is", null)
-      .gte("games_played", 6)
-      .order("fantasy_ppg", { ascending: false })
+      `
+      )
+      .eq('season', season)
+      .not('fantasy_ppg', 'is', null)
+      .gte('games_played', 6)
+      .order('fantasy_ppg', { ascending: false })
 
     // Filter by position if not ALL
-    if (position !== "ALL") {
-      query = query.eq("position", position)
+    if (position !== 'ALL') {
+      query = query.eq('position', position)
     }
 
     const { data, error } = await query
 
     if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 })
+      console.error('Database error:', error)
+      return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
     }
 
     // Process data with proper type casting
@@ -50,7 +52,7 @@ export async function GET(request: NextRequest) {
       season: Number(item.season) || 0,
       games_played: Number(item.games_played) || 0,
       // Use player_name_std as player_id for headshots
-      player_id: item.player_name_std?.replace(/\s+/g, '-').toLowerCase()
+      player_id: item.player_name_std?.replace(/\s+/g, '-').toLowerCase(),
     }))
 
     // Remove duplicate players - keep only the most recent record for each player
@@ -66,9 +68,9 @@ export async function GET(request: NextRequest) {
 
     // Group by tier and get top 5 examples in each tier
     const tierGroups: { [key: string]: any[] } = {}
-    
+
     deduplicatedData.forEach((player: any) => {
-      const tier = player.tier || player.position_tier || "Unknown"
+      const tier = player.tier || player.position_tier || 'Unknown'
       if (!tierGroups[tier]) {
         tierGroups[tier] = []
       }
@@ -81,10 +83,10 @@ export async function GET(request: NextRequest) {
       examplesByTier[tier] = players.slice(0, 5) // Top 5 examples in each tier
     })
 
-    console.log("Examples by tier:", Object.keys(examplesByTier))
+    console.log('Examples by tier:', Object.keys(examplesByTier))
     return NextResponse.json({ data: examplesByTier })
   } catch (error) {
-    console.error("API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error('API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-} 
+}

@@ -13,10 +13,7 @@ interface TeamViewTabProps {
   currentWeek: number
 }
 
-export const TeamViewTab = memo(function TeamViewTab({
-  userTeam,
-  currentWeek
-}: TeamViewTabProps) {
+export const TeamViewTab = memo(function TeamViewTab({ userTeam, currentWeek }: TeamViewTabProps) {
   if (!userTeam) {
     return (
       <div className="text-center py-12">
@@ -39,12 +36,20 @@ export const TeamViewTab = memo(function TeamViewTab({
                 </span>
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-white font-mono mb-2">{userTeam.teamName}</h1>
+                <h1 className="text-4xl font-bold text-white font-mono mb-2">
+                  {userTeam.teamName}
+                </h1>
                 <div className="flex items-center space-x-4">
-                  <Badge variant="outline" className="text-lg px-4 py-2 bg-yellow-400/20 text-yellow-400 border-yellow-400/30 font-mono font-bold">
+                  <Badge
+                    variant="outline"
+                    className="text-lg px-4 py-2 bg-yellow-400/20 text-yellow-400 border-yellow-400/30 font-mono font-bold"
+                  >
                     {userTeam.rank}th Place
                   </Badge>
-                  <Badge variant="outline" className="text-lg px-4 py-2 bg-green-400/20 text-green-400 border-green-400/30 font-mono font-bold">
+                  <Badge
+                    variant="outline"
+                    className="text-lg px-4 py-2 bg-green-400/20 text-green-400 border-green-400/30 font-mono font-bold"
+                  >
                     Grade: {userTeam.grade}
                   </Badge>
                 </div>
@@ -76,27 +81,35 @@ export const TeamViewTab = memo(function TeamViewTab({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {userTeam.players.map((player, index) => (
-              <Card key={index} className="bg-card border-border hover:border-foreground/50 transition-colors">
+              <Card
+                key={index}
+                className="bg-card border-border hover:border-foreground/50 transition-colors"
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <h4 className="font-medium text-foreground text-sm">{player.playerName}</h4>
-                      <p className="text-xs text-muted-foreground">{player.team} • {player.position}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {player.team} • {player.position}
+                      </p>
                     </div>
-                    <Badge variant="outline" className="text-xs bg-foreground/10 text-foreground border-border">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-foreground/10 text-foreground border-border"
+                    >
                       #{player.rank}
                     </Badge>
                   </div>
-                  
+
                   {/* NGS Stats */}
                   <div className="mt-3 pt-3 border-t border-border">
-                    <PlayerNGSStats 
-                      playerName={player.playerName} 
+                    <PlayerNGSStats
+                      playerName={player.playerName}
                       position={player.position}
                       compact={true}
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-xs mt-3 pt-3 border-t border-border">
                     <span className="text-muted-foreground">{player.tier}</span>
                     <span className="text-muted-foreground">Age {player.age}</span>
@@ -110,4 +123,3 @@ export const TeamViewTab = memo(function TeamViewTab({
     </>
   )
 })
-

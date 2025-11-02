@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { TrendingUp, Target } from "lucide-react"
+import { useState } from 'react'
+import { TrendingUp, Target } from 'lucide-react'
 
 interface PlayerCardHeroProps {
   playerName?: string
@@ -15,15 +15,15 @@ interface PlayerCardHeroProps {
 }
 
 export default function PlayerCardHero({
-  playerName = "Malik Nabers",
-  position = "WR",
-  team = "NYG",
+  playerName = 'Malik Nabers',
+  position = 'WR',
+  team = 'NYG',
   stats = [
-    { label: "REC", value: "109" },
-    { label: "YDS", value: "1,204" },
-    { label: "TD", value: "7" },
+    { label: 'REC', value: '109' },
+    { label: 'YDS', value: '1,204' },
+    { label: 'TD', value: '7' },
   ],
-  imageUrl = "/2486779-malik-nabers.webp",
+  imageUrl = '/2486779-malik-nabers.webp',
 }: PlayerCardHeroProps) {
   const [isHovered, setIsHovered] = useState(false)
 
@@ -41,10 +41,10 @@ export default function PlayerCardHero({
           loading="lazy"
           decoding="async"
           className={`w-full h-full object-cover object-top transition-transform duration-700 ${
-            isHovered ? "scale-105" : "scale-100"
+            isHovered ? 'scale-105' : 'scale-100'
           }`}
         />
-        
+
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
@@ -95,11 +95,11 @@ export default function PlayerCardHero({
             <span className="text-foreground">WR1 UPSIDE</span>
           </div>
           <div className="h-1 bg-border rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-foreground rounded-full transition-all duration-1000"
-              style={{ 
-                width: isHovered ? "85%" : "0%",
-                transitionDelay: isHovered ? "200ms" : "0ms"
+              style={{
+                width: isHovered ? '85%' : '0%',
+                transitionDelay: isHovered ? '200ms' : '0ms',
               }}
             />
           </div>
@@ -108,4 +108,3 @@ export default function PlayerCardHero({
     </div>
   )
 }
-

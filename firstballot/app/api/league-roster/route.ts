@@ -11,18 +11,15 @@ export async function GET(request: NextRequest) {
     const leagueId = searchParams.get('leagueId')
 
     if (!leagueId) {
-      return NextResponse.json(
-        { error: 'League ID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'League ID is required' }, { status: 400 })
     }
 
     // Get the userId and JWT token from headers (set by middleware after auth verification)
     const userId = request.headers.get('x-user-id')
     const userJwt = request.headers.get('x-user-jwt')
-    
+
     console.log('[league-roster] Auth headers:', { userId: !!userId, userJwt: !!userJwt })
-    
+
     if (!userId || !userJwt) {
       console.log('[league-roster] Missing auth headers')
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
@@ -38,19 +35,19 @@ export async function GET(request: NextRequest) {
       .eq('auth_id', userId)
       .single()
 
-    console.log('[league-roster] Profile fetch:', { 
-      hasProfile: !!userProfile, 
+    console.log('[league-roster] Profile fetch:', {
+      hasProfile: !!userProfile,
       hasSleeperUsername: !!userProfile?.sleeper_username,
       sleeperUsername: userProfile?.sleeper_username,
-      profileError: profileError?.message 
+      profileError: profileError?.message,
     })
 
     if (profileError || !userProfile?.sleeper_username) {
       return NextResponse.json(
-        { 
+        {
           error: 'Please connect your Sleeper account first',
           message: 'Go to League Buddy and connect your Sleeper username',
-          debug: { profileError: profileError?.message, hasProfile: !!userProfile }
+          debug: { profileError: profileError?.message, hasProfile: !!userProfile },
         },
         { status: 400 }
       )
@@ -60,33 +57,28 @@ export async function GET(request: NextRequest) {
     const [leagueData, rostersData, usersData, playersData] = await Promise.all([
       sleeperApi.getLeagueInfo(leagueId),
       sleeperApi.getLeagueRosters(leagueId),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(r => r.json()),
-      sleeperApi.getAllPlayers()
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
+        (r) => r.json()
+      ),
+      sleeperApi.getAllPlayers(),
     ])
 
     // Find the user's Sleeper user ID
-    const sleeperUser = usersData.find((u: any) => 
-      u.display_name === userProfile.sleeper_username || 
-      u.username === userProfile.sleeper_username
+    const sleeperUser = usersData.find(
+      (u: any) =>
+        u.display_name === userProfile.sleeper_username ||
+        u.username === userProfile.sleeper_username
     )
 
     if (!sleeperUser) {
-      return NextResponse.json(
-        { error: 'User not found in this league' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User not found in this league' }, { status: 404 })
     }
 
     // Find the user's roster
-    const userRoster = rostersData.find((roster: any) => 
-      roster.owner_id === sleeperUser.user_id
-    )
+    const userRoster = rostersData.find((roster: any) => roster.owner_id === sleeperUser.user_id)
 
     if (!userRoster) {
-      return NextResponse.json(
-        { error: 'User roster not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'User roster not found' }, { status: 404 })
     }
 
     // Get player IDs from user's roster only
@@ -95,7 +87,10 @@ export async function GET(request: NextRequest) {
     // Filter and format user's roster data efficiently
     const roster = userPlayerIds
       .map((playerId: string) => playersData[playerId])
-      .filter((player: any) => player && player.position && ['QB', 'RB', 'WR', 'TE'].includes(player.position))
+      .filter(
+        (player: any) =>
+          player && player.position && ['QB', 'RB', 'WR', 'TE'].includes(player.position)
+      )
       .map((player: any) => ({
         player_id: player.player_id,
         first_name: player.first_name || '',
@@ -108,7 +103,7 @@ export async function GET(request: NextRequest) {
         search_rank: player.search_rank || 100,
         fantasy_pos_rank: player.fantasy_pos_rank || null,
         injury_status: player.injury_status || null,
-        status: player.status || 'Active'
+        status: player.status || 'Active',
       }))
       .sort((a: any, b: any) => (a.search_rank || 100) - (b.search_rank || 100))
 
@@ -117,14 +112,10 @@ export async function GET(request: NextRequest) {
       roster: roster,
       total_players: roster.length,
       user_roster_id: userRoster.roster_id,
-      user_sleeper_id: sleeperUser.user_id
+      user_sleeper_id: sleeperUser.user_id,
     })
-
   } catch (error) {
     console.error('Error fetching league roster:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch league roster' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch league roster' }, { status: 500 })
   }
-} 
+}

@@ -1,43 +1,47 @@
-import { supabaseServer } from './supabase-server';
-import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
+import { supabaseServer } from './supabase-server'
+import { createClient } from '@supabase/supabase-js'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface UserProfile {
-  id: string;
-  auth_id: string;
-  username: string;
-  email: string;
-  sleeper_username: string | null;
-  favorite_team: string | null;
-  sleeper_league_id: string | null;
-  membership_status: boolean;
-  feature_access: boolean;
-  stripe_id: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string
+  auth_id: string
+  username: string
+  email: string
+  sleeper_username: string | null
+  favorite_team: string | null
+  sleeper_league_id: string | null
+  membership_status: boolean
+  feature_access: boolean
+  stripe_id: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Create service role client for webhook operations (bypasses RLS)
 const supabaseServiceRole = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+)
 
 export class UserProfileService {
   /**
    * Create a user profile when a user signs up
    */
-  static async createProfile(authId: string, email: string, username: string): Promise<UserProfile> {
+  static async createProfile(
+    authId: string,
+    email: string,
+    username: string
+  ): Promise<UserProfile> {
     try {
       // Check if profile already exists
       const { data: existingProfile } = await supabaseServer
         .from('user_profiles')
         .select('id')
         .eq('auth_id', authId)
-        .single();
+        .single()
 
       if (existingProfile) {
-        throw new Error('Profile already exists for this user');
+        throw new Error('Profile already exists for this user')
       }
 
       // Create new profile with proper UUID and auth_id linking
@@ -53,20 +57,20 @@ export class UserProfileService {
           sleeper_league_id: null,
           membership_status: false,
           feature_access: false,
-          stripe_id: null
+          stripe_id: null,
         })
         .select()
-        .single();
+        .single()
 
       if (error) {
-        console.error('Error creating profile:', error);
-        throw new Error('Failed to create user profile');
+        console.error('Error creating profile:', error)
+        throw new Error('Failed to create user profile')
       }
 
-      return data;
+      return data
     } catch (error) {
-      console.error('Error in createProfile:', error);
-      throw error;
+      console.error('Error in createProfile:', error)
+      throw error
     }
   }
 
@@ -75,33 +79,34 @@ export class UserProfileService {
    */
   static async getProfileByAuthId(authId: string): Promise<UserProfile | null> {
     try {
-      console.log('🔍 Looking up profile for auth_id:', authId);
-      
+      console.log('🔍 Looking up profile for auth_id:', authId)
+
       const { data, error } = await supabaseServer
         .from('user_profiles')
         .select('*')
         .eq('auth_id', authId)
-        .single();
+        .single()
 
       if (error) {
-        console.log('❌ Profile lookup error:', error.code, error.message);
-        if (error.code !== 'PGRST116') { // PGRST116 = no rows returned
-          throw error;
+        console.log('❌ Profile lookup error:', error.code, error.message)
+        if (error.code !== 'PGRST116') {
+          // PGRST116 = no rows returned
+          throw error
         }
-        return null;
+        return null
       }
 
       console.log('✅ Profile found:', {
         id: data.id,
         auth_id: data.auth_id,
         email: data.email,
-        membership_status: data.membership_status
-      });
+        membership_status: data.membership_status,
+      })
 
-      return data;
+      return data
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      return null;
+      console.error('Error fetching profile:', error)
+      return null
     }
   }
 
@@ -114,16 +119,16 @@ export class UserProfileService {
         .from('user_profiles')
         .select('*')
         .eq('id', profileId)
-        .single();
+        .single()
 
       if (error && error.code !== 'PGRST116') {
-        throw error;
+        throw error
       }
 
-      return data;
+      return data
     } catch (error) {
-      console.error('Error fetching profile by ID:', error);
-      return null;
+      console.error('Error fetching profile by ID:', error)
+      return null
     }
   }
 
@@ -136,50 +141,59 @@ export class UserProfileService {
         .from('user_profiles')
         .update({
           ...updates,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('auth_id', authId)
         .select()
-        .single();
+        .single()
 
       if (error) {
-        console.error('Error updating profile:', error);
-        throw new Error('Failed to update user profile');
+        console.error('Error updating profile:', error)
+        throw new Error('Failed to update user profile')
       }
 
-      return data;
+      return data
     } catch (error) {
-      console.error('Error in updateProfile:', error);
-      throw error;
+      console.error('Error in updateProfile:', error)
+      throw error
     }
   }
 
   /**
    * Update sleeper username
    */
-  static async updateSleeperUsername(authId: string, sleeperUsername: string): Promise<UserProfile> {
-    return this.updateProfile(authId, { sleeper_username: sleeperUsername });
+  static async updateSleeperUsername(
+    authId: string,
+    sleeperUsername: string
+  ): Promise<UserProfile> {
+    return this.updateProfile(authId, { sleeper_username: sleeperUsername })
   }
 
   /**
    * Update favorite team
    */
   static async updateFavoriteTeam(authId: string, favoriteTeam: string): Promise<UserProfile> {
-    return this.updateProfile(authId, { favorite_team: favoriteTeam });
+    return this.updateProfile(authId, { favorite_team: favoriteTeam })
   }
 
   /**
    * Update sleeper league ID
    */
-  static async updateSleeperLeagueId(authId: string, sleeperLeagueId: string): Promise<UserProfile> {
-    return this.updateProfile(authId, { sleeper_league_id: sleeperLeagueId });
+  static async updateSleeperLeagueId(
+    authId: string,
+    sleeperLeagueId: string
+  ): Promise<UserProfile> {
+    return this.updateProfile(authId, { sleeper_league_id: sleeperLeagueId })
   }
 
   /**
    * Update membership status
    */
-  static async updateMembershipStatus(authId: string, membershipStatus: boolean): Promise<UserProfile> {
-    return this.updateProfile(authId, { membership_status: membershipStatus });
+  static async updateMembershipStatus(
+    authId: string,
+    membershipStatus: boolean
+  ): Promise<UserProfile> {
+    return this.updateProfile(authId, { membership_status: membershipStatus })
   }
 
   /**
@@ -187,33 +201,33 @@ export class UserProfileService {
    */
   static async getProfileByEmail(email: string): Promise<UserProfile | null> {
     try {
-      console.log('🔍 Looking up profile for email:', email);
-      
+      console.log('🔍 Looking up profile for email:', email)
+
       const { data, error } = await supabaseServer
         .from('user_profiles')
         .select('*')
         .eq('email', email)
-        .single();
+        .single()
 
       if (error) {
-        console.log('❌ Email profile lookup error:', error.code, error.message);
+        console.log('❌ Email profile lookup error:', error.code, error.message)
         if (error.code !== 'PGRST116') {
-          throw error;
+          throw error
         }
-        return null;
+        return null
       }
 
       console.log('✅ Email profile found:', {
         id: data.id,
         auth_id: data.auth_id,
         email: data.email,
-        membership_status: data.membership_status
-      });
+        membership_status: data.membership_status,
+      })
 
-      return data;
+      return data
     } catch (error) {
-      console.error('Error fetching profile by email:', error);
-      return null;
+      console.error('Error fetching profile by email:', error)
+      return null
     }
   }
 
@@ -222,51 +236,50 @@ export class UserProfileService {
    */
   static async hasActiveMembership(authId: string, email?: string): Promise<boolean> {
     try {
-      console.log('🎯 Checking membership for auth_id:', authId);
-      console.log('📧 Email fallback available:', email);
-      
-      const profile = await this.getProfileByAuthId(authId);
-      
+      console.log('🎯 Checking membership for auth_id:', authId)
+      console.log('📧 Email fallback available:', email)
+
+      const profile = await this.getProfileByAuthId(authId)
+
       if (profile) {
-        const isMember = profile.membership_status || false;
-        console.log('✅ Profile found by auth_id - Membership result:', isMember);
+        const isMember = profile.membership_status || false
+        console.log('✅ Profile found by auth_id - Membership result:', isMember)
         console.log('🔍 Profile details:', {
           profileId: profile.id,
           profileAuthId: profile.auth_id,
           profileEmail: profile.email,
           membershipStatus: profile.membership_status,
-          authIdMatches: profile.auth_id === authId
-        });
-        return isMember;
+          authIdMatches: profile.auth_id === authId,
+        })
+        return isMember
       }
-      
-      console.log('❌ No profile found by auth_id, trying email fallback...');
-      
+
+      console.log('❌ No profile found by auth_id, trying email fallback...')
+
       // Fallback to email lookup if provided
       if (email) {
-        console.log('🔄 Trying email fallback:', email);
-        const emailProfile = await this.getProfileByEmail(email);
-        
+        console.log('🔄 Trying email fallback:', email)
+        const emailProfile = await this.getProfileByEmail(email)
+
         if (emailProfile) {
-          const isMember = emailProfile.membership_status || false;
-          console.log('✅ Profile found by email - Membership result:', isMember);
+          const isMember = emailProfile.membership_status || false
+          console.log('✅ Profile found by email - Membership result:', isMember)
           console.log('🔍 Email profile details:', {
             profileId: emailProfile.id,
             profileAuthId: emailProfile.auth_id,
             profileEmail: emailProfile.email,
             membershipStatus: emailProfile.membership_status,
-            authIdMatches: emailProfile.auth_id === authId
-          });
-          return isMember;
+            authIdMatches: emailProfile.auth_id === authId,
+          })
+          return isMember
         }
       }
-      
-      console.log('❌ No profile found by auth_id or email - returning false');
-      return false;
-      
+
+      console.log('❌ No profile found by auth_id or email - returning false')
+      return false
     } catch (error) {
-      console.error('Error checking membership status:', error);
-      return false;
+      console.error('Error checking membership status:', error)
+      return false
     }
   }
 
@@ -278,26 +291,26 @@ export class UserProfileService {
    */
   static async updateUserMembershipStatus(email: string, status: boolean): Promise<boolean> {
     try {
-      console.log(`🔄 Updating membership status for ${email} to ${status}`);
-      
+      console.log(`🔄 Updating membership status for ${email} to ${status}`)
+
       const { error } = await supabaseServiceRole
         .from('user_profiles')
-        .update({ 
+        .update({
           membership_status: status,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('email', email);
-        
+        .eq('email', email)
+
       if (error) {
-        console.error('Error updating membership status:', error);
-        return false;
+        console.error('Error updating membership status:', error)
+        return false
       }
-      
-      console.log(`✅ Successfully updated membership status for ${email}`);
-      return true;
+
+      console.log(`✅ Successfully updated membership status for ${email}`)
+      return true
     } catch (error) {
-      console.error('Error in updateUserMembershipStatus:', error);
-      return false;
+      console.error('Error in updateUserMembershipStatus:', error)
+      return false
     }
   }
 
@@ -307,26 +320,26 @@ export class UserProfileService {
    */
   static async updateUserFeatureAccess(email: string, access: boolean): Promise<boolean> {
     try {
-      console.log(`🔄 Updating feature access for ${email} to ${access}`);
-      
+      console.log(`🔄 Updating feature access for ${email} to ${access}`)
+
       const { error } = await supabaseServiceRole
         .from('user_profiles')
-        .update({ 
+        .update({
           feature_access: access,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('email', email);
-        
+        .eq('email', email)
+
       if (error) {
-        console.error('Error updating feature access:', error);
-        return false;
+        console.error('Error updating feature access:', error)
+        return false
       }
-      
-      console.log(`✅ Successfully updated feature access for ${email}`);
-      return true;
+
+      console.log(`✅ Successfully updated feature access for ${email}`)
+      return true
     } catch (error) {
-      console.error('Error in updateUserFeatureAccess:', error);
-      return false;
+      console.error('Error in updateUserFeatureAccess:', error)
+      return false
     }
   }
 
@@ -336,26 +349,26 @@ export class UserProfileService {
    */
   static async updateUserStripeData(email: string, stripeId: string): Promise<boolean> {
     try {
-      console.log(`🔄 Updating Stripe data for ${email} with ID ${stripeId}`);
-      
+      console.log(`🔄 Updating Stripe data for ${email} with ID ${stripeId}`)
+
       const { error } = await supabaseServiceRole
         .from('user_profiles')
-        .update({ 
+        .update({
           stripe_id: stripeId,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('email', email);
-        
+        .eq('email', email)
+
       if (error) {
-        console.error('Error updating Stripe data:', error);
-        return false;
+        console.error('Error updating Stripe data:', error)
+        return false
       }
-      
-      console.log(`✅ Successfully updated Stripe data for ${email}`);
-      return true;
+
+      console.log(`✅ Successfully updated Stripe data for ${email}`)
+      return true
     } catch (error) {
-      console.error('Error in updateUserStripeData:', error);
-      return false;
+      console.error('Error in updateUserStripeData:', error)
+      return false
     }
   }
 
@@ -364,25 +377,25 @@ export class UserProfileService {
    */
   static async processSuccessfulPayment(email: string, stripeCustomerId: string): Promise<boolean> {
     try {
-      console.log(`🎉 Processing successful payment for ${email}`);
-      
+      console.log(`🎉 Processing successful payment for ${email}`)
+
       // Update all payment-related fields
-      const membershipUpdated = await this.updateUserMembershipStatus(email, true);
-      const featureAccessUpdated = await this.updateUserFeatureAccess(email, true);
-      const stripeDataUpdated = await this.updateUserStripeData(email, stripeCustomerId);
-      
-      const allSuccessful = membershipUpdated && featureAccessUpdated && stripeDataUpdated;
-      
+      const membershipUpdated = await this.updateUserMembershipStatus(email, true)
+      const featureAccessUpdated = await this.updateUserFeatureAccess(email, true)
+      const stripeDataUpdated = await this.updateUserStripeData(email, stripeCustomerId)
+
+      const allSuccessful = membershipUpdated && featureAccessUpdated && stripeDataUpdated
+
       if (allSuccessful) {
-        console.log(`✅ Successfully processed payment for ${email}`);
+        console.log(`✅ Successfully processed payment for ${email}`)
       } else {
-        console.error(`❌ Failed to process payment for ${email} - some updates failed`);
+        console.error(`❌ Failed to process payment for ${email} - some updates failed`)
       }
-      
-      return allSuccessful;
+
+      return allSuccessful
     } catch (error) {
-      console.error('Error in processSuccessfulPayment:', error);
-      return false;
+      console.error('Error in processSuccessfulPayment:', error)
+      return false
     }
   }
-} 
+}

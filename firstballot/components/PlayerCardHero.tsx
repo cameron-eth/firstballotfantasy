@@ -21,13 +21,13 @@ export const PlayerCardHero = memo(function PlayerCardHero({
   college,
   rank,
   projection,
-  imageUrl
+  imageUrl,
 }: PlayerCardHeroProps) {
   return (
     <div className="relative group w-full max-w-3xl mx-auto">
       {/* Glow Effect */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-400 to-green-400 rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-      
+
       {/* Card Container - Glassmorphism */}
       <div className="relative bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-lg overflow-hidden transition-all duration-300 hover:border-yellow-400/50 shadow-2xl">
         <div className="flex flex-col md:grid md:grid-cols-5 gap-0">
@@ -43,10 +43,12 @@ export const PlayerCardHero = memo(function PlayerCardHero({
             />
             {/* Glass overlay on image */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
-            
+
             {/* Rank Badge - Glassmorphism */}
             <div className="absolute top-4 left-4 bg-yellow-400/90 backdrop-blur-sm text-slate-900 px-3 py-1.5 rounded-md shadow-lg">
-              <span className="text-sm font-mono font-bold">#{rank} {position}</span>
+              <span className="text-sm font-mono font-bold">
+                #{rank} {position}
+              </span>
             </div>
           </div>
 
@@ -58,7 +60,9 @@ export const PlayerCardHero = memo(function PlayerCardHero({
                 {playerName}
               </h3>
               <div className="flex items-center space-x-2 sm:space-x-3 text-gray-300">
-                <span className="font-mono text-xs sm:text-sm font-semibold text-yellow-400">{team}</span>
+                <span className="font-mono text-xs sm:text-sm font-semibold text-yellow-400">
+                  {team}
+                </span>
                 <span className="text-xs">•</span>
                 <span className="text-xs sm:text-sm">{college}</span>
               </div>
@@ -67,11 +71,15 @@ export const PlayerCardHero = memo(function PlayerCardHero({
             {/* Stats Grid - Glass Cards */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="space-y-1 p-2 sm:p-3 bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 rounded-md">
-                <div className="text-xs font-mono text-yellow-400 uppercase tracking-wider">Position</div>
+                <div className="text-xs font-mono text-yellow-400 uppercase tracking-wider">
+                  Position
+                </div>
                 <div className="text-base sm:text-lg font-bold text-white">{position}</div>
               </div>
               <div className="space-y-1 p-2 sm:p-3 bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 rounded-md">
-                <div className="text-xs font-mono text-yellow-400 uppercase tracking-wider">Dynasty Rank</div>
+                <div className="text-xs font-mono text-yellow-400 uppercase tracking-wider">
+                  Dynasty Rank
+                </div>
                 <div className="text-base sm:text-lg font-bold text-white">#{rank}</div>
               </div>
             </div>
@@ -85,7 +93,9 @@ export const PlayerCardHero = memo(function PlayerCardHero({
                 <div className="text-xs font-mono text-green-400 uppercase tracking-wider mb-1 font-semibold">
                   2026 Projection
                 </div>
-                <div className="text-xs sm:text-sm text-white font-medium leading-relaxed">{projection}</div>
+                <div className="text-xs sm:text-sm text-white font-medium leading-relaxed">
+                  {projection}
+                </div>
               </div>
               <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 flex-shrink-0" />
             </div>
@@ -95,4 +105,3 @@ export const PlayerCardHero = memo(function PlayerCardHero({
     </div>
   )
 })
-

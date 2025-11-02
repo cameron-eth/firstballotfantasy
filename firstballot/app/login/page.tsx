@@ -1,17 +1,17 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useAuth } from "@/lib/auth"
-import { Shield, Mail, Lock, User, AlertCircle } from "lucide-react"
-import Link from "next/link"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/lib/auth'
+import { Shield, Mail, Lock, User, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -27,14 +27,14 @@ export default function LoginPage() {
     setError(null)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
     try {
       await signIn(email, password)
-      router.push("/")
+      router.push('/')
     } catch (err) {
-      setError("Failed to log in. Please check your credentials.")
+      setError('Failed to log in. Please check your credentials.')
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -48,14 +48,14 @@ export default function LoginPage() {
     setSignUpSuccess(false)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-    const confirmPassword = formData.get("confirmPassword") as string
-    const username = formData.get("username") as string
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirmPassword') as string
+    const username = formData.get('username') as string
 
     // Check if passwords match
     if (password !== confirmPassword) {
-      setError("Passwords do not match. Please try again.")
+      setError('Passwords do not match. Please try again.')
       setIsLoading(false)
       return
     }
@@ -64,7 +64,7 @@ export default function LoginPage() {
       await signUp(email, password, username)
       setSignUpSuccess(true)
     } catch (err) {
-      setError("Failed to create account. This email might already be in use.")
+      setError('Failed to create account. This email might already be in use.')
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -85,7 +85,9 @@ export default function LoginPage() {
             </div>
             <div>
               <CardTitle className="text-2xl text-yellow-400 font-mono">ACCESS CONTROL</CardTitle>
-              <CardDescription className="text-green-400">Create a free account to access our tools</CardDescription>
+              <CardDescription className="text-green-400">
+                Create a free account to access our tools
+              </CardDescription>
             </div>
           </CardHeader>
 
@@ -96,7 +98,7 @@ export default function LoginPage() {
                 <span className="font-mono text-sm">{error}</span>
               </div>
             )}
-            
+
             {signUpSuccess && (
               <div className="bg-green-900/50 border border-green-700 text-green-400 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
@@ -152,7 +154,10 @@ export default function LoginPage() {
                       <Label htmlFor="password" className="text-gray-300 font-mono">
                         PASSWORD
                       </Label>
-                      <Link href="/forgot-password" className="text-sm text-green-400 hover:text-green-300 font-mono">
+                      <Link
+                        href="/forgot-password"
+                        className="text-sm text-green-400 hover:text-green-300 font-mono"
+                      >
                         FORGOT?
                       </Link>
                     </div>
@@ -174,7 +179,7 @@ export default function LoginPage() {
                     className="w-full bg-yellow-400 text-slate-900 hover:bg-yellow-300 font-mono font-bold"
                     disabled={isLoading}
                   >
-                    {isLoading ? "AUTHENTICATING..." : "LOGIN"}
+                    {isLoading ? 'AUTHENTICATING...' : 'LOGIN'}
                   </Button>
                 </form>
               </TabsContent>
@@ -232,7 +237,9 @@ export default function LoginPage() {
                         minLength={6}
                         disabled={signUpSuccess}
                         onChange={(e) => {
-                          const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value
+                          const confirmPassword = (
+                            document.getElementById('confirmPassword') as HTMLInputElement
+                          )?.value
                           if (confirmPassword) {
                             setPasswordsMatch(e.target.value === confirmPassword)
                           }
@@ -258,7 +265,8 @@ export default function LoginPage() {
                         required
                         disabled={signUpSuccess}
                         onChange={(e) => {
-                          const password = (document.getElementById('password') as HTMLInputElement)?.value
+                          const password = (document.getElementById('password') as HTMLInputElement)
+                            ?.value
                           if (password) {
                             setPasswordsMatch(password === e.target.value)
                           }
@@ -275,7 +283,11 @@ export default function LoginPage() {
                     className="w-full bg-green-400 text-slate-900 hover:bg-green-300 font-mono font-bold"
                     disabled={isLoading || signUpSuccess || !passwordsMatch}
                   >
-                    {isLoading ? "CREATING ACCESS..." : signUpSuccess ? "ACCOUNT CREATED" : "CREATE ACCESS"}
+                    {isLoading
+                      ? 'CREATING ACCESS...'
+                      : signUpSuccess
+                        ? 'ACCOUNT CREATED'
+                        : 'CREATE ACCESS'}
                   </Button>
                 </form>
               </TabsContent>

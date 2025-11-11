@@ -16,10 +16,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'League ID is required' }, { status: 400 })
     }
 
-    // Use Next.js cached NFL state
-    const nflState = await sleeperApi.getNflState()
+    // Fetch FRESH NFL state (no cache) to ensure we get the latest week
+    const nflState = await fetch('https://api.sleeper.app/v1/state/nfl', {
+      cache: 'no-store',
+    }).then((r) => r.json())
 
-    const currentWeek = nflState.week || 1
+    const currentWeek = nflState.week || nflState.display_week || 1
+    console.log('🏈 Trade Market - NFL State:', {
+      week: nflState.week,
+      display_week: nflState.display_week,
+      season: nflState.season,
+      season_type: nflState.season_type,
+      currentWeek,
+    })
 
     // Fetch critical data in parallel - Users data without cache to get fresh team names
     const [rosters, users, allPlayers, rankingsResult] = await Promise.all([
@@ -94,14 +103,20 @@ export async function GET(request: NextRequest) {
       // Continue without rankings - use default player values
     }
 
-    // Fetch ALL transactions from offseason (week 0) through current week
+    // Fetch ALL transactions from offseason (week 0) through current week + buffer
     const currentYear = new Date().getFullYear()
     const weeksToFetch = []
 
-    // Include ALL weeks from 0 (offseason) to current week to track full trade history
-    for (let week = 0; week <= currentWeek; week++) {
+    // Add a 2-week buffer to ensure we catch all trades even if NFL state is slightly behind
+    // NFL regular season is 18 weeks, so we cap at 20 to be safe
+    const maxWeek = Math.min(currentWeek + 2, 20)
+    
+    // Include ALL weeks from 0 (offseason) to current week + buffer to track full trade history
+    for (let week = 0; week <= maxWeek; week++) {
       weeksToFetch.push(week)
     }
+    
+    console.log(`📊 Fetching transactions for weeks 0-${maxWeek} (current week: ${currentWeek})`)
 
     // Fetch transactions in larger parallel batches for speed (no delay needed)
     const batchSize = 5
@@ -122,6 +137,17 @@ export async function GET(request: NextRequest) {
 
     // Filter transactions to only include trades
     const trades = allTransactions.filter((tx: any) => tx.type === 'trade')
+    
+    // Log transaction summary with dates
+    if (trades.length > 0) {
+      const tradeDates = trades.map((t: any) => new Date(t.created || t.status_updated)).sort((a, b) => b.getTime() - a.getTime())
+      const mostRecentTrade = tradeDates[0]
+      const oldestTrade = tradeDates[tradeDates.length - 1]
+      console.log(`✅ Found ${trades.length} trades from ${oldestTrade.toLocaleDateString()} to ${mostRecentTrade.toLocaleDateString()}`)
+      console.log(`📅 Most recent trade: ${mostRecentTrade.toLocaleString()}`)
+    } else {
+      console.log('⚠️ No trades found in fetched transactions')
+    }
 
     const responseData = {
       success: true,

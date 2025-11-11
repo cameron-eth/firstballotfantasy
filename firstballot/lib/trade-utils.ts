@@ -31,6 +31,7 @@ export interface TradeAnalysis {
   week: number
   season: string
   date: string
+  timestamp?: number // Unix timestamp for sorting
   teams: {
     rosterId: number
     teamName: string

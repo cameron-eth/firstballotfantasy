@@ -10,7 +10,7 @@ export const NEXTJS_CACHE_OPTIONS = {
   },
   TRANSACTIONS: {
     cache: 'force-cache' as const,
-    next: { revalidate: 300 }, // 5 minutes
+    next: { revalidate: 120 }, // 2 minutes - reduced from 5 to get fresher trade data
   },
   LIVE_DATA: {
     cache: 'force-cache' as const,
@@ -152,8 +152,15 @@ export const sleeperApi = {
     ]),
 
   // Static data (rarely changes)
+  // Note: Players data is ~18MB, exceeds Next.js 2MB cache limit, so we use a shorter revalidation
   getAllPlayers: () =>
-    cachedFetch('https://api.sleeper.app/v1/players/nfl', 'PLAYERS', [CACHE_TAGS.PLAYERS]),
+    cachedFetch('https://api.sleeper.app/v1/players/nfl', 'PLAYERS', [CACHE_TAGS.PLAYERS]).catch(
+      () => {
+        // Fallback to uncached fetch if cache fails due to size
+        console.warn('Players cache failed (too large), fetching without cache')
+        return fetch('https://api.sleeper.app/v1/players/nfl').then((r) => r.json())
+      }
+    ),
 
   getTrendingPlayers: () =>
     cachedFetch(

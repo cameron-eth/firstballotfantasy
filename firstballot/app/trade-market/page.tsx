@@ -89,10 +89,12 @@ function TradeMarketContent() {
         setLoading(true)
         setError(null)
 
-        // Use the new trade market API endpoint
+        // Use the new trade market API endpoint (no cache for fresh data)
         const apiUrl = `/api/trade-market?leagueId=${leagueId}`
 
-        const response = await fetch(apiUrl)
+        const response = await fetch(apiUrl, {
+          cache: 'no-store', // Always fetch fresh trade data
+        })
 
         if (!response.ok) {
           const errorText = await response.text()
@@ -219,13 +221,15 @@ function TradeMarketContent() {
         week: trade.leg,
         season: new Date(trade.created).getFullYear().toString(),
         date: new Date(trade.created).toLocaleDateString(),
+        timestamp: trade.created, // Keep timestamp for sorting
         teams: tradeTeams,
         totalTradeValue,
         winner,
       })
     })
 
-    return analyzedTrades
+    // Sort by timestamp descending (most recent first)
+    return analyzedTrades.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
   }, [transactions, teams, allPlayers, dynastyRankings, loading])
 
   // Calculate trader statistics using utility function

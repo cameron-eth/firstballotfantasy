@@ -4,7 +4,7 @@
 export const CACHE_TTL = {
   // Critical data (frequently changing) - Short TTL
   CURRENT_WEEK: 2 * 60 * 1000, // 2 minutes
-  TRANSACTIONS: 5 * 60 * 1000, // 5 minutes
+  TRANSACTIONS: 2 * 60 * 1000, // 2 minutes (reduced from 5 to get fresher trade data)
   LIVE_DATA: 1 * 60 * 1000, // 1 minute
 
   // League data (moderately stable) - Medium TTL

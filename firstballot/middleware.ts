@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
 async function middleware(request: NextRequest) {
-  // Only run on API routes that need auth (exclude webhooks, overview, and public data endpoints)
-  if (
-    request.nextUrl.pathname.startsWith('/api/') &&
-    !request.nextUrl.pathname.startsWith('/api/webhooks') &&
-    !request.nextUrl.pathname.startsWith('/api/overview') &&
-    !request.nextUrl.pathname.startsWith('/api/ngs-stats') &&
-    !request.nextUrl.pathname.startsWith('/api/test-ngs')
-  ) {
+  // Public API routes that don't need authentication
+  const publicRoutes = [
+    '/api/webhooks',
+    '/api/overview',
+    '/api/ngs-stats',
+    '/api/test-ngs',
+    '/api/rankings',
+    '/api/roster-stats',
+    '/api/trade-market',
+    '/api/prospects',
+    '/api/league-roster',
+    '/api/draft-analysis',
+  ]
+
+  // Check if this is an API route that needs auth
+  const isPublicRoute = publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+
+  if (isApiRoute && !isPublicRoute) {
     const authHeader = request.headers.get('authorization')
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

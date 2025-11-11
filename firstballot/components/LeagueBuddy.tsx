@@ -711,8 +711,20 @@ export default function LeagueBuddy({
           fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, {
             cache: 'no-store',
           })
-            .then((r) => r.json())
-            .catch(() => []),
+            .then(async (r) => {
+              console.log(`📊 Matchups API response status: ${r.status} for league ${leagueId}, week ${week}`)
+              if (!r.ok) {
+                console.warn(`⚠️ Matchups API returned ${r.status}: ${r.statusText}`)
+                return []
+              }
+              const data = await r.json()
+              console.log(`✅ Matchups API returned ${data?.length || 0} entries`)
+              return data
+            })
+            .catch((err) => {
+              console.error(`❌ Failed to fetch matchups for league ${leagueId}, week ${week}:`, err)
+              return []
+            }),
           fetch('/api/rankings')
             .then((res) => (res.ok ? res.json() : []))
             .catch(() => []),
@@ -777,6 +789,19 @@ export default function LeagueBuddy({
       console.log('Roster data fetched (FRESH):', {
         rosterCount: rosters?.length,
         matchupCount: matchups?.length,
+      })
+
+      // Log league status to help debug matchup issues
+      console.log('📋 League Info:', {
+        leagueId,
+        name: league?.name,
+        status: league?.status,
+        season: league?.season,
+        seasonType: league?.season_type,
+        draftId: league?.draft_id,
+        previousLeagueId: league?.previous_league_id,
+        playoffWeekStart: league?.settings?.playoff_week_start,
+        playoffTeams: league?.settings?.num_teams_in_playoff,
       })
 
       if (!rosters || !users || !allPlayers || !league) {
@@ -925,7 +950,15 @@ export default function LeagueBuddy({
 
         console.log(`✅ Processed ${matchupData.length} matchup pairs:`, matchupData)
       } else {
-        console.log(`⚠️ No matchup data found for week ${week}`)
+        console.warn(`⚠️ No matchup data found for week ${week}`, {
+          leagueId,
+          leagueName: league?.name,
+          leagueStatus: league?.status,
+          season: league?.season,
+          currentWeek: week,
+          playoffWeekStart: league?.settings?.playoff_week_start,
+          note: 'This could mean: (1) Season hasn\'t started, (2) Draft not complete, (3) League ended, or (4) API error'
+        })
       }
 
       // Calculate league overview stats

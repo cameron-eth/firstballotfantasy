@@ -58,14 +58,14 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
   return (
     <div className="space-y-6">
       {/* Summary Card */}
-      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/30 border border-yellow-500/40 rounded-xl ring-1 ring-yellow-500/20 shadow-lg shadow-yellow-500/20">
+      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/30 border border-yellow-500/40 rounded-xl shadow-none">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-white flex items-center gap-2 font-mono">
               <Scale className="h-5 w-5 text-yellow-400" />
               Trade Evaluation
             </CardTitle>
-            <Badge variant="outline" className={`${getFairnessColor(result.fairness)} font-mono font-semibold shadow-lg`}>
+            <Badge variant="outline" className={`${getFairnessColor(result.fairness)} font-mono font-semibold`}>
               {result.fairness}
             </Badge>
           </div>
@@ -130,7 +130,7 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
       </Card>
 
       {/* Side 1 Details */}
-      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/20 border border-blue-500/30 rounded-xl ring-1 ring-blue-500/10 shadow-lg shadow-blue-500/10">
+      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/20 border border-blue-500/30 rounded-xl shadow-none">
         <CardHeader>
           <CardTitle className="text-white font-mono">Side 1 Assets</CardTitle>
         </CardHeader>
@@ -190,7 +190,7 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
       </Card>
 
       {/* Side 2 Details */}
-      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/20 border border-purple-500/30 rounded-xl ring-1 ring-purple-500/10 shadow-lg shadow-purple-500/10">
+      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/20 border border-purple-500/30 rounded-xl shadow-none">
         <CardHeader>
           <CardTitle className="text-white font-mono">Side 2 Assets</CardTitle>
         </CardHeader>

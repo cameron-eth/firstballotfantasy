@@ -13,7 +13,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       <div
         ref={ref}
         className={cn(
-          'rounded-lg border text-card-foreground shadow-sm',
+          'rounded-lg border text-card-foreground',
           !hasBgOverride && 'bg-card',
           className
         )}

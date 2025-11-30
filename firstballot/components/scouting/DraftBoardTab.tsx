@@ -144,7 +144,7 @@ export function DraftBoardTab({
               </p>
 
               {draftBoard.length === 0 ? (
-                <Card className="bg-slate-700/50 border-2 border-dashed border-slate-600 rounded-xl">
+                <Card className="bg-slate-700/50 border-2 border-dashed border-slate-600 rounded-xl shadow-none">
                   <CardContent className="p-12 text-center">
                     <TrendingUp className="h-16 w-16 text-slate-500 mx-auto mb-4" />
                     <p className="text-slate-400 mb-2 text-lg">Your draft board is empty</p>
@@ -154,7 +154,7 @@ export function DraftBoardTab({
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-2">
+                <div className="max-h-[600px] overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
                   {draftBoard.map((prospect, index) => (
                     <DraftBoardItem
                       key={prospect.id}

@@ -156,12 +156,12 @@ export default function RankingsPage() {
 
   const getTierColor = (tier: string, isDiamond: boolean = false): string => {
     if (isDiamond) {
-      return 'bg-cyan-500/30 text-cyan-100 border-cyan-400/50 font-bold shadow-lg shadow-cyan-400/30'
+      return 'bg-cyan-500/30 text-cyan-100 border-cyan-400/50 font-bold'
     }
 
     const tierNum = extractTierNumber(tier)
     const colors: Record<number, string> = {
-      1: 'bg-yellow-600/30 text-yellow-200 border-yellow-500/50 shadow-lg shadow-yellow-400/40 font-bold', // Gold for Elite with glow
+      1: 'bg-yellow-600/30 text-yellow-200 border-yellow-500/50 font-bold', // Gold for Elite
       2: 'bg-purple-500/20 text-purple-300 border-purple-500/30', // Purple for Tier 2
       3: 'bg-blue-500/20 text-blue-300 border-blue-500/30', // Blue for Tier 3
       4: 'bg-green-500/20 text-green-300 border-green-500/30', // Green for Tier 4
@@ -175,16 +175,16 @@ export default function RankingsPage() {
 
   const getRowBgColor = (player: PlayerRanking): string => {
     if (isDiamondTier(player)) {
-      return 'bg-gradient-to-r from-cyan-950/50 via-cyan-950/30 to-slate-800/50 border-l-4 border-l-cyan-400/80 shadow-[inset_0_0_30px_rgba(34,211,238,0.15)] ring-1 ring-cyan-400/20'
+      return 'bg-cyan-950/30 border-l-4 border-l-cyan-400/80'
     }
 
     const tierNum = extractTierNumber(player.tier)
     const colors: Record<number, string> = {
-      1: 'bg-gradient-to-r from-yellow-900/40 via-yellow-900/20 to-slate-800/50 border-l-4 border-l-yellow-500/80 shadow-[inset_0_0_25px_rgba(250,204,21,0.2)] ring-1 ring-yellow-500/20', // Gold background for Elite with glow
-      2: 'bg-gradient-to-r from-purple-950/30 via-purple-950/15 to-slate-800/50 border-l-4 border-l-purple-500/60 shadow-[inset_0_0_15px_rgba(168,85,247,0.1)]', // Purple background for Tier 2
-      3: 'bg-gradient-to-r from-blue-950/30 via-blue-950/15 to-slate-800/50 border-l-4 border-l-blue-500/60 shadow-[inset_0_0_15px_rgba(59,130,246,0.1)]', // Blue background for Tier 3
-      4: 'bg-gradient-to-r from-green-950/30 via-green-950/15 to-slate-800/50 border-l-4 border-l-green-500/60 shadow-[inset_0_0_15px_rgba(34,197,94,0.1)]', // Green background for Tier 4
-      5: 'bg-gradient-to-r from-orange-950/30 via-orange-950/15 to-slate-800/50 border-l-4 border-l-orange-500/60 shadow-[inset_0_0_15px_rgba(249,115,22,0.1)]', // Orange background for Tier 5
+      1: 'bg-yellow-900/20 border-l-4 border-l-yellow-500/80', // Gold background for Elite
+      2: 'bg-purple-950/15 border-l-4 border-l-purple-500/60', // Purple background for Tier 2
+      3: 'bg-blue-950/15 border-l-4 border-l-blue-500/60', // Blue background for Tier 3
+      4: 'bg-green-950/15 border-l-4 border-l-green-500/60', // Green background for Tier 4
+      5: 'bg-orange-950/15 border-l-4 border-l-orange-500/60', // Orange background for Tier 5
       6: 'bg-slate-800/10', // Slate background for Tier 6
       7: 'bg-gray-800/10', // Gray background for Tier 7
       8: 'bg-red-950/10', // Red background for Tier 8
@@ -241,7 +241,7 @@ export default function RankingsPage() {
       <main className="w-full px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
-            <div className="inline-flex items-center space-x-2 text-xs font-mono text-yellow-400 uppercase tracking-wider mb-4 px-4 py-2 border border-yellow-400/40 rounded-full bg-yellow-400/10 shadow-[0_0_20px_rgba(250,204,21,0.3)]">
+            <div className="inline-flex items-center space-x-2 text-xs font-mono text-yellow-400 uppercase tracking-wider mb-4 px-4 py-2 border border-yellow-400/40 rounded-full bg-yellow-400/10">
               <TrendingUp className="h-3 w-3" />
               <span>Player Rankings</span>
             </div>
@@ -253,8 +253,8 @@ export default function RankingsPage() {
             </p>
           </div>
 
-          <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/20 border border-yellow-500/30 rounded-xl ring-1 ring-yellow-500/10 shadow-lg shadow-yellow-500/10">
-            <CardHeader>
+          <Card className="!bg-gradient-to-br !from-slate-800 !via-slate-800 !to-yellow-950/20 border border-yellow-500/30 rounded-xl shadow-none">
+            <CardHeader className="!bg-transparent">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <CardTitle className="text-white text-lg sm:text-xl font-mono">Player Rankings</CardTitle>
                 <div className="flex items-center gap-2">
@@ -342,7 +342,7 @@ export default function RankingsPage() {
               </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="!bg-transparent">
               {loading ? (
                 <div className="text-center py-12">
                   <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -350,7 +350,7 @@ export default function RankingsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full border-collapse bg-transparent">
                     <thead>
                       <tr className="border-b border-slate-700">
                         <th className="text-left py-3 px-2 sm:px-4 text-gray-400 font-semibold text-sm">
@@ -404,7 +404,7 @@ export default function RankingsPage() {
                         return (
                           <tr
                             key={player.rank}
-                            className={`border-b border-slate-700/50 hover:bg-slate-700/40 transition-all ${rowBg} hover:shadow-lg`}
+                            className={`border-b border-slate-700/50 hover:bg-slate-700/40 transition-all ${rowBg}`}
                           >
                             <td className="py-3 px-2 sm:px-4 text-white font-mono font-semibold text-sm">
                               #{player.rank}
@@ -472,7 +472,7 @@ export default function RankingsPage() {
                             size="sm"
                             onClick={() => setCurrentPage(1)}
                             disabled={currentPage === 1}
-                            className="flex-1 sm:flex-none border-slate-600 hover:bg-slate-700 hover:border-yellow-400/50 text-white disabled:text-slate-600 disabled:border-slate-700 disabled:bg-slate-800 h-10 font-semibold"
+                            className="flex-1 sm:flex-none border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-yellow-400/50 !text-white disabled:!text-slate-500 disabled:border-slate-700 disabled:bg-slate-800/50 h-10 font-semibold font-mono"
                           >
                             First
                           </Button>
@@ -481,7 +481,7 @@ export default function RankingsPage() {
                             size="sm"
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className="flex-1 sm:flex-none border-slate-600 hover:bg-slate-700 hover:border-yellow-400/50 text-white disabled:text-slate-600 disabled:border-slate-700 disabled:bg-slate-800 h-10 font-semibold"
+                            className="flex-1 sm:flex-none border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-yellow-400/50 !text-white disabled:!text-slate-500 disabled:border-slate-700 disabled:bg-slate-800/50 h-10 font-semibold font-mono"
                           >
                             Prev
                           </Button>
@@ -496,7 +496,7 @@ export default function RankingsPage() {
                             size="sm"
                             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className="flex-1 sm:flex-none border-slate-600 hover:bg-slate-700 hover:border-yellow-400/50 text-white disabled:text-slate-600 disabled:border-slate-700 disabled:bg-slate-800 h-10 font-semibold"
+                            className="flex-1 sm:flex-none border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-yellow-400/50 !text-white disabled:!text-slate-500 disabled:border-slate-700 disabled:bg-slate-800/50 h-10 font-semibold font-mono"
                           >
                             Next
                           </Button>
@@ -505,7 +505,7 @@ export default function RankingsPage() {
                             size="sm"
                             onClick={() => setCurrentPage(totalPages)}
                             disabled={currentPage === totalPages}
-                            className="flex-1 sm:flex-none border-slate-600 hover:bg-slate-700 hover:border-yellow-400/50 text-white disabled:text-slate-600 disabled:border-slate-700 disabled:bg-slate-800 h-10 font-semibold"
+                            className="flex-1 sm:flex-none border-slate-600 bg-slate-700/50 hover:bg-slate-700 hover:border-yellow-400/50 !text-white disabled:!text-slate-500 disabled:border-slate-700 disabled:bg-slate-800/50 h-10 font-semibold font-mono"
                           >
                             Last
                           </Button>

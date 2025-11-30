@@ -120,7 +120,7 @@ export default function TradeCalculatorPage() {
           {result && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Side 1 Score */}
-              <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/30 border border-blue-500/40 rounded-xl p-6 ring-1 ring-blue-500/20 shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 transition-all">
+              <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/30 border border-blue-500/40 rounded-xl p-6 transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-white font-semibold font-mono">Side 1 Total</h4>
                   {result.side1_rank && (
@@ -135,7 +135,7 @@ export default function TradeCalculatorPage() {
               </div>
 
               {/* Side 2 Score */}
-              <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/30 border border-purple-500/40 rounded-xl p-6 ring-1 ring-purple-500/20 shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 transition-all">
+              <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/30 border border-purple-500/40 rounded-xl p-6 transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-white font-semibold font-mono">Side 2 Total</h4>
                   {result.side2_rank && (
@@ -153,7 +153,7 @@ export default function TradeCalculatorPage() {
 
           {/* Trade Summary - Above Inputs */}
           {result && (
-            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/30 border border-yellow-500/40 rounded-xl mb-6 ring-1 ring-yellow-500/20 shadow-lg shadow-yellow-500/20">
+            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/30 border border-yellow-500/40 rounded-xl mb-6 shadow-none">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -194,7 +194,7 @@ export default function TradeCalculatorPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Side 1 Input */}
-            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/20 border border-blue-500/30 rounded-xl ring-1 ring-blue-500/10 shadow-lg shadow-blue-500/10 hover:shadow-xl hover:shadow-blue-500/20 hover:border-blue-500/50 transition-all">
+            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/20 border border-blue-500/30 rounded-xl shadow-none hover:border-blue-500/50 transition-all">
               <CardContent className="p-6">
                 <TradeSideInput
                   side={side1}
@@ -206,7 +206,7 @@ export default function TradeCalculatorPage() {
             </Card>
 
             {/* Side 2 Input */}
-            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/20 border border-purple-500/30 rounded-xl ring-1 ring-purple-500/10 shadow-lg shadow-purple-500/10 hover:shadow-xl hover:shadow-purple-500/20 hover:border-purple-500/50 transition-all">
+            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/20 border border-purple-500/30 rounded-xl shadow-none hover:border-purple-500/50 transition-all">
               <CardContent className="p-6">
                 <TradeSideInput
                   side={side2}
@@ -233,7 +233,7 @@ export default function TradeCalculatorPage() {
 
           {/* Empty State */}
           {!result && !loading && side1.length === 0 && side2.length === 0 && (
-            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 border border-slate-700 rounded-xl ring-1 ring-slate-600/50 shadow-lg">
+            <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 border border-slate-700 rounded-xl shadow-none">
               <CardContent className="p-12 text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-400/10 border border-yellow-400/30 mb-6">
                   <Scale className="h-8 w-8 text-yellow-400" />

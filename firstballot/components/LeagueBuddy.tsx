@@ -441,23 +441,60 @@ export default function LeagueBuddy({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <LeagueBuddySidebar
-        selectedTeam={selectedTeam}
-        sortedTeams={sortedTeams}
-        leagues={leagues}
-        leagueId={leagueId}
-        onLeagueChange={onLeagueChange}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        currentWeek={currentWeek}
-        leagueOverview={leagueOverview}
-      />
+      {/* Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <LeagueBuddySidebar
+          selectedTeam={selectedTeam}
+          sortedTeams={sortedTeams}
+          leagues={leagues}
+          leagueId={leagueId}
+          onLeagueChange={onLeagueChange}
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          currentWeek={currentWeek}
+          leagueOverview={leagueOverview}
+        />
+      </div>
 
       {/* Main Content Area */}
-      <SidebarInset className="!bg-slate-900 overflow-x-hidden">
-        <div className="pl-2 pr-6 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8 max-w-md sm:max-w-none mx-auto sm:mx-0">
+      <SidebarInset className="!bg-slate-900 overflow-x-hidden !ml-0 md:!ml-[var(--sidebar-width)]">
+        <div className="w-full px-2 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
           {/* Mobile Navigation & League Switcher - Only visible on mobile */}
-          <div className="md:hidden mb-6 space-y-6">
+          <div className="md:hidden mb-6 space-y-4">
+            {/* Mobile Navigation Tabs */}
+            <div className="flex gap-2 bg-slate-800/50 p-1 rounded-lg border border-slate-700">
+              <button
+                onClick={() => setActiveSection('overview')}
+                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
+                  activeSection === 'overview'
+                    ? 'bg-yellow-400 text-slate-900'
+                    : 'text-slate-300 hover:text-yellow-400'
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveSection('roster')}
+                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
+                  activeSection === 'roster'
+                    ? 'bg-yellow-400 text-slate-900'
+                    : 'text-slate-300 hover:text-yellow-400'
+                }`}
+              >
+                My Team
+              </button>
+              <button
+                onClick={() => setActiveSection('league')}
+                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
+                  activeSection === 'league'
+                    ? 'bg-yellow-400 text-slate-900'
+                    : 'text-slate-300 hover:text-yellow-400'
+                }`}
+              >
+                League
+              </button>
+            </div>
+
             {/* Mobile League Switcher */}
             {leagues.length > 1 && onLeagueChange && (
               <Card className="bg-slate-800 border-slate-700">

@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { Search } from 'lucide-react'
 import { ProspectCard } from './ProspectCard'
+import { ProspectCharts } from './ProspectCharts'
 import type { Prospect } from './types'
 
 interface ProspectsTabProps {
@@ -23,6 +24,7 @@ interface ProspectsTabProps {
   setSchoolFilter: (filter: string) => void
   schools: string[]
   filteredProspects: Prospect[]
+  allProspects: Prospect[]
   draftBoard: Prospect[]
   onProspectSelect: (prospect: Prospect) => void
   onShowComps: (prospect: Prospect) => void
@@ -39,6 +41,7 @@ export function ProspectsTab({
   setSchoolFilter,
   schools,
   filteredProspects,
+  allProspects,
   draftBoard,
   onProspectSelect,
   onShowComps,
@@ -46,6 +49,13 @@ export function ProspectsTab({
 }: ProspectsTabProps) {
   return (
     <div className="relative">
+      {/* Charts Section */}
+      {!loading && allProspects.length > 0 && (
+        <div className="mb-8">
+          <ProspectCharts prospects={allProspects} />
+        </div>
+      )}
+
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-4">
           <h2 className="text-white text-xl font-semibold">College Prospects</h2>

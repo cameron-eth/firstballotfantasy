@@ -6,14 +6,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Header } from '@/components/header'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, Users, TrendingUp, RefreshCw } from 'lucide-react'
+import { Eye, Users, TrendingUp, RefreshCw, BarChart3 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import {
-  RosterOverviewTab,
   ProspectsTab,
   DraftBoardTab,
   ProspectDetailModal,
   ComparisonsModal,
+  HistoricalRankingsTab,
 } from '@/components/scouting'
 import type { Prospect } from '@/components/scouting/types'
 
@@ -49,7 +49,7 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [schoolFilter, setSchoolFilter] = useState('all')
-  const [activeTab, setActiveTab] = useState('roster')
+  const [activeTab, setActiveTab] = useState('prospects')
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [draggedProspect, setDraggedProspect] = useState<Prospect | null>(null)
   const [dragOverPosition, setDragOverPosition] = useState<string | null>(null)
@@ -762,14 +762,6 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
             <div className="overflow-x-auto">
               <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700 min-w-max">
                 <TabsTrigger
-                  value="roster"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
-                >
-                  <Users className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Roster & Overview</span>
-                  <span className="sm:hidden">Roster</span>
-                </TabsTrigger>
-                <TabsTrigger
                   value="prospects"
                   className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
                 >
@@ -784,18 +776,16 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                   <span className="hidden sm:inline">Draft Board</span>
                   <span className="sm:hidden">Draft</span>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="historical"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                >
+                  <BarChart3 className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Historical</span>
+                  <span className="sm:hidden">History</span>
+                </TabsTrigger>
               </TabsList>
             </div>
-
-            {/* Combined Roster & Overview Tab */}
-            <TabsContent value="roster" className="mt-6">
-              <RosterOverviewTab
-                roster={roster}
-                positionNeeds={positionNeeds}
-                rosterWithPositionalRanks={rosterWithPositionalRanks}
-                onProspectSelect={handleProspectSelect}
-              />
-            </TabsContent>
 
             {/* Prospects Tab */}
             <TabsContent
@@ -813,6 +803,7 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                 setSchoolFilter={setSchoolFilter}
                 schools={schools}
                 filteredProspects={filteredProspects}
+                allProspects={prospects}
                 draftBoard={draftBoard}
                 onProspectSelect={handleProspectSelect}
                 onShowComps={handleShowComps}
@@ -836,6 +827,10 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                 onBoardDrop={handleBoardDrop}
                 onClearDraftBoard={handleClearDraftBoard}
               />
+            </TabsContent>
+
+            <TabsContent value="historical" className="mt-6">
+              <HistoricalRankingsTab currentProspects={prospects} />
             </TabsContent>
           </Tabs>
 

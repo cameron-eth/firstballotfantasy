@@ -141,7 +141,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
                 setShowSuggestions(true)
               }
             }}
-            className="bg-slate-700 border-slate-600 text-white w-full"
+            className="bg-slate-700/50 border-slate-600 text-white w-full focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all"
           />
           {/* Suggestions Dropdown */}
           {showSuggestions && suggestions.length > 0 && (
@@ -177,7 +177,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
         <Button
           onClick={() => handleAddItem()}
           size="sm"
-          className="bg-blue-500 hover:bg-blue-600 text-white"
+          className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-slate-900 font-semibold shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all"
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -188,14 +188,14 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
         {side.map((item, index) => (
           <div
             key={index}
-            className="flex items-center justify-between p-2 bg-slate-700/50 rounded border border-slate-600"
+            className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-yellow-400/30 transition-all shadow-sm"
           >
-            <span className="text-white text-sm">{item}</span>
+            <span className="text-white text-sm font-mono">{item}</span>
             <Button
               onClick={() => handleRemoveItem(index)}
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-red-400"
+              className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/20 transition-all"
             >
               <X className="h-4 w-4" />
             </Button>

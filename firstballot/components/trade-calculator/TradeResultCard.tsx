@@ -58,14 +58,14 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
   return (
     <div className="space-y-6">
       {/* Summary Card */}
-      <Card className="bg-slate-800 border border-slate-700">
+      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/30 border border-yellow-500/40 rounded-xl ring-1 ring-yellow-500/20 shadow-lg shadow-yellow-500/20">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-white flex items-center gap-2">
-              <Scale className="h-5 w-5" />
+            <CardTitle className="text-white flex items-center gap-2 font-mono">
+              <Scale className="h-5 w-5 text-yellow-400" />
               Trade Evaluation
             </CardTitle>
-            <Badge variant="outline" className={getFairnessColor(result.fairness)}>
+            <Badge variant="outline" className={`${getFairnessColor(result.fairness)} font-mono font-semibold shadow-lg`}>
               {result.fairness}
             </Badge>
           </div>
@@ -130,9 +130,9 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
       </Card>
 
       {/* Side 1 Details */}
-      <Card className="bg-slate-800 border border-slate-700">
+      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/20 border border-blue-500/30 rounded-xl ring-1 ring-blue-500/10 shadow-lg shadow-blue-500/10">
         <CardHeader>
-          <CardTitle className="text-white">Side 1 Assets</CardTitle>
+          <CardTitle className="text-white font-mono">Side 1 Assets</CardTitle>
         </CardHeader>
         <CardContent>
           {result.side1.length > 0 ? (
@@ -190,9 +190,9 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
       </Card>
 
       {/* Side 2 Details */}
-      <Card className="bg-slate-800 border border-slate-700">
+      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/20 border border-purple-500/30 rounded-xl ring-1 ring-purple-500/10 shadow-lg shadow-purple-500/10">
         <CardHeader>
-          <CardTitle className="text-white">Side 2 Assets</CardTitle>
+          <CardTitle className="text-white font-mono">Side 2 Assets</CardTitle>
         </CardHeader>
         <CardContent>
           {result.side2.length > 0 ? (
@@ -200,7 +200,7 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
               {result.side2.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded border border-slate-600"
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-purple-400/30 transition-all shadow-sm"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">

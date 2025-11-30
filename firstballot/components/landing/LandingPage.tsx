@@ -39,4 +39,3 @@ export function LandingPage() {
     </main>
   )
 }
-

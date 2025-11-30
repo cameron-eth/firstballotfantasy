@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
     const tradedPicks = (await sleeperApi.getDraftTradedPicks(draftId)) as any[]
 
     // Fetch league rosters and users - Users without cache to get fresh team names
-    const [rosters, users] = await Promise.all([
+    const [rosters, users] = (await Promise.all([
       sleeperApi.getLeagueRosters(draft.league_id),
       fetch(`https://api.sleeper.app/v1/league/${draft.league_id}/users`, {
         cache: 'no-store',
       }).then((r) => r.json()),
-    ]) as [any[], any[]]
+    ])) as [any[], any[]]
 
     // Fetch rankings for grading
     const { data: rankingsData, error: rankingsError } = await supabaseServer

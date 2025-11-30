@@ -134,39 +134,39 @@ export default function RankingsPage() {
 
 ### Component Responsibilities
 
-- **Page Components (`app/**/page.tsx`)**: 
+- **Page Components (`app/**/page.tsx`)\*\*:
   - **Must be 20-30 lines maximum**
   - Serve a single main component
   - No logic, no state, no hooks
   - Just import and render the main feature component
   - Example: `return <RankingsView />`
 
-- **Main Feature Components (`components/[feature]/[Feature]View.tsx`)**: 
+- **Main Feature Components (`components/[feature]/[Feature]View.tsx`)**:
   - Houses all sub-components for a feature
   - Orchestrates data fetching (via hooks)
   - Composes child components
   - Handles high-level layout
   - **Should be 100-400 lines maximum**
 
-- **Feature Components (`components/[feature]/`)**: 
+- **Feature Components (`components/[feature]/`)**:
   - Encapsulate specific functionality
   - Manage their own local state
   - Accept props for configuration
   - **Should be 100-300 lines maximum**
 
-- **UI Components (`components/ui/`)**: 
+- **UI Components (`components/ui/`)**:
   - Generic, reusable components
   - No business logic
   - Highly composable
   - **Should be 50-200 lines maximum**
 
-- **Feature Components (`components/[feature]/`)**: 
+- **Feature Components (`components/[feature]/`)**:
   - Encapsulate specific functionality
   - Manage their own local state
   - Accept props for configuration
   - **Should be 100-300 lines maximum**
 
-- **UI Components (`components/ui/`)**: 
+- **UI Components (`components/ui/`)**:
   - Generic, reusable components
   - No business logic
   - Highly composable
@@ -178,7 +178,7 @@ export default function RankingsPage() {
 
 ### Hard Limits
 
-- **Page Components (`app/**/page.tsx`)**: **20-30 lines maximum**
+- **Page Components (`app/**/page.tsx`)**: **20-30 lines maximum\*\*
 - **Maximum file size: 700 lines**
 - **Target file size: 400-600 lines**
 - **Ideal file size: 200-400 lines**
@@ -248,7 +248,8 @@ interface RankingsTableProps {
 
 ```tsx
 // components/rankings/RankingsTable.tsx
-interface PlayerRanking {  // ❌ Inline type definition
+interface PlayerRanking {
+  // ❌ Inline type definition
   rank: number
   // ...
 }
@@ -284,7 +285,7 @@ const handleSort = (field: SortField) => {
 
 // Use generics for flexible types
 function processData<T>(data: T[]): T[] {
-  return data.map(item => transform(item))
+  return data.map((item) => transform(item))
 }
 
 // Use union types
@@ -427,10 +428,12 @@ bun run lint
 ## Feature: [Feature Name]
 
 ### Requirements
+
 - [ ] Requirement 1
 - [ ] Requirement 2
 
 ### Component Structure
+
 - Page: `app/[route]/page.tsx` (20-30 lines - wrapper only)
   - Main Component: `components/[feature]/[Feature]View.tsx` (houses all sub-components)
     - Child: `components/[feature]/ComponentA.tsx`
@@ -438,10 +441,12 @@ bun run lint
   - Hook: `hooks/useFeatureData.ts`
 
 ### Type Definitions
+
 - Shared: `types/[feature].ts`
 - Feature: `components/[feature]/types.ts`
 
 ### File Size Estimates
+
 - `page.tsx`: ~20-30 lines (wrapper only)
 - `[Feature]View.tsx`: ~200-300 lines (main component)
 - `ComponentA.tsx`: ~150 lines
@@ -449,6 +454,7 @@ bun run lint
 - `useFeatureData.ts`: ~100 lines
 
 ### Dependencies
+
 - Existing: `components/ui/Button`, `components/ui/Card`
 - New: None
 ```
@@ -579,12 +585,7 @@ Use type guards instead of `any`:
 ```tsx
 // ✅ Good
 function isPlayerRanking(obj: unknown): obj is PlayerRanking {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'rank' in obj &&
-    'player_name' in obj
-  )
+  return typeof obj === 'object' && obj !== null && 'rank' in obj && 'player_name' in obj
 }
 
 // ❌ Bad
@@ -663,6 +664,7 @@ When reviewing code, check:
 > **"Fix things at the cause, not the symptom."**
 
 When you encounter issues:
+
 - Don't add quick fixes
 - Understand the root cause
 - Refactor properly
@@ -683,4 +685,3 @@ If you're unsure about any standard or encounter a situation not covered here:
 
 **Last Updated**: 2025-01-XX
 **Version**: 1.0.0
-

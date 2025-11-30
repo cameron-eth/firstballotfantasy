@@ -77,8 +77,10 @@ export async function GET(request: NextRequest) {
     // Find the user's roster
     const rostersDataTyped = rostersData as any[]
     const playersDataTyped = playersData as Record<string, any>
-    
-    const userRoster = rostersDataTyped.find((roster: any) => roster.owner_id === sleeperUser.user_id)
+
+    const userRoster = rostersDataTyped.find(
+      (roster: any) => roster.owner_id === sleeperUser.user_id
+    )
 
     if (!userRoster) {
       return NextResponse.json({ error: 'User roster not found' }, { status: 404 })

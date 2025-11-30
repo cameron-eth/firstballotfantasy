@@ -180,6 +180,10 @@ export default function LeagueBuddy({
     router.push(`/draft-buddy?leagueId=${leagueId}`)
   }, [router, leagueId])
 
+  const handlePlayoffOddsClick = useCallback(() => {
+    router.push(`/playoff-odds?leagueId=${leagueId}`)
+  }, [router, leagueId])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 overflow-x-hidden">
@@ -441,23 +445,21 @@ export default function LeagueBuddy({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Sidebar - Hidden on mobile, visible on desktop */}
-      <div className="hidden md:block">
-        <LeagueBuddySidebar
-          selectedTeam={selectedTeam}
-          sortedTeams={sortedTeams}
-          leagues={leagues}
-          leagueId={leagueId}
-          onLeagueChange={onLeagueChange}
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          currentWeek={currentWeek}
-          leagueOverview={leagueOverview}
-        />
-      </div>
+      {/* Sidebar - Responsive visibility handled by Sidebar component */}
+      <LeagueBuddySidebar
+        selectedTeam={selectedTeam}
+        sortedTeams={sortedTeams}
+        leagues={leagues}
+        leagueId={leagueId}
+        onLeagueChange={onLeagueChange}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        currentWeek={currentWeek}
+        leagueOverview={leagueOverview}
+      />
 
       {/* Main Content Area */}
-      <SidebarInset className="!bg-slate-900 overflow-x-hidden !ml-0 md:!ml-[var(--sidebar-width)]">
+      <SidebarInset className="!bg-slate-900 overflow-x-hidden">
         <div className="w-full px-2 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
           {/* Mobile Navigation & League Switcher - Only visible on mobile */}
           <div className="md:hidden mb-6 space-y-4">
@@ -552,6 +554,7 @@ export default function LeagueBuddy({
                 onTradeMarketClick={handleTradeMarketClick}
                 onScoutingPortalClick={handleScoutingPortalClick}
                 onDraftBuddyClick={handleDraftBuddyClick}
+                onPlayoffOddsClick={handlePlayoffOddsClick}
               />
 
               {/* Lineup Manager - Current vs Optimized with What-If */}

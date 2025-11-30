@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
-import { Trophy, Eye, Users, Target } from 'lucide-react'
+import { Trophy, Eye, Users, Target, BarChart3 } from 'lucide-react'
 import type { TeamData, MatchupData } from './types'
 
 const GRADE_COLORS = {
@@ -31,6 +31,7 @@ interface OverviewHeaderProps {
   onTradeMarketClick: () => void
   onScoutingPortalClick: () => void
   onDraftBuddyClick: () => void
+  onPlayoffOddsClick: () => void
 }
 
 export function OverviewHeader({
@@ -42,6 +43,7 @@ export function OverviewHeader({
   onTradeMarketClick,
   onScoutingPortalClick,
   onDraftBuddyClick,
+  onPlayoffOddsClick,
 }: OverviewHeaderProps) {
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
@@ -117,6 +119,13 @@ export function OverviewHeader({
               <Users className="h-4 w-4" />
               <span>Draft</span>
             </button>
+            <button
+              className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+              onClick={onPlayoffOddsClick}
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Playoff Odds</span>
+            </button>
           </div>
         </div>
 
@@ -186,7 +195,7 @@ export function OverviewHeader({
         )}
 
         {/* Mobile Action Buttons - Only visible on mobile */}
-        <div className="md:hidden flex items-center justify-center space-x-3 mt-3">
+        <div className="md:hidden flex items-center justify-center space-x-3 mt-3 flex-wrap gap-2">
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
             onClick={onTradeMarketClick}
@@ -207,6 +216,13 @@ export function OverviewHeader({
           >
             <Users className="h-4 w-4" />
             <span>Draft</span>
+          </button>
+          <button
+            className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
+            onClick={onPlayoffOddsClick}
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>Playoff Odds</span>
           </button>
         </div>
       </CardContent>

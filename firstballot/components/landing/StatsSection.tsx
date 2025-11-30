@@ -17,7 +17,9 @@ export function StatsSection() {
           <Activity className="h-3 w-3" />
           <span>Live Platform Stats</span>
         </div>
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white font-mono mb-4">THE NUMBERS</h2>
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white font-mono mb-4">
+          THE NUMBERS
+        </h2>
         <p className="text-gray-400 text-lg">Real-time data driving dynasty decisions</p>
       </div>
 
@@ -104,4 +106,3 @@ export function StatsSection() {
     </section>
   )
 }
-

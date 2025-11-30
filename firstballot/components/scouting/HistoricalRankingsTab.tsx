@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, BarChart3, Users, Calendar } from 'lucide-react'
 import type { Prospect } from './types'
@@ -100,9 +106,11 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   // Compare average valuation
   const valuationComparison = useMemo(() => {
     const currentAvg =
-      currentProspects.reduce((sum, p) => sum + (p.valuation || 0), 0) / currentProspects.length || 0
+      currentProspects.reduce((sum, p) => sum + (p.valuation || 0), 0) / currentProspects.length ||
+      0
     const historicalAvg =
-      historicalProspects.reduce((sum, p) => sum + (p.valuation || 0), 0) / historicalProspects.length || 0
+      historicalProspects.reduce((sum, p) => sum + (p.valuation || 0), 0) /
+        historicalProspects.length || 0
 
     return {
       current: currentAvg,
@@ -253,7 +261,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
                     <span>2026: {pos.current}</span>
-                    <span>{selectedYear}: {pos.historical}</span>
+                    <span>
+                      {selectedYear}: {pos.historical}
+                    </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -311,7 +321,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
                     <span>2026: {tier.current}</span>
-                    <span>{selectedYear}: {tier.historical}</span>
+                    <span>
+                      {selectedYear}: {tier.historical}
+                    </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -344,4 +356,3 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
     </div>
   )
 }
-

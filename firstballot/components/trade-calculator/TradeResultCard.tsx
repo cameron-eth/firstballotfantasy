@@ -4,30 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown, Minus, Scale } from 'lucide-react'
 import Link from 'next/link'
-
-interface TradeItem {
-  name: string
-  type: 'player' | 'pick'
-  position?: string
-  total_score: number
-  tier: string
-  rank?: number | null
-}
-
-interface TradeResult {
-  side1: TradeItem[]
-  side1_total: number
-  side1_rank?: number
-  side1_not_found: string[]
-  side2: TradeItem[]
-  side2_total: number
-  side2_rank?: number
-  side2_not_found: string[]
-  difference: number
-  difference_pct: number
-  fairness: string
-  winner: string
-}
+import type { TradeResult } from '@/types/trade-calculator'
 
 interface TradeResultCardProps {
   result: TradeResult
@@ -65,7 +42,10 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
               <Scale className="h-5 w-5 text-yellow-400" />
               Trade Evaluation
             </CardTitle>
-            <Badge variant="outline" className={`${getFairnessColor(result.fairness)} font-mono font-semibold`}>
+            <Badge
+              variant="outline"
+              className={`${getFairnessColor(result.fairness)} font-mono font-semibold`}
+            >
               {result.fairness}
             </Badge>
           </div>

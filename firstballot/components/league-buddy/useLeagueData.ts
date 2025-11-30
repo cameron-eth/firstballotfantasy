@@ -226,32 +226,20 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
           TEAM?: string
           [key: string]: any
         }
-        rankingsMap = rankingsResponse.reduce(
-          (acc: Record<string, any>, player: RankingPlayer) => {
-            const playerName = player['PLAYER NAME']
-            const rank = player.RK
-            if (playerName && rank !== undefined) {
-              acc[playerName] = {
-                rank: rank,
-                position: player.POS || '',
-                team: player.TEAM || '',
-                name: playerName,
-                tier:
-                  rank <= 12
-                    ? 1
-                    : rank <= 36
-                      ? 2
-                      : rank <= 72
-                        ? 3
-                        : rank <= 120
-                          ? 4
-                          : 5,
-              }
+        rankingsMap = rankingsResponse.reduce((acc: Record<string, any>, player: RankingPlayer) => {
+          const playerName = player['PLAYER NAME']
+          const rank = player.RK
+          if (playerName && rank !== undefined) {
+            acc[playerName] = {
+              rank: rank,
+              position: player.POS || '',
+              team: player.TEAM || '',
+              name: playerName,
+              tier: rank <= 12 ? 1 : rank <= 36 ? 2 : rank <= 72 ? 3 : rank <= 120 ? 4 : 5,
             }
-            return acc
-          },
-          {}
-        )
+          }
+          return acc
+        }, {})
       }
       setPlayerRankings(rankingsMap)
 

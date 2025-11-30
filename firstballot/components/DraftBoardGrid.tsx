@@ -121,7 +121,11 @@ export function DraftBoardGrid({
           const result = await response.json()
           // API returns { data: [...], rankingsMap: {...} }
           // Extract the data array if it exists, otherwise use the result directly if it's an array
-          const rankingsData = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : []
+          const rankingsData = Array.isArray(result?.data)
+            ? result.data
+            : Array.isArray(result)
+              ? result
+              : []
           setRankings(rankingsData)
         }
       } catch (e) {

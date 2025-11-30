@@ -6,12 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X, Plus } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
-
-interface PlayerSuggestion {
-  player_name: string
-  position: string
-  team: string
-}
+import type { PlayerSuggestion } from '@/types/trade-calculator'
 
 interface TradeSideInputProps {
   side: string[]

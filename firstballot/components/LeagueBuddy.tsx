@@ -441,21 +441,23 @@ export default function LeagueBuddy({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Sidebar - Sidebar component handles its own visibility */}
-      <LeagueBuddySidebar
-        selectedTeam={selectedTeam}
-        sortedTeams={sortedTeams}
-        leagues={leagues}
-        leagueId={leagueId}
-        onLeagueChange={onLeagueChange}
-        activeSection={activeSection}
-        setActiveSection={setActiveSection}
-        currentWeek={currentWeek}
-        leagueOverview={leagueOverview}
-      />
+      {/* Sidebar - Hidden on mobile, visible on desktop */}
+      <div className="hidden md:block">
+        <LeagueBuddySidebar
+          selectedTeam={selectedTeam}
+          sortedTeams={sortedTeams}
+          leagues={leagues}
+          leagueId={leagueId}
+          onLeagueChange={onLeagueChange}
+          activeSection={activeSection}
+          setActiveSection={setActiveSection}
+          currentWeek={currentWeek}
+          leagueOverview={leagueOverview}
+        />
+      </div>
 
       {/* Main Content Area */}
-      <SidebarInset className="!bg-slate-900 overflow-x-hidden">
+      <SidebarInset className="!bg-slate-900 overflow-x-hidden !ml-0 md:!ml-[var(--sidebar-width)]">
         <div className="w-full px-2 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
           {/* Mobile Navigation & League Switcher - Only visible on mobile */}
           <div className="md:hidden mb-6 space-y-4">

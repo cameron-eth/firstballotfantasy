@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, TrendingUp, BarChart3, LineChart } from 'lucide-react'
+import { Activity, TrendingUp, BarChart3, LineChart, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export function StatsSection() {
@@ -25,10 +25,10 @@ export function StatsSection() {
         {/* Stat 1 - Animated bar chart */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 backdrop-blur-sm hover:border-yellow-400/50 transition-all animate-on-scroll slide-left group">
           <div className="flex items-center justify-between mb-4">
-            <TrendingUp className="h-6 w-6 text-yellow-400" />
-            <span className="text-xs font-mono text-gray-500 uppercase">Active Users</span>
+            <Star className="h-6 w-6 text-yellow-400" />
+            <span className="text-xs font-mono text-gray-500 uppercase">Players Graded</span>
           </div>
-          <div className="text-4xl font-bold text-white font-mono mb-2">12.5K</div>
+          <div className="text-4xl font-bold text-white font-mono mb-2">500+</div>
           <div className="flex items-end space-x-1 h-16 mt-4">
             {[40, 65, 45, 80, 70, 85, 95, 100].map((height, i) => (
               <div
@@ -41,7 +41,7 @@ export function StatsSection() {
               />
             ))}
           </div>
-          <div className="text-sm text-green-400 font-mono mt-2">↑ 23% this month</div>
+          <div className="text-sm text-green-400 font-mono mt-2">↑ Growing weekly</div>
         </div>
 
         {/* Stat 2 - Circular progress */}

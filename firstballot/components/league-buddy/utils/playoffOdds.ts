@@ -32,7 +32,8 @@ export function calculatePlayoffOdds(
   schedule?: ScheduleMap,
   simulations: number = 10000
 ): PlayoffOddsResult[] {
-  if (teams.length === 0 || currentWeek >= totalWeeks) {
+  // Only return hardcoded values if season is completely over (no remaining weeks)
+  if (teams.length === 0 || currentWeek > totalWeeks) {
     return teams.map((team, index) => ({
       teamName: team.teamName,
       wins: team.wins,
@@ -44,7 +45,45 @@ export function calculatePlayoffOdds(
   }
 
   const spots = playoffSpots || Math.ceil(teams.length / 2)
-  const remainingWeeks = totalWeeks - currentWeek
+
+  // Detect games per week by looking at max games played vs weeks
+  // If teams have ~2x games as weeks, it's a 2-game-per-week league (H2H + Median)
+  const maxGamesPlayed = Math.max(...teams.map((t) => t.wins + t.losses))
+  const minGamesPlayed = Math.min(...teams.map((t) => t.wins + t.losses))
+  const gamesPerWeek = maxGamesPlayed > currentWeek * 1.5 ? 2 : 1
+
+  // Calculate total expected games for the season
+  const totalExpectedGames = totalWeeks * gamesPerWeek
+
+  // Check if current week is in progress (teams have different game counts)
+  const weekInProgress = maxGamesPlayed !== minGamesPlayed
+
+  // Calculate remaining weeks to simulate
+  // If week is in progress, include current week for teams that haven't played
+  const startingWeek = weekInProgress ? currentWeek : currentWeek + 1
+  const remainingWeeks = totalWeeks - startingWeek + 1
+
+  // If no remaining games possible, use final standings
+  if (remainingWeeks <= 0 && !weekInProgress) {
+    const sortedTeams = [...teams].sort((a, b) => {
+      if (a.wins !== b.wins) return b.wins - a.wins
+      return b.pointsFor - a.pointsFor
+    })
+    return sortedTeams.map((team, index) => ({
+      teamName: team.teamName,
+      wins: team.wins,
+      losses: team.losses,
+      pointsFor: team.pointsFor,
+      playoffProbability: index < spots ? 100 : 0,
+      rank: index + 1,
+    }))
+  }
+
+  // Calculate each team's remaining games individually
+  const teamRemainingGames = teams.map((team) => {
+    const gamesPlayed = team.wins + team.losses
+    return Math.max(0, totalExpectedGames - gamesPlayed)
+  })
 
   // Calculate average points per game and standard deviation for each team
   const teamStats = teams.map((team) => {
@@ -69,32 +108,84 @@ export function calculatePlayoffOdds(
   // Initialize playoff counts
   const playoffCounts = new Array(teams.length).fill(0)
 
+  // Check if any team has remaining games
+  const anyRemainingGames = teamRemainingGames.some((g) => g > 0)
+  if (!anyRemainingGames) {
+    const sortedTeams = [...teams].sort((a, b) => {
+      if (a.wins !== b.wins) return b.wins - a.wins
+      return b.pointsFor - a.pointsFor
+    })
+    return sortedTeams.map((team, index) => ({
+      teamName: team.teamName,
+      wins: team.wins,
+      losses: team.losses,
+      pointsFor: team.pointsFor,
+      playoffProbability: index < spots ? 100 : 0,
+      rank: index + 1,
+    }))
+  }
+
   // Run Monte Carlo simulations
   for (let sim = 0; sim < simulations; sim++) {
-    // Simulate remaining games for each team
+    // For H2H + Median format, we need to simulate all teams' scores for each week first
+    // Then calculate median and determine wins/losses
+
+    // Pre-calculate all team scores for all remaining weeks
+    const weeklyScores: number[][] = [] // [weekIndex][teamIndex] = score
+
+    for (let weekOffset = 0; weekOffset < remainingWeeks; weekOffset++) {
+      const weekScores: number[] = []
+
+      for (let teamIndex = 0; teamIndex < teams.length; teamIndex++) {
+        const teamStatsData = teamStats[teamIndex]
+
+        // Simulate score with extreme outcomes accounted for
+        const randomFactor = Math.random()
+        let scoreMultiplier: number
+
+        if (randomFactor < 0.05) {
+          // Extreme bust week (5% chance)
+          scoreMultiplier = 0.5 + Math.random() * 0.2 // 50-70% of average
+        } else if (randomFactor > 0.95) {
+          // Extreme boom week (5% chance)
+          scoreMultiplier = 1.5 + Math.random() * 0.5 // 150-200% of average
+        } else {
+          // Normal variance - Box-Muller transform
+          const u1 = Math.random()
+          const u2 = Math.random()
+          const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
+          scoreMultiplier = 1 + z * 0.3
+        }
+
+        weekScores.push(Math.max(0, teamStatsData.avg * scoreMultiplier))
+      }
+
+      weeklyScores.push(weekScores)
+    }
+
+    // Now simulate each team's record
     const simulatedRecords = teams.map((team, index) => {
       let simulatedWins = team.wins
       let simulatedLosses = team.losses
       let simulatedPF = team.pointsFor
 
-      const teamStatsData = teamStats[index]
       const teamRosterId = team.rosterId
 
       // Simulate each remaining week
       for (let weekOffset = 0; weekOffset < remainingWeeks; weekOffset++) {
-        const weekNumber = currentWeek + weekOffset + 1
+        const weekNumber = startingWeek + weekOffset
+        const teamScore = weeklyScores[weekOffset][index]
+        simulatedPF += teamScore
 
-        // Use actual schedule if available, otherwise fall back to random
-        let opponentRosterId: number | undefined
+        // Game 1: H2H vs scheduled opponent
         let opponentIndex: number | undefined
 
         if (schedule && schedule[weekNumber] && schedule[weekNumber][teamRosterId]) {
-          // Use actual schedule
-          opponentRosterId = schedule[weekNumber][teamRosterId]
+          const opponentRosterId = schedule[weekNumber][teamRosterId]
           opponentIndex = teams.findIndex((t) => t.rosterId === opponentRosterId)
         }
 
-        // Fallback to random opponent if schedule not available
+        // Fallback to random opponent if no schedule
         if (opponentIndex === undefined || opponentIndex === -1) {
           opponentIndex = Math.floor(Math.random() * teams.length)
           while (opponentIndex === index) {
@@ -102,56 +193,31 @@ export function calculatePlayoffOdds(
           }
         }
 
-        const opponentStats = teamStats[opponentIndex]
+        const opponentScore = weeklyScores[weekOffset][opponentIndex]
 
-        // Simulate scores with extreme outcomes accounted for
-        // Use normal distribution approximation with fat tails for extreme outcomes
-        const randomFactor = Math.random()
-
-        // 5% chance of extreme boom week (top 2.5% outcome)
-        // 5% chance of extreme bust week (bottom 2.5% outcome)
-        // 90% chance of normal variance
-        let teamScoreMultiplier: number
-        let opponentScoreMultiplier: number
-
-        if (randomFactor < 0.05) {
-          // Extreme bust week - bottom 2.5% (≈ -2 standard deviations)
-          teamScoreMultiplier = 0.5 + Math.random() * 0.2 // 50-70% of average
-        } else if (randomFactor > 0.95) {
-          // Extreme boom week - top 2.5% (≈ +2 standard deviations)
-          teamScoreMultiplier = 1.5 + Math.random() * 0.5 // 150-200% of average
-        } else {
-          // Normal variance - use normal distribution approximation
-          // Box-Muller transform for normal distribution
-          const u1 = Math.random()
-          const u2 = Math.random()
-          const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
-          teamScoreMultiplier = 1 + z * 0.3 // Scale to reasonable variance
-        }
-
-        // Same for opponent
-        const opponentRandom = Math.random()
-        if (opponentRandom < 0.05) {
-          opponentScoreMultiplier = 0.5 + Math.random() * 0.2
-        } else if (opponentRandom > 0.95) {
-          opponentScoreMultiplier = 1.5 + Math.random() * 0.5
-        } else {
-          const u1 = Math.random()
-          const u2 = Math.random()
-          const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
-          opponentScoreMultiplier = 1 + z * 0.3
-        }
-
-        // Calculate scores with variance
-        const teamScore = Math.max(0, teamStatsData.avg * teamScoreMultiplier)
-        const opponentScore = Math.max(0, opponentStats.avg * opponentScoreMultiplier)
-
+        // H2H result
         if (teamScore > opponentScore) {
           simulatedWins++
-          simulatedPF += teamScore
         } else {
           simulatedLosses++
-          simulatedPF += teamScore // Still add team's score to PF
+        }
+
+        // Game 2 (if 2-game format): vs League Median
+        if (gamesPerWeek === 2) {
+          // Calculate median score for this week
+          const sortedScores = [...weeklyScores[weekOffset]].sort((a, b) => a - b)
+          const midIndex = Math.floor(sortedScores.length / 2)
+          const medianScore =
+            sortedScores.length % 2 === 0
+              ? (sortedScores[midIndex - 1] + sortedScores[midIndex]) / 2
+              : sortedScores[midIndex]
+
+          // Win if above median, lose if below
+          if (teamScore > medianScore) {
+            simulatedWins++
+          } else {
+            simulatedLosses++
+          }
         }
       }
 

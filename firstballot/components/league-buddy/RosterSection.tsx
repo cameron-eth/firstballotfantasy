@@ -72,7 +72,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
         {/* Insights Categories Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Most Efficient Players */}
-          <Card className="bg-gradient-to-br from-green-900/20 to-slate-700 border-green-500/30">
+          <Card className="bg-slate-800 border-green-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-green-400 text-sm flex items-center gap-2">
                 <Star className="h-4 w-4" />
@@ -118,7 +118,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           </Card>
 
           {/* Trade Bait */}
-          <Card className="bg-gradient-to-br from-blue-900/20 to-slate-700 border-blue-500/30">
+          <Card className="bg-slate-800 border-blue-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-blue-400 text-sm flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4" />
@@ -160,7 +160,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           </Card>
 
           {/* Breakout Candidates */}
-          <Card className="bg-gradient-to-br from-purple-900/20 to-slate-700 border-purple-500/30">
+          <Card className="bg-slate-800 border-purple-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-purple-400 text-sm flex items-center gap-2">
                 <Flame className="h-4 w-4" />
@@ -199,7 +199,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           </Card>
 
           {/* Underperformers */}
-          <Card className="bg-gradient-to-br from-red-900/20 to-slate-700 border-red-500/30">
+          <Card className="bg-slate-800 border-red-500/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-red-400 text-sm flex items-center gap-2">
                 <TrendingDown className="h-4 w-4" />

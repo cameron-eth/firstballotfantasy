@@ -31,9 +31,9 @@ export function PlayoffOddsView() {
     { [week: number]: { [rosterId: number]: number } } | undefined
   >(undefined)
 
-  // Fetch remaining schedule
+  // Fetch remaining schedule (including current week if games in progress)
   useEffect(() => {
-    if (!leagueId || !currentWeek || currentWeek >= 14) {
+    if (!leagueId || !currentWeek || currentWeek > 14) {
       setScheduleData(undefined)
       return
     }
@@ -42,8 +42,9 @@ export function PlayoffOddsView() {
       const scheduleMap: { [week: number]: { [rosterId: number]: number } } = {}
 
       try {
-        // Fetch matchups for remaining weeks
-        for (let week = currentWeek + 1; week <= 14; week++) {
+        // Fetch matchups for current week AND remaining weeks
+        // Include current week because games may still be in progress
+        for (let week = currentWeek; week <= 14; week++) {
           const response = await fetch(
             `https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`,
             { cache: 'no-store' }
@@ -52,15 +53,22 @@ export function PlayoffOddsView() {
             const matchups = await response.json()
             scheduleMap[week] = {}
 
-            // Build matchup pairs
-            const matchupGroups = new Map<number, any[]>()
-            matchups.forEach((matchup: any) => {
-              const matchupId = matchup.matchup_id
-              if (!matchupGroups.has(matchupId)) {
-                matchupGroups.set(matchupId, [])
+            // Build matchup pairs using matchup_id
+            const matchupGroups = new Map<number, { roster_id: number; points: number }[]>()
+            matchups.forEach(
+              (matchup: { roster_id: number; matchup_id: number; points: number }) => {
+                const matchupId = matchup.matchup_id
+                if (matchupId !== null && matchupId !== undefined) {
+                  if (!matchupGroups.has(matchupId)) {
+                    matchupGroups.set(matchupId, [])
+                  }
+                  matchupGroups.get(matchupId)!.push({
+                    roster_id: matchup.roster_id,
+                    points: matchup.points || 0,
+                  })
+                }
               }
-              matchupGroups.get(matchupId)!.push(matchup)
-            })
+            )
 
             // Map each team to their opponent
             matchupGroups.forEach((teamsInMatchup) => {

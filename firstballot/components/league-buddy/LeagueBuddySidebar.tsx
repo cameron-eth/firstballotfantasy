@@ -86,7 +86,7 @@ export function LeagueBuddySidebar({
   return (
     <Sidebar
       collapsible="none"
-      className="!bg-gradient-to-b !from-slate-800 !to-slate-900 !border-slate-700/50"
+      className="hidden md:flex !bg-gradient-to-b !from-slate-800 !to-slate-900 !border-slate-700/50"
     >
       {/* Team Info Header */}
       <SidebarHeader className="p-5 border-b border-slate-700/50 !bg-slate-800/50 backdrop-blur-sm">

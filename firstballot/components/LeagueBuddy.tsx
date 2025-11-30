@@ -445,7 +445,7 @@ export default function LeagueBuddy({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Sidebar - Responsive visibility handled by Sidebar component */}
+      {/* Sidebar - Hidden on mobile via Sidebar component's built-in classes */}
       <LeagueBuddySidebar
         selectedTeam={selectedTeam}
         sortedTeams={sortedTeams}
@@ -459,7 +459,7 @@ export default function LeagueBuddy({
       />
 
       {/* Main Content Area */}
-      <SidebarInset className="!bg-slate-900 overflow-x-hidden">
+      <SidebarInset className="bg-slate-900 overflow-x-hidden">
         <div className="w-full px-2 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
           {/* Mobile Navigation & League Switcher - Only visible on mobile */}
           <div className="md:hidden mb-6 space-y-4">

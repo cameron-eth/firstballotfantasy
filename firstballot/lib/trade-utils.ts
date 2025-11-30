@@ -66,10 +66,55 @@ export interface TraderStats {
 }
 
 // Dynasty Player Valuation System
-// Based on Dynasty SF Rankings with 150+ top players
+// Based on FirstBallotModel comprehensive scoring (0-13125 scale)
 
+export interface PlayerValuationData {
+  total_score?: number
+  tier?: string
+  player_name?: string
+  position?: string
+}
+
+/**
+ * Convert total_score (0-13125) to a normalized value
+ * Uses a more linear scale that better reflects the actual total_score
+ * Divides by ~131 to get values roughly in the 0-100 range but preserves differences
+ */
+const convertTotalScoreToValue = (totalScore: number): number => {
+  // More linear conversion: divide by 131.25 to get 0-100 scale
+  // This preserves the relative differences between players better
+  // Elite players (12000+) will show ~90-100
+  // Mid-tier players (6000-8000) will show ~45-60
+  // Lower players (3000-5000) will show ~20-40
+
+  // Scale: divide by 131.25, then apply a slight curve to emphasize top players
+  const baseValue = totalScore / 131.25
+
+  // Apply a slight exponential curve to better separate elite players
+  // This makes top players (10000+) stand out more while keeping lower players readable
+  if (totalScore >= 10000) {
+    // Elite players: slight boost to separate them
+    return Math.min(100, baseValue * 1.1)
+  } else if (totalScore >= 8000) {
+    // Star players: slight boost
+    return baseValue * 1.05
+  } else if (totalScore >= 5000) {
+    // Mid-tier: linear
+    return baseValue
+  } else {
+    // Lower tier: slight reduction but still readable
+    return Math.max(1, baseValue * 0.95)
+  }
+}
+
+/**
+ * Get player value from FirstBallotModel scoring system
+ * @param valuationData - Player valuation data from dynasty_player_tiers table
+ * @param fantasyPpg - Optional fantasy PPG for adjustment
+ * @param gamesPlayed - Optional games played for adjustment
+ */
 export const getPlayerValue = (
-  rank: number,
+  valuationData?: PlayerValuationData,
   fantasyPpg?: number,
   gamesPlayed?: number
 ): {
@@ -79,8 +124,8 @@ export const getPlayerValue = (
   valueWithPpg?: number
   ppgMultiplier?: number
 } => {
-  if (!rank || rank <= 0 || rank > 1000) {
-    // Unranked or out-of-bounds: assign lowest value
+  // If no valuation data, return unranked
+  if (!valuationData || !valuationData.total_score) {
     return {
       value: 1,
       tier: 'Unranked',
@@ -88,22 +133,24 @@ export const getPlayerValue = (
     }
   }
 
-  // Linear, non-negative, capped at minValue
-  const A = 100 // starting value
-  const B = 0.5 // decrement per rank
-  const minValue = 5
+  // Ensure total_score is a number (handle string conversion from database)
+  const totalScore =
+    typeof valuationData.total_score === 'string'
+      ? parseFloat(valuationData.total_score)
+      : valuationData.total_score
 
-  const baseValue = Math.max(A - B * (rank - 1), minValue)
+  if (!totalScore || totalScore <= 0 || isNaN(totalScore)) {
+    return {
+      value: 1,
+      tier: 'Unranked',
+      isRanked: false,
+    }
+  }
 
-  // Assign tier based on rank
-  let tier = ''
-  if (rank <= 12) tier = 'Tier 1'
-  else if (rank <= 36) tier = 'Tier 2'
-  else if (rank <= 72) tier = 'Tier 3'
-  else if (rank <= 120) tier = 'Tier 4'
-  else tier = 'Tier 5'
+  const baseValue = convertTotalScoreToValue(totalScore)
+  const tier = valuationData.tier || 'Unranked'
 
-  // PPG-based value adjustment
+  // PPG-based value adjustment (optional, for fine-tuning)
   let valueWithPpg = baseValue
   let ppgMultiplier = 1
 
@@ -116,8 +163,6 @@ export const getPlayerValue = (
       TE: { baseline: 8, multiplier: 1.5 },
     }
 
-    // Get position-specific baseline (this would need to be passed in or determined)
-    // For now, use a general baseline
     const baseline = 15
     const ppgRatio = fantasyPpg / baseline
 
@@ -133,6 +178,41 @@ export const getPlayerValue = (
     valueWithPpg: Math.round(valueWithPpg * 100) / 100,
     ppgMultiplier: Math.round(ppgMultiplier * 100) / 100,
   }
+}
+
+/**
+ * Legacy function for backward compatibility - converts rank to valuation data
+ * @deprecated Use getPlayerValue with PlayerValuationData instead
+ */
+export const getPlayerValueFromRank = (
+  rank: number,
+  fantasyPpg?: number,
+  gamesPlayed?: number
+): {
+  value: number
+  tier: string
+  isRanked: boolean
+  valueWithPpg?: number
+  ppgMultiplier?: number
+} => {
+  // Approximate rank-based scoring (for backward compatibility)
+  // This is a rough conversion - prefer using total_score from database
+  if (!rank || rank <= 0 || rank > 1000) {
+    return {
+      value: 1,
+      tier: 'Unranked',
+      isRanked: false,
+    }
+  }
+
+  // Rough approximation: rank 1 ≈ score 13125, rank 150 ≈ score 3281
+  const estimatedScore = Math.max(3281, 13125 - (rank - 1) * 65)
+
+  return getPlayerValue(
+    { total_score: estimatedScore, tier: `Tier ${Math.ceil(rank / 30)}` },
+    fantasyPpg,
+    gamesPlayed
+  )
 }
 
 // Draft Pick Valuation System
@@ -228,14 +308,19 @@ export const GRADE_COLORS = {
 export const matchPlayerToRankings = (
   playerName: string,
   dynastyRankings: Record<string, any>
-): { rank: number; tier: string; isRanked: boolean } => {
+): { rank: number; tier: string; isRanked: boolean; total_score?: number } => {
   // Direct match
   if (dynastyRankings[playerName]) {
     const ranking = dynastyRankings[playerName]
+    const totalScore =
+      typeof ranking.total_score === 'string'
+        ? parseFloat(ranking.total_score)
+        : ranking.total_score
     return {
-      rank: ranking.rank,
-      tier: `Tier ${ranking.tier}`,
+      rank: ranking.rank || (totalScore ? calculateRankFromScore(totalScore) : 999),
+      tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
       isRanked: true,
+      total_score: totalScore,
     }
   }
 
@@ -251,10 +336,15 @@ export const matchPlayerToRankings = (
   for (const variation of nameVariations) {
     if (dynastyRankings[variation]) {
       const ranking = dynastyRankings[variation]
+      const totalScore =
+        typeof ranking.total_score === 'string'
+          ? parseFloat(ranking.total_score)
+          : ranking.total_score
       return {
-        rank: ranking.rank,
-        tier: `Tier ${ranking.tier}`,
+        rank: ranking.rank || (totalScore ? calculateRankFromScore(totalScore) : 999),
+        tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
         isRanked: true,
+        total_score: totalScore,
       }
     }
   }
@@ -265,6 +355,15 @@ export const matchPlayerToRankings = (
     tier: 'Unranked',
     isRanked: false,
   }
+}
+
+/**
+ * Calculate approximate rank from total_score (for backward compatibility)
+ */
+const calculateRankFromScore = (totalScore: number): number => {
+  // Rough approximation: score 13125 ≈ rank 1, score 3281 ≈ rank 150
+  if (!totalScore || totalScore <= 0) return 999
+  return Math.max(1, Math.round(150 - ((totalScore - 3281) / (13125 - 3281)) * 149))
 }
 
 // Process player data for trade analysis
@@ -286,7 +385,19 @@ export const processPlayerForTrade = (
   const gamesPlayed = stats?.games_played || player.games_played
   const totalFantasyPoints = stats?.total_fantasy_points || player.fantasy_points_ppr
 
-  const valueData = getPlayerValue(ranking.rank, fantasyPpg, gamesPlayed)
+  // Use new valuation system with total_score if available
+  const valuationData = ranking.total_score
+    ? {
+        total_score: ranking.total_score,
+        tier: ranking.tier, // tier is now the full tier name string (e.g., "Elite (Tier 1)")
+        player_name: playerName,
+        position: player.position,
+      }
+    : undefined
+
+  const valueData = valuationData
+    ? getPlayerValue(valuationData, fantasyPpg, gamesPlayed)
+    : getPlayerValueFromRank(ranking.rank, fantasyPpg, gamesPlayed)
 
   return {
     playerId,

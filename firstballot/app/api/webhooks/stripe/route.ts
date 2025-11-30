@@ -98,10 +98,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 
   try {
     // Extract customer email from payment intent
+    const paymentIntentAny = paymentIntent as any
     const customerEmail =
       paymentIntent.receipt_email ||
-      paymentIntent.billing_details?.email ||
-      paymentIntent.customer_details?.email
+      paymentIntentAny.billing_details?.email ||
+      paymentIntentAny.customer_details?.email
 
     if (!customerEmail) {
       console.error('❌ No customer email found in payment intent')
@@ -130,10 +131,11 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   console.log('❌ Payment intent failed:', paymentIntent.id)
 
   try {
+    const paymentIntentAny = paymentIntent as any
     const customerEmail =
       paymentIntent.receipt_email ||
-      paymentIntent.billing_details?.email ||
-      paymentIntent.customer_details?.email
+      paymentIntentAny.billing_details?.email ||
+      paymentIntentAny.customer_details?.email
 
     if (customerEmail) {
       // Deactivate membership on payment failure
@@ -226,20 +228,16 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
   try {
     // Update our database with the subscription details
-    const { error } = await SubscriptionService.updateSubscriptionStatus(
+    const subscriptionAny = subscription as any
+    await SubscriptionService.updateSubscriptionStatus(
       subscription.id,
       subscription.status,
       subscription.items.data[0]?.price.recurring?.interval === 'year' ? 'yearly' : 'monthly',
-      subscription.current_period_start,
-      subscription.current_period_end
+      subscriptionAny.current_period_start,
+      subscriptionAny.current_period_end
     )
-
-    if (error) {
-      console.error('Error updating subscription status:', error)
-    } else {
-      console.log(`✅ Successfully updated subscription status for ${subscription.id}`)
-    }
-  } catch (error) {
+    console.log(`✅ Successfully updated subscription status for ${subscription.id}`)
+  } catch (error: any) {
     console.error('Error handling subscription created:', error)
   }
 }
@@ -248,12 +246,13 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('📅 Subscription updated:', subscription.id)
 
   try {
+    const subscriptionAny = subscription as any
     await SubscriptionService.updateSubscriptionStatus(
       subscription.id,
       subscription.status,
       subscription.items.data[0]?.price.recurring?.interval === 'year' ? 'yearly' : 'monthly',
-      subscription.current_period_start,
-      subscription.current_period_end
+      subscriptionAny.current_period_start,
+      subscriptionAny.current_period_end
     )
     console.log(`✅ Successfully updated subscription ${subscription.id}`)
   } catch (error) {
@@ -265,12 +264,13 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('📅 Subscription deleted:', subscription.id)
 
   try {
+    const subscriptionAny = subscription as any
     await SubscriptionService.updateSubscriptionStatus(
       subscription.id,
       subscription.status,
       subscription.items.data[0]?.price.recurring?.interval === 'year' ? 'yearly' : 'monthly',
-      subscription.current_period_start,
-      subscription.current_period_end
+      subscriptionAny.current_period_start,
+      subscriptionAny.current_period_end
     )
     console.log(`✅ Successfully processed subscription deletion for ${subscription.id}`)
   } catch (error) {

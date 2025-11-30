@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Fetch critical data in parallel - Users data without cache to get fresh team names
-    const [rosters, users, allPlayers, rankingsResult] = await Promise.all([
+    const [rosters, users, allPlayers, rankingsResult] = (await Promise.all([
       sleeperApi.getLeagueRosters(leagueId),
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
         (r) => r.json()
@@ -39,16 +39,26 @@ export async function GET(request: NextRequest) {
       sleeperApi.getAllPlayers(),
       (async () => {
         try {
-          return await supabaseAdmin
-            .from('dynasty_sf_top_150')
+          const result = await supabaseAdmin
+            .from('dynasty_player_tiers')
             .select('*')
-            .order('RK', { ascending: true })
+            .order('total_score', { ascending: false })
+          console.log(
+            `✅ Fetched ${result.data?.length || 0} players from dynasty_player_tiers table`
+          )
+          if (result.data && result.data.length > 0) {
+            const samplePlayer = result.data[0]
+            console.log(
+              `   Sample player: ${samplePlayer.player_name} (total_score: ${samplePlayer.total_score}, tier: ${samplePlayer.tier})`
+            )
+          }
+          return result
         } catch (err) {
-          console.error('Rankings fetch error:', err)
+          console.error('❌ Rankings fetch error:', err)
           return { data: [], error: err }
         }
       })(),
-    ])
+    ])) as [any[], any[], Record<string, any>, any]
 
     // Process teams data efficiently
     const teamsData = rosters.map((roster: any) => {
@@ -76,24 +86,35 @@ export async function GET(request: NextRequest) {
       Array.isArray(rankingsResult.data) &&
       rankingsResult.data.length > 0
     ) {
-      rankingsMap = rankingsResult.data.reduce((acc: any, player: any) => {
-        const playerName = player['PLAYER NAME']
+      rankingsMap = rankingsResult.data.reduce((acc: any, player: any, index: number) => {
+        const playerName = player.player_name
         if (playerName) {
+          // Calculate rank from position in sorted list
+          const rank = index + 1
+
+          // Extract tier number from tier string (e.g., "Elite (Tier 1)" -> 1)
+          let tierNum = 5 // Default
+          if (player.tier) {
+            const tierMatch = player.tier.match(/Tier (\d+)/)
+            if (tierMatch) {
+              tierNum = parseInt(tierMatch[1])
+            } else if (player.tier.includes('Elite')) tierNum = 1
+            else if (player.tier.includes('Star')) tierNum = 2
+            else if (player.tier.includes('High-End Starter')) tierNum = 3
+            else if (player.tier.includes('Solid Starter')) tierNum = 4
+          }
+
           acc[playerName] = {
-            rank: player.RK,
-            position: player.POS,
-            team: player.TEAM,
+            rank,
+            position: player.position,
+            team: player.team,
             name: playerName,
-            tier:
-              player.RK <= 12
-                ? 1
-                : player.RK <= 36
-                  ? 2
-                  : player.RK <= 72
-                    ? 3
-                    : player.RK <= 120
-                      ? 4
-                      : 5,
+            total_score:
+              typeof player.total_score === 'string'
+                ? parseFloat(player.total_score)
+                : player.total_score,
+            tier: tierNum,
+            tier_name: player.tier,
           }
         }
         return acc
@@ -110,12 +131,12 @@ export async function GET(request: NextRequest) {
     // Add a 2-week buffer to ensure we catch all trades even if NFL state is slightly behind
     // NFL regular season is 18 weeks, so we cap at 20 to be safe
     const maxWeek = Math.min(currentWeek + 2, 20)
-    
+
     // Include ALL weeks from 0 (offseason) to current week + buffer to track full trade history
     for (let week = 0; week <= maxWeek; week++) {
       weeksToFetch.push(week)
     }
-    
+
     console.log(`📊 Fetching transactions for weeks 0-${maxWeek} (current week: ${currentWeek})`)
 
     // Fetch transactions in larger parallel batches for speed (no delay needed)
@@ -133,17 +154,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch traded picks with Next.js caching
-    const tradedPicks = await sleeperApi.getTradedPicks(leagueId).catch(() => [])
+    const tradedPicks = (await sleeperApi.getTradedPicks(leagueId).catch(() => [])) as any[]
 
     // Filter transactions to only include trades
     const trades = allTransactions.filter((tx: any) => tx.type === 'trade')
-    
+
     // Log transaction summary with dates
     if (trades.length > 0) {
-      const tradeDates = trades.map((t: any) => new Date(t.created || t.status_updated)).sort((a, b) => b.getTime() - a.getTime())
+      const tradeDates = trades
+        .map((t: any) => new Date(t.created || t.status_updated))
+        .sort((a, b) => b.getTime() - a.getTime())
       const mostRecentTrade = tradeDates[0]
       const oldestTrade = tradeDates[tradeDates.length - 1]
-      console.log(`✅ Found ${trades.length} trades from ${oldestTrade.toLocaleDateString()} to ${mostRecentTrade.toLocaleDateString()}`)
+      console.log(
+        `✅ Found ${trades.length} trades from ${oldestTrade.toLocaleDateString()} to ${mostRecentTrade.toLocaleDateString()}`
+      )
       console.log(`📅 Most recent trade: ${mostRecentTrade.toLocaleString()}`)
     } else {
       console.log('⚠️ No trades found in fetched transactions')

@@ -16,7 +16,7 @@ export async function loadEspnPlayersData(): Promise<any[]> {
 
     const data = await response.json()
     espnPlayersData = data.athletes || []
-    return espnPlayersData
+    return espnPlayersData || []
   } catch (error) {
     console.error('Error loading ESPN players data:', error)
     return []
@@ -66,17 +66,19 @@ export function getEspnId(player: any, espnPlayersData: any[]): string | undefin
 
   // If multiple matches, use team as a secondary validator
   if (matches.length > 1 && player.team) {
-    // TODO: Adjust 'teamAbbrev' to the correct key if needed
-    const teamKey = 'teamAbbrev' // <-- change this if you find the correct key
+    // ESPN player data uses 'team' or 'teamAbbrev' for team abbreviation
     const teamMatches = matches.filter((p) => {
       // Try to match team abbreviation or name (case-insensitive)
+      const pTeam =
+        (p as { team?: string; teamAbbrev?: string }).team ||
+        (p as { teamAbbrev?: string }).teamAbbrev
       return (
-        (p[teamKey]?.toLowerCase &&
+        (pTeam?.toLowerCase &&
           player.team?.toLowerCase &&
-          p[teamKey]?.toLowerCase() === player.team?.toLowerCase()) ||
-        (p.team?.toLowerCase &&
+          pTeam.toLowerCase() === player.team.toLowerCase()) ||
+        ((p as { team?: string })?.team?.toLowerCase &&
           player.team?.toLowerCase &&
-          p.team?.toLowerCase() === player.team?.toLowerCase())
+          (p as { team?: string }).team?.toLowerCase() === player.team.toLowerCase())
       )
     })
     if (teamMatches.length > 0) {

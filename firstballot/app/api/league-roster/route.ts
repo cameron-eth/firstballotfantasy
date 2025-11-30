@@ -75,7 +75,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Find the user's roster
-    const userRoster = rostersData.find((roster: any) => roster.owner_id === sleeperUser.user_id)
+    const rostersDataTyped = rostersData as any[]
+    const playersDataTyped = playersData as Record<string, any>
+    
+    const userRoster = rostersDataTyped.find((roster: any) => roster.owner_id === sleeperUser.user_id)
 
     if (!userRoster) {
       return NextResponse.json({ error: 'User roster not found' }, { status: 404 })
@@ -86,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     // Filter and format user's roster data efficiently
     const roster = userPlayerIds
-      .map((playerId: string) => playersData[playerId])
+      .map((playerId: string) => playersDataTyped[playerId])
       .filter(
         (player: any) =>
           player && player.position && ['QB', 'RB', 'WR', 'TE'].includes(player.position)

@@ -1,8 +1,10 @@
-// League Buddy Type Definitions
+// Type definitions for LeagueBuddy component
 
 export interface LeagueBuddyProps {
   leagueId: string
   user?: any
+  leagues?: any[]
+  onLeagueChange?: (leagueId: string) => void
 }
 
 export interface TeamData {
@@ -19,6 +21,7 @@ export interface TeamData {
   grade: string
   gradeScore: number
   players: PlayerData[]
+  starters: string[] // Sleeper player IDs of starters from roster
   trends: TeamTrends
   positionStrengths: PositionStrengths
   currentWeekProjection?: number
@@ -27,8 +30,6 @@ export interface TeamData {
   recentForm: string
 }
 
-// DEPRECATED: Use PlayerData from components/league-buddy/types.ts instead
-// This type is kept for backward compatibility but should be migrated
 export interface PlayerData {
   playerId: string
   playerName: string
@@ -39,7 +40,7 @@ export interface PlayerData {
   age: number
   experience: number
   status: string
-  injury_status?: string | null // Injury status from Sleeper API
+  injury_status?: string | null // Injury status from Sleeper API (e.g., 'Questionable', 'Doubtful', 'Out', 'IR')
   injury_start_date?: string | null // Injury start date from Sleeper API - if not null, player is injured
   isOnBye?: boolean // Whether player's team is on bye week
   espn_id?: string
@@ -47,7 +48,7 @@ export interface PlayerData {
   fantasy_points_half_ppr?: number
   fantasy_points?: number
   games_played?: number
-  fantasy_ppg?: number
+  fantasy_ppg?: number // Fantasy points per game from NGS
   rankingData?: {
     rank: number
     position: string
@@ -75,6 +76,7 @@ export interface PositionStrengths {
   SFLX: number
 }
 
+// Raw Sleeper API matchup structure
 export interface SleeperMatchup {
   starters: string[]
   roster_id: number
@@ -101,6 +103,9 @@ export interface MatchupData {
   players?: string[]
   startersPoints?: number[]
   playersPoints?: Record<string, number>
+  opponentAvatar?: string
+  opponentUsername?: string
+  opponentDisplayName?: string
 }
 
 export interface LeagueOverview {
@@ -111,6 +116,7 @@ export interface LeagueOverview {
   highestScoringTeam: string
   lowestScoringTeam: string
   trendingPlayers: TrendingPlayer[]
+  rosterPositions: Record<string, number>
 }
 
 export interface TrendingPlayer {
@@ -124,18 +130,26 @@ export interface TrendingPlayer {
   espn_id?: string
 }
 
-export interface Transaction {
-  transactionId: string
-  type: 'trade' | 'free_agent' | 'waiver'
-  status: string
-  week: number
-  rosterIds: number[]
-  adds: Record<string, number> | null
-  drops: Record<string, number> | null
-  draftPicks: any[]
-  waiverBudget: any[]
-  creator: string
-  created: number
-  consenterIds: number[]
-  metadata: any
+// Constants for better maintainability
+export const GRADE_COLORS = {
+  'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
+  A: 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
+  'A-': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
+  'B+': 'bg-green-400/20 text-green-400 border-green-400',
+  B: 'bg-green-400/20 text-green-400 border-green-400',
+  'B-': 'bg-green-400/20 text-green-400 border-green-400',
+  'C+': 'bg-blue-400/20 text-blue-400 border-blue-400',
+  C: 'bg-blue-400/20 text-blue-400 border-blue-400',
+  'C-': 'bg-blue-400/20 text-blue-400 border-blue-400',
+  D: 'bg-red-400/20 text-red-400 border-red-400',
+  F: 'bg-red-400/20 text-red-400 border-red-400',
+} as const
+
+export const POSITION_COLORS = {
+  QB: 'bg-blue-500',
+  RB: 'bg-green-500',
+  WR: 'bg-yellow-500',
+  TE: 'bg-purple-500',
+  K: 'bg-pink-500',
+  DEF: 'bg-gray-500',
 }

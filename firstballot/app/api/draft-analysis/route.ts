@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch draft data with Next.js caching
-    const draft = await sleeperApi.getDraft(draftId)
+    const draft = (await sleeperApi.getDraft(draftId)) as any
 
     // Fetch picks with Next.js caching
-    const picks = await sleeperApi.getDraftPicks(draftId)
+    const picks = (await sleeperApi.getDraftPicks(draftId)) as any[]
 
     // Fetch traded picks with Next.js caching
-    const tradedPicks = await sleeperApi.getDraftTradedPicks(draftId)
+    const tradedPicks = (await sleeperApi.getDraftTradedPicks(draftId)) as any[]
 
     // Fetch league rosters and users - Users without cache to get fresh team names
     const [rosters, users] = await Promise.all([
@@ -26,34 +26,51 @@ export async function GET(request: NextRequest) {
       fetch(`https://api.sleeper.app/v1/league/${draft.league_id}/users`, {
         cache: 'no-store',
       }).then((r) => r.json()),
-    ])
+    ]) as [any[], any[]]
 
     // Fetch rankings for grading
     const { data: rankingsData, error: rankingsError } = await supabaseServer
-      .from('dynasty_sf_top_150')
+      .from('dynasty_player_tiers')
       .select('*')
-      .order('RK', { ascending: true })
+      .order('total_score', { ascending: false })
 
     if (rankingsError) {
       throw rankingsError
     }
 
     // Create player rankings lookup and tier mapping
-    const playerRankings = rankingsData.reduce((acc: any, player: any) => {
-      const playerName = player['PLAYER NAME']
+    const playerRankings = (rankingsData || []).reduce((acc: any, player: any, index: number) => {
+      const playerName = player.player_name
       if (playerName) {
-        // Determine tier based on rank
+        // Calculate rank from position in sorted list
+        const rank = index + 1
+
+        // Extract tier number from tier string (e.g., "Elite (Tier 1)" -> 1)
         let tier = 4 // Default tier
-        if (player.RK <= 12) tier = 1
-        else if (player.RK <= 24) tier = 2
-        else if (player.RK <= 48) tier = 3
+        if (player.tier) {
+          const tierMatch = player.tier.match(/Tier (\d+)/)
+          if (tierMatch) {
+            tier = parseInt(tierMatch[1])
+          } else if (player.tier.includes('Elite')) tier = 1
+          else if (player.tier.includes('Star')) tier = 2
+          else if (player.tier.includes('High-End Starter')) tier = 3
+          else if (player.tier.includes('Solid Starter')) tier = 4
+        }
+
+        // Convert total_score from string to number if needed
+        const totalScore =
+          typeof player.total_score === 'string'
+            ? parseFloat(player.total_score)
+            : player.total_score
 
         acc[playerName] = {
-          rank: player.RK,
-          position: player.POS,
-          team: player.TEAM,
+          rank,
+          position: player.position,
+          team: player.team,
           name: playerName,
-          tier: tier,
+          tier,
+          total_score: totalScore,
+          tier_name: player.tier,
         }
       }
       return acc
@@ -116,10 +133,11 @@ export async function GET(request: NextRequest) {
       let ageCount = 0
 
       // Calculate value based on rankings and analyze reach/steal
+      const allPlayersTyped = allPlayers as Record<string, any>
       for (const pick of picks) {
         const playerName = `${pick.metadata?.first_name} ${pick.metadata?.last_name}`
         const ranking = playerRankings[playerName]
-        const playerData = allPlayers[pick.player_id]
+        const playerData = allPlayersTyped[pick.player_id]
         if (playerData && playerData.age) {
           totalAge += Number(playerData.age)
           ageCount++

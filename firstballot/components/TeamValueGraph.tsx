@@ -12,6 +12,7 @@ import {
   ArrowLeftRight,
   Calendar,
 } from 'lucide-react'
+import { getPlayerValue, type PlayerValuationData } from '@/lib/trade-utils'
 
 interface TeamValueData {
   teamId: string
@@ -80,38 +81,26 @@ export function TeamValueGraph({
     )
   }
 
-  // Helper function to get player value using Dynasty SF valuation system
-  const getPlayerValue = (player: any, rankings: Record<string, any>) => {
+  // Helper function to get player value using unified FirstBallotModel valuation system
+  const getPlayerValueFromRankings = (player: any, rankings: Record<string, any>) => {
     const ranking = rankings[player.full_name] || rankings[player.name]
 
-    if (ranking && ranking.rank) {
-      const rank = ranking.rank
+    if (ranking) {
+      // Use new valuation system with total_score if available
+      const valuationData: PlayerValuationData | undefined = ranking.total_score
+        ? {
+            total_score: ranking.total_score,
+            tier: ranking.tier_name || ranking.tier,
+            player_name: ranking.name,
+            position: ranking.position,
+          }
+        : undefined
 
-      // Dynasty SF Rankings valuation
-      let baseValue: number
-      if (rank <= 12) {
-        // Top 12: 85-100 points (scale based on exact rank)
-        baseValue = 100 - (rank - 1) * (15 / 11) // Linear scale from 100 to 85
-      } else if (rank <= 36) {
-        // Ranks 13-36: 65-84 points
-        baseValue = 84 - (rank - 13) * (19 / 23)
-      } else if (rank <= 72) {
-        // Ranks 37-72: 45-64 points
-        baseValue = 64 - (rank - 37) * (19 / 35)
-      } else if (rank <= 120) {
-        // Ranks 73-120: 25-44 points
-        baseValue = 44 - (rank - 73) * (19 / 47)
-      } else if (rank <= 200) {
-        // Ranks 121-200: 5-24 points
-        baseValue = 24 - (rank - 121) * (19 / 79)
-      } else {
-        // Ranks 201+: 3-5 points
-        baseValue = 5 - Math.min(2, (rank - 200) * 0.1)
-      }
+      const valueResult = getPlayerValue(valuationData, player.fantasy_ppg, player.games_played)
 
       return {
-        totalValue: Math.max(3, baseValue),
-        valueWithPpg: Math.max(3, baseValue), // Using base value for consistency
+        totalValue: valueResult.value,
+        valueWithPpg: valueResult.valueWithPpg || valueResult.value,
       }
     }
 
@@ -201,12 +190,12 @@ export function TeamValueGraph({
       .map((team) => {
         let totalValue = 0
 
-        // Calculate roster value using Dynasty SF valuation system
+        // Calculate roster value using unified FirstBallotModel valuation system
         if (team.roster) {
           Object.values(team.roster).forEach((playerId: any) => {
             const player = allPlayers[playerId]
             if (player) {
-              const playerValue = getPlayerValue(player, dynastyRankings)
+              const playerValue = getPlayerValueFromRankings(player, dynastyRankings)
               totalValue += playerValue.totalValue
             }
           })
@@ -279,7 +268,7 @@ export function TeamValueGraph({
               if (rosterId === team.teamId) {
                 const player = allPlayers[playerId]
                 if (player) {
-                  const playerValue = getPlayerValue(player, dynastyRankings)
+                  const playerValue = getPlayerValueFromRankings(player, dynastyRankings)
                   const value = playerValue.valueWithPpg || playerValue.totalValue
                   transactionValueChange += value
                   playersAdded.push({
@@ -299,7 +288,7 @@ export function TeamValueGraph({
               if (rosterId === team.teamId) {
                 const player = allPlayers[playerId]
                 if (player) {
-                  const playerValue = getPlayerValue(player, dynastyRankings)
+                  const playerValue = getPlayerValueFromRankings(player, dynastyRankings)
                   const value = playerValue.valueWithPpg || playerValue.totalValue
                   transactionValueChange -= value
                   playersDropped.push({

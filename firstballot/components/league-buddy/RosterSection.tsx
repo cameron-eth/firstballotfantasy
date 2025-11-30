@@ -4,25 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TeamLogo } from '@/components/team-logo'
 import { PlayerNGSStats } from '@/components/player-ngs-stats'
-import { Star, Flame, ShoppingCart, TrendingDown, Activity } from 'lucide-react'
-import { NGSMetricsOverview } from './NGSMetricsOverview'
+import { Activity, Star, ShoppingCart, Flame, TrendingDown } from 'lucide-react'
+import type { TeamData } from './types'
 
 const POSITION_COLORS = {
-  QB: 'bg-red-500',
+  QB: 'bg-blue-500',
   RB: 'bg-green-500',
-  WR: 'bg-blue-500',
-  TE: 'bg-yellow-500',
-  K: 'bg-purple-500',
-  DEF: 'bg-gray-500',
+  WR: 'bg-yellow-500',
+  TE: 'bg-purple-500',
+  K: 'bg-gray-500',
+  DEF: 'bg-red-500',
 }
 
 interface RosterSectionProps {
-  selectedTeam: any
+  selectedTeam: TeamData
+  sortedTeams: TeamData[]
+  teams: TeamData[]
 }
 
-export function RosterSection({ selectedTeam }: RosterSectionProps) {
-  if (!selectedTeam) return null
-
+export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectionProps) {
   return (
     <>
       {/* Position Strengths */}
@@ -62,10 +62,7 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
         </div>
       </div>
 
-      {/* NGS METRICS OVERVIEW - CENTERPIECE */}
-      <NGSMetricsOverview selectedTeam={selectedTeam} />
-
-      {/* NGS PLAYER INSIGHTS */}
+      {/* NGS Player Insights */}
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-6">
           <Activity className="h-6 w-6 text-yellow-400" />
@@ -84,10 +81,10 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
             </CardHeader>
             <CardContent className="space-y-2">
               {selectedTeam.players
-                .filter((p: any) => p.fantasy_ppg && p.fantasy_ppg > 8)
-                .sort((a: any, b: any) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
+                .filter((p) => p.fantasy_ppg && p.fantasy_ppg > 8)
+                .sort((a, b) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
                 .slice(0, 3)
-                .map((player: any, idx: number) => (
+                .map((player, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
@@ -111,8 +108,8 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                     </div>
                   </div>
                 ))}
-              {selectedTeam.players.filter((p: any) => p.fantasy_ppg && p.fantasy_ppg > 8)
-                .length === 0 && (
+              {selectedTeam.players.filter((p) => p.fantasy_ppg && p.fantasy_ppg > 8).length ===
+                0 && (
                 <div className="text-slate-500 text-sm text-center py-4">
                   No high performers yet
                 </div>
@@ -130,12 +127,10 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
             </CardHeader>
             <CardContent className="space-y-2">
               {selectedTeam.players
-                .filter(
-                  (p: any) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5
-                )
-                .sort((a: any, b: any) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
+                .filter((p) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5)
+                .sort((a, b) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
                 .slice(0, 3)
-                .map((player: any, idx: number) => (
+                .map((player, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
@@ -157,7 +152,7 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                   </div>
                 ))}
               {selectedTeam.players.filter(
-                (p: any) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5
+                (p) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5
               ).length === 0 && (
                 <div className="text-slate-500 text-sm text-center py-4">No trade targets</div>
               )}
@@ -174,10 +169,10 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
             </CardHeader>
             <CardContent className="space-y-2">
               {selectedTeam.players
-                .filter((p: any) => p.age && p.age <= 24 && p.rank <= 150)
-                .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+                .filter((p) => p.age && p.age <= 24 && p.rank <= 150)
+                .sort((a, b) => (a.rank || 999) - (b.rank || 999))
                 .slice(0, 3)
-                .map((player: any, idx: number) => (
+                .map((player, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
@@ -198,10 +193,8 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                     </div>
                   </div>
                 ))}
-              {selectedTeam.players.filter((p: any) => p.age && p.age <= 24 && p.rank <= 150)
-                .length === 0 && (
-                <div className="text-slate-500 text-sm text-center py-4">No young talent</div>
-              )}
+              {selectedTeam.players.filter((p) => p.age && p.age <= 24 && p.rank <= 150).length ===
+                0 && <div className="text-slate-500 text-sm text-center py-4">No young talent</div>}
             </CardContent>
           </Card>
 
@@ -215,10 +208,10 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
             </CardHeader>
             <CardContent className="space-y-2">
               {selectedTeam.players
-                .filter((p: any) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8)
-                .sort((a: any, b: any) => (a.fantasy_ppg || 0) - (b.fantasy_ppg || 0))
+                .filter((p) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8)
+                .sort((a, b) => (a.fantasy_ppg || 0) - (b.fantasy_ppg || 0))
                 .slice(0, 3)
-                .map((player: any, idx: number) => (
+                .map((player, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
@@ -243,7 +236,7 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                   </div>
                 ))}
               {selectedTeam.players.filter(
-                (p: any) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8
+                (p) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8
               ).length === 0 && (
                 <div className="text-slate-500 text-sm text-center py-4">All performing well!</div>
               )}
@@ -252,11 +245,11 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
         </div>
       </div>
 
-      {/* FULL TEAM ROSTER */}
+      {/* Full Team Roster */}
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h3 className="text-green-400 font-mono text-lg mb-4">FULL ROSTER</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {selectedTeam.players.map((player: any, index: number) => (
+          {selectedTeam.players.map((player, index) => (
             <Card
               key={index}
               className="p-3 bg-slate-700 border-slate-600 hover:border-green-400/50 transition-colors"
@@ -277,7 +270,7 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                     <span>{player.team}</span>
                     <span>#{player.rank}</span>
                   </div>
-                  <div className="flex items-center space-x-2 mt-1">
+                  <div className="flex items-center space-x-2 mt-1 flex-wrap">
                     <Badge
                       variant="outline"
                       className="text-xs bg-slate-600/20 text-slate-300 border-slate-600"
@@ -290,6 +283,33 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                         className="text-xs bg-blue-400/20 text-blue-400 border-blue-400"
                       >
                         {player.age}yo
+                      </Badge>
+                    )}
+                    {(player.injury_status || player.injury_start_date) && (
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          !player.injury_status && player.injury_start_date
+                            ? 'bg-red-500/20 text-red-400 border-red-500/50'
+                            : player.injury_status?.toLowerCase() === 'out' ||
+                                player.injury_status?.toLowerCase() === 'ir'
+                              ? 'bg-red-500/20 text-red-400 border-red-500/50'
+                              : player.injury_status?.toLowerCase() === 'doubtful'
+                                ? 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+                                : player.injury_status?.toLowerCase() === 'questionable'
+                                  ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                                  : 'bg-gray-500/20 text-gray-400 border-gray-500/50'
+                        }`}
+                      >
+                        {player.injury_status || 'Injured'}
+                      </Badge>
+                    )}
+                    {player.isOnBye && (
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-purple-500/20 text-purple-400 border-purple-500/50"
+                      >
+                        BYE
                       </Badge>
                     )}
                   </div>
@@ -388,25 +408,25 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                 <div className="flex justify-between">
                   <span className="text-slate-300">Tier 1 Players:</span>
                   <span className="text-green-400 font-semibold">
-                    {selectedTeam.players.filter((p: any) => p.tier === 'Tier 1').length}
+                    {selectedTeam.players.filter((p) => p.tier === 'Tier 1').length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-300">Tier 2 Players:</span>
                   <span className="text-blue-400 font-semibold">
-                    {selectedTeam.players.filter((p: any) => p.tier === 'Tier 2').length}
+                    {selectedTeam.players.filter((p) => p.tier === 'Tier 2').length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-300">Young Players (≤25):</span>
                   <span className="text-purple-400 font-semibold">
-                    {selectedTeam.players.filter((p: any) => p.age && p.age <= 25).length}
+                    {selectedTeam.players.filter((p) => p.age && p.age <= 25).length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-300">Top 50 Players:</span>
                   <span className="text-green-400 font-semibold">
-                    {selectedTeam.players.filter((p: any) => p.rank <= 50).length}
+                    {selectedTeam.players.filter((p) => p.rank <= 50).length}
                   </span>
                 </div>
               </div>
@@ -432,6 +452,43 @@ export function RosterSection({ selectedTeam }: RosterSectionProps) {
                       const projectedWins = Math.round(adjustedWinRate * 14)
                       const projectedLosses = 14 - projectedWins
                       return `${projectedWins}-${projectedLosses}`
+                    })()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Projected Finish:</span>
+                  <span className="text-blue-400 font-bold">
+                    {(() => {
+                      const teamRank =
+                        sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+                      const gradeAdjustment =
+                        selectedTeam.gradeScore > 70 ? -1 : selectedTeam.gradeScore < 30 ? 1 : 0
+                      const projectedRank = Math.max(
+                        1,
+                        Math.min(teams.length, teamRank + gradeAdjustment)
+                      )
+                      return `${projectedRank}${projectedRank === 1 ? 'st' : projectedRank === 2 ? 'nd' : projectedRank === 3 ? 'rd' : 'th'}`
+                    })()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-300 text-sm">Playoff Chance:</span>
+                  <span className="text-purple-400 font-bold">
+                    {(() => {
+                      const teamRank =
+                        sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+                      const totalTeams = teams.length
+                      const playoffSpots = Math.max(4, Math.ceil(totalTeams / 2))
+
+                      let baseChance = 0
+                      if (teamRank <= playoffSpots / 2) baseChance = 85
+                      else if (teamRank <= playoffSpots) baseChance = 65
+                      else if (teamRank <= playoffSpots + 2) baseChance = 35
+                      else baseChance = 15
+
+                      const gradeBonus = (selectedTeam.gradeScore - 50) * 0.5
+                      const finalChance = Math.max(5, Math.min(95, baseChance + gradeBonus))
+                      return `${Math.round(finalChance)}%`
                     })()}
                   </span>
                 </div>

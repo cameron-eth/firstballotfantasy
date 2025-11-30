@@ -3,13 +3,24 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn('rounded-lg border bg-card text-card-foreground shadow-sm', className)}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    // Allow className to override bg-card if !bg-transparent or similar is used
+    const hasBgOverride =
+      className?.includes('!bg-') ||
+      className?.includes('bg-transparent') ||
+      className?.includes('bg-slate')
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          'rounded-lg border text-card-foreground shadow-sm',
+          !hasBgOverride && 'bg-card',
+          className
+        )}
+        {...props}
+      />
+    )
+  }
 )
 Card.displayName = 'Card'
 

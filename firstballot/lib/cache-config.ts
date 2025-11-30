@@ -81,7 +81,7 @@ export const CACHE_KEYS = {
     TRADED_PICKS: (leagueId: string) => `traded_picks_${leagueId}`,
     ALL_PLAYERS: 'all_players',
     DYNASTY_RANKINGS: 'dynasty_rankings',
-    USER_PROFILE: (userId: string) => `user_profile_${userId}`,
+    USER_PROFILE_BY_ID: (userId: string) => `user_profile_${userId}`,
   },
 
   // Local Storage Keys

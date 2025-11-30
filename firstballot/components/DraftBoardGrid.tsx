@@ -38,6 +38,9 @@ export function DraftBoardGrid({
 
   // Memoized player rank map for efficient lookups
   const playerRankMap = useMemo(() => {
+    if (!Array.isArray(rankings)) {
+      return {}
+    }
     return rankings.reduce((acc: Record<string, number>, player: any) => {
       const playerName = player['PLAYER NAME']
       if (playerName) {
@@ -115,11 +118,15 @@ export function DraftBoardGrid({
           next: { revalidate: 3600 }, // 1 hour
         })
         if (response.ok) {
-          const data = await response.json()
-          setRankings(data)
+          const result = await response.json()
+          // API returns { data: [...], rankingsMap: {...} }
+          // Extract the data array if it exists, otherwise use the result directly if it's an array
+          const rankingsData = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : []
+          setRankings(rankingsData)
         }
       } catch (e) {
-        // fail silently
+        console.error('Error fetching rankings:', e)
+        setRankings([])
       } finally {
         setRankingsLoading(false)
       }

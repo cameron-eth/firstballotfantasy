@@ -110,225 +110,408 @@ export function ProspectCharts({ prospects }: ProspectChartsProps) {
   const chartCount = 4 // Position, Tier, Grade Tier, Valuation
 
   return (
-    <div className="mb-8">
-      <Carousel
-        setApi={setApi}
-        opts={{
-          align: 'start',
-          loop: false,
-          dragFree: true,
-        }}
-        className="w-full"
-      >
-        <CarouselContent className="-ml-2 md:-ml-4">
-          {/* Position Distribution */}
-          <CarouselItem className="pl-2 md:pl-4 basis-full md:basis-1/2">
-            <Card className="bg-slate-800/50 border border-slate-700 hover:border-yellow-400/50 transition-all h-full shadow-none">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white font-mono text-sm flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-yellow-400" />
-                    By Position
-                  </CardTitle>
-                  <span className="text-[10px] font-mono text-gray-500 uppercase">
-                    Distribution
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4">
-                <div className="text-xl font-bold text-white font-mono mb-2">
-                  {prospects.length}
-                </div>
-                <div className="space-y-1.5">
-                  {Object.entries(positionDistribution)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([position, count], i) => (
-                      <div key={position} className="flex items-center gap-2">
-                        <div className="text-xs text-gray-400 font-mono w-8">{position}</div>
-                        <div className="flex-1 h-4 bg-slate-700 rounded-full overflow-hidden relative">
-                          <div
-                            className={`h-full ${positionColors[position] || 'bg-slate-500'} rounded-full origin-left flex items-center justify-end pr-1`}
-                            style={{
-                              width: `${(count / maxPositionCount) * 100}%`,
-                              animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
-                              transformOrigin: 'left center',
-                            }}
-                          >
-                            <span className="text-[9px] font-bold text-slate-900 font-mono">
-                              {count}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </CarouselItem>
-
-          {/* Tier Distribution */}
-          <CarouselItem className="pl-2 md:pl-4 basis-full md:basis-1/2">
-            <Card className="bg-slate-800/50 border border-slate-700 hover:border-purple-400/50 transition-all h-full shadow-none">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white font-mono text-sm flex items-center gap-1.5">
-                    <BarChart3 className="h-3.5 w-3.5 text-purple-400" />
-                    By Tier
-                  </CardTitle>
-                  <span className="text-[10px] font-mono text-gray-500 uppercase">
-                    Tier Breakdown
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 pb-4">
-                <div className="text-xl font-bold text-white font-mono mb-2">
-                  {prospects.length}
-                </div>
-                <div className="space-y-1.5">
-                  {Object.entries(tierDistribution)
-                    .sort(([a], [b]) => {
-                      const tierOrder = [
-                        'Tier 1',
-                        'Tier 2',
-                        'Tier 3',
-                        'Tier 4',
-                        'Tier 5',
-                        'Ungraded',
-                      ]
-                      return tierOrder.indexOf(a) - tierOrder.indexOf(b)
-                    })
-                    .map(([tier, count], i) => (
-                      <div key={tier} className="flex items-center gap-2">
-                        <div className="text-xs text-gray-400 font-mono w-14 truncate">{tier}</div>
-                        <div className="flex-1 h-4 bg-slate-700 rounded-full overflow-hidden relative">
-                          <div
-                            className={`h-full ${tierColors[tier] || 'bg-gray-400'} rounded-full origin-left flex items-center justify-end pr-1`}
-                            style={{
-                              width: `${(count / maxTierCount) * 100}%`,
-                              animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
-                              transformOrigin: 'left center',
-                            }}
-                          >
-                            <span className="text-[9px] font-bold text-slate-900 font-mono">
-                              {count}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </CarouselItem>
-
-          {/* Grade Tier Distribution */}
-          <CarouselItem className="pl-2 md:pl-4 basis-full md:basis-1/2">
-            <Card className="bg-slate-800/50 border border-slate-700 hover:border-green-400/50 transition-all h-full shadow-none">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white font-mono text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-400" />
-                    By Grade Tier
-                  </CardTitle>
-                  <span className="text-xs font-mono text-gray-500 uppercase">Grade Breakdown</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-white font-mono mb-4">
-                  {prospects.length}
-                </div>
-                <div className="space-y-3">
-                  {Object.entries(gradeTierDistribution)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([gradeTier, count], i) => (
-                      <div key={gradeTier} className="flex items-center gap-3">
-                        <div className="text-sm text-gray-400 font-mono w-24 truncate">
-                          {gradeTier}
-                        </div>
-                        <div className="flex-1 h-6 bg-slate-700 rounded-full overflow-hidden relative">
-                          <div
-                            className="h-full bg-gradient-to-r from-green-400 to-green-300 rounded-full origin-left flex items-center justify-end pr-2"
-                            style={{
-                              width: `${(count / Math.max(...Object.values(gradeTierDistribution), 1)) * 100}%`,
-                              animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
-                              transformOrigin: 'left center',
-                            }}
-                          >
-                            <span className="text-xs font-bold text-slate-900 font-mono">
-                              {count}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </CarouselItem>
-
-          {/* Valuation Ranges */}
-          <CarouselItem className="pl-2 md:pl-4 basis-full md:basis-1/2">
-            <Card className="bg-slate-800/50 border border-slate-700 hover:border-blue-400/50 transition-all h-full shadow-none">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white font-mono text-lg flex items-center gap-2">
-                    <PieChart className="h-5 w-5 text-blue-400" />
-                    Valuation Ranges
-                  </CardTitle>
-                  <span className="text-xs font-mono text-gray-500 uppercase">
-                    Value Distribution
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-white font-mono mb-4">
-                  {prospects.length}
-                </div>
-                <div className="space-y-3">
-                  {Object.entries(valuationRanges)
-                    .reverse()
-                    .map(([range, count], i) => (
-                      <div key={range} className="flex items-center gap-3">
-                        <div className="text-sm text-gray-400 font-mono w-16">{range}</div>
-                        <div className="flex-1 h-6 bg-slate-700 rounded-full overflow-hidden relative">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-400 to-blue-300 rounded-full origin-left flex items-center justify-end pr-2"
-                            style={{
-                              width: `${(count / maxValuationCount) * 100}%`,
-                              animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
-                              transformOrigin: 'left center',
-                            }}
-                          >
-                            <span className="text-xs font-bold text-slate-900 font-mono">
-                              {count}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </CarouselItem>
-        </CarouselContent>
-        <CarouselPrevious className="-left-4 md:-left-12 bg-slate-700/90 border-slate-600 hover:bg-slate-600 hover:border-yellow-400/50 text-white shadow-lg z-10" />
-        <CarouselNext className="-right-4 md:-right-12 bg-slate-700/90 border-slate-600 hover:bg-slate-600 hover:border-yellow-400/50 text-white shadow-lg z-10" />
-      </Carousel>
-
-      {/* Mobile Navigation Dots */}
-      <div className="flex justify-center gap-2 mt-4 md:hidden">
-        {Array.from({ length: chartCount }).map((_, index) => (
+    <div className="mb-6">
+      {/* Desktop: Grid layout with navigation */}
+      <div className="hidden md:block">
+        <div className="flex items-center gap-2 mb-3">
           <button
-            key={index}
-            onClick={() => api?.scrollTo(index)}
-            className={`h-2 rounded-full transition-all ${
-              current === index
-                ? 'w-8 bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)]'
-                : 'w-2 bg-slate-600 hover:bg-slate-500'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
+            onClick={() => api?.scrollPrev()}
+            className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 hover:border-yellow-400/50 text-slate-400 hover:text-yellow-400 flex items-center justify-center transition-all"
+          >
+            ←
+          </button>
+          <div className="flex-1 overflow-hidden">
+            <Carousel
+              setApi={setApi}
+              opts={{
+                align: 'start',
+                loop: false,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-3">
+                {/* Position Distribution */}
+                <CarouselItem className="pl-3 basis-1/2 lg:basis-1/3">
+                  <Card className="bg-slate-800 border border-slate-700 h-full">
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-yellow-400 font-mono text-xs flex items-center gap-1.5">
+                          <Users className="h-3 w-3" />
+                          Position
+                        </CardTitle>
+                        <span className="text-lg font-bold text-white font-mono">
+                          {prospects.length}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-3 px-3">
+                      <div className="space-y-1">
+                        {Object.entries(positionDistribution)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([position, count], i) => (
+                            <div key={position} className="flex items-center gap-2">
+                              <div className="text-[10px] text-slate-400 font-mono w-6">
+                                {position}
+                              </div>
+                              <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                                <div
+                                  className={`h-full ${positionColors[position] || 'bg-slate-500'} rounded`}
+                                  style={{
+                                    width: `${(count / maxPositionCount) * 100}%`,
+                                    animation: mounted
+                                      ? `chart-fill 0.5s ease ${i * 0.05}s both`
+                                      : 'none',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                                {count}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+
+                {/* Tier Distribution */}
+                <CarouselItem className="pl-3 basis-1/2 lg:basis-1/3">
+                  <Card className="bg-slate-800 border border-slate-700 h-full">
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-purple-400 font-mono text-xs flex items-center gap-1.5">
+                          <BarChart3 className="h-3 w-3" />
+                          Tier
+                        </CardTitle>
+                        <span className="text-lg font-bold text-white font-mono">
+                          {prospects.length}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-3 px-3">
+                      <div className="space-y-1">
+                        {Object.entries(tierDistribution)
+                          .sort(([a], [b]) => {
+                            const tierOrder = [
+                              'Tier 1',
+                              'Tier 2',
+                              'Tier 3',
+                              'Tier 4',
+                              'Tier 5',
+                              'Ungraded',
+                            ]
+                            return tierOrder.indexOf(a) - tierOrder.indexOf(b)
+                          })
+                          .map(([tier, count], i) => (
+                            <div key={tier} className="flex items-center gap-2">
+                              <div className="text-[10px] text-slate-400 font-mono w-10 truncate">
+                                {tier.replace('Tier ', 'T')}
+                              </div>
+                              <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                                <div
+                                  className={`h-full ${tierColors[tier] || 'bg-gray-400'} rounded`}
+                                  style={{
+                                    width: `${(count / maxTierCount) * 100}%`,
+                                    animation: mounted
+                                      ? `chart-fill 0.5s ease ${i * 0.05}s both`
+                                      : 'none',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                                {count}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+
+                {/* Grade Tier Distribution */}
+                <CarouselItem className="pl-3 basis-1/2 lg:basis-1/3">
+                  <Card className="bg-slate-800 border border-slate-700 h-full">
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-green-400 font-mono text-xs flex items-center gap-1.5">
+                          <TrendingUp className="h-3 w-3" />
+                          Grade
+                        </CardTitle>
+                        <span className="text-lg font-bold text-white font-mono">
+                          {prospects.length}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-3 px-3">
+                      <div className="space-y-1">
+                        {Object.entries(gradeTierDistribution)
+                          .sort(([, a], [, b]) => b - a)
+                          .slice(0, 5)
+                          .map(([gradeTier, count], i) => (
+                            <div key={gradeTier} className="flex items-center gap-2">
+                              <div className="text-[10px] text-slate-400 font-mono w-12 truncate">
+                                {gradeTier}
+                              </div>
+                              <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-green-400 rounded"
+                                  style={{
+                                    width: `${(count / Math.max(...Object.values(gradeTierDistribution), 1)) * 100}%`,
+                                    animation: mounted
+                                      ? `chart-fill 0.5s ease ${i * 0.05}s both`
+                                      : 'none',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                                {count}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+
+                {/* Valuation Ranges */}
+                <CarouselItem className="pl-3 basis-1/2 lg:basis-1/3">
+                  <Card className="bg-slate-800 border border-slate-700 h-full">
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-blue-400 font-mono text-xs flex items-center gap-1.5">
+                          <PieChart className="h-3 w-3" />
+                          Value
+                        </CardTitle>
+                        <span className="text-lg font-bold text-white font-mono">
+                          {prospects.length}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-3 px-3">
+                      <div className="space-y-1">
+                        {Object.entries(valuationRanges)
+                          .reverse()
+                          .map(([range, count], i) => (
+                            <div key={range} className="flex items-center gap-2">
+                              <div className="text-[10px] text-slate-400 font-mono w-8">
+                                {range}
+                              </div>
+                              <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                                <div
+                                  className="h-full bg-blue-400 rounded"
+                                  style={{
+                                    width: `${(count / maxValuationCount) * 100}%`,
+                                    animation: mounted
+                                      ? `chart-fill 0.5s ease ${i * 0.05}s both`
+                                      : 'none',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                                {count}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </CarouselItem>
+              </CarouselContent>
+            </Carousel>
+          </div>
+          <button
+            onClick={() => api?.scrollNext()}
+            className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 hover:border-yellow-400/50 text-slate-400 hover:text-yellow-400 flex items-center justify-center transition-all"
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile: Swipeable carousel */}
+      <div className="md:hidden">
+        <Carousel setApi={setApi} opts={{ align: 'start', loop: false }} className="w-full">
+          <CarouselContent className="-ml-2">
+            {/* Position Distribution */}
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Card className="bg-slate-800 border border-slate-700">
+                <CardHeader className="pb-2 pt-3 px-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-yellow-400 font-mono text-xs flex items-center gap-1.5">
+                      <Users className="h-3 w-3" />
+                      Position
+                    </CardTitle>
+                    <span className="text-lg font-bold text-white font-mono">
+                      {prospects.length}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 pb-3 px-3">
+                  <div className="space-y-1">
+                    {Object.entries(positionDistribution)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([position, count]) => (
+                        <div key={position} className="flex items-center gap-2">
+                          <div className="text-[10px] text-slate-400 font-mono w-6">{position}</div>
+                          <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                            <div
+                              className={`h-full ${positionColors[position] || 'bg-slate-500'} rounded`}
+                              style={{ width: `${(count / maxPositionCount) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+
+            {/* Tier */}
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Card className="bg-slate-800 border border-slate-700">
+                <CardHeader className="pb-2 pt-3 px-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-purple-400 font-mono text-xs flex items-center gap-1.5">
+                      <BarChart3 className="h-3 w-3" />
+                      Tier
+                    </CardTitle>
+                    <span className="text-lg font-bold text-white font-mono">
+                      {prospects.length}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 pb-3 px-3">
+                  <div className="space-y-1">
+                    {Object.entries(tierDistribution)
+                      .sort(([a], [b]) => {
+                        const tierOrder = [
+                          'Tier 1',
+                          'Tier 2',
+                          'Tier 3',
+                          'Tier 4',
+                          'Tier 5',
+                          'Ungraded',
+                        ]
+                        return tierOrder.indexOf(a) - tierOrder.indexOf(b)
+                      })
+                      .map(([tier, count]) => (
+                        <div key={tier} className="flex items-center gap-2">
+                          <div className="text-[10px] text-slate-400 font-mono w-10 truncate">
+                            {tier.replace('Tier ', 'T')}
+                          </div>
+                          <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                            <div
+                              className={`h-full ${tierColors[tier] || 'bg-gray-400'} rounded`}
+                              style={{ width: `${(count / maxTierCount) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+
+            {/* Grade */}
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Card className="bg-slate-800 border border-slate-700">
+                <CardHeader className="pb-2 pt-3 px-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-green-400 font-mono text-xs flex items-center gap-1.5">
+                      <TrendingUp className="h-3 w-3" />
+                      Grade
+                    </CardTitle>
+                    <span className="text-lg font-bold text-white font-mono">
+                      {prospects.length}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 pb-3 px-3">
+                  <div className="space-y-1">
+                    {Object.entries(gradeTierDistribution)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 5)
+                      .map(([gradeTier, count]) => (
+                        <div key={gradeTier} className="flex items-center gap-2">
+                          <div className="text-[10px] text-slate-400 font-mono w-12 truncate">
+                            {gradeTier}
+                          </div>
+                          <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                            <div
+                              className="h-full bg-green-400 rounded"
+                              style={{
+                                width: `${(count / Math.max(...Object.values(gradeTierDistribution), 1)) * 100}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+
+            {/* Value */}
+            <CarouselItem className="pl-2 basis-[85%]">
+              <Card className="bg-slate-800 border border-slate-700">
+                <CardHeader className="pb-2 pt-3 px-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-blue-400 font-mono text-xs flex items-center gap-1.5">
+                      <PieChart className="h-3 w-3" />
+                      Value
+                    </CardTitle>
+                    <span className="text-lg font-bold text-white font-mono">
+                      {prospects.length}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 pb-3 px-3">
+                  <div className="space-y-1">
+                    {Object.entries(valuationRanges)
+                      .reverse()
+                      .map(([range, count]) => (
+                        <div key={range} className="flex items-center gap-2">
+                          <div className="text-[10px] text-slate-400 font-mono w-8">{range}</div>
+                          <div className="flex-1 h-3 bg-slate-700/50 rounded overflow-hidden">
+                            <div
+                              className="h-full bg-blue-400 rounded"
+                              style={{ width: `${(count / maxValuationCount) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 w-4 text-right">
+                            {count}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </CarouselItem>
+          </CarouselContent>
+        </Carousel>
+
+        {/* Mobile Navigation Dots */}
+        <div className="flex justify-center gap-2 mt-3">
+          {Array.from({ length: chartCount }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => api?.scrollTo(index)}
+              className={`h-1.5 rounded-full transition-all ${
+                current === index ? 'w-6 bg-yellow-400' : 'w-1.5 bg-slate-600'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

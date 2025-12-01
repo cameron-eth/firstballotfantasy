@@ -20,9 +20,6 @@ interface ProspectsTabProps {
   setSearchTerm: (term: string) => void
   positionFilter: string
   setPositionFilter: (filter: string) => void
-  schoolFilter: string
-  setSchoolFilter: (filter: string) => void
-  schools: string[]
   filteredProspects: Prospect[]
   allProspects: Prospect[]
   draftBoard: Prospect[]
@@ -37,9 +34,6 @@ export function ProspectsTab({
   setSearchTerm,
   positionFilter,
   setPositionFilter,
-  schoolFilter,
-  setSchoolFilter,
-  schools,
   filteredProspects,
   allProspects,
   draftBoard,
@@ -66,48 +60,31 @@ export function ProspectsTab({
                 placeholder="Search prospects..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-700 border-slate-600 text-white w-full sm:w-auto"
+                className="pl-10 bg-slate-950 border-slate-800 text-white w-full sm:w-auto focus:border-blue-500/50 focus:ring-blue-500/20"
               />
             </div>
-            <div className="flex space-x-2">
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger className="w-full sm:w-32 bg-slate-700 border-slate-600 text-white">
-                  <SelectValue placeholder="Position" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600 text-white">
-                  <SelectItem value="all" className="text-white">
-                    All Positions
-                  </SelectItem>
-                  <SelectItem value="QB" className="text-white">
-                    QB
-                  </SelectItem>
-                  <SelectItem value="RB" className="text-white">
-                    RB
-                  </SelectItem>
-                  <SelectItem value="WR" className="text-white">
-                    WR
-                  </SelectItem>
-                  <SelectItem value="TE" className="text-white">
-                    TE
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={schoolFilter} onValueChange={setSchoolFilter}>
-                <SelectTrigger className="w-full sm:w-40 bg-slate-700 border-slate-600 text-white">
-                  <SelectValue placeholder="School" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600 text-white">
-                  <SelectItem value="all" className="text-white">
-                    All Schools
-                  </SelectItem>
-                  {schools.map((school) => (
-                    <SelectItem key={school} value={school} className="text-white">
-                      {school}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={positionFilter} onValueChange={setPositionFilter}>
+              <SelectTrigger className="w-full sm:w-32 bg-slate-950 border-slate-800 text-white focus:border-blue-500/50 focus:ring-blue-500/20">
+                <SelectValue placeholder="Position" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                <SelectItem value="all" className="text-white">
+                  All Positions
+                </SelectItem>
+                <SelectItem value="QB" className="text-white">
+                  QB
+                </SelectItem>
+                <SelectItem value="RB" className="text-white">
+                  RB
+                </SelectItem>
+                <SelectItem value="WR" className="text-white">
+                  WR
+                </SelectItem>
+                <SelectItem value="TE" className="text-white">
+                  TE
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -117,18 +94,20 @@ export function ProspectsTab({
           <p className="text-gray-400">Loading prospects...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProspects.map((prospect) => (
-            <ProspectCard
-              key={prospect.id}
-              prospect={prospect}
-              onSelect={onProspectSelect}
-              onCompare={onShowComps}
-              isOnBoard={draftBoard.some((p) => p.id === prospect.id)}
-              variant="full"
-              isDiamondTier={isDiamondTier(prospect)}
-            />
-          ))}
+        <div className="max-h-[800px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+            {filteredProspects.map((prospect) => (
+              <ProspectCard
+                key={prospect.id}
+                prospect={prospect}
+                onSelect={onProspectSelect}
+                onCompare={onShowComps}
+                isOnBoard={draftBoard.some((p) => p.id === prospect.id)}
+                variant="full"
+                isDiamondTier={isDiamondTier(prospect)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

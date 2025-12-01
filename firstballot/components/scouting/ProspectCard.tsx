@@ -500,7 +500,7 @@ export function ProspectCard({
   )
 }
 
-// Export for Draft Board list item - PRO style
+// Export for Draft Board list item - Compact style
 export function DraftBoardItem({
   prospect,
   index,
@@ -508,6 +508,7 @@ export function DraftBoardItem({
   onDragStart,
   onDragOver,
   onDrop,
+  isDiamondTier = false,
 }: {
   prospect: Prospect
   index: number
@@ -515,11 +516,10 @@ export function DraftBoardItem({
   onDragStart?: (e: React.DragEvent, index: number) => void
   onDragOver?: (e: React.DragEvent) => void
   onDrop?: (e: React.DragEvent, index: number) => void
+  isDiamondTier?: boolean
 }) {
   const tier = getTier(prospect)
   const tierStyles = getTierStyles(tier)
-  const gradeTier = getGradeTier(prospect)
-  const gradeStyles = getGradeStyles(gradeTier)
 
   return (
     <div
@@ -530,116 +530,77 @@ export function DraftBoardItem({
         onDragOver?.(e)
       }}
       onDrop={(e) => onDrop?.(e, index)}
-      className={`group rounded-lg border transition-all cursor-grab active:cursor-grabbing hover:scale-[1.005] overflow-hidden ${tierStyles.card} ${tierStyles.glow} ${
+      className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all cursor-grab active:cursor-grabbing ${tierStyles.card} ${tierStyles.glow} ${
         !tierStyles.card ? 'bg-slate-800/80 border-slate-600/50 hover:border-slate-500' : ''
       }`}
     >
-      {/* Header section */}
+      {/* Board position */}
       <div
-        className={`px-2 pt-2 pb-1.5 ${getTierHeaderBg(tier)} border-b ${tierStyles.glow ? 'border-current/20' : 'border-slate-600/30'}`}
+        className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+          tier === 'Tier 1'
+            ? 'bg-amber-500/30 text-amber-300'
+            : tier === 'Tier 2'
+              ? 'bg-blue-500/30 text-blue-300'
+              : 'bg-slate-700 text-slate-400'
+        }`}
       >
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-1 flex-wrap">
-            {/* Board position badge */}
-            <div
-              className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold border flex-shrink-0 ${
-                tier === 'Tier 1'
-                  ? 'bg-gradient-to-br from-amber-500/40 to-yellow-500/30 text-amber-200 border-amber-400/50'
-                  : tier === 'Tier 2'
-                    ? 'bg-gradient-to-br from-blue-500/30 to-indigo-500/20 text-blue-200 border-blue-400/40'
-                    : 'bg-slate-700/80 text-slate-300 border-slate-600/50'
-              }`}
-            >
-              {index + 1}
-            </div>
-            <Badge
-              variant="outline"
-              className={`${getPositionStyles(prospect.position)} text-[9px] px-1 py-0 border`}
-            >
-              {prospect.position}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={`${tierStyles.badge} text-[9px] px-1 py-0 border flex items-center gap-0.5`}
-            >
-              {tierStyles.icon && <span className="text-[8px]">{tierStyles.icon}</span>}
-              {tier}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Name header with rank and value in top right */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div
-              className={`${getTierTextColor(tier)} font-semibold text-xs leading-tight flex items-center gap-1 mb-0.5 truncate`}
-            >
-              {prospect.name}
-              {tier === 'Tier 1' && <Crown className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />}
-              {prospect.overall_grade && (
-                <span
-                  className={`${getTierTextColor(tier)} font-semibold text-[10px] opacity-90 ml-0.5 flex-shrink-0`}
-                >
-                  {prospect.overall_grade.toFixed(1)}
-                </span>
-              )}
-            </div>
-            {/* School */}
-            <div className="text-gray-400 text-[10px] flex items-center gap-0.5 truncate">
-              <School className="h-2.5 w-2.5 flex-shrink-0" />
-              <span className="truncate">{prospect.school || 'TBD'}</span>
-            </div>
-          </div>
-          {/* Rank and Value in top right */}
-          <div className="text-right ml-2 flex-shrink-0">
-            <div
-              className={`${getTierTextColor(tier)} font-semibold text-[10px] opacity-80 mb-0.5`}
-            >
-              #{prospect.rank}
-            </div>
-            <div className={`${getTierTextColor(tier)} font-bold text-xs`}>
-              {getValue(prospect)}
-            </div>
-            <div className="text-gray-500 text-[9px]">value</div>
-          </div>
-        </div>
+        {index + 1}
       </div>
 
-      <div className="px-2 pt-1.5 pb-2">
-        {/* All Comparisons */}
-        {prospect.nfl_comparisons && (
-          <div className="mb-1.5">
-            <ComparisonBadges comparisons={prospect.nfl_comparisons} size="sm" />
-          </div>
-        )}
+      {/* Position badge */}
+      <Badge
+        variant="outline"
+        className={`${getPositionStyles(prospect.position)} text-[10px] px-1.5 py-0.5 flex-shrink-0`}
+      >
+        {prospect.position}
+      </Badge>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-2">
-          <GripVertical className="h-4 w-4 text-gray-500" />
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove()
-            }}
-            className="w-6 h-6 rounded-full bg-slate-700/80 text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all flex items-center justify-center text-sm"
-          >
-            ×
-          </button>
+      {/* Name and school */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <span className={`${getTierTextColor(tier)} font-semibold text-sm truncate`}>
+            {prospect.name}
+          </span>
+          {tier === 'Tier 1' && <Crown className="h-3 w-3 text-amber-400 flex-shrink-0" />}
+          {isDiamondTier && <Gem className="h-3 w-3 text-cyan-400 flex-shrink-0" />}
         </div>
+        <div className="text-gray-500 text-[10px] truncate">{prospect.school || 'TBD'}</div>
+      </div>
+
+      {/* Rank & Value */}
+      <div className="text-right flex-shrink-0">
+        <div className={`${getTierTextColor(tier)} font-bold text-sm`}>#{prospect.rank}</div>
+        <div className="text-gray-500 text-[10px]">{getValue(prospect)}</div>
+      </div>
+
+      {/* Drag handle and remove */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <GripVertical className="h-4 w-4 text-gray-600" />
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+          className="w-5 h-5 rounded-full text-gray-500 hover:bg-red-500/20 hover:text-red-400 transition-all flex items-center justify-center text-xs"
+        >
+          ×
+        </button>
       </div>
     </div>
   )
 }
 
-// Export for Add Prospects list in Draft Board
+// Export for Add Prospects list in Draft Board - Compact style
 export function AddProspectItem({
   prospect,
   isOnBoard,
   onClick,
+  isDiamondTier = false,
 }: {
   prospect: Prospect
   isOnBoard: boolean
   onClick: () => void
+  isDiamondTier?: boolean
 }) {
   const tier = getTier(prospect)
   const tierStyles = getTierStyles(tier)
@@ -654,40 +615,44 @@ export function AddProspectItem({
 
   return (
     <div
-      className={`p-3 rounded-xl border transition-all ${
+      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all ${
         isOnBoard
-          ? 'bg-slate-700/30 border-blue-500/30 opacity-60 cursor-not-allowed'
-          : `cursor-pointer hover:scale-[1.02] ${tierStyles.card} ${tierStyles.glow} ${
-              !tierStyles.card
-                ? 'bg-slate-800/80 border-slate-600/50 hover:border-amber-400/50'
-                : ''
+          ? 'bg-slate-700/30 border-blue-500/30 opacity-50 cursor-not-allowed'
+          : `cursor-pointer hover:border-amber-400/50 ${tierStyles.card} ${tierStyles.glow} ${
+              !tierStyles.card ? 'bg-slate-800/80 border-slate-600/50' : ''
             }`
       }`}
       onClick={handleClick}
     >
-      <div className="flex items-center justify-between mb-1.5">
-        <Badge
-          variant="outline"
-          className={`${getPositionStyles(prospect.position)} text-[10px] px-1.5 border`}
-        >
-          {prospect.position}
-        </Badge>
-        <div
-          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${tierStyles.badge}`}
-        >
-          {tierStyles.icon}#{prospect.rank}
+      {/* Position */}
+      <Badge
+        variant="outline"
+        className={`${getPositionStyles(prospect.position)} text-[9px] px-1 py-0 flex-shrink-0`}
+      >
+        {prospect.position}
+      </Badge>
+
+      {/* Name */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1">
+          <span className={`${getTierTextColor(tier)} font-semibold text-xs truncate`}>
+            {prospect.name}
+          </span>
+          {tier === 'Tier 1' && <Crown className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />}
+          {isDiamondTier && <Gem className="h-2.5 w-2.5 text-cyan-400 flex-shrink-0" />}
         </div>
+        <div className="text-gray-500 text-[9px] truncate">{prospect.school}</div>
       </div>
-      <div className="font-semibold text-white text-sm flex items-center gap-1">
-        {prospect.name}
-        {tier === 'Tier 1' && <Crown className="h-3 w-3 text-amber-400" />}
+
+      {/* Rank */}
+      <div
+        className={`${tierStyles.badge} text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0`}
+      >
+        #{prospect.rank}
       </div>
-      <div className="text-gray-400 text-xs">{prospect.school}</div>
-      {isOnBoard && (
-        <div className="text-blue-400 text-[10px] mt-1 flex items-center gap-1">
-          <Sparkles className="h-3 w-3" /> On Board
-        </div>
-      )}
+
+      {/* On board indicator */}
+      {isOnBoard && <Sparkles className="h-3 w-3 text-blue-400 flex-shrink-0" />}
     </div>
   )
 }

@@ -48,7 +48,6 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
   const [rosterError, setRosterError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
-  const [schoolFilter, setSchoolFilter] = useState('all')
   const [activeTab, setActiveTab] = useState('prospects')
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [draggedProspect, setDraggedProspect] = useState<Prospect | null>(null)
@@ -121,14 +120,6 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
     return rankedRoster
   }, [roster])
 
-  const schools = useMemo(() => {
-    const schoolSet = new Set<string>()
-    prospects.forEach((prospect) => {
-      if (prospect.school) schoolSet.add(prospect.school)
-    })
-    return Array.from(schoolSet).sort()
-  }, [prospects])
-
   const filteredProspects = useMemo(() => {
     let filtered = prospects
 
@@ -144,12 +135,8 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
       filtered = filtered.filter((prospect) => prospect.position === positionFilter)
     }
 
-    if (schoolFilter !== 'all') {
-      filtered = filtered.filter((prospect) => prospect.school === schoolFilter)
-    }
-
     return filtered
-  }, [prospects, searchTerm, positionFilter, schoolFilter])
+  }, [prospects, searchTerm, positionFilter])
 
   // Calculate #1 player at each position (Diamond Tier for prospects)
   const topOneProspectByPosition = useMemo(() => {
@@ -799,9 +786,6 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                 setSearchTerm={setSearchTerm}
                 positionFilter={positionFilter}
                 setPositionFilter={setPositionFilter}
-                schoolFilter={schoolFilter}
-                setSchoolFilter={setSchoolFilter}
-                schools={schools}
                 filteredProspects={filteredProspects}
                 allProspects={prospects}
                 draftBoard={draftBoard}

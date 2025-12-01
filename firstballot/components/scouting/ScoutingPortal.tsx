@@ -746,28 +746,28 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto">
-              <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700 min-w-max">
+            <div className="overflow-x-auto pb-1">
+              <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700 h-9 sm:h-10 p-1">
                 <TabsTrigger
                   value="prospects"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 h-full"
                 >
-                  <Eye className="h-4 w-4 mr-1 sm:mr-2" />
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
                   Prospects
                 </TabsTrigger>
                 <TabsTrigger
                   value="draftboard"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 h-full"
                 >
-                  <TrendingUp className="h-4 w-4 mr-1 sm:mr-2" />
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
                   <span className="hidden sm:inline">Draft Board</span>
                   <span className="sm:hidden">Draft</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="historical"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap"
+                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 h-full"
                 >
-                  <BarChart3 className="h-4 w-4 mr-1 sm:mr-2" />
+                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
                   <span className="hidden sm:inline">Historical</span>
                   <span className="sm:hidden">History</span>
                 </TabsTrigger>

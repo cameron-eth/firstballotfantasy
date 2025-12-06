@@ -454,18 +454,3 @@ if (cachedData) return cachedData
 - [Sleeper API](https://docs.sleeper.app/)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 
-### Development Tools
-
-- **VS Code**: Recommended editor
-- **Extensions**: ES7+ React/Redux/React-Native snippets, Tailwind CSS IntelliSense
-- **Database**: Supabase Studio
-- **API Testing**: Postman/Insomnia
-
----
-
-## Contributing
-
-1. **Code Review**: All changes require review
-2. **Testing**: Test major features before deployment
-3. **Documentation**: Update docs for significant changes
-4. **Performance**: Monitor bundle size and performance metrics

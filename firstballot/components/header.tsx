@@ -22,7 +22,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 const navigation = [
   { name: 'OVERVIEW', href: '/' },
   { name: 'LEAGUE BUDDY', href: '/league-buddy', requiresAuth: true },
-  { name: 'DRAFT BUDDY', href: '/draft-buddy', requiresAuth: true },
   { name: 'RANKINGS', href: '/rankings' },
   { name: 'TRADE CALCULATOR', href: '/trade-calculator' },
 ]

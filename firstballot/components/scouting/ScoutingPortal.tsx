@@ -16,6 +16,8 @@ import {
   HistoricalRankingsTab,
 } from '@/components/scouting'
 import type { Prospect } from '@/components/scouting/types'
+import { useDraftboard } from '@/hooks/use-draftboard'
+import { useAuth } from '@/lib/auth'
 
 interface RosterPlayer {
   id: string
@@ -60,6 +62,14 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
     prospect: Prospect
     index: number
   } | null>(null)
+
+  // Auth for checking if user is logged in
+  const { user } = useAuth()
+
+  // Draftboard persistence
+  const { savedBoard, saving: savingBoard, saveBoard } = useDraftboard()
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [initialBoardLoaded, setInitialBoardLoaded] = useState(false)
 
   // Memoized expensive computations
   const positionNeeds = useMemo(() => {
@@ -562,7 +572,46 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
 
   const handleClearDraftBoard = useCallback(() => {
     setDraftBoard([])
+    setHasUnsavedChanges(true)
   }, [])
+
+  // Save draft board to database
+  const handleSaveBoard = useCallback(async () => {
+    const prospectIds = draftBoard.map((p) => p.id)
+    const result = await saveBoard(prospectIds)
+    if (result) {
+      setHasUnsavedChanges(false)
+    }
+  }, [draftBoard, saveBoard])
+
+  // Load saved board when prospects are available
+  useEffect(() => {
+    if (savedBoard && prospects.length > 0 && !initialBoardLoaded) {
+      // Find prospects by their IDs and preserve order
+      const loadedProspects: Prospect[] = []
+      savedBoard.prospect_ids.forEach((id) => {
+        const prospect = prospects.find((p) => p.id === id)
+        if (prospect) {
+          loadedProspects.push(prospect)
+        }
+      })
+      if (loadedProspects.length > 0) {
+        setDraftBoard(loadedProspects)
+      }
+      setInitialBoardLoaded(true)
+    }
+  }, [savedBoard, prospects, initialBoardLoaded])
+
+  // Track unsaved changes when draftBoard changes (after initial load)
+  useEffect(() => {
+    if (initialBoardLoaded) {
+      const currentIds = draftBoard.map((p) => p.id)
+      const savedIds = savedBoard?.prospect_ids || []
+      const hasChanges =
+        currentIds.length !== savedIds.length || currentIds.some((id, idx) => id !== savedIds[idx])
+      setHasUnsavedChanges(hasChanges)
+    }
+  }, [draftBoard, savedBoard, initialBoardLoaded])
 
   // Fetch roster from Sleeper API
   useEffect(() => {
@@ -810,6 +859,12 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                 onBoardDragOver={handleBoardDragOver}
                 onBoardDrop={handleBoardDrop}
                 onClearDraftBoard={handleClearDraftBoard}
+                // Persistence props
+                hasSavedBoard={!!savedBoard}
+                savingBoard={savingBoard}
+                hasUnsavedChanges={hasUnsavedChanges}
+                onSaveBoard={handleSaveBoard}
+                isLoggedIn={!!user}
               />
             </TabsContent>
 

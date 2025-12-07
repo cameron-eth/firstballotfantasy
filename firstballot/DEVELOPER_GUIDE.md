@@ -453,4 +453,3 @@ if (cachedData) return cachedData
 - [Stripe API](https://stripe.com/docs/api)
 - [Sleeper API](https://docs.sleeper.app/)
 - [Tailwind CSS](https://tailwindcss.com/docs)
-

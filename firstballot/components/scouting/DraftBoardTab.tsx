@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { Search, School, TrendingUp } from 'lucide-react'
 import { AddProspectItem, DraftBoardItem } from './ProspectCard'
+import { DraftBoardControls } from './DraftBoardControls'
 import type { Prospect } from './types'
 
 interface DraftBoardTabProps {
@@ -30,6 +31,12 @@ interface DraftBoardTabProps {
   onBoardDragOver: (e: React.DragEvent, index: number) => void
   onBoardDrop: (e: React.DragEvent, index: number) => void
   onClearDraftBoard: () => void
+  // Persistence props
+  hasSavedBoard?: boolean
+  savingBoard?: boolean
+  hasUnsavedChanges?: boolean
+  onSaveBoard?: () => Promise<void>
+  isLoggedIn?: boolean
 }
 
 // Utility function to get tier from prospect
@@ -57,6 +64,12 @@ export function DraftBoardTab({
   onBoardDragOver,
   onBoardDrop,
   onClearDraftBoard,
+  // Persistence props
+  hasSavedBoard = false,
+  savingBoard = false,
+  hasUnsavedChanges = false,
+  onSaveBoard,
+  isLoggedIn = false,
 }: DraftBoardTabProps) {
   // Draft board filter state
   const [boardPositionFilter, setBoardPositionFilter] = useState('all')
@@ -81,11 +94,20 @@ export function DraftBoardTab({
     <div className="relative">
       <Card className="bg-transparent border-0 shadow-none">
         <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-white flex items-center justify-between">
+          <CardTitle className="text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
               Custom Draft Board
             </span>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Save Controls - only show when logged in */}
+              {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
+                <DraftBoardControls
+                  hasSavedBoard={hasSavedBoard}
+                  saving={savingBoard}
+                  hasChanges={hasUnsavedChanges}
+                  onSave={onSaveBoard}
+                />
+              )}
               <Badge className="bg-slate-800 border-slate-700 text-slate-300 font-mono border">
                 {filteredDraftBoard.length} / {draftBoard.length} Prospects
               </Badge>

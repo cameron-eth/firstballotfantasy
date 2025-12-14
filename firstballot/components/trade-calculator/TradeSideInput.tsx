@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import { X, Plus } from 'lucide-react'
 import { useDebounce } from '@/hooks/use-debounce'
 import type { PlayerSuggestion } from '@/types/trade-calculator'
@@ -154,6 +155,11 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        playerName={player.player_name}
+                        size={28}
+                      />
                       <span className="text-white font-semibold">{player.player_name}</span>
                       <Badge
                         variant="outline"
@@ -185,7 +191,13 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
             key={index}
             className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-yellow-400/30 transition-all shadow-sm"
           >
-            <span className="text-white text-sm font-mono">{item}</span>
+            <div className="flex items-center gap-3">
+              <PlayerHeadshot
+                playerName={item}
+                size={32}
+              />
+              <span className="text-white text-sm font-semibold">{item}</span>
+            </div>
             <Button
               onClick={() => handleRemoveItem(index)}
               size="sm"

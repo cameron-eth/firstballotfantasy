@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TeamLogo } from '@/components/team-logo'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import { PlayerNGSStats } from '@/components/player-ngs-stats'
 import { Activity, Star, ShoppingCart, Flame, TrendingDown } from 'lucide-react'
 import type { TeamData } from './types'
@@ -90,7 +91,13 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        espnId={player.espn_id}
+                        playerName={player.playerName}
+                        size={24}
+                        className="flex-shrink-0"
+                      />
                       <div className="min-w-0">
                         <div className="text-slate-100 font-semibold text-sm truncate">
                           {player.playerName}
@@ -136,7 +143,13 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        espnId={player.espn_id}
+                        playerName={player.playerName}
+                        size={24}
+                        className="flex-shrink-0"
+                      />
                       <div className="min-w-0">
                         <div className="text-slate-100 font-semibold text-sm truncate">
                           {player.playerName}
@@ -178,7 +191,13 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        espnId={player.espn_id}
+                        playerName={player.playerName}
+                        size={24}
+                        className="flex-shrink-0"
+                      />
                       <div className="min-w-0">
                         <div className="text-slate-100 font-semibold text-sm truncate">
                           {player.playerName}
@@ -217,7 +236,13 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <TeamLogo team={player.team} size={24} className="flex-shrink-0" />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        espnId={player.espn_id}
+                        playerName={player.playerName}
+                        size={24}
+                        className="flex-shrink-0"
+                      />
                       <div className="min-w-0">
                         <div className="text-slate-100 font-semibold text-sm truncate">
                           {player.playerName}
@@ -255,7 +280,13 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
               className="p-3 bg-slate-700 border-slate-600 hover:border-green-400/50 transition-colors"
             >
               <div className="flex items-center space-x-3 mb-3">
-                <TeamLogo team={player.team} size={40} className="flex-shrink-0" />
+                <PlayerHeadshot
+                  headshotUrl={player.headshot_url}
+                  espnId={player.espn_id}
+                  playerName={player.playerName}
+                  size={40}
+                  className="flex-shrink-0"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
                     <h4 className="font-semibold text-slate-100 truncate">{player.playerName}</h4>
@@ -339,7 +370,12 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-3">
-                <TeamLogo team={selectedTeam.trends.bestPlayer.team} size={48} />
+                <PlayerHeadshot
+                  headshotUrl={selectedTeam.trends.bestPlayer.headshot_url}
+                  espnId={selectedTeam.trends.bestPlayer.espn_id}
+                  playerName={selectedTeam.trends.bestPlayer.playerName}
+                  size={48}
+                />
                 <div>
                   <h4 className="font-semibold text-slate-100">
                     {selectedTeam.trends.bestPlayer.playerName}
@@ -359,7 +395,12 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-3">
-                <TeamLogo team={selectedTeam.trends.breakoutCandidate.team} size={48} />
+                <PlayerHeadshot
+                  headshotUrl={selectedTeam.trends.breakoutCandidate.headshot_url}
+                  espnId={selectedTeam.trends.breakoutCandidate.espn_id}
+                  playerName={selectedTeam.trends.breakoutCandidate.playerName}
+                  size={48}
+                />
                 <div>
                   <h4 className="font-semibold text-slate-100">
                     {selectedTeam.trends.breakoutCandidate.playerName}
@@ -379,7 +420,12 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-3">
-                <TeamLogo team={selectedTeam.trends.sleeperPick.team} size={48} />
+                <PlayerHeadshot
+                  headshotUrl={selectedTeam.trends.sleeperPick.headshot_url}
+                  espnId={selectedTeam.trends.sleeperPick.espn_id}
+                  playerName={selectedTeam.trends.sleeperPick.playerName}
+                  size={48}
+                />
                 <div>
                   <h4 className="font-semibold text-slate-100">
                     {selectedTeam.trends.sleeperPick.playerName}

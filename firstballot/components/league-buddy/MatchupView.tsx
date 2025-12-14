@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
 import { TeamLogo } from '@/components/team-logo'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import { Target, TrendingUp } from 'lucide-react'
 import type { TeamData, MatchupData } from './types'
 import { getRankColor } from './utils'
@@ -363,7 +364,11 @@ export function MatchupView({
                           <div className="flex items-center justify-between gap-3">
                             {/* Player Info */}
                             <div className="flex items-center space-x-3 flex-1 min-w-0">
-                              <TeamLogo team={player.team} size={32} />
+                              <PlayerHeadshot
+                                headshotUrl={player.headshot_url}
+                                playerName={player.playerName}
+                                size={32}
+                              />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center space-x-2 mb-1">
                                   <div className="text-slate-100 font-semibold text-sm truncate">
@@ -460,7 +465,11 @@ export function MatchupView({
                     className="flex items-center justify-between p-2 bg-slate-600 rounded"
                   >
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <TeamLogo team={player.team} size={24} />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        playerName={player.playerName}
+                        size={28}
+                      />
                       <div className="min-w-0">
                         <div className="text-slate-100 text-sm font-semibold truncate">
                           {player.playerName}
@@ -488,7 +497,11 @@ export function MatchupView({
                     className="flex items-center justify-between p-2 bg-slate-600 rounded"
                   >
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <TeamLogo team={player.team} size={24} />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        playerName={player.playerName}
+                        size={28}
+                      />
                       <div className="min-w-0">
                         <div className="text-slate-100 text-sm font-semibold truncate">
                           {player.playerName}

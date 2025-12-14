@@ -165,7 +165,7 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
 
       const rosterStatsMap: Record<
         string,
-        { fantasy_ppg: number; total_fantasy_points: number; games_played: number }
+        { fantasy_ppg: number; total_fantasy_points: number; games_played: number; headshot_url?: string | null }
       > = {}
 
       if (allSleeperPlayerIds.length > 0) {
@@ -189,6 +189,7 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
                   fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,
                   total_fantasy_points: parseFloat(String(playerStats.total_fantasy_points)) || 0,
                   games_played: playerStats.games_played || 0,
+                  headshot_url: playerStats.headshot_url || null,
                 }
               }
             )
@@ -258,6 +259,7 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
             fantasy_ppg: stats.fantasy_ppg,
             fantasy_points_ppr: stats.total_fantasy_points,
             games_played: stats.games_played,
+            headshot_url: stats.headshot_url,
           }
           if (stats.fantasy_ppg > 0) mergedCount++
         }
@@ -489,6 +491,7 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
               injury_start_date: injuryStartDate,
               isOnBye,
               espn_id: player.espn_id,
+              headshot_url: player.headshot_url,
               fantasy_points_ppr: fantasyPointsPPR,
               fantasy_points_half_ppr: player.fantasy_points_half_ppr,
               fantasy_points: fantasyPointsPPR,

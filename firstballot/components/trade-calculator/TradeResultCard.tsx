@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import { TrendingUp, TrendingDown, Minus, Scale } from 'lucide-react'
 import Link from 'next/link'
 import type { TradeResult } from '@/types/trade-calculator'
@@ -120,32 +121,47 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
               {result.side1.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded border border-slate-600"
+                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg border border-slate-600"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white font-semibold">{item.name}</span>
-                      {item.rank && (
-                        <Link
-                          href={`/rankings?player=${encodeURIComponent(item.name)}`}
-                          className="text-blue-400 hover:text-blue-300 text-xs"
-                        >
-                          #{item.rank}
-                        </Link>
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                        item.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
+                        item.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
+                        item.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
+                        'from-purple-600/30 to-violet-900/50'
+                      }`} />
+                      <PlayerHeadshot
+                        playerName={item.name}
+                        size={40}
+                        className="relative z-10"
+                      />
                     </div>
-                    <div className="flex items-center gap-2">
-                      {item.position && (
-                        <Badge
-                          variant="outline"
-                          className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
-                        >
-                          {item.position}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white font-semibold">{item.name}</span>
+                        {item.rank && (
+                          <Link
+                            href={`/rankings?player=${encodeURIComponent(item.name)}`}
+                            className="text-blue-400 hover:text-blue-300 text-xs"
+                          >
+                            #{item.rank}
+                          </Link>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.position && (
+                          <Badge
+                            variant="outline"
+                            className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
+                          >
+                            {item.position}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={`${getTierColor(item.tier)} text-xs`}>
+                          {item.tier}
                         </Badge>
-                      )}
-                      <Badge variant="outline" className={`${getTierColor(item.tier)} text-xs`}>
-                        {item.tier}
-                      </Badge>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -180,32 +196,47 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
               {result.side2.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-purple-400/30 transition-all shadow-sm"
+                  className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-purple-400/30 transition-all shadow-sm"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-white font-semibold">{item.name}</span>
-                      {item.rank && (
-                        <Link
-                          href={`/rankings?player=${encodeURIComponent(item.name)}`}
-                          className="text-blue-400 hover:text-blue-300 text-xs"
-                        >
-                          #{item.rank}
-                        </Link>
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                        item.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
+                        item.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
+                        item.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
+                        'from-purple-600/30 to-violet-900/50'
+                      }`} />
+                      <PlayerHeadshot
+                        playerName={item.name}
+                        size={40}
+                        className="relative z-10"
+                      />
                     </div>
-                    <div className="flex items-center gap-2">
-                      {item.position && (
-                        <Badge
-                          variant="outline"
-                          className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
-                        >
-                          {item.position}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white font-semibold">{item.name}</span>
+                        {item.rank && (
+                          <Link
+                            href={`/rankings?player=${encodeURIComponent(item.name)}`}
+                            className="text-blue-400 hover:text-blue-300 text-xs"
+                          >
+                            #{item.rank}
+                          </Link>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.position && (
+                          <Badge
+                            variant="outline"
+                            className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
+                          >
+                            {item.position}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={`${getTierColor(item.tier)} text-xs`}>
+                          {item.tier}
                         </Badge>
-                      )}
-                      <Badge variant="outline" className={`${getTierColor(item.tier)} text-xs`}>
-                        {item.tier}
-                      </Badge>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">

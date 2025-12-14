@@ -25,4 +25,5 @@ export interface PlayerSuggestion {
   player_name: string
   position: string
   team: string
+  headshot_url?: string | null
 }

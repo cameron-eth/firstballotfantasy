@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { TeamLogo } from '@/components/team-logo'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import { MatchupData } from '@/types/league'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
@@ -103,8 +103,8 @@ export const CurrentLineup = memo(function CurrentLineup({
             >
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3">
-                  <TeamLogo
-                    team={team}
+                  <PlayerHeadshot
+                    playerName={playerName}
                     size={40}
                     className={`flex-shrink-0 ${gamePlayed ? 'opacity-50' : ''}`}
                   />

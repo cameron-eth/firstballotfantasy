@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { TeamLogo } from '@/components/team-logo'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import { UserAvatar } from '@/components/user-avatar'
 import { CurrentLineup } from '@/components/league/CurrentLineup'
 import { PlayerNGSStats } from '@/components/player-ngs-stats'
@@ -735,7 +736,11 @@ export default function LeagueBuddy({
                                     className="flex items-center justify-between gap-3 text-xs bg-slate-800/50 rounded p-2"
                                   >
                                     <div className="flex items-center space-x-2 flex-1">
-                                      <TeamLogo team={removedSlot.player.team} size={20} />
+                                      <PlayerHeadshot
+                                        headshotUrl={removedSlot.player.headshot_url}
+                                        playerName={removedSlot.player.playerName}
+                                        size={24}
+                                      />
                                       <span className="text-slate-400">
                                         {removedSlot.player.playerName}
                                       </span>
@@ -751,7 +756,11 @@ export default function LeagueBuddy({
                                       <span className="text-slate-300 font-semibold">
                                         {addedSlot.player.playerName}
                                       </span>
-                                      <TeamLogo team={addedSlot.player.team} size={20} />
+                                      <PlayerHeadshot
+                                        headshotUrl={addedSlot.player.headshot_url}
+                                        playerName={addedSlot.player.playerName}
+                                        size={24}
+                                      />
                                       {improvement > 0 && (
                                         <span className="text-green-400 text-xs">
                                           +{improvement.toFixed(1)}
@@ -871,11 +880,20 @@ export default function LeagueBuddy({
                                     >
                                       {slot.position}
                                     </Badge>
-                                    <TeamLogo
-                                      team={slot.player.team}
-                                      size={24}
-                                      className="flex-shrink-0"
-                                    />
+                                    <div className="relative flex-shrink-0">
+                                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                                        slot.player.position === 'QB' ? 'from-pink-600/40 to-purple-900/60' :
+                                        slot.player.position === 'RB' ? 'from-teal-600/40 to-emerald-900/60' :
+                                        slot.player.position === 'WR' ? 'from-blue-600/40 to-indigo-900/60' :
+                                        'from-purple-600/40 to-violet-900/60'
+                                      }`} />
+                                      <PlayerHeadshot
+                                        headshotUrl={slot.player.headshot_url}
+                                        playerName={slot.player.playerName}
+                                        size={36}
+                                        className="relative z-10"
+                                      />
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-semibold text-slate-100 truncate">
                                         {slot.player.playerName}
@@ -1122,11 +1140,20 @@ export default function LeagueBuddy({
                                   {/* Player Info Row */}
                                   <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                      <TeamLogo
-                                        team={slot.player.team}
-                                        size={48}
-                                        className="flex-shrink-0"
-                                      />
+                                      <div className="relative flex-shrink-0">
+                                        <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                                          slot.player.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
+                                          slot.player.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
+                                          slot.player.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
+                                          'from-purple-600/30 to-violet-900/50'
+                                        }`} />
+                                        <PlayerHeadshot
+                                          headshotUrl={slot.player.headshot_url}
+                                          playerName={slot.player.playerName}
+                                          size={56}
+                                          className="relative z-10"
+                                        />
+                                      </div>
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center space-x-2 mb-1 flex-wrap">
                                           <div className="text-slate-100 font-semibold text-base truncate">
@@ -1260,11 +1287,20 @@ export default function LeagueBuddy({
                                     >
                                       <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                          <TeamLogo
-                                            team={player.team}
-                                            size={40}
-                                            className="flex-shrink-0"
-                                          />
+                                          <div className="relative flex-shrink-0">
+                                            <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                                              player.position === 'QB' ? 'from-pink-600/20 to-purple-900/40' :
+                                              player.position === 'RB' ? 'from-teal-600/20 to-emerald-900/40' :
+                                              player.position === 'WR' ? 'from-blue-600/20 to-indigo-900/40' :
+                                              'from-purple-600/20 to-violet-900/40'
+                                            }`} />
+                                            <PlayerHeadshot
+                                              headshotUrl={player.headshot_url}
+                                              playerName={player.playerName}
+                                              size={40}
+                                              className="relative z-10"
+                                            />
+                                          </div>
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center space-x-2 mb-1">
                                               <div className="text-slate-200 text-sm font-semibold truncate">

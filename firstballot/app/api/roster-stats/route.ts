@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const { data: stats, error } = await supabaseServer
       .from('master_player_stats')
       .select(
-        'player_gsis_id, player_display_name, fantasy_ppg, total_fantasy_points, games_played'
+        'player_gsis_id, player_display_name, fantasy_ppg, total_fantasy_points, games_played, headshot_url'
       )
       .in('player_gsis_id', gsisIds)
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       const { data: nameStats } = await supabaseServer
         .from('master_player_stats')
         .select(
-          'player_gsis_id, player_display_name, fantasy_ppg, total_fantasy_points, games_played'
+          'player_gsis_id, player_display_name, fantasy_ppg, total_fantasy_points, games_played, headshot_url'
         )
         .in('player_display_name', playerNames)
 
@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
         fantasy_ppg: playerStats?.fantasy_ppg || 0,
         total_fantasy_points: playerStats?.total_fantasy_points || 0,
         games_played: playerStats?.games_played || 0,
+        headshot_url: playerStats?.headshot_url || null,
       }
     })
 

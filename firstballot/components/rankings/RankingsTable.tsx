@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowUpDown } from 'lucide-react'
 import type { PlayerRanking, SortField } from '@/types/rankings'
 import { getTierIcon } from './tierUtils'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 
 interface RankingsTableProps {
   rankings: PlayerRanking[]
@@ -98,8 +99,25 @@ export function RankingsTable({
                 <td className="py-3 px-2 sm:px-4 text-white font-mono font-semibold text-sm">
                   #{player.rank}
                 </td>
-                <td className="py-3 px-2 sm:px-4 text-white font-semibold text-sm">
-                  {player.player_name}
+                <td className="py-3 px-2 sm:px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-shrink-0">
+                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                        player.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
+                        player.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
+                        player.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
+                        'from-purple-600/30 to-violet-900/50'
+                      }`} />
+                      <PlayerHeadshot
+                        headshotUrl={player.headshot_url}
+                        espnId={player.espn_id}
+                        playerName={player.player_name}
+                        size={40}
+                        className="relative z-10"
+                      />
+                    </div>
+                    <span className="text-white font-semibold text-sm">{player.player_name}</span>
+                  </div>
                 </td>
                 <td className="py-3 px-2 sm:px-4">
                   <Badge

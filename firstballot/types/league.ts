@@ -43,6 +43,7 @@ export interface PlayerData {
   injury_start_date?: string | null // Injury start date from Sleeper API - if not null, player is injured
   isOnBye?: boolean // Whether player's team is on bye week
   espn_id?: string
+  headshot_url?: string | null // Player headshot URL from NFL data
   fantasy_points_ppr?: number
   fantasy_points_half_ppr?: number
   fantasy_points?: number

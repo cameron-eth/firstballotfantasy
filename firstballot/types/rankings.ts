@@ -6,6 +6,8 @@ export interface PlayerRanking {
   age: number
   total_score: number
   tier: string
+  espn_id?: string | null
+  headshot_url?: string | null
   age_score?: number
   draft_capital_score?: number
   recent_form_score?: number

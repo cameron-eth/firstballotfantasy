@@ -357,11 +357,7 @@ export function ProspectComparison({ prospects, onProspectSelect }: ProspectComp
                         border: '1px solid #1e293b',
                         borderRadius: '12px',
                       }}
-                      formatter={(
-                        value: number,
-                        _name: string,
-                        props: any
-                      ) => [
+                      formatter={(value: number, _name: string, props: any) => [
                         `${value.toFixed(1)}`,
                         `${props.payload?.fullName} (${props.payload?.position})`,
                       ]}

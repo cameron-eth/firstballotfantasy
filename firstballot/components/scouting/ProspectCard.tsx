@@ -708,7 +708,7 @@ export function DraftBoardItem({
     >
       {/* Board position */}
       <div
-        className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+        className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
           tier === 'Tier 1'
             ? 'bg-amber-500/30 text-amber-300'
             : tier === 'Tier 2'
@@ -717,6 +717,17 @@ export function DraftBoardItem({
         }`}
       >
         {index + 1}
+      </div>
+
+      {/* Headshot */}
+      <div className="relative flex-shrink-0">
+        <PlayerHeadshot
+          headshotUrl={prospect.headshot_url}
+          espnId={prospect.espn_id}
+          playerName={prospect.name}
+          size={32}
+          className="rounded-md border border-white/10"
+        />
       </div>
 
       {/* Position badge */}
@@ -803,6 +814,17 @@ export function AddProspectItem({
       >
         {prospect.position}
       </Badge>
+
+      {/* Headshot */}
+      <div className="relative flex-shrink-0">
+        <PlayerHeadshot
+          headshotUrl={prospect.headshot_url}
+          espnId={prospect.espn_id}
+          playerName={prospect.name}
+          size={24}
+          className="rounded border border-white/10"
+        />
+      </div>
 
       {/* Name */}
       <div className="flex-1 min-w-0">

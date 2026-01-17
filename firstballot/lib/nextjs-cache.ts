@@ -211,48 +211,48 @@ export const revalidateCache = {
   // Revalidate all league data
   league: async (leagueId: string) => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.LEAGUE)
+    await (revalidateTag as any)(CACHE_TAGS.LEAGUE)
   },
 
   // Revalidate all user data
   user: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.USER)
+    await (revalidateTag as any)(CACHE_TAGS.USER)
   },
 
   // Revalidate all player data
   players: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.PLAYERS)
+    await (revalidateTag as any)(CACHE_TAGS.PLAYERS)
   },
 
   // Revalidate all rankings
   rankings: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.RANKINGS)
+    await (revalidateTag as any)(CACHE_TAGS.RANKINGS)
   },
 
   // Revalidate NFL state
   nflState: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.NFL_STATE)
+    await (revalidateTag as any)(CACHE_TAGS.NFL_STATE)
   },
 
   // Revalidate transactions
   transactions: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.TRANSACTIONS)
+    await (revalidateTag as any)(CACHE_TAGS.TRANSACTIONS)
   },
 
   // Revalidate draft data
   draft: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.DRAFT)
+    await (revalidateTag as any)(CACHE_TAGS.DRAFT)
   },
 
   // Revalidate analysis data
   analysis: async () => {
     const { revalidateTag } = await import('next/cache')
-    await revalidateTag(CACHE_TAGS.ANALYSIS)
+    await (revalidateTag as any)(CACHE_TAGS.ANALYSIS)
   },
 }

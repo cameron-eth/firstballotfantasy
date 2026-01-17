@@ -46,7 +46,7 @@ interface ScoutingPortalProps {
 export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const searchParams = useSearchParams()
   const urlTab = searchParams.get('tab')
-  
+
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
@@ -530,12 +530,10 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   }, [])
 
   const handleSaveNotes = useCallback((id: number, notes: string) => {
-    setProspects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, notes } : p))
-    )
+    setProspects((prev) => prev.map((p) => (p.id === id ? { ...p, notes } : p)))
     // Update selected prospect if it's the one being edited
     setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
-    
+
     // In a real app, we would save this to Supabase here
     console.log(`Saving notes for prospect ${id}: ${notes}`)
   }, [])

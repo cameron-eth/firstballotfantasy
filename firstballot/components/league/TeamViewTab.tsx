@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PlayerNGSStats } from '@/components/player-ngs-stats'
 import { Trophy } from 'lucide-react'
-import { TeamData } from '@/types/league'
+import { TeamData, PlayerData } from '@/types/league'
 import { GRADE_COLORS } from '@/lib/league-utils'
 
 interface TeamViewTabProps {
@@ -80,7 +80,7 @@ export const TeamViewTab = memo(function TeamViewTab({ userTeam, currentWeek }: 
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {userTeam.players.map((player, index) => (
+            {userTeam.players.map((player: PlayerData, index: number) => (
               <Card
                 key={index}
                 className="bg-card border-border hover:border-foreground/50 transition-colors"

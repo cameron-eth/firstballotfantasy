@@ -837,12 +837,17 @@ export default function LeagueBuddy({
                                       {slot.position}
                                     </Badge>
                                     <div className="relative flex-shrink-0">
-                                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
-                                        slot.player.position === 'QB' ? 'from-pink-600/40 to-purple-900/60' :
-                                        slot.player.position === 'RB' ? 'from-teal-600/40 to-emerald-900/60' :
-                                        slot.player.position === 'WR' ? 'from-blue-600/40 to-indigo-900/60' :
-                                        'from-purple-600/40 to-violet-900/60'
-                                      }`} />
+                                      <div
+                                        className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                                          slot.player.position === 'QB'
+                                            ? 'from-pink-600/40 to-purple-900/60'
+                                            : slot.player.position === 'RB'
+                                              ? 'from-teal-600/40 to-emerald-900/60'
+                                              : slot.player.position === 'WR'
+                                                ? 'from-blue-600/40 to-indigo-900/60'
+                                                : 'from-purple-600/40 to-violet-900/60'
+                                        }`}
+                                      />
                                       <PlayerHeadshot
                                         headshotUrl={slot.player.headshot_url}
                                         playerName={slot.player.playerName}
@@ -1097,12 +1102,17 @@ export default function LeagueBuddy({
                                   <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                                       <div className="relative flex-shrink-0">
-                                        <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
-                                          slot.player.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
-                                          slot.player.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
-                                          slot.player.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
-                                          'from-purple-600/30 to-violet-900/50'
-                                        }`} />
+                                        <div
+                                          className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                                            slot.player.position === 'QB'
+                                              ? 'from-pink-600/30 to-purple-900/50'
+                                              : slot.player.position === 'RB'
+                                                ? 'from-teal-600/30 to-emerald-900/50'
+                                                : slot.player.position === 'WR'
+                                                  ? 'from-blue-600/30 to-indigo-900/50'
+                                                  : 'from-purple-600/30 to-violet-900/50'
+                                          }`}
+                                        />
                                         <PlayerHeadshot
                                           headshotUrl={slot.player.headshot_url}
                                           playerName={slot.player.playerName}
@@ -1244,12 +1254,17 @@ export default function LeagueBuddy({
                                       <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                                           <div className="relative flex-shrink-0">
-                                            <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
-                                              player.position === 'QB' ? 'from-pink-600/20 to-purple-900/40' :
-                                              player.position === 'RB' ? 'from-teal-600/20 to-emerald-900/40' :
-                                              player.position === 'WR' ? 'from-blue-600/20 to-indigo-900/40' :
-                                              'from-purple-600/20 to-violet-900/40'
-                                            }`} />
+                                            <div
+                                              className={`absolute inset-0 rounded-full bg-gradient-to-br ${
+                                                player.position === 'QB'
+                                                  ? 'from-pink-600/20 to-purple-900/40'
+                                                  : player.position === 'RB'
+                                                    ? 'from-teal-600/20 to-emerald-900/40'
+                                                    : player.position === 'WR'
+                                                      ? 'from-blue-600/20 to-indigo-900/40'
+                                                      : 'from-purple-600/20 to-violet-900/40'
+                                              }`}
+                                            />
                                             <PlayerHeadshot
                                               headshotUrl={player.headshot_url}
                                               playerName={player.playerName}

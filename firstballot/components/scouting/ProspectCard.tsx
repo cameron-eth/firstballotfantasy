@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { School, Star, GripVertical, Crown, Sparkles, TrendingUp, Gem } from 'lucide-react'
 import { ComparisonBadges } from './ComparisonBadges'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import type { Prospect } from './types'
 
 interface ProspectCardProps {
@@ -348,14 +349,8 @@ export function ProspectCard({
   }
 
   if (variant === 'dossier') {
-    const initials = prospect.name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-
     // Format physical attributes
-    const heightDisplay = prospect.height 
+    const heightDisplay = prospect.height
       ? `${Math.floor(prospect.height / 12)}'${Math.round(prospect.height % 12)}"`
       : null
     const weightDisplay = prospect.weight ? `${prospect.weight} lbs` : null
@@ -363,42 +358,35 @@ export function ProspectCard({
     return (
       <div
         className={`group relative overflow-hidden rounded-2xl border transition-all duration-500 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${tierStyles.card} ${tierStyles.glow} ${
-          !tierStyles.card ? 'bg-[#0a0f1a] border-white/[0.06] hover:border-blue-500/30 shadow-2xl' : ''
+          !tierStyles.card
+            ? 'bg-[#0a0f1a] border-white/[0.06] hover:border-blue-500/30 shadow-2xl'
+            : ''
         }`}
         onClick={() => onSelect(prospect)}
       >
         {/* Top Accent Bar */}
-        <div className={`h-1 w-full ${isDiamondTier ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-cyan-400' : tier === 'Tier 1' ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500' : 'bg-gradient-to-r from-blue-500/50 via-blue-400/30 to-blue-500/50'}`} />
+        <div
+          className={`h-1 w-full ${isDiamondTier ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-cyan-400' : tier === 'Tier 1' ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500' : 'bg-gradient-to-r from-blue-500/50 via-blue-400/30 to-blue-500/50'}`}
+        />
 
         <div className="p-4 relative z-10 h-full flex flex-col min-h-[240px]">
           {/* Header: Headshot + Info */}
           <div className="flex gap-4 mb-4">
             {/* Headshot */}
             <div className="relative flex-shrink-0">
-              {prospect.headshot_url ? (
-                <div className="w-20 h-20 rounded-xl bg-slate-900 border border-white/10 overflow-hidden shadow-xl group-hover:border-blue-500/40 transition-all">
-                  <img 
-                    src={prospect.headshot_url} 
-                    alt={prospect.name}
-                    className="w-full h-full object-cover object-top"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
-                      if (target.parentElement) {
-                        target.parentElement.innerHTML = `<span class="w-full h-full flex items-center justify-center text-xl font-black font-mono text-white/60">${initials}</span>`
-                      }
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="w-20 h-20 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl font-black font-mono text-white/40 shadow-xl group-hover:border-blue-500/40 group-hover:text-blue-400/60 transition-all">
-                  {initials}
-                </div>
-              )}
+              <PlayerHeadshot
+                headshotUrl={prospect.headshot_url}
+                espnId={prospect.espn_id}
+                playerName={prospect.name}
+                size={80}
+                className="rounded-xl border border-white/10 shadow-xl group-hover:border-blue-500/40 transition-all"
+              />
               {/* Jersey Number Badge */}
               {prospect.jersey && (
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-md bg-slate-950 border border-white/10 flex items-center justify-center">
-                  <span className="text-[9px] font-black text-white font-mono">#{prospect.jersey}</span>
+                  <span className="text-[9px] font-black text-white font-mono">
+                    #{prospect.jersey}
+                  </span>
                 </div>
               )}
             </div>
@@ -412,13 +400,15 @@ export function ProspectCard({
                 >
                   {prospect.position}
                 </Badge>
-                <span className={`text-[9px] font-black font-mono ${tierTextColor}`}>#{prospect.rank}</span>
+                <span className={`text-[9px] font-black font-mono ${tierTextColor}`}>
+                  #{prospect.rank}
+                </span>
               </div>
-              
+
               <h4 className="text-lg font-black text-white font-mono uppercase leading-tight tracking-tight truncate group-hover:text-blue-400 transition-colors">
                 {prospect.name}
               </h4>
-              
+
               <div className="flex items-center gap-1.5 mt-1 text-slate-500 text-[10px] font-mono font-bold uppercase tracking-wide">
                 <School className="h-2.5 w-2.5 flex-shrink-0" />
                 <span className="truncate">{prospect.school || 'TBD'}</span>
@@ -430,13 +420,17 @@ export function ProspectCard({
           <div className="flex items-center gap-3 mb-4 py-2 px-3 rounded-lg bg-white/[0.02] border border-white/[0.03]">
             {heightDisplay && (
               <div className="flex flex-col">
-                <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">HT</span>
+                <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">
+                  HT
+                </span>
                 <span className="text-xs font-black text-white font-mono">{heightDisplay}</span>
               </div>
             )}
             {weightDisplay && (
               <div className="flex flex-col">
-                <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">WT</span>
+                <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">
+                  WT
+                </span>
                 <span className="text-xs font-black text-white font-mono">{weightDisplay}</span>
               </div>
             )}
@@ -445,8 +439,12 @@ export function ProspectCard({
             )}
             <div className="flex-1" />
             <div className="flex flex-col items-end">
-              <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">Value</span>
-              <span className="text-xs font-black text-blue-400 font-mono">{getValue(prospect)}</span>
+              <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">
+                Value
+              </span>
+              <span className="text-xs font-black text-blue-400 font-mono">
+                {getValue(prospect)}
+              </span>
             </div>
           </div>
 
@@ -457,8 +455,12 @@ export function ProspectCard({
           <div className="pt-3 border-t border-white/[0.04]">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${gradeStyles.bg.includes('amber') ? 'bg-amber-400' : gradeStyles.bg.includes('emerald') ? 'bg-emerald-400' : 'bg-blue-400'} animate-pulse`} />
-                <span className="text-[10px] font-black text-white font-mono uppercase">{gradeTier}</span>
+                <div
+                  className={`w-1.5 h-1.5 rounded-full ${gradeStyles.bg.includes('amber') ? 'bg-amber-400' : gradeStyles.bg.includes('emerald') ? 'bg-emerald-400' : 'bg-blue-400'} animate-pulse`}
+                />
+                <span className="text-[10px] font-black text-white font-mono uppercase">
+                  {gradeTier}
+                </span>
               </div>
               <span className={`text-xs font-black font-mono ${gradeStyles.text}`}>
                 {prospect.overall_grade?.toFixed(0) || '--'}
@@ -505,7 +507,7 @@ export function ProspectCard({
 
           <div className="flex items-center justify-between mb-3 relative z-10">
             <div className="flex items-center gap-1.5 flex-wrap">
-               <Badge
+              <Badge
                 variant="outline"
                 className={`${tierStyles.badge} text-[9px] px-2 py-0.5 border font-black uppercase tracking-widest flex items-center gap-1`}
               >
@@ -529,7 +531,9 @@ export function ProspectCard({
               )}
             </div>
             <div className="flex items-center gap-1 bg-slate-950/40 rounded-full px-2 py-0.5 border border-white/5">
-              <span className={`${tierTextColor} font-mono font-black text-xs`}>#{prospect.rank}</span>
+              <span className={`${tierTextColor} font-mono font-black text-xs`}>
+                #{prospect.rank}
+              </span>
             </div>
           </div>
 
@@ -552,51 +556,65 @@ export function ProspectCard({
             <div className="mb-4 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-3 w-3 text-blue-400" />
-                <span className="text-[10px] font-black text-blue-300 uppercase tracking-widest">Market Steal</span>
+                <span className="text-[10px] font-black text-blue-300 uppercase tracking-widest">
+                  Market Steal
+                </span>
               </div>
-              <span className="text-[9px] font-mono text-blue-400">+{marketOpportunity.toFixed(0)} Index Delta</span>
+              <span className="text-[9px] font-mono text-blue-400">
+                +{marketOpportunity.toFixed(0)} Index Delta
+              </span>
             </div>
           )}
 
           {/* Enhanced Grade Visualizer */}
           <div className="grid grid-cols-2 gap-4 mb-4">
-             <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
-                <div className="text-[9px] text-gray-500 uppercase font-mono tracking-widest mb-1">Dynasty Value</div>
-                <div className="flex items-end gap-1">
-                   <div className={`text-2xl font-black ${tierTextColor} leading-none font-mono`}>{getValue(prospect)}</div>
-                   <div className="text-[10px] text-gray-600 font-mono mb-0.5">PTS</div>
+            <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
+              <div className="text-[9px] text-gray-500 uppercase font-mono tracking-widest mb-1">
+                Dynasty Value
+              </div>
+              <div className="flex items-end gap-1">
+                <div className={`text-2xl font-black ${tierTextColor} leading-none font-mono`}>
+                  {getValue(prospect)}
                 </div>
-             </div>
-             <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
-                <div className="flex justify-between items-center mb-1">
-                   <div className="text-[9px] text-gray-500 uppercase font-mono tracking-widest">{gradeTier}</div>
-                   <div className={`text-xs font-black ${gradeStyles.text} font-mono`}>{prospect.overall_grade?.toFixed(1) || '-'}</div>
+                <div className="text-[10px] text-gray-600 font-mono mb-0.5">PTS</div>
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
+              <div className="flex justify-between items-center mb-1">
+                <div className="text-[9px] text-gray-500 uppercase font-mono tracking-widest">
+                  {gradeTier}
                 </div>
-                {/* Visual Grade Bar */}
-                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
-                   <div 
-                     className={`h-full ${gradeStyles.bg} opacity-80`}
-                     style={{ width: `${prospect.overall_grade || 50}%` }}
-                   />
+                <div className={`text-xs font-black ${gradeStyles.text} font-mono`}>
+                  {prospect.overall_grade?.toFixed(1) || '-'}
                 </div>
-                <div className="flex justify-between mt-1 opacity-40">
-                   <span className="text-[7px] text-gray-500 font-mono">50</span>
-                   <span className="text-[7px] text-gray-500 font-mono">100</span>
-                </div>
-             </div>
+              </div>
+              {/* Visual Grade Bar */}
+              <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
+                <div
+                  className={`h-full ${gradeStyles.bg} opacity-80`}
+                  style={{ width: `${prospect.overall_grade || 50}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-1 opacity-40">
+                <span className="text-[7px] text-gray-500 font-mono">50</span>
+                <span className="text-[7px] text-gray-500 font-mono">100</span>
+              </div>
+            </div>
           </div>
 
           {/* Physical Attributes with Better UI */}
           {(prospect.height || prospect.weight) && (
             <div className="flex items-center gap-4 mb-4 px-2">
-               <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
-                  <span className="text-[10px] text-gray-400 font-mono">{formatHeight(prospect.height)}</span>
-               </div>
-               <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-                  <span className="text-[10px] text-gray-400 font-mono">{prospect.weight} LBS</span>
-               </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
+                <span className="text-[10px] text-gray-400 font-mono">
+                  {formatHeight(prospect.height)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+                <span className="text-[10px] text-gray-400 font-mono">{prospect.weight} LBS</span>
+              </div>
             </div>
           )}
 
@@ -643,7 +661,9 @@ export function ProspectCard({
           {isOnBoard && (
             <div className="mt-3 flex items-center justify-center gap-2 py-1 bg-blue-500/5 rounded-full border border-blue-500/10">
               <Sparkles className="h-2.5 w-2.5 text-blue-400 animate-pulse" />
-              <span className="text-blue-300 text-[9px] font-black uppercase tracking-widest">On Draft Board</span>
+              <span className="text-blue-300 text-[9px] font-black uppercase tracking-widest">
+                On Draft Board
+              </span>
             </div>
           )}
         </div>

@@ -39,7 +39,8 @@ interface Prospect {
 
 // Helper to generate headshot URL from ESPN ID
 const getHeadshotUrl = (espnId: number | null): string | null => {
-  if (espnId) return `https://a.espncdn.com/combiner/i?img=/i/headshots/college-football/players/full/${espnId}.png&w=350&h=254`
+  if (espnId)
+    return `https://a.espncdn.com/combiner/i?img=/i/headshots/college-football/players/full/${espnId}.png&w=350&h=254`
   return null
 }
 
@@ -117,7 +118,8 @@ export async function GET(request: NextRequest) {
         hometown: record.hometown,
         jersey: record.jersey,
         class: record.class || null,
-        headshot_url: record.headshot_url || getHeadshotUrl(record.espn_id ? Number(record.espn_id) : null),
+        headshot_url:
+          record.headshot_url || getHeadshotUrl(record.espn_id ? Number(record.espn_id) : null),
         team_color: record.team_color,
         college_stats: record.college_stats || null,
         draft_year: record.draft_year,

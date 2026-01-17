@@ -23,7 +23,7 @@ export interface Prospect {
   weight: number | null
   hometown?: string | null
   jersey?: number | null
-  class?: string | null  // Freshman, Sophomore, Junior, Senior
+  class?: string | null // Freshman, Sophomore, Junior, Senior
   // Headshot & Team
   headshot_url?: string | null
   team_color?: string | null

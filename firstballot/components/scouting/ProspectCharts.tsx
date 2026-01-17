@@ -2,12 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  type CarouselApi,
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from '@/components/ui/carousel'
+import { type CarouselApi, Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
 import { BarChart3, PieChart, TrendingUp, Users } from 'lucide-react'
 import type { Prospect } from './types'
 
@@ -140,7 +135,9 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                 .map(([position, count]) => (
                   <div key={position} className="group/item">
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-blue-300 transition-colors">{position}</span>
+                      <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-blue-300 transition-colors">
+                        {position}
+                      </span>
                       <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
                     </div>
                     <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
@@ -218,7 +215,9 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                     <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-400 opacity-40 group-hover/item:opacity-100 transition-opacity"
-                        style={{ width: `${((count as number) / Math.max(...Object.values(gradeTierDistribution) as number[], 1)) * 100}%` }}
+                        style={{
+                          width: `${((count as number) / Math.max(...(Object.values(gradeTierDistribution) as number[]), 1)) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -244,13 +243,17 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                 .map(([pos, count]) => (
                   <div key={pos} className="group/item">
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-orange-300 transition-colors">{pos}</span>
+                      <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-orange-300 transition-colors">
+                        {pos}
+                      </span>
                       <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
                     </div>
                     <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-orange-500 opacity-40 group-hover/item:opacity-100 transition-opacity"
-                        style={{ width: `${((count as number) / Math.max(...Object.values(positionalScarcity) as number[], 1)) * 100}%` }}
+                        style={{
+                          width: `${((count as number) / Math.max(...(Object.values(positionalScarcity) as number[]), 1)) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -276,7 +279,9 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                 .map(([range, count], i) => (
                   <div key={range} className="group/item">
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-blue-300 transition-colors">{range}</span>
+                      <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-blue-300 transition-colors">
+                        {range}
+                      </span>
                       <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
                     </div>
                     <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
@@ -333,8 +338,12 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                           .map(([position, count]) => (
                             <div key={position} className="group/item">
                               <div className="flex justify-between items-center mb-0.5">
-                                <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-blue-300 transition-colors">{position}</span>
-                                <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
+                                <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-blue-300 transition-colors">
+                                  {position}
+                                </span>
+                                <span className="text-[9px] font-mono text-slate-600">
+                                  {count as number}
+                                </span>
                               </div>
                               <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
                                 <div
@@ -382,7 +391,9 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                                 <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-purple-300 transition-colors">
                                   {tier.replace('Tier ', 'T')}
                                 </span>
-                                <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
+                                <span className="text-[9px] font-mono text-slate-600">
+                                  {count as number}
+                                </span>
                               </div>
                               <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
                                 <div
@@ -421,13 +432,15 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                                 <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-green-300 transition-colors truncate max-w-[80px]">
                                   {gradeTier}
                                 </span>
-                                <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
+                                <span className="text-[9px] font-mono text-slate-600">
+                                  {count as number}
+                                </span>
                               </div>
                               <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-green-400 opacity-40 group-hover/item:opacity-100 transition-opacity"
                                   style={{
-                                    width: `${((count as number) / Math.max(...Object.values(gradeTierDistribution) as number[], 1)) * 100}%`,
+                                    width: `${((count as number) / Math.max(...(Object.values(gradeTierDistribution) as number[]), 1)) * 100}%`,
                                   }}
                                 />
                               </div>
@@ -456,14 +469,18 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                           .map(([pos, count]) => (
                             <div key={pos} className="group/item">
                               <div className="flex justify-between items-center mb-0.5">
-                                <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-orange-300 transition-colors">{pos}</span>
-                                <span className="text-[9px] font-mono text-slate-600">{count as number}</span>
+                                <span className="text-[9px] text-slate-500 font-mono font-bold group-hover/item:text-orange-300 transition-colors">
+                                  {pos}
+                                </span>
+                                <span className="text-[9px] font-mono text-slate-600">
+                                  {count as number}
+                                </span>
                               </div>
                               <div className="h-0.5 w-full bg-slate-900 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-orange-500 opacity-40 group-hover/item:opacity-100 transition-opacity"
                                   style={{
-                                    width: `${((count as number) / Math.max(...Object.values(positionalScarcity) as number[], 1)) * 100}%`,
+                                    width: `${((count as number) / Math.max(...(Object.values(positionalScarcity) as number[]), 1)) * 100}%`,
                                   }}
                                 />
                               </div>
@@ -554,8 +571,12 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                       .map(([position, count]) => (
                         <div key={position} className="group/item">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-[10px] text-slate-400 font-mono font-bold">{position}</span>
-                            <span className="text-[10px] font-mono text-slate-500">{count as number}</span>
+                            <span className="text-[10px] text-slate-400 font-mono font-bold">
+                              {position}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-500">
+                              {count as number}
+                            </span>
                           </div>
                           <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
                             <div
@@ -604,7 +625,9 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                             <span className="text-[10px] text-slate-400 font-mono font-bold">
                               {tier.replace('Tier ', 'T')}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-500">{count as number}</span>
+                            <span className="text-[10px] font-mono text-slate-500">
+                              {count as number}
+                            </span>
                           </div>
                           <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
                             <div
@@ -644,13 +667,15 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                             <span className="text-[10px] text-slate-400 font-mono font-bold truncate max-w-[80px]">
                               {gradeTier}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-500">{count as number}</span>
+                            <span className="text-[10px] font-mono text-slate-500">
+                              {count as number}
+                            </span>
                           </div>
                           <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-green-400 rounded-full"
                               style={{
-                                width: `${((count as number) / Math.max(...Object.values(gradeTierDistribution) as number[], 1)) * 100}%`,
+                                width: `${((count as number) / Math.max(...(Object.values(gradeTierDistribution) as number[]), 1)) * 100}%`,
                               }}
                             />
                           </div>
@@ -671,7 +696,10 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                       Scarcity
                     </CardTitle>
                     <span className="text-xl font-black text-white font-mono leading-none">
-                      {Object.values(positionalScarcity).reduce((a, b) => (a as number) + (b as number), 0)}
+                      {Object.values(positionalScarcity).reduce(
+                        (a, b) => (a as number) + (b as number),
+                        0
+                      )}
                     </span>
                   </div>
                 </CardHeader>
@@ -682,14 +710,18 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                       .map(([pos, count]) => (
                         <div key={pos} className="group/item">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-[10px] text-slate-400 font-mono font-bold">{pos}</span>
-                            <span className="text-[10px] font-mono text-slate-500">{count as number} Left</span>
+                            <span className="text-[10px] text-slate-400 font-mono font-bold">
+                              {pos}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-500">
+                              {count as number} Left
+                            </span>
                           </div>
                           <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-orange-500 rounded-full"
                               style={{
-                                width: `${((count as number) / Math.max(...Object.values(positionalScarcity) as number[], 1)) * 100}%`,
+                                width: `${((count as number) / Math.max(...(Object.values(positionalScarcity) as number[]), 1)) * 100}%`,
                               }}
                             />
                           </div>

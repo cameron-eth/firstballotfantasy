@@ -135,7 +135,10 @@ export function ProspectComparison({ prospects, onProspectSelect }: ProspectComp
       {
         metric: 'Rank',
         ...Object.fromEntries(
-          selectedProspects.map((p) => [p.name, ((maxRank - (p.rank || maxRank) + 1) / maxRank) * 100])
+          selectedProspects.map((p) => [
+            p.name,
+            ((maxRank - (p.rank || maxRank) + 1) / maxRank) * 100,
+          ])
         ),
       },
     ]
@@ -354,9 +357,13 @@ export function ProspectComparison({ prospects, onProspectSelect }: ProspectComp
                         border: '1px solid #1e293b',
                         borderRadius: '12px',
                       }}
-                      formatter={(value: number, name: string, props: { payload: { fullName: string; position: string } }) => [
+                      formatter={(
+                        value: number,
+                        _name: string,
+                        props: any
+                      ) => [
                         `${value.toFixed(1)}`,
-                        `${props.payload.fullName} (${props.payload.position})`,
+                        `${props.payload?.fullName} (${props.payload?.position})`,
                       ]}
                     />
                     <Bar dataKey="grade" radius={[0, 4, 4, 0]}>
@@ -502,4 +509,3 @@ export function ProspectComparison({ prospects, onProspectSelect }: ProspectComp
     </div>
   )
 }
-

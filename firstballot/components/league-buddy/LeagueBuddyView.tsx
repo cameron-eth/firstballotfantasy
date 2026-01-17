@@ -21,12 +21,12 @@ import { useLeagueContext } from '@/lib/league-context'
 export function LeagueBuddyView() {
   const { user: authUser } = useAuth()
   const { isMember, loading: membershipLoading } = useMembershipCheck()
-  const { 
-    selectedLeagueId, 
-    selectLeague, 
-    leagues, 
+  const {
+    selectedLeagueId,
+    selectLeague,
+    leagues,
     isLoading: leaguesLoading,
-    selectedLeague 
+    selectedLeague,
   } = useLeagueContext()
 
   const [username, setUsername] = useState('')
@@ -51,7 +51,7 @@ export function LeagueBuddyView() {
         if (data?.sleeper_username) {
           setUsername(data.sleeper_username)
           setNoSleeperUsername(false)
-          
+
           const userData = await sleeperApi.getUser(data.sleeper_username)
           if (userData) {
             setSleeperUser(userData as SleeperUser)
@@ -83,7 +83,7 @@ export function LeagueBuddyView() {
 
         const userData = await sleeperApi.getUser(currentUsername)
         if (!userData) throw new Error('Sleeper user not found')
-        
+
         setSleeperUser(userData as SleeperUser)
 
         await userApi.updateUserSleeperProfile({

@@ -27,41 +27,44 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   // Derived selected league
   const selectedLeague = useMemo(() => {
     if (!selectedLeagueId) return leagues[0] || null
-    return leagues.find(l => l.league_id === selectedLeagueId) || leagues[0] || null
+    return leagues.find((l) => l.league_id === selectedLeagueId) || leagues[0] || null
   }, [leagues, selectedLeagueId])
 
   // Fetch leagues for a Sleeper username
-  const fetchLeaguesForUsername = useCallback(async (sleeperUsername: string): Promise<UserLeague[]> => {
-    try {
-      const userResponse = await fetch(`${SLEEPER_API_BASE}/user/${sleeperUsername}`)
-      if (!userResponse.ok) throw new Error('Sleeper user not found')
-      
-      const sleeperUser = await userResponse.json()
-      const sleeperId = sleeperUser.user_id
+  const fetchLeaguesForUsername = useCallback(
+    async (sleeperUsername: string): Promise<UserLeague[]> => {
+      try {
+        const userResponse = await fetch(`${SLEEPER_API_BASE}/user/${sleeperUsername}`)
+        if (!userResponse.ok) throw new Error('Sleeper user not found')
 
-      const currentYear = new Date().getFullYear()
-      const leaguesResponse = await fetch(
-        `${SLEEPER_API_BASE}/user/${sleeperId}/leagues/nfl/${currentYear}`
-      )
-      
-      if (!leaguesResponse.ok) throw new Error('Failed to fetch leagues')
+        const sleeperUser = await userResponse.json()
+        const sleeperId = sleeperUser.user_id
 
-      const leaguesData: SleeperLeagueResponse[] = await leaguesResponse.json()
-      
-      return leaguesData.map((league) => ({
-        league_id: league.league_id,
-        name: league.name,
-        season: league.season,
-        total_rosters: league.total_rosters,
-        roster_positions: league.roster_positions,
-        scoring_settings: league.scoring_settings,
-        status: league.status as UserLeague['status'],
-      }))
-    } catch (err) {
-      console.error('Error fetching leagues:', err)
-      return []
-    }
-  }, [])
+        const currentYear = new Date().getFullYear()
+        const leaguesResponse = await fetch(
+          `${SLEEPER_API_BASE}/user/${sleeperId}/leagues/nfl/${currentYear}`
+        )
+
+        if (!leaguesResponse.ok) throw new Error('Failed to fetch leagues')
+
+        const leaguesData: SleeperLeagueResponse[] = await leaguesResponse.json()
+
+        return leaguesData.map((league) => ({
+          league_id: league.league_id,
+          name: league.name,
+          season: league.season,
+          total_rosters: league.total_rosters,
+          roster_positions: league.roster_positions,
+          scoring_settings: league.scoring_settings,
+          status: league.status as UserLeague['status'],
+        }))
+      } catch (err) {
+        console.error('Error fetching leagues:', err)
+        return []
+      }
+    },
+    []
+  )
 
   // Initial load
   const loadLeagues = useCallback(async () => {
@@ -75,7 +78,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     try {
       // 1. Get user profile
       const profileResponse = await fetch('/api/user-profile')
-      
+
       if (!profileResponse.ok) {
         // If profile doesn't exist or unauthorized, just assume no leagues for now
         if (profileResponse.status === 404 || profileResponse.status === 401) {
@@ -85,7 +88,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
         }
         throw new Error(`Profile fetch failed: ${profileResponse.status}`)
       }
-      
+
       const profile = await profileResponse.json()
       if (!profile.sleeper_username) {
         setLeagues([])
@@ -99,7 +102,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
       // 3. Restore selected league from cache
       const cachedId = localStorage.getItem(STORAGE_KEY) || leagueCache.getLeagueId()
-      if (cachedId && userLeagues.some(l => l.league_id === cachedId)) {
+      if (cachedId && userLeagues.some((l) => l.league_id === cachedId)) {
         setSelectedLeagueId(cachedId)
       } else if (userLeagues.length > 0) {
         setSelectedLeagueId(userLeagues[0].league_id)
@@ -149,35 +152,34 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Context value
-  const value: LeagueContextType = useMemo(() => ({
-    selectedLeagueId,
-    selectedLeague,
-    leagues,
-    isLoading,
-    error,
-    selectLeague,
-    addLeague,
-    removeLeague,
-    refreshLeagues,
-    setDefaultLeague,
-  }), [
-    selectedLeagueId,
-    selectedLeague,
-    leagues,
-    isLoading,
-    error,
-    selectLeague,
-    addLeague,
-    removeLeague,
-    refreshLeagues,
-    setDefaultLeague,
-  ])
-
-  return (
-    <LeagueContext.Provider value={value}>
-      {children}
-    </LeagueContext.Provider>
+  const value: LeagueContextType = useMemo(
+    () => ({
+      selectedLeagueId,
+      selectedLeague,
+      leagues,
+      isLoading,
+      error,
+      selectLeague,
+      addLeague,
+      removeLeague,
+      refreshLeagues,
+      setDefaultLeague,
+    }),
+    [
+      selectedLeagueId,
+      selectedLeague,
+      leagues,
+      isLoading,
+      error,
+      selectLeague,
+      addLeague,
+      removeLeague,
+      refreshLeagues,
+      setDefaultLeague,
+    ]
   )
+
+  return <LeagueContext.Provider value={value}>{children}</LeagueContext.Provider>
 }
 
 // Hook to use league context
@@ -194,4 +196,3 @@ export function useSelectedLeague(): UserLeague | null {
   const { selectedLeague } = useLeagueContext()
   return selectedLeague
 }
-

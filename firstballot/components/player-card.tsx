@@ -24,7 +24,6 @@ interface PlayerCardProps {
   player: Player
 }
 
-
 export function PlayerCard({ player }: PlayerCardProps) {
   const position = player.position || player.tier?.split(' ')[0] || ''
   const [imageError, setImageError] = useState(false)
@@ -78,7 +77,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
                 ) : (
                   <User style={{ width: 32, height: 32 }} />
                 )}
-            </div>
+              </div>
             ) : (
               <div
                 className="relative overflow-hidden rounded-lg bg-slate-700"
@@ -98,9 +97,9 @@ export function PlayerCard({ player }: PlayerCardProps) {
                   }}
                   style={{ display: 'block' }}
                 />
-          </div>
+              </div>
             )}
-        </div>
+          </div>
 
           {/* Right: Player Info */}
           <div className="flex-1 min-w-0">
@@ -109,12 +108,10 @@ export function PlayerCard({ player }: PlayerCardProps) {
               {position && (
                 <div className="px-2 py-0.5 rounded-full bg-slate-600/80 text-white text-xs font-medium">
                   {position}
-        </div>
+                </div>
               )}
             </div>
-            {player.team && (
-              <p className="text-sm text-slate-400">{player.team}</p>
-            )}
+            {player.team && <p className="text-sm text-slate-400">{player.team}</p>}
           </div>
         </div>
       </CardContent>

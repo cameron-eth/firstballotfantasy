@@ -110,7 +110,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   // Compare average grade (use overall_grade, fallback to valuation for legacy data)
   const valuationComparison = useMemo(() => {
     const getGrade = (p: Prospect) => p.overall_grade || p.valuation || 0
-    
+
     const currentAvg =
       currentProspects.length > 0
         ? currentProspects.reduce((sum, p) => sum + getGrade(p), 0) / currentProspects.length
@@ -240,7 +240,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-slate-900/40 rounded-2xl border border-white/5">
-                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">2026 Class</div>
+                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">
+                    2026 Class
+                  </div>
                   <div className="text-3xl font-black text-white font-mono tracking-tighter">
                     {valuationComparison.current.toFixed(1)}
                   </div>
@@ -254,7 +256,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                   </div>
                 </div>
                 <div className="text-center p-4 bg-slate-900/40 rounded-2xl border border-white/5">
-                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">Grade Delta</div>
+                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">
+                    Grade Delta
+                  </div>
                   <div
                     className={`text-3xl font-black font-mono tracking-tighter ${
                       valuationComparison.change >= 0 ? 'text-green-400' : 'text-red-400'
@@ -298,13 +302,18 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                         >
                           {pos.position}
                         </Badge>
-                        <span className={`text-[10px] font-black font-mono ${pos.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {pos.change >= 0 ? '+' : ''}{pos.change}
+                        <span
+                          className={`text-[10px] font-black font-mono ${pos.change >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                        >
+                          {pos.change >= 0 ? '+' : ''}
+                          {pos.change}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-[10px] text-gray-500 font-mono font-bold">
                         <span>2026: {pos.current}</span>
-                        <span>{selectedYear === 'all' ? 'Database' : selectedYear}: {pos.historical}</span>
+                        <span>
+                          {selectedYear === 'all' ? 'Database' : selectedYear}: {pos.historical}
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -323,7 +332,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                           className={`absolute inset-y-0 left-0 ${positionColors[pos.position] || 'bg-slate-500'} opacity-30 rounded-full origin-left`}
                           style={{
                             width: `${(pos.historical / maxPositionCount) * 100}%`,
-                            animation: mounted ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both` : 'none',
+                            animation: mounted
+                              ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both`
+                              : 'none',
                             transformOrigin: 'left center',
                           }}
                         />
@@ -355,13 +366,18 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                         >
                           {tier.tier}
                         </Badge>
-                        <span className={`text-[10px] font-black font-mono ${tier.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {tier.change >= 0 ? '+' : ''}{tier.change}
+                        <span
+                          className={`text-[10px] font-black font-mono ${tier.change >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                        >
+                          {tier.change >= 0 ? '+' : ''}
+                          {tier.change}
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-[10px] text-gray-500 font-mono font-bold">
                         <span>2026: {tier.current}</span>
-                        <span>{selectedYear === 'all' ? 'Database' : selectedYear}: {tier.historical}</span>
+                        <span>
+                          {selectedYear === 'all' ? 'Database' : selectedYear}: {tier.historical}
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -380,7 +396,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                           className={`absolute inset-y-0 left-0 ${tierColors[tier.tier] || 'bg-gray-400'} opacity-30 rounded-full origin-left`}
                           style={{
                             width: `${(tier.historical / maxTierCount) * 100}%`,
-                            animation: mounted ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both` : 'none',
+                            animation: mounted
+                              ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both`
+                              : 'none',
                             transformOrigin: 'left center',
                           }}
                         />
@@ -426,7 +444,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                 <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
                   <Shield className="h-6 w-6 text-slate-600" />
                 </div>
-                <p className="text-sm font-black font-mono text-slate-500 uppercase tracking-[0.2em]">No prospects found for {selectedYear}</p>
+                <p className="text-sm font-black font-mono text-slate-500 uppercase tracking-[0.2em]">
+                  No prospects found for {selectedYear}
+                </p>
               </div>
             )}
           </div>

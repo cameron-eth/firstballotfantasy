@@ -4,13 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { 
-  Trophy, 
-  Search, 
-  ShoppingCart, 
-  BarChart3,
-  Home
-} from 'lucide-react'
+import { Trophy, Search, ShoppingCart, BarChart3, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function BottomNav() {
@@ -37,8 +31,8 @@ export function BottomNav() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center justify-center py-2 px-1 relative transition-colors duration-200",
-                  isActive ? "text-yellow-400" : "text-gray-400 hover:text-gray-200"
+                  'flex flex-col items-center justify-center py-2 px-1 relative transition-colors duration-200',
+                  isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-200'
                 )}
               >
                 <div className="relative">
@@ -47,7 +41,7 @@ export function BottomNav() {
                     <motion.div
                       layoutId="bottom-nav-active"
                       className="absolute -inset-1 bg-yellow-400/10 rounded-lg -z-10"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                     />
                   )}
                 </div>
@@ -58,7 +52,7 @@ export function BottomNav() {
                   <motion.div
                     layoutId="bottom-nav-dot"
                     className="w-1 h-1 bg-yellow-400 rounded-full mt-0.5"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                   />
                 )}
               </Link>
@@ -69,5 +63,3 @@ export function BottomNav() {
     </div>
   )
 }
-
-

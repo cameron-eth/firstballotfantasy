@@ -50,7 +50,11 @@ export function TradeCalculatorView() {
                   disabled={loading}
                   className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black font-mono h-14 rounded-xl uppercase tracking-widest transition-all active:scale-95"
                 >
-                  {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Scale className="h-5 w-5 mr-2" />}
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  ) : (
+                    <Scale className="h-5 w-5 mr-2" />
+                  )}
                   Evaluate Assets
                 </Button>
               </div>
@@ -96,13 +100,19 @@ export function TradeCalculatorView() {
                 <X className="h-4 w-4 text-red-400" />
               </div>
               <div>
-                <p className="text-red-400 font-black font-mono text-[10px] uppercase tracking-widest">Analysis Failure</p>
+                <p className="text-red-400 font-black font-mono text-[10px] uppercase tracking-widest">
+                  Analysis Failure
+                </p>
                 <p className="text-red-300/70 text-xs font-mono">{error}</p>
               </div>
             </div>
           )}
 
-          {result && <div className="mt-10"><TradeResultCard result={result} /></div>}
+          {result && (
+            <div className="mt-10">
+              <TradeResultCard result={result} />
+            </div>
+          )}
 
           {!result && !loading && side1.length === 0 && side2.length === 0 && (
             <Card className="bg-slate-950/40 border border-white/5 rounded-2xl shadow-none mt-10">
@@ -110,7 +120,9 @@ export function TradeCalculatorView() {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/5 border border-white/10 mb-8 rotate-3 hover:rotate-0 transition-transform duration-500">
                   <Scale className="h-10 w-10 text-slate-600" />
                 </div>
-                <h3 className="text-white font-black font-mono text-lg uppercase tracking-tight mb-2">Initialize Trade Matrix</h3>
+                <h3 className="text-white font-black font-mono text-lg uppercase tracking-tight mb-2">
+                  Initialize Trade Matrix
+                </h3>
                 <p className="text-slate-500 font-mono text-xs uppercase tracking-widest max-w-sm mx-auto leading-relaxed">
                   Add assets to both sides to activate the ML valuation engine.
                 </p>

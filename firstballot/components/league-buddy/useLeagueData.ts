@@ -165,7 +165,12 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
 
       const rosterStatsMap: Record<
         string,
-        { fantasy_ppg: number; total_fantasy_points: number; games_played: number; headshot_url?: string | null }
+        {
+          fantasy_ppg: number
+          total_fantasy_points: number
+          games_played: number
+          headshot_url?: string | null
+        }
       > = {}
 
       if (allSleeperPlayerIds.length > 0) {
@@ -184,6 +189,7 @@ export function useLeagueData(leagueId: string, user?: any): UseLeagueDataReturn
                 fantasy_ppg: number | string
                 total_fantasy_points: number | string
                 games_played: number
+                headshot_url?: string | null
               }) => {
                 rosterStatsMap[playerStats.sleeper_player_id] = {
                   fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,

@@ -27,9 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${inter.className} ${firaCode.className} bg-slate-900 text-gray-100 min-h-screen`}
       >
         <AuthProvider>
-          <LeagueProvider>
-            {children}
-          </LeagueProvider>
+          <LeagueProvider>{children}</LeagueProvider>
         </AuthProvider>
         <Analytics />
       </body>

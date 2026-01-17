@@ -46,15 +46,22 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
             <CardContent className="p-0">
               <div className="bg-blue-500/5 p-6 border-b border-white/5 flex justify-between items-end">
                 <div>
-                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">Cumulative Index</div>
+                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">
+                    Cumulative Index
+                  </div>
                   <div className="text-4xl font-black text-white font-mono tracking-tighter">
                     {result.side1_total.toLocaleString()}
                   </div>
                 </div>
                 {result.side1_rank && (
                   <div className="text-right">
-                    <div className="text-[9px] text-slate-600 font-mono uppercase mb-1">Primary Rank</div>
-                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 font-mono text-[10px] px-2">
+                    <div className="text-[9px] text-slate-600 font-mono uppercase mb-1">
+                      Primary Rank
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-500/10 text-blue-400 border-blue-500/20 font-mono text-[10px] px-2"
+                    >
                       #{result.side1_rank}
                     </Badge>
                   </div>
@@ -78,11 +85,17 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                         )}
                       </div>
                       <div>
-                        <div className="text-xs font-black text-white font-mono uppercase tracking-tight group-hover/asset:text-blue-400 transition-colors">{item.name}</div>
+                        <div className="text-xs font-black text-white font-mono uppercase tracking-tight group-hover/asset:text-blue-400 transition-colors">
+                          {item.name}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] text-slate-500 font-mono font-bold">{item.position}</span>
+                          <span className="text-[9px] text-slate-500 font-mono font-bold">
+                            {item.position}
+                          </span>
                           <span className="text-[9px] text-slate-700 font-mono">•</span>
-                          <span className={`text-[9px] font-black font-mono uppercase tracking-tighter ${getTierColor(item.tier).split(' ')[1]}`}>
+                          <span
+                            className={`text-[9px] font-black font-mono uppercase tracking-tighter ${getTierColor(item.tier).split(' ')[1]}`}
+                          >
                             {item.tier}
                           </span>
                         </div>
@@ -97,8 +110,13 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                   </div>
                 ))}
                 {result.side1_not_found.map((name, i) => (
-                  <div key={i} className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between">
-                    <span className="text-[10px] text-red-400 font-mono italic">Missing Data: {name}</span>
+                  <div
+                    key={i}
+                    className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between"
+                  >
+                    <span className="text-[10px] text-red-400 font-mono italic">
+                      Missing Data: {name}
+                    </span>
                     <Minus className="h-3 w-3 text-red-900" />
                   </div>
                 ))}
@@ -116,15 +134,22 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
             <CardContent className="p-0">
               <div className="bg-purple-500/5 p-6 border-b border-white/5 flex justify-between items-end">
                 <div>
-                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">Cumulative Index</div>
+                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">
+                    Cumulative Index
+                  </div>
                   <div className="text-4xl font-black text-white font-mono tracking-tighter">
                     {result.side2_total.toLocaleString()}
                   </div>
                 </div>
                 {result.side2_rank && (
                   <div className="text-right">
-                    <div className="text-[9px] text-slate-600 font-mono uppercase mb-1">Primary Rank</div>
-                    <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20 font-mono text-[10px] px-2">
+                    <div className="text-[9px] text-slate-600 font-mono uppercase mb-1">
+                      Primary Rank
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="bg-purple-500/10 text-purple-400 border-purple-500/20 font-mono text-[10px] px-2"
+                    >
                       #{result.side2_rank}
                     </Badge>
                   </div>
@@ -148,11 +173,17 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                         )}
                       </div>
                       <div>
-                        <div className="text-xs font-black text-white font-mono uppercase tracking-tight group-hover/asset:text-purple-400 transition-colors">{item.name}</div>
+                        <div className="text-xs font-black text-white font-mono uppercase tracking-tight group-hover/asset:text-purple-400 transition-colors">
+                          {item.name}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] text-slate-500 font-mono font-bold">{item.position}</span>
+                          <span className="text-[9px] text-slate-500 font-mono font-bold">
+                            {item.position}
+                          </span>
                           <span className="text-[9px] text-slate-700 font-mono">•</span>
-                          <span className={`text-[9px] font-black font-mono uppercase tracking-tighter ${getTierColor(item.tier).split(' ')[1]}`}>
+                          <span
+                            className={`text-[9px] font-black font-mono uppercase tracking-tighter ${getTierColor(item.tier).split(' ')[1]}`}
+                          >
                             {item.tier}
                           </span>
                         </div>
@@ -167,8 +198,13 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                   </div>
                 ))}
                 {result.side2_not_found.map((name, i) => (
-                  <div key={i} className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between">
-                    <span className="text-[10px] text-red-400 font-mono italic">Missing Data: {name}</span>
+                  <div
+                    key={i}
+                    className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between"
+                  >
+                    <span className="text-[10px] text-red-400 font-mono italic">
+                      Missing Data: {name}
+                    </span>
                     <Minus className="h-3 w-3 text-red-900" />
                   </div>
                 ))}

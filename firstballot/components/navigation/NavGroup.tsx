@@ -37,24 +37,19 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
   }
 
   return (
-    <div 
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       <button
         className={cn(
-          "flex items-center space-x-1 px-4 py-2 text-sm font-mono transition-all duration-200 rounded-lg",
-          isActive 
-            ? "text-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.1)]" 
-            : "text-gray-300 hover:text-white hover:bg-slate-700/50"
+          'flex items-center space-x-1 px-4 py-2 text-sm font-mono transition-all duration-200 rounded-lg',
+          isActive
+            ? 'text-yellow-400 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.1)]'
+            : 'text-gray-300 hover:text-white hover:bg-slate-700/50'
         )}
       >
         <span>{label}</span>
-        <ChevronDown className={cn(
-          "h-3 w-3 transition-transform duration-200",
-          isOpen && "rotate-180"
-        )} />
+        <ChevronDown
+          className={cn('h-3 w-3 transition-transform duration-200', isOpen && 'rotate-180')}
+        />
       </button>
 
       <AnimatePresence>
@@ -63,7 +58,7 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className="absolute top-full left-0 mt-1 w-64 z-50"
           >
             <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 backdrop-blur-md bg-opacity-95">
@@ -75,12 +70,12 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
                   return (
                     <Link
                       key={item.name}
-                      href={isDisabled ? "#" : item.href}
+                      href={isDisabled ? '#' : item.href}
                       className={cn(
-                        "flex items-start p-3 rounded-lg transition-all duration-200",
-                        isDisabled 
-                          ? "opacity-50 cursor-not-allowed grayscale" 
-                          : "hover:bg-slate-700/50 group"
+                        'flex items-start p-3 rounded-lg transition-all duration-200',
+                        isDisabled
+                          ? 'opacity-50 cursor-not-allowed grayscale'
+                          : 'hover:bg-slate-700/50 group'
                       )}
                       onClick={(e) => {
                         if (isDisabled) e.preventDefault()
@@ -113,5 +108,3 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
     </div>
   )
 }
-
-

@@ -235,7 +235,7 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
               ) : (
                 transactions.map((tx) => {
                   const teamNames = (tx.rosterIds || [])
-                    .map((rosterId) => {
+                    .map((rosterId: number) => {
                       const team = teams.find((t) => t.rosterId === rosterId)
                       return team?.teamName || `Team ${rosterId}`
                     })

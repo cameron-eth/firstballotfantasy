@@ -41,8 +41,9 @@ export function AllTimeRankingsTab() {
 
   const filteredProspects = useMemo(() => {
     return prospects.filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           p.school.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.school.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesPosition = positionFilter === 'all' || p.position === positionFilter
       return matchesSearch && matchesPosition
     })
@@ -88,7 +89,7 @@ export function AllTimeRankingsTab() {
               className="pl-10 h-10 bg-slate-950/60 border-white/5 text-white w-full sm:w-64 focus:border-yellow-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
             />
           </div>
-          
+
           <Select value={positionFilter} onValueChange={setPositionFilter}>
             <SelectTrigger className="h-10 w-full sm:w-36 bg-slate-950/60 border-white/5 text-white focus:border-yellow-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
               <SelectValue placeholder="Position" />
@@ -107,7 +108,9 @@ export function AllTimeRankingsTab() {
       {loading ? (
         <div className="text-center py-20">
           <div className="w-10 h-10 border-2 border-yellow-400/20 border-t-yellow-400 rounded-full animate-spin mx-auto mb-6"></div>
-          <p className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">Compiling Historical Data...</p>
+          <p className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
+            Compiling Historical Data...
+          </p>
         </div>
       ) : (
         <Card className="bg-slate-900/40 border-white/5 overflow-hidden rounded-2xl backdrop-blur-md">
@@ -115,18 +118,30 @@ export function AllTimeRankingsTab() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/5 bg-slate-950/40">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest">Rank</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest">Athlete</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest">Pos</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest text-center">Class</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest text-right">Grade</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest text-right">Value</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest">
+                    Rank
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest">
+                    Athlete
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest">
+                    Pos
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest text-center">
+                    Class
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest text-right">
+                    Grade
+                  </th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 font-mono uppercase tracking-widest text-right">
+                    Value
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.03]">
                 {filteredProspects.map((prospect, index) => (
-                  <tr 
-                    key={prospect.id} 
+                  <tr
+                    key={prospect.id}
                     className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
                   >
                     <td className="px-6 py-4">
@@ -141,11 +156,19 @@ export function AllTimeRankingsTab() {
                       <div className="flex items-center gap-3">
                         {prospect.headshot_url ? (
                           <div className="w-10 h-10 rounded-lg bg-slate-950 border border-white/10 overflow-hidden flex-shrink-0">
-                            <img src={prospect.headshot_url} alt="" className="w-full h-full object-cover object-top" />
+                            <img
+                              src={prospect.headshot_url}
+                              alt=""
+                              className="w-full h-full object-cover object-top"
+                            />
                           </div>
                         ) : (
                           <div className="w-10 h-10 rounded-lg bg-slate-950 border border-white/10 flex items-center justify-center text-[10px] font-black font-mono text-slate-600 flex-shrink-0">
-                            {prospect.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            {prospect.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')
+                              .slice(0, 2)}
                           </div>
                         )}
                         <div>
@@ -160,7 +183,10 @@ export function AllTimeRankingsTab() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant="outline" className={`${getPositionStyles(prospect.position)} text-[10px] font-black px-2 py-0 border-none rounded`}>
+                      <Badge
+                        variant="outline"
+                        className={`${getPositionStyles(prospect.position)} text-[10px] font-black px-2 py-0 border-none rounded`}
+                      >
                         {prospect.position}
                       </Badge>
                     </td>
@@ -175,7 +201,7 @@ export function AllTimeRankingsTab() {
                           {prospect.overall_grade?.toFixed(1)}
                         </span>
                         <div className="w-16 h-1 bg-slate-950 rounded-full overflow-hidden mt-1">
-                          <div 
+                          <div
                             className="h-full bg-yellow-400 opacity-80"
                             style={{ width: `${prospect.overall_grade}%` }}
                           />
@@ -192,10 +218,12 @@ export function AllTimeRankingsTab() {
               </tbody>
             </table>
           </div>
-          
+
           {filteredProspects.length === 0 && (
             <div className="py-20 text-center">
-              <p className="text-sm font-black font-mono text-slate-500 uppercase tracking-widest">No legends found in this sector</p>
+              <p className="text-sm font-black font-mono text-slate-500 uppercase tracking-widest">
+                No legends found in this sector
+              </p>
             </div>
           )}
         </Card>
@@ -203,4 +231,3 @@ export function AllTimeRankingsTab() {
     </div>
   )
 }
-

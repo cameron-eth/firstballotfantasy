@@ -40,7 +40,7 @@ export const CurrentLineup = memo(function CurrentLineup({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {starters.map((playerId, index) => {
+      {starters.map((playerId: string, index: number) => {
         const player = allPlayers[playerId]
         if (!player) return null
 

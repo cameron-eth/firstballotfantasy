@@ -57,7 +57,9 @@ export function PlayerMatchupCard({
   const imageUrl = getImageUrl()
 
   return (
-    <Card className={`bg-slate-800/95 border-slate-700 rounded-lg hover:border-slate-600 transition-colors ${className}`}>
+    <Card
+      className={`bg-slate-800/95 border-slate-700 rounded-lg hover:border-slate-600 transition-colors ${className}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
           {/* Left: Headshot - Larger rectangular image */}
@@ -67,11 +69,7 @@ export function PlayerMatchupCard({
                 className="flex items-center justify-center rounded-lg bg-slate-700 text-slate-300 font-mono font-bold"
                 style={{ width: 64, height: 64, fontSize: 20 }}
               >
-                {playerName ? (
-                  getInitials(playerName)
-                ) : (
-                  <User style={{ width: 48, height: 48 }} />
-                )}
+                {playerName ? getInitials(playerName) : <User style={{ width: 48, height: 48 }} />}
               </div>
             ) : (
               <div
@@ -111,4 +109,3 @@ export function PlayerMatchupCard({
     </Card>
   )
 }
-

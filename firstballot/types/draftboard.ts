@@ -9,3 +9,10 @@ export interface Draftboard {
   created_at: string
   updated_at: string
 }
+
+export interface SaveDraftboardRequest {
+  id?: string
+  name: string
+  draft_year?: number
+  prospect_ids: number[]
+}

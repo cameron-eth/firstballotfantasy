@@ -115,7 +115,9 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-black font-mono text-slate-400 uppercase tracking-[0.2em]">{sideLabel}</h3>
+        <h3 className="text-xs font-black font-mono text-slate-400 uppercase tracking-[0.2em]">
+          {sideLabel}
+        </h3>
         <div className="px-2 py-0.5 rounded bg-slate-900 border border-white/5 text-[9px] font-black font-mono text-slate-500 uppercase">
           {side.length} Asset{side.length !== 1 ? 's' : ''}
         </div>
@@ -177,7 +179,9 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs font-black text-white font-mono uppercase">{player.player_name}</div>
+                      <div className="text-xs font-black text-white font-mono uppercase">
+                        {player.player_name}
+                      </div>
                       <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
                         {player.team} <span className="opacity-30">•</span> {player.position}
                       </div>
@@ -200,14 +204,15 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover:grayscale-0 transition-all">
-                <PlayerHeadshot
-                  playerName={item}
-                  size={32}
-                />
+                <PlayerHeadshot playerName={item} size={32} />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-200 font-mono uppercase tracking-tight group-hover:text-white transition-colors">{item}</span>
-                <span className="text-[9px] text-slate-600 font-mono uppercase">Verified Asset</span>
+                <span className="text-xs font-black text-slate-200 font-mono uppercase tracking-tight group-hover:text-white transition-colors">
+                  {item}
+                </span>
+                <span className="text-[9px] text-slate-600 font-mono uppercase">
+                  Verified Asset
+                </span>
               </div>
             </div>
             <button
@@ -220,7 +225,9 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
         ))}
         {side.length === 0 && (
           <div className="py-10 border-2 border-dashed border-white/5 rounded-2xl flex flex-center justify-center">
-            <span className="text-[10px] font-black font-mono text-slate-700 uppercase tracking-widest">Empty Asset Queue</span>
+            <span className="text-[10px] font-black font-mono text-slate-700 uppercase tracking-widest">
+              Empty Asset Queue
+            </span>
           </div>
         )}
       </div>

@@ -53,7 +53,8 @@ export function ProspectsTab({
               College <span className="text-blue-400">Prospects</span>
             </h2>
             <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">
-              Comprehensive {draftYear === 'all' ? 'All-Time' : draftYear} rookie database and rankings.
+              Comprehensive {draftYear === 'all' ? 'All-Time' : draftYear} rookie database and
+              rankings.
             </p>
           </div>
 
@@ -85,7 +86,7 @@ export function ProspectsTab({
                 <SelectItem value="2019">2019 CLASS</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={positionFilter} onValueChange={setPositionFilter}>
               <SelectTrigger className="h-10 w-full sm:w-36 bg-slate-950/60 border-white/5 text-white focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Position" />
@@ -105,7 +106,9 @@ export function ProspectsTab({
       {loading ? (
         <div className="text-center py-20">
           <div className="w-10 h-10 border-2 border-blue-400/20 border-t-blue-400 rounded-full animate-spin mx-auto mb-6"></div>
-          <p className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">Accessing Secure Database...</p>
+          <p className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
+            Accessing Secure Database...
+          </p>
         </div>
       ) : (
         <div className="max-h-[1200px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">

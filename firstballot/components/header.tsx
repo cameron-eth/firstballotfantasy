@@ -2,17 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
-  Shield,
-  User,
-  LogOut,
-  Menu,
-  X,
-  Lock,
-  Crown,
-  Sparkles,
-  Zap,
-} from 'lucide-react'
+import { Shield, User, LogOut, Menu, X, Lock, Crown, Sparkles, Zap } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useMembership } from '@/hooks/use-membership'
 import { useState } from 'react'
@@ -34,7 +24,10 @@ export function Header() {
           {/* Main Header */}
           <div className="flex items-center justify-between h-16 min-h-[64px]">
             {/* Logo and Brand */}
-            <Link href="/" className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity">
+            <Link
+              href="/"
+              className="flex items-center space-x-2 sm:space-x-3 hover:opacity-80 transition-opacity"
+            >
               <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
                 <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-yellow-400" />
               </div>
@@ -56,7 +49,7 @@ export function Header() {
               <div className="hidden md:block">
                 <MegaMenu isLoggedIn={!!user} />
               </div>
-              
+
               {user ? (
                 // ... rest of user section stays similar but maybe more compact
                 <motion.div
@@ -204,11 +197,15 @@ export function Header() {
                       <User className="h-5 w-5 text-gray-300" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-white truncate max-w-[200px]">{user.email}</div>
-                      <div className="text-xs text-gray-400">{isMember ? 'PRO MEMBER' : 'FREE ACCOUNT'}</div>
+                      <div className="text-sm font-bold text-white truncate max-w-[200px]">
+                        {user.email}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {isMember ? 'PRO MEMBER' : 'FREE ACCOUNT'}
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       href="/billing"
@@ -235,7 +232,7 @@ export function Header() {
           </AnimatePresence>
         </div>
       </header>
-      
+
       {/* Global Mobile Bottom Nav */}
       <BottomNav />
     </>

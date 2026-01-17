@@ -29,8 +29,18 @@ export function useDraftboard(): UseDraftboardReturn {
     try {
       const response = await fetch('/api/draftboard')
 
+      // Handle 401 gracefully - user might not be fully authenticated yet
+      if (response.status === 401) {
+        // Not authenticated - this is expected if user just logged in
+        // and the session hasn't propagated yet
+        console.log('Draftboard: User not authenticated yet, will retry')
+        setSavedBoard(null)
+        return null
+      }
+
       if (!response.ok) {
-        throw new Error('Failed to fetch board')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to fetch board (${response.status})`)
       }
 
       const data = await response.json()
@@ -90,10 +100,15 @@ export function useDraftboard(): UseDraftboardReturn {
   )
 
   // Load board on mount when user is available
+  // Small delay to ensure auth interceptor is set up
   useEffect(() => {
     if (user && !hasLoadedRef.current) {
       hasLoadedRef.current = true
-      loadBoard()
+      // Small delay to ensure fetch interceptor is ready
+      const timer = setTimeout(() => {
+        loadBoard()
+      }, 100)
+      return () => clearTimeout(timer)
     }
   }, [user, loadBoard])
 

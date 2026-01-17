@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const score = searchParams.get('score')
     const search = searchParams.get('search') // For autocomplete
 
+    // Get rankings data (headshot_url and espn_id should now be in the table)
     const { data, error } = await supabaseServer
       .from('dynasty_player_tiers')
       .select('*')
@@ -87,6 +88,8 @@ export async function GET(request: NextRequest) {
         age: player.age,
         total_score: totalScore,
         tier: player.tier,
+        headshot_url: player.headshot_url || null,
+        espn_id: player.espn_id || null,
         // Backward compatibility fields
         rank: index + 1,
         RK: index + 1,

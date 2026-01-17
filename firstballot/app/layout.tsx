@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { Fira_Code } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth'
+import { LeagueProvider } from '@/lib/league-context'
 import { Analytics } from '@vercel/analytics/next'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -25,7 +26,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${inter.className} ${firaCode.className} bg-slate-900 text-gray-100 min-h-screen`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <LeagueProvider>
+            {children}
+          </LeagueProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

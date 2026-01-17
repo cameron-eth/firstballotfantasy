@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { HeroSection } from './HeroSection'
+import { ScoutingFeatured } from './ScoutingFeatured'
 import { StatsSection } from './StatsSection'
 import { FeaturesSection } from './FeaturesSection'
 import { CommunitySection } from './CommunitySection'
@@ -31,6 +32,7 @@ export function LandingPage() {
   return (
     <main className="w-full px-3 sm:px-4 md:px-6 lg:px-8 overflow-hidden">
       <HeroSection />
+      <ScoutingFeatured />
       <StatsSection />
       <FeaturesSection />
       <CommunitySection />

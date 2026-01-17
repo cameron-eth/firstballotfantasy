@@ -16,78 +16,48 @@ import { sleeperApi } from '@/lib/nextjs-cache'
 import { userApi } from '@/lib/user-api'
 import type { SleeperUser, SleeperLeague } from '@/lib/sleeper-api'
 
+import { useLeagueContext } from '@/lib/league-context'
+
 export function LeagueBuddyView() {
   const { user: authUser } = useAuth()
   const { isMember, loading: membershipLoading } = useMembershipCheck()
+  const { 
+    selectedLeagueId, 
+    selectLeague, 
+    leagues, 
+    isLoading: leaguesLoading,
+    selectedLeague 
+  } = useLeagueContext()
 
   const [username, setUsername] = useState('')
-  const [user, setUser] = useState<SleeperUser | null>(null)
-  const [leagues, setLeagues] = useState<SleeperLeague[]>([])
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>('')
+  const [sleeperUser, setSleeperUser] = useState<SleeperUser | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profileChecked, setProfileChecked] = useState(false)
   const [noSleeperUsername, setNoSleeperUsername] = useState(false)
 
-  const [isCacheValidState, setIsCacheValidState] = useState(false)
+  // ... (rest of state logic)
 
   // Use shared cache utility
   const { keys } = cacheUtils
 
-  // Check cache validity on mount (client-side only)
-  useEffect(() => {
-    setIsCacheValidState(cacheUtils.isValid())
-  }, [])
-
   // On mount, fetch the user settings for Sleeper username
   useEffect(() => {
-    if (!authUser?.id) {
-      return
-    }
+    if (!authUser?.id) return
 
     const loadSettings = async () => {
       try {
-        // Check cache first
-        if (cacheUtils.isValid()) {
-          const cachedUsername = cacheUtils.get(keys.SLEEPER_USERNAME)
-          const cachedUser = cacheUtils.get(keys.SLEEPER_USER) as SleeperUser | null
-          const cachedLeagues = cacheUtils.get(keys.SLEEPER_LEAGUES) as SleeperLeague[] | null
-
-          if (cachedUsername) {
-            setUsername(cachedUsername)
-            setNoSleeperUsername(false)
-
-            if (cachedUser && cachedLeagues) {
-              setUser(cachedUser)
-              setLeagues(cachedLeagues)
-              if (cachedLeagues.length === 1) {
-                setSelectedLeagueId(cachedLeagues[0].league_id)
-              }
-            } else {
-              // Auto-connect if username is cached but user/leagues aren't
-              await connectToSleeper(cachedUsername)
-            }
-            setProfileChecked(true)
-            return
-          }
-        }
-
-        // If no cache or cache expired, fetch from API
         const data = await userApi.getUserSettings()
-        if (data) {
-          if (data.sleeper_username) {
-            setUsername(data.sleeper_username)
-            setNoSleeperUsername(false)
-
-            // Cache the username
-            cacheUtils.set(keys.SLEEPER_USERNAME, data.sleeper_username)
-            cacheUtils.setExpiry()
-
-            // Auto-connect if username is saved - pass the username directly to avoid race condition
-            await connectToSleeper(data.sleeper_username)
-          } else {
-            setNoSleeperUsername(true)
+        if (data?.sleeper_username) {
+          setUsername(data.sleeper_username)
+          setNoSleeperUsername(false)
+          
+          const userData = await sleeperApi.getUser(data.sleeper_username)
+          if (userData) {
+            setSleeperUser(userData as SleeperUser)
           }
+        } else {
+          setNoSleeperUsername(true)
         }
         setProfileChecked(true)
       } catch (err) {
@@ -110,49 +80,25 @@ export function LeagueBuddyView() {
       try {
         setLoading(true)
         setError(null)
-        setLeagues([])
-        setSelectedLeagueId('')
 
-        // Get user id with Next.js caching
         const userData = await sleeperApi.getUser(currentUsername)
-        if (!userData) {
-          throw new Error('Failed to fetch user data')
-        }
-        setUser(userData as SleeperUser)
+        if (!userData) throw new Error('Sleeper user not found')
+        
+        setSleeperUser(userData as SleeperUser)
 
-        const updateResponse = await userApi.updateUserSleeperProfile({
+        await userApi.updateUserSleeperProfile({
           sleeper_username: (userData as SleeperUser).username,
         })
 
-        console.log(
-          '[League Buddy] Sleeper username saved:',
-          (userData as SleeperUser).username,
-          updateResponse.ok
-        )
-
-        // Cache the user data
-        cacheUtils.set(keys.SLEEPER_USER, userData)
-
-        // Get leagues with Next.js caching
-        const leaguesData = await sleeperApi.getUserLeagues((userData as SleeperUser).user_id)
-        if (!leaguesData) {
-          throw new Error('Failed to fetch leagues data')
-        }
-        const typedLeagues = leaguesData as SleeperLeague[]
-        setLeagues(typedLeagues)
-
-        // Cache the leagues data
-        cacheUtils.set(keys.SLEEPER_LEAGUES, typedLeagues)
-
-        if (typedLeagues.length === 1) setSelectedLeagueId(typedLeagues[0].league_id)
-        setLoading(false)
+        // Trigger a refresh of leagues in context
+        window.location.reload() // Simplest way to re-sync everything for now
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to connect to Sleeper'
-        setError(errorMessage)
+        setError(err instanceof Error ? err.message : 'Failed to connect')
+      } finally {
         setLoading(false)
       }
     },
-    [username, keys.SLEEPER_USER, keys.SLEEPER_LEAGUES]
+    [username]
   )
 
   return (
@@ -161,33 +107,33 @@ export function LeagueBuddyView() {
       <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
         <div className="space-y-6">
           {/* Connection Section */}
-          {!user && (
-            <Card className="bg-slate-800 border-slate-700">
+          {!sleeperUser && !leaguesLoading && (
+            <Card className="bg-slate-800 border-slate-700 max-w-2xl mx-auto">
               <CardHeader>
                 <CardTitle className="text-green-400 font-mono">CONNECT TO SLEEPER</CardTitle>
                 <p className="text-gray-300 text-sm">
-                  Enter your Sleeper username to view your leagues
+                  Enter your Sleeper username to sync all your leagues automatically
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-300 mb-2 block">Sleeper Username</label>
+                  <label className="text-sm text-gray-300 mb-2 block font-mono">USERNAME</label>
                   <Input
-                    placeholder="Enter Sleeper Username"
+                    placeholder="e.g. commish123"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full"
+                    className="w-full bg-slate-900 border-slate-700"
                   />
                 </div>
                 <Button
                   onClick={() => connectToSleeper()}
                   disabled={loading}
-                  className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 w-full"
+                  className="bg-yellow-400 text-slate-900 hover:bg-yellow-300 w-full font-bold"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'CONNECT TO SLEEPER'}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'CONNECT ACCOUNT'}
                 </Button>
                 {error && (
-                  <div className="flex items-center space-x-2 text-red-400 text-sm">
+                  <div className="flex items-center space-x-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20">
                     <AlertCircle className="h-4 w-4" />
                     <span>{error}</span>
                   </div>
@@ -196,91 +142,44 @@ export function LeagueBuddyView() {
             </Card>
           )}
 
-          {/* League Select */}
+          {/* League Selection (Grid) - Only show if no league is selected yet */}
           {leagues.length > 0 && !selectedLeagueId && (
-            <Card className="bg-slate-800 border-slate-700">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-green-400 font-mono">SELECT LEAGUE</CardTitle>
-                    <p className="text-gray-300 text-sm">Choose a league to view the dashboard</p>
-                  </div>
-                  {!isMember && leagues.length > 1 && (
-                    <div className="flex items-center space-x-2">
-                      <Crown className="h-4 w-4 text-yellow-400" />
-                      <span className="text-xs text-yellow-400 font-mono">FREE: 1 LEAGUE</span>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {leagues.map((league, index) => {
-                    // Always allow first league, restrict others if not member
-                    const canAccess = index === 0 || isMember
-
-                    return (
-                      <LeagueCard
-                        key={league.league_id}
-                        league={league}
-                        leagueIndex={index}
-                        canAccess={canAccess}
-                        isMember={isMember}
-                        isSelected={selectedLeagueId === league.league_id}
-                        onClick={() => setSelectedLeagueId(league.league_id)}
-                      />
-                    )
-                  })}
-                </div>
-
-                {/* Upgrade Prompt for Free Users with Multiple Leagues */}
-                {!isMember && leagues.length > 1 && (
-                  <div className="mt-6 p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
-                    <div className="text-center space-y-3">
-                      <div className="flex items-center justify-center space-x-2">
-                        <Crown className="h-5 w-5 text-yellow-400" />
-                        <h3 className="text-yellow-400 font-mono">UNLOCK ALL LEAGUES</h3>
-                      </div>
-                      <p className="text-gray-300 text-sm">
-                        Upgrade to Pro to access all {leagues.length} of your leagues
-                      </p>
-                      <Button
-                        onClick={() => {
-                          window.location.href =
-                            'https://buy.stripe.com/test_dRm3cvdadbi5fdV3oZeAg00'
-                        }}
-                        className="bg-yellow-400 text-slate-900 hover:bg-yellow-300"
-                      >
-                        Upgrade to Pro
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* League Buddy Dashboard */}
-          {user && selectedLeagueId && (
-            <LeagueBuddy
-              leagueId={selectedLeagueId}
-              user={user}
-              leagues={leagues}
-              onLeagueChange={setSelectedLeagueId}
-            />
-          )}
-
-          {/* Loading State */}
-          {loading && (
-            <div className="text-center py-8">
-              <LoadingSpinner size="lg" text="Loading league data..." />
+            <div className="space-y-4">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-white font-mono">YOUR LEAGUES</h2>
+                <p className="text-slate-400">Select a league to begin analysis</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {leagues.map((league, index) => (
+                  <LeagueCard
+                    key={league.league_id}
+                    league={league}
+                    leagueIndex={index}
+                    canAccess={index === 0 || isMember}
+                    isMember={isMember}
+                    isSelected={false}
+                    onClick={() => selectLeague(league.league_id)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Membership Loading State */}
-          {membershipLoading && (
-            <div className="text-center py-8">
-              <LoadingSpinner size="default" text="Checking membership..." />
+          {/* League Dashboard - Reacts to global selection */}
+          {selectedLeagueId && sleeperUser && (
+            <LeagueBuddy
+              leagueId={selectedLeagueId}
+              user={sleeperUser}
+              leagues={leagues}
+              onLeagueChange={selectLeague}
+            />
+          )}
+
+          {/* Loading States */}
+          {(leaguesLoading || loading) && !selectedLeagueId && (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+              <Loader2 className="h-12 w-12 text-yellow-400 animate-spin" />
+              <p className="text-slate-400 font-mono animate-pulse">SYNCING LEAGUES...</p>
             </div>
           )}
         </div>

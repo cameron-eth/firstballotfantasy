@@ -2,7 +2,6 @@
 
 import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp } from 'lucide-react'
 import { useRankings } from '@/hooks/use-rankings'
 import { RankingsFilters } from './RankingsFilters'
 import { RankingsTable } from './RankingsTable'
@@ -30,19 +29,6 @@ export function RankingsView() {
 
       <main className="w-full px-4 py-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <div className="inline-flex items-center space-x-2 text-xs font-mono text-yellow-400 uppercase tracking-wider mb-4 px-4 py-2 border border-yellow-400/40 rounded-full bg-yellow-400/10">
-              <TrendingUp className="h-3 w-3" />
-              <span>Player Rankings</span>
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white font-mono mb-4">
-              DYNASTY RANKINGS
-            </h1>
-            <p className="text-gray-300 font-mono text-lg">
-              Complete player rankings based on ML-weighted scoring system
-            </p>
-          </div>
-
           <Card className="!bg-gradient-to-br !from-slate-800 !via-slate-800 !to-yellow-950/20 border border-yellow-500/30 rounded-xl shadow-none">
             <CardHeader className="!bg-transparent">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">

@@ -497,50 +497,6 @@ export default function LeagueBuddy({
                 League
               </button>
             </div>
-
-            {/* Mobile League Switcher */}
-            {leagues.length > 1 && onLeagueChange && (
-              <Card className="bg-slate-800 border-slate-700">
-                <CardContent className="p-4">
-                  <label className="text-sm text-yellow-400 font-mono mb-3 block">
-                    Select League
-                  </label>
-                  <Select value={leagueId} onValueChange={onLeagueChange}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 hover:bg-slate-600 hover:border-yellow-400/30 transition-all duration-200 h-12 rounded-lg px-4">
-                      <SelectValue placeholder="Select a league" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-700 border-slate-600">
-                      {leagues.map((league) => (
-                        <SelectItem
-                          key={league.league_id}
-                          value={league.league_id}
-                          className="text-slate-200 hover:bg-slate-600 focus:bg-slate-600"
-                        >
-                          <div className="flex flex-col py-2 text-left">
-                            <span
-                              className={`font-semibold text-sm text-left ${
-                                league.league_id === leagueId ? 'text-yellow-400' : ''
-                              }`}
-                            >
-                              {league.name}
-                            </span>
-                            <span
-                              className={`text-xs text-left ${
-                                league.league_id === leagueId
-                                  ? 'text-yellow-400/70'
-                                  : 'text-slate-400'
-                              }`}
-                            >
-                              {league.total_rosters} teams • {league.season}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* OVERVIEW SECTION */}

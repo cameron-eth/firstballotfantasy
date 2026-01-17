@@ -28,21 +28,13 @@ interface Prospect {
   weight: number | null
   hometown: string | null
   jersey: number | null
-  class: string | null  // Freshman, Sophomore, Junior, Senior
+  class: string | null
   // Headshot & Team
   headshot_url: string | null
   team_color: string | null
   // Stats
   college_stats: Record<string, number> | null
   draft_year: number | null
-}
-
-// Helper function to determine projected round based on rank
-const getProjectedRound = (rank: number): string => {
-  if (rank <= 12) return '1st'
-  if (rank <= 24) return '2nd'
-  if (rank <= 36) return '3rd'
-  return 'UDFA'
 }
 
 // Helper to generate headshot URL from ESPN ID
@@ -53,13 +45,11 @@ const getHeadshotUrl = (espnId: number | null): string | null => {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get optional draft_year filter from query params
     const { searchParams } = new URL(request.url)
-    const draftYear = searchParams.get('draft_year') || '2026'
-    const isAllYears = draftYear === 'all'
-    const yearNum = !isAllYears ? parseInt(draftYear) : null
+    const limit = parseInt(searchParams.get('limit') || '100')
+    const position = searchParams.get('position')
 
-    // Use dynasty_prospects exclusively
+    // Fetch from dynasty_prospects exclusively
     let query = supabaseServer
       .from('dynasty_prospects')
       .select(
@@ -90,21 +80,22 @@ export async function GET(request: NextRequest) {
         draft_year
       `
       )
+      .not('overall_grade', 'is', null)
+      .order('overall_grade', { ascending: false })
+      .limit(limit)
 
-    if (!isAllYears && yearNum) {
-      query = query.eq('draft_year', yearNum)
+    if (position && position !== 'all') {
+      query = query.eq('position', position)
     }
 
-    const { data: dynastyData, error: dynastyError } = await query
-      .order('draft_year', { ascending: false })
-      .order('rank', { ascending: true })
+    const { data: historicalData, error: historicalError } = await query
 
-    if (dynastyError) {
-      console.error('Database error fetching prospects from dynasty_prospects:', dynastyError)
+    if (historicalError) {
+      console.error('Database error fetching all-time prospects:', historicalError)
     }
 
     // Map data
-    const prospects: Prospect[] = (dynastyData || []).map((record) => {
+    const prospects: Prospect[] = (historicalData || []).map((record) => {
       return {
         id: Number(record.id),
         rank: Number(record.rank) || 999,
@@ -115,7 +106,6 @@ export async function GET(request: NextRequest) {
         school: record.school || 'TBD',
         espn_id: record.espn_id ? Number(record.espn_id) : null,
         cfbd_id: record.cfbd_id ? Number(record.cfbd_id) : null,
-        projectedRound: getProjectedRound(Number(record.rank) || 999),
         tier: record.tier,
         tier_numeric: record.tier_numeric,
         valuation: record.valuation ? Number(record.valuation) : null,
@@ -142,7 +132,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching prospects:', error)
-    return NextResponse.json({ error: 'Failed to fetch prospects' }, { status: 500 })
+    console.error('Error fetching all-time prospects:', error)
+    return NextResponse.json({ error: 'Failed to fetch all-time prospects' }, { status: 500 })
   }
 }

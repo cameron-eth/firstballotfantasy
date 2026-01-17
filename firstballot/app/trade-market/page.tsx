@@ -41,13 +41,25 @@ import { TradeCharts } from '@/components/trade-charts'
 import { TeamValueGraph } from '@/components/TeamValueGraph'
 import { leagueCache } from '@/lib/league-cache'
 
+import { Header } from '@/components/header'
+import { useLeagueContext } from '@/lib/league-context'
+
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function TradeMarketContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { selectedLeagueId, leagues, isLoading: leaguesLoading } = useLeagueContext()
   const [leagueId, setLeagueId] = useState<string>('')
 
+  // Sync with global league context
+  useEffect(() => {
+    if (selectedLeagueId) {
+      setLeagueId(selectedLeagueId)
+    }
+  }, [selectedLeagueId])
+
   const [teams, setTeams] = useState<any[]>([])
+  // ... rest of state
   const [allPlayers, setAllPlayers] = useState<Record<string, any>>({})
   const [transactions, setTransactions] = useState<any[]>([])
   const [tradedPicks, setTradedPicks] = useState<any[]>([])
@@ -340,8 +352,9 @@ function TradeMarketContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-900 text-white">
+      <Header />
+      <div className="max-w-7xl mx-auto space-y-6 p-4">
         {/* Enhanced Header */}
         <div className="relative mb-8">
           {/* Background Pattern */}

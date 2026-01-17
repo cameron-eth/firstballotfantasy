@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create a new draftboard
+// POST - Create or update a draftboard (upsert behavior)
 export async function POST(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id')
@@ -70,6 +70,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and prospect_ids are required' }, { status: 400 })
     }
 
+    // Check if a board with this name already exists for this user
+    const { data: existingBoard } = await supabase
+      .from('user_draftboards')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', body.name)
+      .single()
+
+    if (existingBoard) {
+      // Update existing board
+      const { data, error } = await supabase
+        .from('user_draftboards')
+        .update({
+          prospect_ids: body.prospect_ids,
+          draft_year: body.draft_year || 2026,
+        })
+        .eq('id', existingBoard.id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating draftboard:', error)
+        return NextResponse.json({ error: 'Failed to update board' }, { status: 500 })
+      }
+
+      return NextResponse.json({ board: data })
+    }
+
+    // Create new board
     const { data, error } = await supabase
       .from('user_draftboards')
       .insert({
@@ -82,13 +112,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      // Check for unique constraint violation
-      if (error.code === '23505') {
-        return NextResponse.json(
-          { error: 'A board with this name already exists' },
-          { status: 409 }
-        )
-      }
       console.error('Error creating draftboard:', error)
       return NextResponse.json({ error: 'Failed to create board' }, { status: 500 })
     }

@@ -10,8 +10,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, BarChart3, Users, Calendar } from 'lucide-react'
+import { TrendingUp, BarChart3, Users, Calendar, Shield, Search } from 'lucide-react'
 import type { Prospect } from './types'
+import { ProspectCard } from './ProspectCard'
+import { Input } from '@/components/ui/input'
 
 interface HistoricalProspect extends Prospect {
   draft_year: number
@@ -23,9 +25,11 @@ interface HistoricalRankingsTabProps {
 
 export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTabProps) {
   const [historicalProspects, setHistoricalProspects] = useState<HistoricalProspect[]>([])
-  const [selectedYear, setSelectedYear] = useState<string>('2025')
+  const [selectedYear, setSelectedYear] = useState<string>('2024') // Default to 2024 since 2025 is empty
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'charts' | 'athletes'>('athletes')
 
   useEffect(() => {
     setMounted(true)
@@ -98,19 +102,23 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
         change: (current[tier] || 0) - (historical[tier] || 0),
       }))
       .sort((a, b) => {
-        const tierOrder = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Ungraded']
+        const tierOrder = ['Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Tier 5', 'Tier 6', 'Ungraded']
         return tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier)
       })
   }, [currentProspects, historicalProspects])
 
-  // Compare average valuation
+  // Compare average grade (use overall_grade, fallback to valuation for legacy data)
   const valuationComparison = useMemo(() => {
+    const getGrade = (p: Prospect) => p.overall_grade || p.valuation || 0
+    
     const currentAvg =
-      currentProspects.reduce((sum, p) => sum + (p.valuation || 0), 0) / currentProspects.length ||
-      0
+      currentProspects.length > 0
+        ? currentProspects.reduce((sum, p) => sum + getGrade(p), 0) / currentProspects.length
+        : 0
     const historicalAvg =
-      historicalProspects.reduce((sum, p) => sum + (p.valuation || 0), 0) /
-        historicalProspects.length || 0
+      historicalProspects.length > 0
+        ? historicalProspects.reduce((sum, p) => sum + getGrade(p), 0) / historicalProspects.length
+        : 0
 
     return {
       current: currentAvg,
@@ -132,6 +140,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
     'Tier 3': 'bg-blue-400',
     'Tier 4': 'bg-green-400',
     'Tier 5': 'bg-orange-400',
+    'Tier 6': 'bg-red-400',
     Ungraded: 'bg-gray-400',
   }
 
@@ -141,6 +150,15 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   )
 
   const maxTierCount = Math.max(...tierComparison.map((t) => Math.max(t.current, t.historical)), 1)
+
+  const filteredHistorical = useMemo(() => {
+    if (!searchTerm) return historicalProspects
+    return historicalProspects.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.school.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [historicalProspects, searchTerm])
 
   if (loading) {
     return (
@@ -153,206 +171,267 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
 
   return (
     <div className="space-y-6">
-      {/* Year Selector */}
+      {/* Year Selector & View Toggle */}
       <Card className="bg-slate-800/50 border border-slate-700">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-white font-mono flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-yellow-400" />
-              Compare to Draft Class
-            </CardTitle>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600 text-white">
-                <SelectItem value="2025" className="text-white">
-                  2025
-                </SelectItem>
-                <SelectItem value="2024" className="text-white">
-                  2024
-                </SelectItem>
-                <SelectItem value="2023" className="text-white">
-                  2023
-                </SelectItem>
-                <SelectItem value="2022" className="text-white">
-                  2022
-                </SelectItem>
-                <SelectItem value="2021" className="text-white">
-                  2021
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-      </Card>
+        <CardHeader className="py-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-yellow-400" />
+                <CardTitle className="text-white font-mono text-base uppercase tracking-wider">
+                  Compare to Class
+                </CardTitle>
+              </div>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-28 bg-slate-900 border-white/5 text-white h-9 text-xs font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-white/10 text-white font-mono text-xs">
+                  <SelectItem value="all">All Classes</SelectItem>
+                  <SelectItem value="2027">2027 Class</SelectItem>
+                  <SelectItem value="2026">2026 (Current)</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                  <SelectItem value="2022">2022</SelectItem>
+                  <SelectItem value="2021">2021</SelectItem>
+                  <SelectItem value="2020">2020</SelectItem>
+                  <SelectItem value="2019">2019</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Average Valuation Comparison */}
-      <Card className="bg-slate-800/50 border border-slate-700 hover:border-yellow-400/50 transition-all">
-        <CardHeader>
-          <CardTitle className="text-white font-mono text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-yellow-400" />
-            Average Valuation
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-xs text-gray-400 font-mono mb-2">2026 Class</div>
-              <div className="text-3xl font-bold text-white font-mono">
-                {valuationComparison.current.toFixed(1)}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-gray-400 font-mono mb-2">{selectedYear} Class</div>
-              <div className="text-3xl font-bold text-white font-mono">
-                {valuationComparison.historical.toFixed(1)}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-gray-400 font-mono mb-2">Change</div>
-              <div
-                className={`text-3xl font-bold font-mono ${
-                  valuationComparison.change >= 0 ? 'text-green-400' : 'text-red-400'
+            <div className="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
+              <button
+                onClick={() => setViewMode('athletes')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black font-mono uppercase tracking-widest transition-all ${
+                  viewMode === 'athletes'
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
-                {valuationComparison.change >= 0 ? '+' : ''}
-                {valuationComparison.change.toFixed(1)}
-              </div>
+                Athletes
+              </button>
+              <button
+                onClick={() => setViewMode('charts')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black font-mono uppercase tracking-widest transition-all ${
+                  viewMode === 'charts'
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                Analytics
+              </button>
             </div>
           </div>
-          <div className="relative w-full h-3 bg-slate-700 rounded-full overflow-hidden mt-6">
-            <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full origin-left"
-              style={{
-                width: `${Math.min((valuationComparison.current / 100) * 100, 100)}%`,
-                animation: mounted ? 'chart-fill 1.2s ease 0.2s both' : 'none',
-                transformOrigin: 'left center',
-              }}
-            />
-          </div>
-        </CardContent>
+        </CardHeader>
       </Card>
 
-      {/* Position Comparison */}
-      <Card className="bg-slate-800/50 border border-slate-700 hover:border-blue-400/50 transition-all">
-        <CardHeader>
-          <CardTitle className="text-white font-mono text-lg flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-400" />
-            Position Distribution Comparison
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {positionComparison.map((pos, i) => (
-              <div key={pos.position}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant="outline"
-                      className={`${positionColors[pos.position] || 'bg-slate-500'} text-slate-900 border-0 font-mono`}
-                    >
-                      {pos.position}
-                    </Badge>
-                    <span className="text-xs text-gray-400 font-mono">
-                      {pos.change >= 0 ? '+' : ''}
-                      {pos.change}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
-                    <span>2026: {pos.current}</span>
-                    <span>
-                      {selectedYear}: {pos.historical}
-                    </span>
+      {viewMode === 'charts' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Average Grade Comparison */}
+          <Card className="bg-slate-800/50 border border-slate-700 hover:border-yellow-400/50 transition-all md:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white font-mono text-sm flex items-center gap-2 uppercase tracking-widest">
+                <TrendingUp className="h-4 w-4 text-yellow-400" />
+                Grade Comparison Matrix
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-slate-900/40 rounded-2xl border border-white/5">
+                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">2026 Class</div>
+                  <div className="text-3xl font-black text-white font-mono tracking-tighter">
+                    {valuationComparison.current.toFixed(1)}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`absolute inset-y-0 left-0 ${positionColors[pos.position] || 'bg-slate-500'} rounded-full origin-left`}
-                      style={{
-                        width: `${(pos.current / maxPositionCount) * 100}%`,
-                        animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
-                        transformOrigin: 'left center',
-                      }}
-                    />
+                <div className="text-center p-4 bg-slate-900/40 rounded-2xl border border-white/5">
+                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">
+                    {selectedYear === 'all' ? 'Database Avg' : `${selectedYear} Class`}
                   </div>
-                  <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`absolute inset-y-0 left-0 ${positionColors[pos.position] || 'bg-slate-500'} opacity-60 rounded-full origin-left`}
-                      style={{
-                        width: `${(pos.historical / maxPositionCount) * 100}%`,
-                        animation: mounted ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both` : 'none',
-                        transformOrigin: 'left center',
-                      }}
-                    />
+                  <div className="text-3xl font-black text-white font-mono tracking-tighter">
+                    {valuationComparison.historical.toFixed(1)}
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-slate-900/40 rounded-2xl border border-white/5">
+                  <div className="text-[10px] text-gray-500 font-mono mb-2 uppercase tracking-widest">Grade Delta</div>
+                  <div
+                    className={`text-3xl font-black font-mono tracking-tighter ${
+                      valuationComparison.change >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}
+                  >
+                    {valuationComparison.change >= 0 ? '+' : ''}
+                    {valuationComparison.change.toFixed(1)}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tier Comparison */}
-      <Card className="bg-slate-800/50 border border-slate-700 hover:border-purple-400/50 transition-all">
-        <CardHeader>
-          <CardTitle className="text-white font-mono text-lg flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-purple-400" />
-            Tier Distribution Comparison
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {tierComparison.map((tier, i) => (
-              <div key={tier.tier}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant="outline"
-                      className={`${tierColors[tier.tier] || 'bg-gray-400'} text-slate-900 border-0 font-mono`}
-                    >
-                      {tier.tier}
-                    </Badge>
-                    <span className="text-xs text-gray-400 font-mono">
-                      {tier.change >= 0 ? '+' : ''}
-                      {tier.change}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400 font-mono">
-                    <span>2026: {tier.current}</span>
-                    <span>
-                      {selectedYear}: {tier.historical}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`absolute inset-y-0 left-0 ${tierColors[tier.tier] || 'bg-gray-400'} rounded-full origin-left`}
-                      style={{
-                        width: `${(tier.current / maxTierCount) * 100}%`,
-                        animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
-                        transformOrigin: 'left center',
-                      }}
-                    />
-                  </div>
-                  <div className="relative h-4 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`absolute inset-y-0 left-0 ${tierColors[tier.tier] || 'bg-gray-400'} opacity-60 rounded-full origin-left`}
-                      style={{
-                        width: `${(tier.historical / maxTierCount) * 100}%`,
-                        animation: mounted ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both` : 'none',
-                        transformOrigin: 'left center',
-                      }}
-                    />
-                  </div>
-                </div>
+              <div className="relative w-full h-1.5 bg-slate-900 rounded-full overflow-hidden mt-6 border border-white/5">
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-yellow-500 to-yellow-300 rounded-full origin-left"
+                  style={{
+                    width: `${Math.min((valuationComparison.current / 100) * 100, 100)}%`,
+                    animation: mounted ? 'chart-fill 1.2s ease 0.2s both' : 'none',
+                    transformOrigin: 'left center',
+                  }}
+                />
               </div>
-            ))}
+            </CardContent>
+          </Card>
+
+          {/* Position Comparison */}
+          <Card className="bg-slate-800/50 border border-slate-700 hover:border-blue-400/50 transition-all">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white font-mono text-sm flex items-center gap-2 uppercase tracking-widest">
+                <Users className="h-4 w-4 text-blue-400" />
+                Position Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-5">
+                {positionComparison.map((pos, i) => (
+                  <div key={pos.position}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className={`${positionColors[pos.position] || 'bg-slate-500'} text-slate-950 border-0 font-black text-[10px] px-2 py-0.5 rounded uppercase`}
+                        >
+                          {pos.position}
+                        </Badge>
+                        <span className={`text-[10px] font-black font-mono ${pos.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {pos.change >= 0 ? '+' : ''}{pos.change}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-[10px] text-gray-500 font-mono font-bold">
+                        <span>2026: {pos.current}</span>
+                        <span>{selectedYear === 'all' ? 'Database' : selectedYear}: {pos.historical}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className={`absolute inset-y-0 left-0 ${positionColors[pos.position] || 'bg-slate-500'} rounded-full origin-left`}
+                          style={{
+                            width: `${(pos.current / maxPositionCount) * 100}%`,
+                            animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
+                            transformOrigin: 'left center',
+                          }}
+                        />
+                      </div>
+                      <div className="relative h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className={`absolute inset-y-0 left-0 ${positionColors[pos.position] || 'bg-slate-500'} opacity-30 rounded-full origin-left`}
+                          style={{
+                            width: `${(pos.historical / maxPositionCount) * 100}%`,
+                            animation: mounted ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both` : 'none',
+                            transformOrigin: 'left center',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tier Comparison */}
+          <Card className="bg-slate-800/50 border border-slate-700 hover:border-purple-400/50 transition-all">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white font-mono text-sm flex items-center gap-2 uppercase tracking-widest">
+                <BarChart3 className="h-4 w-4 text-purple-400" />
+                Tier Comparison
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-5">
+                {tierComparison.map((tier, i) => (
+                  <div key={tier.tier}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className={`${tierColors[tier.tier] || 'bg-gray-400'} text-slate-950 border-0 font-black text-[10px] px-2 py-0.5 rounded uppercase`}
+                        >
+                          {tier.tier}
+                        </Badge>
+                        <span className={`text-[10px] font-black font-mono ${tier.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {tier.change >= 0 ? '+' : ''}{tier.change}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-[10px] text-gray-500 font-mono font-bold">
+                        <span>2026: {tier.current}</span>
+                        <span>{selectedYear === 'all' ? 'Database' : selectedYear}: {tier.historical}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className={`absolute inset-y-0 left-0 ${tierColors[tier.tier] || 'bg-gray-400'} rounded-full origin-left`}
+                          style={{
+                            width: `${(tier.current / maxTierCount) * 100}%`,
+                            animation: mounted ? `chart-fill 0.8s ease ${i * 0.1}s both` : 'none',
+                            transformOrigin: 'left center',
+                          }}
+                        />
+                      </div>
+                      <div className="relative h-2 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                        <div
+                          className={`absolute inset-y-0 left-0 ${tierColors[tier.tier] || 'bg-gray-400'} opacity-30 rounded-full origin-left`}
+                          style={{
+                            width: `${(tier.historical / maxTierCount) * 100}%`,
+                            animation: mounted ? `chart-fill 0.8s ease ${i * 0.1 + 0.2}s both` : 'none',
+                            transformOrigin: 'left center',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Search bar for historical class */}
+          <div className="flex items-center justify-between gap-4 px-2">
+            <div className="relative flex-1 max-w-md group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                placeholder={`Search ${selectedYear} class...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 bg-slate-950/60 border-white/5 text-white w-full focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
+              />
+            </div>
+            <div className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest bg-slate-900/40 px-3 py-2 rounded-lg border border-white/5">
+              Showing {filteredHistorical.length} Athletes
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-10">
+            {filteredHistorical.length > 0 ? (
+              filteredHistorical.map((prospect) => (
+                <ProspectCard
+                  key={prospect.id}
+                  prospect={prospect}
+                  onSelect={() => {}} // Not used in historical tab for now
+                  onCompare={() => {}} // Not used in historical tab for now
+                  variant="dossier"
+                />
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center bg-slate-900/40 rounded-3xl border border-dashed border-white/10">
+                <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
+                  <Shield className="h-6 w-6 text-slate-600" />
+                </div>
+                <p className="text-sm font-black font-mono text-slate-500 uppercase tracking-[0.2em]">No prospects found for {selectedYear}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

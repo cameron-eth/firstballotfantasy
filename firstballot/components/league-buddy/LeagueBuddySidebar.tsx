@@ -90,48 +90,6 @@ export function LeagueBuddySidebar({
     >
       {/* Team Info Header */}
       <SidebarHeader className="p-5 border-b border-slate-700/50 !bg-slate-800/50 backdrop-blur-sm">
-        {/* League Switcher */}
-        {leagues.length > 1 && onLeagueChange && (
-          <div className="mb-5">
-            <label className="text-[10px] text-yellow-400 font-mono mb-2 block uppercase tracking-widest font-semibold">
-              League
-            </label>
-            <Select value={leagueId} onValueChange={onLeagueChange}>
-              <SelectTrigger className="!bg-slate-700/50 !border-slate-600/50 !text-slate-100 hover:!bg-slate-600/50 hover:!border-yellow-400/30 !transition-all !duration-200 !h-11 !rounded-lg !shadow-sm">
-                <SelectValue placeholder="Select a league" />
-              </SelectTrigger>
-              <SelectContent className="!bg-slate-700 !border-slate-600">
-                {leagues.map((league) => (
-                  <SelectItem
-                    key={league.league_id}
-                    value={league.league_id}
-                    className={`!text-slate-200 hover:!bg-slate-600 focus:!bg-slate-600 ${
-                      league.league_id === leagueId ? '!bg-yellow-400/20 !text-yellow-400' : ''
-                    }`}
-                  >
-                    <div className="flex flex-col py-1">
-                      <span
-                        className={`font-semibold text-sm ${
-                          league.league_id === leagueId ? 'text-yellow-400' : ''
-                        }`}
-                      >
-                        {league.name}
-                      </span>
-                      <span
-                        className={`text-xs ${
-                          league.league_id === leagueId ? 'text-yellow-400/70' : 'text-slate-400'
-                        }`}
-                      >
-                        {league.total_rosters} teams • {league.season}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         <AnimatePresence mode="wait">
           {selectedTeam && (
             <motion.div

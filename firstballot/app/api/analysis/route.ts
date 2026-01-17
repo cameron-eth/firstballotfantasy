@@ -1,51 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
+// Force dynamic to always get fresh data (no caching)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+// Helper to check if error is "table does not exist"
+function isTableMissingError(error: unknown): boolean {
+  if (!error) return false
+  const message = String((error as Record<string, unknown>)?.message || error)
+  return message.includes('does not exist') || message.includes('42P01')
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const dataType = searchParams.get('type') || 'all'
 
-    let result: any = {}
+    const result: Record<string, unknown[]> = {
+      modelPerformance: [],
+      aggregatedStats: [],
+      draftSuccess: [],
+      breakoutBust: [],
+      prospectAnalysis: [],
+    }
 
     if (dataType === 'all' || dataType === 'model') {
-      // Fetch model performance
-      const { data: modelData, error: modelError } = await supabaseServer
-        .from('master_model_performance')
-        .select('*')
-        .limit(1)
+      // Fetch model performance - gracefully handle missing table
+      try {
+        const { data: modelData, error: modelError } = await supabaseServer
+          .from('master_model_performance')
+          .select('*')
+          .limit(1)
 
-      if (modelError) throw modelError
-      result.modelPerformance = modelData || []
+        if (modelError && !isTableMissingError(modelError)) {
+          console.error('Model performance query failed:', modelError)
+        }
+        result.modelPerformance = modelData || []
+      } catch (modelErr) {
+        if (!isTableMissingError(modelErr)) {
+          console.error('Model performance query failed:', modelErr)
+        }
+        result.modelPerformance = []
+      }
     }
 
     if (dataType === 'all' || dataType === 'stats') {
-      // Fetch aggregated stats
-      const { data: statsData, error: statsError } = await supabaseServer
-        .from('master_aggregated_stats')
-        .select('*')
-        .gte('season', 2020)
-        .order('position')
-        .order('season', { ascending: false })
-        .order('avg_fantasy_ppg', { ascending: false })
+      // Fetch aggregated stats - gracefully handle missing table
+      try {
+        const { data: statsData, error: statsError } = await supabaseServer
+          .from('master_aggregated_stats')
+          .select('*')
+          .gte('season', 2020)
+          .order('position')
+          .order('season', { ascending: false })
+          .order('avg_fantasy_ppg', { ascending: false })
 
-      if (statsError) throw statsError
-      result.aggregatedStats = statsData || []
+        if (statsError && !isTableMissingError(statsError)) {
+          console.error('Aggregated stats query failed:', statsError)
+        }
+        result.aggregatedStats = statsData || []
+      } catch (statsErr) {
+        if (!isTableMissingError(statsErr)) {
+          console.error('Aggregated stats query failed:', statsErr)
+        }
+        result.aggregatedStats = []
+      }
     }
 
     if (dataType === 'all' || dataType === 'draft') {
-      // Fetch draft success rates
-      const { data: draftData, error: draftError } = await supabaseServer
-        .from('draft_success_rates')
-        .select('*')
-        .order('draft_round')
+      // Fetch draft success rates - gracefully handle missing table
+      try {
+        const { data: draftData, error: draftError } = await supabaseServer
+          .from('draft_success_rates')
+          .select('*')
+          .order('draft_round')
 
-      if (draftError) throw draftError
-      result.draftSuccess = draftData || []
+        if (draftError && !isTableMissingError(draftError)) {
+          console.error('Draft success rates query failed:', draftError)
+        }
+        result.draftSuccess = draftData || []
+      } catch (draftErr) {
+        if (!isTableMissingError(draftErr)) {
+          console.error('Draft success rates query failed:', draftErr)
+        }
+        result.draftSuccess = []
+      }
     }
 
     if (dataType === 'all' || dataType === 'breakout') {
-      // Fetch breakout/bust analysis
+      // Fetch breakout/bust analysis - gracefully handle missing table
       try {
         const { data: bbData, error: bbError } = await supabaseServer
           .from('master_breakout_bust')
@@ -69,10 +113,12 @@ export async function GET(request: NextRequest) {
           .order('surprise_factor', { ascending: false })
           .limit(50)
 
-        if (bbError) throw bbError
+        if (bbError && !isTableMissingError(bbError)) {
+          console.error('Breakout/Bust query failed:', bbError)
+        }
         result.breakoutBust = bbData || []
-      } catch (bbErr: any) {
-        if (!String(bbErr?.message).includes('does not exist')) {
+      } catch (bbErr) {
+        if (!isTableMissingError(bbErr)) {
           console.error('Breakout/Bust query failed:', bbErr)
         }
         result.breakoutBust = []
@@ -80,20 +126,42 @@ export async function GET(request: NextRequest) {
     }
 
     if (dataType === 'all' || dataType === 'prospect') {
-      // Fetch prospect analysis
-      const { data: prospectData, error: prospectError } = await supabaseServer
-        .from('master_prospect_analysis')
-        .select('*')
-        .eq('analysis_type', 'prospect_tier')
-        .order('hit_rate', { ascending: false })
+      // Fetch prospect analysis - gracefully handle missing table
+      try {
+        const { data: prospectData, error: prospectError } = await supabaseServer
+          .from('master_prospect_analysis')
+          .select('*')
+          .eq('analysis_type', 'prospect_tier')
+          .order('hit_rate', { ascending: false })
 
-      if (prospectError) throw prospectError
-      result.prospectAnalysis = prospectData || []
+        if (prospectError && !isTableMissingError(prospectError)) {
+          console.error('Prospect analysis query failed:', prospectError)
+        }
+        result.prospectAnalysis = prospectData || []
+      } catch (prospectErr) {
+        if (!isTableMissingError(prospectErr)) {
+          console.error('Prospect analysis query failed:', prospectErr)
+        }
+        result.prospectAnalysis = []
+      }
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json(result, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+      },
+    })
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // Return empty data structure instead of 500 error
+    return NextResponse.json({
+      modelPerformance: [],
+      aggregatedStats: [],
+      draftSuccess: [],
+      breakoutBust: [],
+      prospectAnalysis: [],
+    })
   }
 }

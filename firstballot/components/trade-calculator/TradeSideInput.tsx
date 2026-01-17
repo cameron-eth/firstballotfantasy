@@ -113,16 +113,16 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
   }, [])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-semibold text-white">{sideLabel}</h3>
-        <Badge variant="outline" className="bg-slate-700/50 text-slate-300 border-slate-600">
-          {side.length} {side.length === 1 ? 'item' : 'items'}
-        </Badge>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-black font-mono text-slate-400 uppercase tracking-[0.2em]">{sideLabel}</h3>
+        <div className="px-2 py-0.5 rounded bg-slate-900 border border-white/5 text-[9px] font-black font-mono text-slate-500 uppercase">
+          {side.length} Asset{side.length !== 1 ? 's' : ''}
+        </div>
       </div>
 
-      <div className="relative flex gap-2">
-        <div className="flex-1 relative">
+      <div className="relative">
+        <div className="relative group/input">
           <Input
             ref={inputRef}
             placeholder={placeholder}
@@ -137,77 +137,92 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
                 setShowSuggestions(true)
               }
             }}
-            className="bg-slate-700/50 border-slate-600 text-white w-full focus:border-yellow-400/50 focus:ring-2 focus:ring-yellow-400/20 transition-all"
+            className="bg-slate-900/50 border-white/5 text-white w-full h-12 pl-4 pr-12 rounded-xl focus:border-blue-500/30 focus:ring-0 transition-all font-mono text-xs placeholder:text-slate-700"
           />
-          {/* Suggestions Dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div
-              ref={suggestionsRef}
-              className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <Button
+              onClick={() => handleAddItem()}
+              size="sm"
+              className="h-8 w-8 p-0 bg-white/5 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 border border-white/5 rounded-lg transition-all"
             >
-              {suggestions.map((player, index) => (
-                <div
-                  key={`${player.player_name}-${index}`}
-                  onClick={() => handleSuggestionClick(player.player_name)}
-                  className={`px-4 py-2 cursor-pointer hover:bg-slate-700 transition-colors ${
-                    index === selectedIndex ? 'bg-slate-700' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Suggestions Dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div
+            ref={suggestionsRef}
+            className="absolute z-[60] w-full mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto backdrop-blur-xl"
+          >
+            {suggestions.map((player, index) => (
+              <div
+                key={`${player.player_name}-${index}`}
+                onClick={() => handleSuggestionClick(player.player_name)}
+                className={`px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
+                  index === selectedIndex ? 'bg-white/5' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
                       <PlayerHeadshot
                         headshotUrl={player.headshot_url}
                         playerName={player.player_name}
-                        size={28}
+                        size={32}
                       />
-                      <span className="text-white font-semibold">{player.player_name}</span>
-                      <Badge
-                        variant="outline"
-                        className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
-                      >
-                        {player.position}
-                      </Badge>
-                      <span className="text-gray-400 text-sm">{player.team}</span>
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-white font-mono uppercase">{player.player_name}</div>
+                      <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
+                        {player.team} <span className="opacity-30">•</span> {player.position}
+                      </div>
                     </div>
                   </div>
+                  <Plus className="h-3 w-3 text-slate-700" />
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <Button
-          onClick={() => handleAddItem()}
-          size="sm"
-          className="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-slate-900 font-semibold shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Items list */}
-      <div className="space-y-2">
+      {/* Items list - Asset Tokens */}
+      <div className="grid grid-cols-1 gap-2">
         {side.map((item, index) => (
           <div
             key={index}
-            className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-yellow-400/30 transition-all shadow-sm"
+            className="group flex items-center justify-between p-3 bg-slate-900/40 hover:bg-slate-900/60 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300"
           >
             <div className="flex items-center gap-3">
-              <PlayerHeadshot
-                playerName={item}
-                size={32}
-              />
-              <span className="text-white text-sm font-semibold">{item}</span>
+              <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover:grayscale-0 transition-all">
+                <PlayerHeadshot
+                  playerName={item}
+                  size={32}
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-slate-200 font-mono uppercase tracking-tight group-hover:text-white transition-colors">{item}</span>
+                <span className="text-[9px] text-slate-600 font-mono uppercase">Verified Asset</span>
+              </div>
             </div>
-            <Button
+            <button
               onClick={() => handleRemoveItem(index)}
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/20 transition-all"
+              className="h-6 w-6 flex items-center justify-center rounded-md text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
             >
-              <X className="h-4 w-4" />
-            </Button>
+              <X className="h-3 w-3" />
+            </button>
           </div>
         ))}
+        {side.length === 0 && (
+          <div className="py-10 border-2 border-dashed border-white/5 rounded-2xl flex flex-center justify-center">
+            <span className="text-[10px] font-black font-mono text-slate-700 uppercase tracking-widest">Empty Asset Queue</span>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,9 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TeamLogo } from '@/components/team-logo'
+import { ProspectCharts } from '@/components/scouting/ProspectCharts'
+import { ProspectComparison } from '@/components/scouting/ProspectComparison'
+import type { Prospect } from '@/components/scouting/types'
+import { 
+  TrendingUp, 
+  TrendingDown,
+  BarChart3, 
+  Users, 
+  ChevronUp, 
+  ChevronDown 
+} from 'lucide-react'
 
 import {
   BarChart,
@@ -88,6 +99,11 @@ export default function AnalysisPage() {
   const [draftSuccess, setDraftSuccess] = useState<DraftSuccessRates[]>([])
   const [breakoutBust, setBreakoutBust] = useState<BreakoutBust[]>([])
   const [prospectAnalysis, setProspectAnalysis] = useState<ProspectAnalysis[]>([])
+  const [allProspects, setAllProspects] = useState<Prospect[]>([])
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+  const [selectedYear1, setSelectedYear1] = useState<number | null>(null)
+  const [selectedYear2, setSelectedYear2] = useState<number | null>(null)
+  const [selectedDeepDiveYear, setSelectedDeepDiveYear] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -113,18 +129,42 @@ export default function AnalysisPage() {
         setLoading(true)
         setError(null)
 
-        // Fetch all analysis data from API
-        const response = await fetch('/api/analysis?type=all')
-        if (!response.ok) {
-          throw new Error('Failed to fetch analysis data')
-        }
-        const result = await response.json()
+        // Fetch all analysis data and ALL prospects in parallel
+        const [analysisRes, prospectsRes] = await Promise.all([
+          fetch('/api/analysis?type=all'),
+          fetch('/api/prospects?draft_year=all')
+        ])
 
-        setModelPerformance(result.modelPerformance || [])
-        setAggregatedStats(result.aggregatedStats || [])
-        setDraftSuccess(result.draftSuccess || [])
-        setBreakoutBust(result.breakoutBust || [])
-        setProspectAnalysis(result.prospectAnalysis || [])
+        const [analysisResult, prospectsResult] = await Promise.all([
+          analysisRes.json(),
+          prospectsRes.json()
+        ])
+
+        setModelPerformance(analysisResult.modelPerformance || [])
+        setAggregatedStats(analysisResult.aggregatedStats || [])
+        setDraftSuccess(analysisResult.draftSuccess || [])
+        setBreakoutBust(analysisResult.breakoutBust || [])
+        setProspectAnalysis(analysisResult.prospectAnalysis || [])
+        
+        // Set all prospects
+        const prospects = prospectsResult || []
+        setAllProspects(prospects)
+        
+        // Extract available years and sort descending (newest first)
+        const years = [...new Set(prospects.map((p: Prospect) => p.draft_year).filter(Boolean))] as number[]
+        years.sort((a, b) => b - a)
+        setAvailableYears(years)
+        
+        // Set default selections - top 2 most recent years
+        if (years.length >= 2) {
+          setSelectedYear1(years[0])
+          setSelectedYear2(years[1])
+          setSelectedDeepDiveYear(years[0])
+        } else if (years.length === 1) {
+          setSelectedYear1(years[0])
+          setSelectedYear2(years[0])
+          setSelectedDeepDiveYear(years[0])
+        }
       } catch (err) {
         console.error('Error fetching data:', err)
         setError('Failed to load analytics data')
@@ -135,6 +175,131 @@ export default function AnalysisPage() {
 
     fetchData()
   }, [])
+
+  // Filter prospects by selected years
+  const prospectsYear1 = useMemo(() => 
+    allProspects.filter(p => p.draft_year === selectedYear1), 
+    [allProspects, selectedYear1]
+  )
+  const prospectsYear2 = useMemo(() => 
+    allProspects.filter(p => p.draft_year === selectedYear2), 
+    [allProspects, selectedYear2]
+  )
+  const prospectsDeepDive = useMemo(() => 
+    allProspects.filter(p => p.draft_year === selectedDeepDiveYear), 
+    [allProspects, selectedDeepDiveYear]
+  )
+
+  // Calculate Overachievers and Underachievers based on NFL performance vs Prediction
+  const achievementData = useMemo(() => {
+    if (breakoutBust.length === 0) return { overachievers: [], underachievers: [] }
+
+    // Overachievers are 'breakout' players with positive surprise factors
+    const over = breakoutBust
+      .filter(p => p.analysis_type === 'breakout' || p.surprise_factor > 0)
+      .sort((a, b) => b.surprise_factor - a.surprise_factor)
+      .slice(0, 10)
+
+    // Underachievers are 'bust' players with negative surprise factors
+    const under = breakoutBust
+      .filter(p => p.analysis_type === 'bust' || p.surprise_factor < 0)
+      .sort((a, b) => a.surprise_factor - b.surprise_factor) // Most negative first
+      .slice(0, 10)
+    
+    return {
+      overachievers: over,
+      underachievers: under
+    }
+  }, [breakoutBust])
+
+  // Class Comparison Memoized Calculations
+  const classComparison = useMemo(() => {
+    const positions = ['QB', 'RB', 'WR', 'TE']
+    const year1Label = selectedYear1?.toString() || 'Year 1'
+    const year2Label = selectedYear2?.toString() || 'Year 2'
+    
+    // Positional Strength Comparison
+    const positionalStrength = positions.map(pos => {
+      const countYear1 = prospectsYear1.filter(p => p.position === pos).length
+      const countYear2 = prospectsYear2.filter(p => p.position === pos).length
+      
+      // Elite Count (Grade >= 85)
+      const eliteYear1 = prospectsYear1.filter(p => p.position === pos && (p.overall_grade || 0) >= 85).length
+      const eliteYear2 = prospectsYear2.filter(p => p.position === pos && (p.overall_grade || 0) >= 85).length
+
+      return {
+        position: pos,
+        [`${year1Label} Count`]: countYear1,
+        [`${year2Label} Count`]: countYear2,
+        [`${year1Label} Elite`]: eliteYear1,
+        [`${year2Label} Elite`]: eliteYear2
+      }
+    })
+
+    // Draft Capital Projection (Top 100)
+    const draftCapital = [
+      { round: '1st Round', [year1Label]: prospectsYear1.filter(p => p.rank <= 32).length, [year2Label]: prospectsYear2.filter(p => p.rank <= 32).length },
+      { round: '2nd Round', [year1Label]: prospectsYear1.filter(p => p.rank > 32 && p.rank <= 64).length, [year2Label]: prospectsYear2.filter(p => p.rank > 32 && p.rank <= 64).length },
+      { round: '3rd Round', [year1Label]: prospectsYear1.filter(p => p.rank > 64 && p.rank <= 100).length, [year2Label]: prospectsYear2.filter(p => p.rank > 64 && p.rank <= 100).length },
+    ]
+
+    // Metric Correlation (Height/Weight vs Valuation)
+    const correlationData = [...prospectsYear1, ...prospectsYear2]
+      .filter(p => p.height && p.weight && p.valuation)
+      .map(p => ({
+        height: p.height,
+        weight: p.weight,
+        valuation: p.valuation,
+        name: p.name,
+        year: p.draft_year,
+        position: p.position
+      }))
+
+    // Value Distribution Comparison
+    const valueRanges = [
+      { name: '80+', min: 80, max: 100 },
+      { name: '60-79', min: 60, max: 79 },
+      { name: '40-59', min: 40, max: 59 },
+      { name: '20-39', min: 20, max: 39 },
+      { name: '<20', min: 0, max: 19 }
+    ]
+
+    const valueDistribution = valueRanges.map(range => {
+      const countYear1 = prospectsYear1.filter(p => (p.valuation || 0) >= range.min && (p.valuation || 0) <= range.max).length
+      const countYear2 = prospectsYear2.filter(p => (p.valuation || 0) >= range.min && (p.valuation || 0) <= range.max).length
+      
+      return {
+        range: range.name,
+        [year1Label]: countYear1,
+        [year2Label]: countYear2
+      }
+    })
+
+    // Summary Metrics
+    const avgValYear1 = prospectsYear1.length > 0 
+      ? prospectsYear1.reduce((sum, p) => sum + (p.valuation || 0), 0) / prospectsYear1.length 
+      : 0
+    const avgValYear2 = prospectsYear2.length > 0 
+      ? prospectsYear2.reduce((sum, p) => sum + (p.valuation || 0), 0) / prospectsYear2.length 
+      : 0
+
+    return {
+      positionalStrength,
+      draftCapital,
+      correlationData,
+      valueDistribution,
+      year1Label,
+      year2Label,
+      summary: {
+        avgValYear1: avgValYear1.toFixed(1),
+        avgValYear2: avgValYear2.toFixed(1),
+        eliteCountYear1: prospectsYear1.filter(p => (p.overall_grade || 0) >= 85).length,
+        eliteCountYear2: prospectsYear2.filter(p => (p.overall_grade || 0) >= 85).length,
+        totalYear1: prospectsYear1.length,
+        totalYear2: prospectsYear2.length
+      }
+    }
+  }, [prospectsYear1, prospectsYear2, selectedYear1, selectedYear2])
 
   if (loading) {
     return (
@@ -326,512 +491,465 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-[#0a0f1d] text-slate-200">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-mono font-bold text-yellow-400 mb-2">
-            COMPREHENSIVE ANALYSIS
-          </h1>
-          <p className="text-green-400">
-            Advanced analytics from master data pipeline • Live Database
-          </p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Page Header */}
+        <div className="mb-16 relative">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+          
+          <div className="relative z-10">
+            <h1 className="text-5xl font-black font-mono text-white mb-4 tracking-tighter">
+              ANALYTICS<span className="text-blue-500">_</span>HUB
+            </h1>
+            <div className="flex items-center gap-4 text-slate-400">
+              <div className="flex items-center gap-2 bg-slate-900/50 border border-white/5 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-mono font-bold uppercase tracking-widest">Live Pipeline Active</span>
+              </div>
+              <p className="text-sm font-medium border-l border-white/10 pl-4">
+                Processing {allProspects.length} assets across {availableYears.length} draft classes
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Enhanced Model Performance Summary */}
-        {modelPerformance.length > 0 && (
-          <Card className="mb-8 bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono">MASTER MODEL PERFORMANCE</CardTitle>
-              <p className="text-green-400 text-sm">
-                {modelPerformance[0].model} • {modelPerformance[0].feature_count} features •
-                Cross-validated
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">
-                    {(modelPerformance[0].r2 * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-sm text-gray-400">R² Score</div>
-                  <div className="text-xs text-gray-500">
-                    CV: {(modelPerformance[0].cv_r2_mean * 100).toFixed(1)}%
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-yellow-400">
-                    {modelPerformance[0].rmse.toFixed(2)}
-                  </div>
-                  <div className="text-sm text-gray-400">RMSE</div>
-                  <div className="text-xs text-gray-500">
-                    CV: {modelPerformance[0].cv_rmse_mean.toFixed(2)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-400">
-                    {modelPerformance[0].feature_count}
-                  </div>
-                  <div className="text-sm text-gray-400">Features</div>
-                  <div className="text-xs text-gray-500">Optimized</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-400">
-                    {modelPerformance[0].total_players?.toLocaleString() || 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-400">Players</div>
-                  <div className="text-xs text-gray-500">2015-2024</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400">
-                    {modelPerformance[0].avg_actual_ppg?.toFixed(1) || 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-400">Avg PPG</div>
-                  <div className="text-xs text-gray-500">Actual</div>
-                </div>
-              </div>
+        {/* SECTION 1: ADVANCED COMPARISON TOOL */}
+        <div className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-xl font-black font-mono text-white uppercase tracking-widest">
+              Head-to-Head Labs
+            </h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+          </div>
+          <ProspectComparison prospects={allProspects} />
+        </div>
 
-              {/* Top Features */}
-              {modelPerformance[0].top_features && (
-                <div className="mt-6 p-4 bg-slate-700 rounded-lg">
-                  <h4 className="text-yellow-400 font-mono text-sm mb-2">
-                    TOP PREDICTIVE FEATURES
-                  </h4>
-                  <p className="text-gray-300 text-sm">{modelPerformance[0].top_features}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* SECTION 2: PERFORMANCE LEADERS */}
+        {breakoutBust.length > 0 && (
+          <div className="mb-20">
+            <div className="flex items-center gap-4 mb-8">
+              <h2 className="text-xl font-black font-mono text-white uppercase tracking-widest">
+                Performance Leaders
+              </h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Top 10 Overachievers */}
+              <Card className="bg-slate-900/40 border-white/5 backdrop-blur-xl">
+                <CardHeader className="border-b border-white/5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-green-400 font-mono text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      Top 10 Overachievers
+                    </CardTitle>
+                    <span className="text-[10px] text-slate-500 font-mono uppercase">Actual vs ML Prediction</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-1">
+                    {achievementData.overachievers.map((p, idx) => (
+                      <div key={`${p.player_name}-${p.season}`} className="group flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all">
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs font-mono text-slate-600 w-4">{idx + 1}</span>
+                          <div>
+                            <p className="text-sm font-bold text-white group-hover:text-green-400 transition-colors">{p.player_name}</p>
+                            <p className="text-[10px] text-slate-500 font-mono uppercase">
+                              {p.position} • {p.season} Season • {p.fantasy_ppg.toFixed(1)} Actual PPG
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-green-400 font-black font-mono text-sm">
+                            +{p.surprise_factor.toFixed(1)}
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-mono uppercase">Surprise Factor</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top 10 Underachievers */}
+              <Card className="bg-slate-900/40 border-white/5 backdrop-blur-xl">
+                <CardHeader className="border-b border-white/5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-red-400 font-mono text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4" />
+                      Top 10 Underachievers
+                    </CardTitle>
+                    <span className="text-[10px] text-slate-500 font-mono uppercase">Actual vs ML Prediction</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="space-y-1">
+                    {achievementData.underachievers.map((p, idx) => (
+                      <div key={`${p.player_name}-${p.season}`} className="group flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all">
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs font-mono text-slate-600 w-4">{idx + 1}</span>
+                          <div>
+                            <p className="text-sm font-bold text-white group-hover:text-red-400 transition-colors">{p.player_name}</p>
+                            <p className="text-[10px] text-slate-500 font-mono uppercase">
+                              {p.position} • {p.season} Season • {p.fantasy_ppg.toFixed(1)} Actual PPG
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-red-400 font-black font-mono text-sm">
+                            {p.surprise_factor.toFixed(1)}
+                          </div>
+                          <p className="text-[10px] text-slate-600 font-mono uppercase">Surprise Factor</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
 
-        {/* Enhanced Analytics Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Seasonal Performance Trends */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono">ELITE TIER TRENDS</CardTitle>
-              <p className="text-green-400 text-sm">Top tier performance by season</p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={seasonalTrends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="season" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="avgPPG"
-                    stroke="#FFD700"
-                    fill="#FFD700"
-                    fillOpacity={0.3}
-                  />
-                  <Line type="monotone" dataKey="playerCount" stroke="#2CFF94" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        {/* SECTION 3: CLASS INTELLIGENCE */}
+        <div className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-xl font-black font-mono text-white uppercase tracking-widest">
+              Market Intelligence
+            </h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+          </div>
 
-          {/* Enhanced Prediction Accuracy */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono">PREDICTION ACCURACY</CardTitle>
-              <p className="text-green-400 text-sm">
-                Actual vs Predicted PPG • R² = {(modelPerformance[0]?.r2 * 100 || 0).toFixed(1)}%
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <ScatterChart data={predictionAccuracy}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="predicted" stroke="#9CA3AF" />
-                  <YAxis dataKey="actual" stroke="#9CA3AF" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Scatter dataKey="actual" fill="#2CFF94" fillOpacity={0.6} />
-                </ScatterChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Class Comparison Hub */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between gap-4 mb-6 bg-slate-900/50 border border-white/5 p-4 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <BarChart3 className="h-5 w-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black font-mono text-white uppercase tracking-wider">Class Comparison</h3>
+                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Compare macro data between years</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedYear1 || ''}
+                  onChange={(e) => setSelectedYear1(Number(e.target.value))}
+                  className="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-sm font-mono font-bold text-blue-400 focus:ring-2 focus:ring-blue-500/20 focus:outline-none appearance-none cursor-pointer hover:border-white/20 transition-all"
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <div className="w-8 h-px bg-white/10" />
+                <select
+                  value={selectedYear2 || ''}
+                  onChange={(e) => setSelectedYear2(Number(e.target.value))}
+                  className="bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-sm font-mono font-bold text-slate-400 focus:ring-2 focus:ring-white/20 focus:outline-none appearance-none cursor-pointer hover:border-white/20 transition-all"
+                >
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-        {/* Draft Analysis Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Enhanced Draft Success */}
-          <Card
-            className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
-            onClick={() => {
-              if (draftSort === 'eliteRate') setDraftSort('tier1PlusRate')
-              else if (draftSort === 'tier1PlusRate') setDraftSort('totalPlayers')
-              else setDraftSort('eliteRate')
-            }}
-          >
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                DRAFT ROUND SUCCESS RATES
-                <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort:{' '}
-                  {draftSort === 'eliteRate'
-                    ? 'Elite Rate'
-                    : draftSort === 'tier1PlusRate'
-                      ? 'Tier 1+ Rate'
-                      : 'Total Players'}
-                </span>
-              </CardTitle>
-              <p className="text-green-400 text-sm">Click to sort • Hit rates by draft position</p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={draftRoundSuccess.slice(0, 7)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="round" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="eliteRate" fill="#8B5CF6" name="Elite Rate %" />
-                  <Bar dataKey="tier1PlusRate" fill="#10B981" name="Tier 1+ Rate %" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Summary Delta Card */}
+              <Card className="bg-slate-900/40 border-white/5">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-slate-400 font-mono text-[10px] uppercase tracking-widest">Comparative Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-8">
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-[10px] text-slate-500 uppercase font-black mb-2 tracking-widest">Avg Valuation</p>
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-4xl font-black text-white leading-none">{classComparison.summary.avgValYear1}</span>
+                          <span className="text-xs text-blue-400 font-mono font-bold">vs {classComparison.summary.avgValYear2}</span>
+                        </div>
+                      </div>
+                      <div className={`px-3 py-1.5 rounded-full text-[10px] font-black font-mono uppercase tracking-tighter ${
+                        parseFloat(classComparison.summary.avgValYear1) > parseFloat(classComparison.summary.avgValYear2) 
+                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                        : 'bg-slate-800 text-slate-400 border border-white/5'
+                      }`}>
+                        {parseFloat(classComparison.summary.avgValYear1) > parseFloat(classComparison.summary.avgValYear2) ? '↗ Winner' : '↘ Second'}
+                      </div>
+                    </div>
 
-          {/* Prospect Tier Analysis */}
-          <Card
-            className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
-            onClick={() => {
-              if (prospectSort === 'hitRate') setProspectSort('successRate')
-              else if (prospectSort === 'successRate') setProspectSort('totalCount')
-              else setProspectSort('hitRate')
-            }}
-          >
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                PROSPECT TIER ANALYSIS
-                <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort:{' '}
-                  {prospectSort === 'hitRate'
-                    ? 'Hit Rate'
-                    : prospectSort === 'successRate'
-                      ? 'Success Rate'
-                      : 'Total Count'}
-                </span>
-              </CardTitle>
-              <p className="text-green-400 text-sm">
-                Click to sort • Success rates by prospect grade
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={prospectTierData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="tier" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="hitRate" fill="#FFD700" name="Hit Rate %" />
-                  <Bar dataKey="successRate" fill="#2CFF94" name="Success Rate %" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Position Performance & Tier Distribution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Enhanced Position Performance */}
-          <Card
-            className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
-            onClick={() => {
-              if (positionSort === 'avgPPG') setPositionSort('totalPlayers')
-              else if (positionSort === 'totalPlayers') setPositionSort('avgError')
-              else setPositionSort('avgPPG')
-            }}
-          >
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                2024 POSITION PERFORMANCE
-                <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort:{' '}
-                  {positionSort === 'avgPPG'
-                    ? 'Avg PPG'
-                    : positionSort === 'totalPlayers'
-                      ? 'Total Players'
-                      : 'Avg Error'}
-                </span>
-              </CardTitle>
-              <p className="text-green-400 text-sm">
-                Click to sort • Average PPG and prediction accuracy
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={positionPerformance}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="position" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1F2937',
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="avgPPG" fill="#2CFF94" name="Avg PPG" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Enhanced Tier Distribution */}
-          <Card
-            className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
-            onClick={() => {
-              if (tierSort === 'value') setTierSort('avgPPG')
-              else setTierSort('value')
-            }}
-          >
-            <CardHeader>
-              <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                2024 TIER DISTRIBUTION
-                <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                  Sort: {tierSort === 'value' ? 'Player Count' : 'Avg PPG'}
-                </span>
-              </CardTitle>
-              <p className="text-green-400 text-sm">
-                Click to sort • Player count by performance tier
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={tierDistribution}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {tierDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        {breakoutBust.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Enhanced Breakouts and Busts */}
-            {/* Top Breakouts with Surprise Factor */}
-            <Card
-              className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
-              onClick={() => {
-                if (breakoutSort === 'surprise_factor') setBreakoutSort('fantasy_ppg')
-                else if (breakoutSort === 'fantasy_ppg') setBreakoutSort('performance_ratio')
-                else setBreakoutSort('surprise_factor')
-              }}
-            >
-              <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                  TOP BREAKOUTS
-                  <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                    Sort:{' '}
-                    {breakoutSort === 'surprise_factor'
-                      ? 'Surprise Factor'
-                      : breakoutSort === 'fantasy_ppg'
-                        ? 'Fantasy PPG'
-                        : 'Performance Ratio'}
-                  </span>
-                </CardTitle>
-                <p className="text-green-400 text-sm">
-                  Click to sort • Highest surprise factor players
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {topBreakouts.map((player, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center p-3 bg-slate-700 rounded"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <TeamLogo
-                          team={player.recent_team || 'NFL'}
-                          size={32}
-                          className="flex-shrink-0"
-                        />
-                        <div>
-                          <div className="text-white font-medium">{player.player_name}</div>
-                          <div className="text-sm text-gray-400">
-                            {player.position} • {player.season}
-                            {player.tier_upgrade && (
-                              <span className="text-green-400 ml-2">↗ TIER UP</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Ratio: {player.performance_ratio?.toFixed(2) || 'N/A'}
-                          </div>
+                    <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
+                      <div>
+                        <p className="text-[10px] text-slate-500 uppercase font-black mb-1 tracking-widest">Elite (85+)</p>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-black text-amber-400 leading-none">{classComparison.summary.eliteCountYear1}</span>
+                          <span className="text-[10px] text-slate-600 font-mono">/ {classComparison.summary.totalYear1}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-green-400 font-bold">
-                          +{player.surprise_factor.toFixed(1)}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {player.fantasy_ppg.toFixed(1)} PPG
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          vs {player.predicted_fantasy_ppg.toFixed(1)} pred
-                        </div>
+                        <p className="text-[10px] text-slate-500 uppercase font-black mb-1 tracking-widest">Total Assets</p>
+                        <span className="text-lg font-black text-white leading-none">{classComparison.summary.totalYear1}</span>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Positional Strength Comparison */}
+              <Card className="bg-slate-900/40 border-white/5 lg:col-span-2">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-slate-400 font-mono text-[10px] uppercase tracking-widest">Positional Strength ({classComparison.year1Label} vs {classComparison.year2Label})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[220px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={classComparison.positionalStrength}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                        <XAxis dataKey="position" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
+                        <YAxis stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                          contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                          itemStyle={{ fontSize: '10px', fontWeight: 'bold' }}
+                        />
+                        <Bar dataKey={`${classComparison.year1Label} Count`} fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={32} />
+                        <Bar dataKey={`${classComparison.year2Label} Count`} fill="#1e293b" radius={[4, 4, 0, 0]} barSize={32} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Deep Dive Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <Users className="h-5 w-5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black font-mono text-white uppercase tracking-wider">Class Deep Dive</h3>
+                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Internal distribution metrics</p>
+                </div>
+              </div>
+              
+              <div className="flex bg-slate-900/50 border border-white/5 rounded-2xl p-1.5 backdrop-blur-sm">
+                {availableYears.slice(0, 5).map(year => (
+                  <button
+                    key={year}
+                    onClick={() => setSelectedDeepDiveYear(year)}
+                    className={`px-5 py-2 rounded-xl font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                      selectedDeepDiveYear === year
+                        ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
+                        : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ProspectCharts prospects={prospectsDeepDive} variant="grid" />
+          </div>
+        </div>
+
+        {/* SECTION 4: SYSTEM BENCHMARKS */}
+        <div className="mb-20">
+          <div className="flex items-center gap-4 mb-8">
+            <h2 className="text-xl font-black font-mono text-white uppercase tracking-widest">
+              System Benchmarks
+            </h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Metric Correlation Section */}
+            <Card className="bg-slate-900/40 border-white/5 lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
+                <div>
+                  <CardTitle className="text-white font-mono text-sm uppercase tracking-widest">Trait Correlation Matrix</CardTitle>
+                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mt-1">Weight vs Value Correlation • Colored by Draft Class</p>
+                </div>
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <BarChart3 className="h-4 w-4 text-blue-400" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" />
+                      <XAxis 
+                        type="number" 
+                        dataKey="weight" 
+                        name="Weight" 
+                        unit="lbs" 
+                        stroke="#475569" 
+                        fontSize={10}
+                        domain={['dataMin - 10', 'dataMax + 10']}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis 
+                        type="number" 
+                        dataKey="valuation" 
+                        name="Value" 
+                        stroke="#475569" 
+                        fontSize={10} 
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip 
+                        cursor={{ strokeDasharray: '3 3' }} 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-[#0f172a] border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
+                                <p className="text-white font-black font-mono text-xs uppercase mb-1">{data.name}</p>
+                                <p className="text-[10px] text-blue-400 font-mono mb-3">{data.year} {data.position}</p>
+                                <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-3">
+                                  <div>
+                                    <p className="text-[8px] text-slate-500 uppercase font-black">Weight</p>
+                                    <p className="text-xs font-bold text-white">{data.weight} lbs</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[8px] text-slate-500 uppercase font-black">Value</p>
+                                    <p className="text-xs font-bold text-blue-400">{data.valuation}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Scatter 
+                        name={`${classComparison.year1Label} Class`} 
+                        data={classComparison.correlationData.filter(d => d.year === selectedYear1)} 
+                        fill="#3b82f6" 
+                        shape="circle"
+                      />
+                      <Scatter 
+                        name={`${classComparison.year2Label} Class`} 
+                        data={classComparison.correlationData.filter(d => d.year === selectedYear2)} 
+                        fill="#1e293b" 
+                        stroke="rgba(255,255,255,0.1)"
+                        shape="circle"
+                      />
+                    </ScatterChart>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Top Busts with Surprise Factor */}
-            <Card
-              className="bg-slate-800 border-slate-700 cursor-pointer hover:border-yellow-400 transition-colors"
-              onClick={() => {
-                if (bustSort === 'surprise_factor') setBustSort('fantasy_ppg')
-                else if (bustSort === 'fantasy_ppg') setBustSort('performance_ratio')
-                else setBustSort('surprise_factor')
-              }}
-            >
+            {/* Value Distribution Comparison */}
+            <Card className="bg-slate-900/40 border-white/5">
               <CardHeader>
-                <CardTitle className="text-yellow-400 font-mono flex items-center justify-between">
-                  TOP BUSTS
-                  <span className="text-xs text-green-400 bg-slate-700 px-2 py-1 rounded">
-                    Sort:{' '}
-                    {bustSort === 'surprise_factor'
-                      ? 'Surprise Factor'
-                      : bustSort === 'fantasy_ppg'
-                        ? 'Fantasy PPG'
-                        : 'Performance Ratio'}
-                  </span>
-                </CardTitle>
-                <p className="text-green-400 text-sm">Click to sort • Biggest disappointments</p>
+                <CardTitle className="text-white font-mono text-sm uppercase tracking-widest">Value Density</CardTitle>
+                <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mt-1">Cross-class distribution</p>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {topBusts.map((player, index) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center p-3 bg-slate-700 rounded"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <TeamLogo
-                          team={player.recent_team || 'NFL'}
-                          size={32}
-                          className="flex-shrink-0"
-                        />
-                        <div>
-                          <div className="text-white font-medium">{player.player_name}</div>
-                          <div className="text-sm text-gray-400">
-                            {player.position} • {player.season}
-                            {player.tier_downgrade && (
-                              <span className="text-red-400 ml-2">↘ TIER DOWN</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Ratio: {player.performance_ratio?.toFixed(2) || 'N/A'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-red-400 font-bold">
-                          {player.surprise_factor.toFixed(1)}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {player.fantasy_ppg.toFixed(1)} PPG
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          vs {player.predicted_fantasy_ppg.toFixed(1)} pred
-                        </div>
-                      </div>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={classComparison.valueDistribution}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                      <XAxis dataKey="range" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
+                      <YAxis stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                      />
+                      <Area type="monotone" dataKey={classComparison.year1Label} stroke="#3b82f6" strokeWidth={2} fill="url(#colorBlue)" fillOpacity={1} />
+                      <Area type="monotone" dataKey={classComparison.year2Label} stroke="#1e293b" strokeWidth={2} fill="rgba(30, 41, 59, 0.3)" fillOpacity={1} />
+                      <defs>
+                        <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Master Data Pipeline Insights (Optional Section) */}
+        {modelPerformance.length > 0 && (
+          <div className="mb-20">
+            <div className="flex items-center gap-4 mb-8">
+              <h2 className="text-xl font-black font-mono text-white uppercase tracking-widest">
+                Machine Learning Stats
+              </h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+            </div>
+            
+            <Card className="bg-slate-900/40 border-white/5">
+              <CardHeader>
+                <CardTitle className="text-yellow-400 font-mono uppercase tracking-[0.2em]">Master Model Performance</CardTitle>
+                <p className="text-green-400 text-xs font-mono">
+                  {modelPerformance[0].model} • {modelPerformance[0].feature_count} features • Cross-validated
+                </p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+                  <div className="text-center">
+                    <div className="text-4xl font-black text-green-400 mb-1 leading-none">
+                      {(modelPerformance[0].r2 * 100).toFixed(1)}%
                     </div>
-                  ))}
+                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest">R² Score</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-black text-yellow-400 mb-1 leading-none">
+                      {modelPerformance[0].rmse.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest">RMSE</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-black text-purple-400 mb-1 leading-none">
+                      {modelPerformance[0].feature_count}
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Features</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-black text-blue-400 mb-1 leading-none">
+                      {modelPerformance[0].total_players?.toLocaleString() || 'N/A'}
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Population</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-4xl font-black text-green-400 mb-1 leading-none">
+                      {modelPerformance[0].avg_actual_ppg?.toFixed(1) || 'N/A'}
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Avg PPG</div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Enhanced Key Insights */}
-        <Card className="mt-8 bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono">MASTER DATA INSIGHTS</CardTitle>
-            <p className="text-green-400 text-sm">Advanced analytics from comprehensive pipeline</p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">MODEL EXCELLENCE</h3>
-                  <p className="text-gray-300 text-sm">
-                    {modelPerformance.length > 0 &&
-                      `${(modelPerformance[0].r2 * 100).toFixed(1)}% R² with ${modelPerformance[0].feature_count} optimized features across ${modelPerformance[0].total_players?.toLocaleString() || 'N/A'} player seasons`}
-                  </p>
-                </div>
-              </div>
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">DRAFT INTELLIGENCE</h3>
-                  <p className="text-gray-300 text-sm">
-                    {draftRoundSuccess.length > 0 &&
-                      `Round 1: ${draftRoundSuccess[0]?.eliteRate}% elite rate, Round 7: ${draftRoundSuccess[6]?.eliteRate || '0'}% elite rate - clear draft capital value`}
-                  </p>
-                </div>
-              </div>
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">BREAKOUT SCIENCE</h3>
-                  <p className="text-gray-300 text-sm">
-                    {topBreakouts.length > 0 &&
-                      `${topBreakouts.length} major breakouts with surprise factors up to +${topBreakouts[0]?.surprise_factor.toFixed(1)} - predictive patterns identified`}
-                  </p>
-                </div>
-              </div>
-              <div className="gradient-border">
-                <div className="gradient-border-content">
-                  <h3 className="text-green-400 font-mono text-sm mb-2">PROSPECT GRADING</h3>
-                  <p className="text-gray-300 text-sm">
-                    {prospectTierData.length > 0 &&
-                      `${prospectTierData[0]?.tier} prospects: ${prospectTierData[0]?.hitRate}% hit rate - validated prospect evaluation system`}
-                  </p>
-                </div>
-              </div>
+        {/* Footer Info */}
+        <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-yellow-400 flex items-center justify-center text-slate-900 font-black">FB</div>
+            <div>
+              <p className="text-xs font-black font-mono text-white uppercase tracking-widest">First Ballot Fantasy</p>
+              <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Advanced Analytics Pipeline v4.2.0</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-slate-600 font-mono uppercase tracking-[0.2em]">Data Refreshed Hourly • © 2026</p>
+          </div>
+        </div>
       </main>
     </div>
   )

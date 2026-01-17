@@ -104,7 +104,7 @@ export function RecordSection() {
     }
   }
 
-  const transformPlayerForCard = (player: BreakoutBustPlayer) => ({
+  const transformPlayerForCard = (player: BreakoutBustPlayer, isBreakout: boolean = true) => ({
     name: player.player_name,
     tier: player.prospect_tier || 'Unknown',
     ppg: Number(player.fantasy_ppg?.toFixed(1)) || 0,
@@ -115,6 +115,8 @@ export function RecordSection() {
         : player.prediction_error.toFixed(1),
     team: player.recent_team || 'N/A',
     playerId: player.player_id,
+    position: player.position,
+    statusTag: isBreakout ? 'Strong Start' : 'Average',
   })
 
   return (
@@ -218,7 +220,7 @@ export function RecordSection() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {breakoutCandidates.slice(0, 15).map((player, index) => (
                       <div key={index} className="relative">
-                        <PlayerCard player={transformPlayerForCard(player)} />
+                        <PlayerCard player={transformPlayerForCard(player, true)} />
                         <div className="absolute top-2 right-2 bg-green-400 text-slate-900 px-2 py-1 rounded text-xs font-mono font-bold">
                           +{player.surprise_factor.toFixed(1)}
                         </div>
@@ -321,7 +323,7 @@ export function RecordSection() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {bustCandidates.slice(0, 15).map((player, index) => (
                       <div key={index} className="relative">
-                        <PlayerCard player={transformPlayerForCard(player)} />
+                        <PlayerCard player={transformPlayerForCard(player, false)} />
                         <div className="absolute top-2 right-2 bg-red-400 text-slate-900 px-2 py-1 rounded text-xs font-mono font-bold">
                           {player.surprise_factor.toFixed(1)}
                         </div>

@@ -5,11 +5,12 @@ import { useSearchParams } from 'next/navigation'
 import { Header } from '@/components/header'
 import { ScoutingPortal } from '@/components/scouting'
 
-function ScoutingPortalWrapper() {
-  const searchParams = useSearchParams()
-  const leagueId = searchParams.get('leagueId') || ''
+import { useLeagueContext } from '@/lib/league-context'
 
-  return <ScoutingPortal leagueId={leagueId} />
+function ScoutingPortalWrapper() {
+  const { selectedLeagueId } = useLeagueContext()
+
+  return <ScoutingPortal leagueId={selectedLeagueId || ''} />
 }
 
 export default function ScoutingPortalPage() {

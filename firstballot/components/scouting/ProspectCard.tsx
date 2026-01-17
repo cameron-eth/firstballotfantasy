@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,8 +13,9 @@ interface ProspectCardProps {
   onSelect: (prospect: Prospect) => void
   onCompare: (prospect: Prospect) => void
   isOnBoard?: boolean
-  variant?: 'full' | 'compact' | 'mini'
+  variant?: 'full' | 'compact' | 'mini' | 'dossier'
   isDiamondTier?: boolean
+  positionNeed?: number
 }
 
 // Utility functions
@@ -198,9 +200,10 @@ export function ProspectCard({
   prospect,
   onSelect,
   onCompare,
-  isOnBoard,
+  isOnBoard = false,
   variant = 'full',
   isDiamondTier = false,
+  positionNeed = 0,
 }: ProspectCardProps) {
   const tier = getTier(prospect)
   const tierStyles = isDiamondTier
@@ -220,6 +223,14 @@ export function ProspectCard({
   const tierBgColor = isDiamondTier
     ? 'bg-gradient-to-r from-cyan-500/20 via-cyan-500/10 to-cyan-500/20'
     : getTierHeaderBg(tier)
+
+  // Meaningful Data: Calculate "Market Opportunity"
+  // Logic: If grade is high but rank is relatively lower, it's a "Steal"
+  const marketOpportunity = useMemo(() => {
+    if (!prospect.overall_grade) return 0
+    const expectedRank = 100 - (prospect.overall_grade - 50) * 2 // Very rough heuristic
+    return Math.max(0, expectedRank - prospect.rank)
+  }, [prospect.overall_grade, prospect.rank])
 
   if (variant === 'mini') {
     return (
@@ -336,12 +347,146 @@ export function ProspectCard({
     )
   }
 
+  if (variant === 'dossier') {
+    const initials = prospect.name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2)
+
+    // Format physical attributes
+    const heightDisplay = prospect.height 
+      ? `${Math.floor(prospect.height / 12)}'${Math.round(prospect.height % 12)}"`
+      : null
+    const weightDisplay = prospect.weight ? `${prospect.weight} lbs` : null
+
+    return (
+      <div
+        className={`group relative overflow-hidden rounded-2xl border transition-all duration-500 cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${tierStyles.card} ${tierStyles.glow} ${
+          !tierStyles.card ? 'bg-[#0a0f1a] border-white/[0.06] hover:border-blue-500/30 shadow-2xl' : ''
+        }`}
+        onClick={() => onSelect(prospect)}
+      >
+        {/* Top Accent Bar */}
+        <div className={`h-1 w-full ${isDiamondTier ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-cyan-400' : tier === 'Tier 1' ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500' : 'bg-gradient-to-r from-blue-500/50 via-blue-400/30 to-blue-500/50'}`} />
+
+        <div className="p-4 relative z-10 h-full flex flex-col min-h-[240px]">
+          {/* Header: Headshot + Info */}
+          <div className="flex gap-4 mb-4">
+            {/* Headshot */}
+            <div className="relative flex-shrink-0">
+              {prospect.headshot_url ? (
+                <div className="w-20 h-20 rounded-xl bg-slate-900 border border-white/10 overflow-hidden shadow-xl group-hover:border-blue-500/40 transition-all">
+                  <img 
+                    src={prospect.headshot_url} 
+                    alt={prospect.name}
+                    className="w-full h-full object-cover object-top"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                      if (target.parentElement) {
+                        target.parentElement.innerHTML = `<span class="w-full h-full flex items-center justify-center text-xl font-black font-mono text-white/60">${initials}</span>`
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-xl font-black font-mono text-white/40 shadow-xl group-hover:border-blue-500/40 group-hover:text-blue-400/60 transition-all">
+                  {initials}
+                </div>
+              )}
+              {/* Jersey Number Badge */}
+              {prospect.jersey && (
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-md bg-slate-950 border border-white/10 flex items-center justify-center">
+                  <span className="text-[9px] font-black text-white font-mono">#{prospect.jersey}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Name & School */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Badge
+                  variant="outline"
+                  className={`${getPositionStyles(prospect.position)} text-[8px] px-1.5 py-0 border-none font-black uppercase tracking-tight bg-white/5 rounded`}
+                >
+                  {prospect.position}
+                </Badge>
+                <span className={`text-[9px] font-black font-mono ${tierTextColor}`}>#{prospect.rank}</span>
+              </div>
+              
+              <h4 className="text-lg font-black text-white font-mono uppercase leading-tight tracking-tight truncate group-hover:text-blue-400 transition-colors">
+                {prospect.name}
+              </h4>
+              
+              <div className="flex items-center gap-1.5 mt-1 text-slate-500 text-[10px] font-mono font-bold uppercase tracking-wide">
+                <School className="h-2.5 w-2.5 flex-shrink-0" />
+                <span className="truncate">{prospect.school || 'TBD'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Physical Attributes Row */}
+          <div className="flex items-center gap-3 mb-4 py-2 px-3 rounded-lg bg-white/[0.02] border border-white/[0.03]">
+            {heightDisplay && (
+              <div className="flex flex-col">
+                <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">HT</span>
+                <span className="text-xs font-black text-white font-mono">{heightDisplay}</span>
+              </div>
+            )}
+            {weightDisplay && (
+              <div className="flex flex-col">
+                <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">WT</span>
+                <span className="text-xs font-black text-white font-mono">{weightDisplay}</span>
+              </div>
+            )}
+            {!heightDisplay && !weightDisplay && (
+              <span className="text-[10px] text-slate-600 font-mono">Measurables TBD</span>
+            )}
+            <div className="flex-1" />
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] text-slate-600 font-mono uppercase tracking-wider">Value</span>
+              <span className="text-xs font-black text-blue-400 font-mono">{getValue(prospect)}</span>
+            </div>
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Footer: Grade Bar */}
+          <div className="pt-3 border-t border-white/[0.04]">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${gradeStyles.bg.includes('amber') ? 'bg-amber-400' : gradeStyles.bg.includes('emerald') ? 'bg-emerald-400' : 'bg-blue-400'} animate-pulse`} />
+                <span className="text-[10px] font-black text-white font-mono uppercase">{gradeTier}</span>
+              </div>
+              <span className={`text-xs font-black font-mono ${gradeStyles.text}`}>
+                {prospect.overall_grade?.toFixed(0) || '--'}
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-slate-950 rounded-full overflow-hidden border border-white/5">
+              <div
+                className={`h-full ${gradeStyles.bg} transition-all duration-1000 ease-out`}
+                style={{ width: `${prospect.overall_grade || 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Subtle Position Watermark */}
+        <div className="absolute bottom-2 right-3 font-mono text-[60px] font-black text-white/[0.015] select-none pointer-events-none uppercase leading-none">
+          {prospect.position}
+        </div>
+      </div>
+    )
+  }
+
   // Full variant
   return (
     <Card
       className={`overflow-hidden border transition-all cursor-pointer group hover:scale-[1.01] ${tierStyles.card} ${tierStyles.glow} ${
         !tierStyles.card ? 'bg-slate-800/90 border-slate-600/50 hover:border-slate-500' : ''
-      } !bg-transparent`}
+      } !bg-transparent backdrop-blur-md`}
       style={{ background: 'transparent' }}
       onClick={() => onSelect(prospect)}
     >
@@ -349,134 +494,142 @@ export function ProspectCard({
         className="p-0 overflow-hidden !bg-transparent"
         style={{ background: 'transparent' }}
       >
-        {/* Header section with name and rank */}
+        {/* Modern Header: Tier-specific backdrop and better badge grouping */}
         <div
-          className={`px-3 pt-3 pb-2 ${tierBgColor} border-b ${tierStyles.glow ? 'border-current/20' : 'border-slate-600/30'}`}
+          className={`px-4 pt-4 pb-3 ${tierBgColor} border-b ${tierStyles.glow ? 'border-current/20' : 'border-slate-600/30'} relative overflow-hidden`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1 flex-wrap">
-              {/* Grade Tier Badge */}
-              <Badge
+          {/* Subtle background icon */}
+          <div className="absolute -top-2 -right-2 opacity-5 scale-150 rotate-12">
+            {tierStyles.icon || <TrendingUp className="h-20 w-20" />}
+          </div>
+
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <div className="flex items-center gap-1.5 flex-wrap">
+               <Badge
                 variant="outline"
-                className={`${gradeStyles.bg} ${gradeStyles.text} border-current/30 text-[10px] font-semibold flex items-center gap-0.5 shadow-sm ${gradeStyles.glow}`}
+                className={`${tierStyles.badge} text-[9px] px-2 py-0.5 border font-black uppercase tracking-widest flex items-center gap-1`}
               >
-                {gradeTier === 'Elite' && <Sparkles className="h-2.5 w-2.5" />}
-                {gradeTier}
+                {tierStyles.icon}
+                {tierDisplayName}
               </Badge>
-              {/* Position Badge */}
               <Badge
                 variant="outline"
-                className={`${getPositionStyles(prospect.position)} text-[10px] border`}
+                className={`${getPositionStyles(prospect.position)} text-[10px] px-2 border font-bold`}
               >
                 {prospect.position}
               </Badge>
-              {/* Projected Round */}
-              <Badge
-                variant="outline"
-                className="bg-slate-700/50 text-slate-300 border-slate-500/40 text-[10px]"
-              >
-                {getProjectedRound(prospect.rank)}
-              </Badge>
-              {/* Tier Badge */}
-              <Badge
-                variant="outline"
-                className={`${tierStyles.badge} text-[10px] border font-semibold flex items-center gap-0.5`}
-              >
-                {tierStyles.icon && <span className="text-[9px]">{tierStyles.icon}</span>}
-                {tierDisplayName}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <GripVertical className="h-3 w-3 text-gray-400" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-5 w-5 p-0 text-gray-400 hover:text-amber-400"
-              >
-                <Star className="h-2.5 w-2.5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Name header with rank in top right */}
-          <div className="flex items-center justify-between">
-            <h3
-              className={`${tierTextColor} font-bold text-sm leading-tight flex items-center gap-1.5`}
-            >
-              {prospect.name}
-              {isDiamondTier ? (
-                <Gem className="h-3 w-3 text-cyan-300" />
-              ) : (
-                tier === 'Tier 1' && <Crown className="h-3 w-3 text-amber-400" />
+              {/* Roster Alignment Analysis */}
+              {positionNeed >= 3 && (
+                <Badge
+                  variant="outline"
+                  className="bg-red-500/20 text-red-300 border-red-500/30 text-[9px] font-black uppercase tracking-tighter animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.2)]"
+                >
+                  Critical Need
+                </Badge>
               )}
-            </h3>
-            <span className={`${tierTextColor} font-semibold text-xs opacity-80`}>
-              #{prospect.rank}
-            </span>
+            </div>
+            <div className="flex items-center gap-1 bg-slate-950/40 rounded-full px-2 py-0.5 border border-white/5">
+              <span className={`${tierTextColor} font-mono font-black text-xs`}>#{prospect.rank}</span>
+            </div>
           </div>
 
-          {/* School */}
-          <div className="flex items-center text-gray-400 text-[10px] mt-1">
-            <School className="h-2.5 w-2.5 mr-0.5" />
-            <span>{prospect.school || 'TBD'}</span>
+          <div className="relative z-10">
+            <h3 className="text-xl font-black text-white leading-tight font-mono tracking-tight group-hover:translate-x-1 transition-transform">
+              {prospect.name}
+            </h3>
+            <div className="flex items-center text-gray-400 text-[10px] mt-1 uppercase tracking-tighter font-mono">
+              <School className="h-3 w-3 mr-1 text-gray-500" />
+              <span>{prospect.school || 'TBD'}</span>
+              <span className="mx-1.5 opacity-30">•</span>
+              <span>{getProjectedRound(prospect.rank)} ROUND</span>
+            </div>
           </div>
         </div>
 
-        <div className="px-3 pt-2 pb-3">
-          {/* Stats section - PRO style gradient box matching header */}
-          <div
-            className={`rounded-lg p-2 mb-2 border ${tierBgColor} ${tierStyles.glow ? 'border-current/20' : 'border-slate-600/30'}`}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <div>
-                <div className={`text-base font-bold ${tierTextColor}`}>{getValue(prospect)}</div>
-                <div className="text-gray-500 text-[9px]">Dynasty Value</div>
+        <div className="px-4 py-4 relative z-10">
+          {/* Market Analysis: surfacing meaningful value gaps */}
+          {marketOpportunity > 10 && (
+            <div className="mb-4 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-3 w-3 text-blue-400" />
+                <span className="text-[10px] font-black text-blue-300 uppercase tracking-widest">Market Steal</span>
               </div>
-              <div className="text-center">
-                <div className={`text-sm font-bold ${tierTextColor}`}>
-                  {prospect.overall_grade?.toFixed(1) || '-'}
-                </div>
-                <div className="text-gray-500 text-[9px]">{gradeTier}</div>
-              </div>
-            </div>
-
-            {/* Physical attributes */}
-            {(prospect.height || prospect.weight) && (
-              <div className="flex justify-center gap-3 text-[9px] text-gray-400 border-t border-white/10 pt-1.5 mt-1.5">
-                {prospect.height && <span>{formatHeight(prospect.height)}</span>}
-                {prospect.weight && <span>{prospect.weight} lbs</span>}
-              </div>
-            )}
-          </div>
-
-          {/* NFL Comparisons - Show All */}
-          {prospect.nfl_comparisons && (
-            <div className="mb-2">
-              <div className="text-gray-500 text-[9px] uppercase tracking-wide mb-1 flex items-center gap-0.5">
-                <TrendingUp className="h-2.5 w-2.5" />
-                Comparisons
-              </div>
-              <ComparisonBadges comparisons={prospect.nfl_comparisons} size="sm" />
+              <span className="text-[9px] font-mono text-blue-400">+{marketOpportunity.toFixed(0)} Index Delta</span>
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="flex gap-1.5">
+          {/* Enhanced Grade Visualizer */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+             <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5 flex flex-col justify-center">
+                <div className="text-[9px] text-gray-500 uppercase font-mono tracking-widest mb-1">Dynasty Value</div>
+                <div className="flex items-end gap-1">
+                   <div className={`text-2xl font-black ${tierTextColor} leading-none font-mono`}>{getValue(prospect)}</div>
+                   <div className="text-[10px] text-gray-600 font-mono mb-0.5">PTS</div>
+                </div>
+             </div>
+             <div className="p-3 rounded-xl bg-slate-950/40 border border-white/5">
+                <div className="flex justify-between items-center mb-1">
+                   <div className="text-[9px] text-gray-500 uppercase font-mono tracking-widest">{gradeTier}</div>
+                   <div className={`text-xs font-black ${gradeStyles.text} font-mono`}>{prospect.overall_grade?.toFixed(1) || '-'}</div>
+                </div>
+                {/* Visual Grade Bar */}
+                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
+                   <div 
+                     className={`h-full ${gradeStyles.bg} opacity-80`}
+                     style={{ width: `${prospect.overall_grade || 50}%` }}
+                   />
+                </div>
+                <div className="flex justify-between mt-1 opacity-40">
+                   <span className="text-[7px] text-gray-500 font-mono">50</span>
+                   <span className="text-[7px] text-gray-500 font-mono">100</span>
+                </div>
+             </div>
+          </div>
+
+          {/* Physical Attributes with Better UI */}
+          {(prospect.height || prospect.weight) && (
+            <div className="flex items-center gap-4 mb-4 px-2">
+               <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
+                  <span className="text-[10px] text-gray-400 font-mono">{formatHeight(prospect.height)}</span>
+               </div>
+               <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+                  <span className="text-[10px] text-gray-400 font-mono">{prospect.weight} LBS</span>
+               </div>
+            </div>
+          )}
+
+          {/* Comparisons: More Visual Style */}
+          {prospect.nfl_comparisons && (
+            <div className="mb-5">
+              <div className="text-[9px] text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1 font-mono">
+                <TrendingUp className="h-2.5 w-2.5 opacity-50" />
+                Historical Comps
+              </div>
+              <div className="bg-slate-900/40 rounded-lg p-2 border border-white/5">
+                <ComparisonBadges comparisons={prospect.nfl_comparisons} size="sm" />
+              </div>
+            </div>
+          )}
+
+          {/* Actions: High-end button styles */}
+          <div className="flex gap-2">
             <Button
               size="sm"
-              className={`${tierStyles.badge} hover:opacity-90 transition-all flex-1 border font-semibold text-[10px] h-7`}
+              className={`flex-[2] ${tierStyles.badge} border shadow-lg transition-all active:scale-95 font-black text-[10px] h-8 uppercase tracking-widest`}
               onClick={(e) => {
                 e.stopPropagation()
                 onSelect(prospect)
               }}
             >
-              {tierStyles.icon && <span className="text-[9px]">{tierStyles.icon}</span>}
-              <span className="ml-0.5">{tierDisplayName}</span>
+              <Gem className="h-3 w-3 mr-1" />
+              Analyze
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="border-slate-600 text-gray-300 bg-slate-700/50 hover:border-blue-400 hover:bg-blue-500/10 hover:text-blue-300 transition-all text-[10px] h-7"
+              className="flex-1 border-slate-700 text-gray-400 bg-slate-800/50 hover:border-blue-400/50 hover:text-blue-300 transition-all h-8 text-[10px] uppercase font-mono tracking-tighter"
               onClick={(e) => {
                 e.stopPropagation()
                 onCompare(prospect)
@@ -486,12 +639,11 @@ export function ProspectCard({
             </Button>
           </div>
 
-          {/* On board indicator */}
+          {/* Status Indicator */}
           {isOnBoard && (
-            <div className="text-center mt-1.5">
-              <span className="text-blue-400 text-[10px] flex items-center justify-center gap-0.5">
-                <Sparkles className="h-2.5 w-2.5" /> On Your Board
-              </span>
+            <div className="mt-3 flex items-center justify-center gap-2 py-1 bg-blue-500/5 rounded-full border border-blue-500/10">
+              <Sparkles className="h-2.5 w-2.5 text-blue-400 animate-pulse" />
+              <span className="text-blue-300 text-[9px] font-black uppercase tracking-widest">On Draft Board</span>
             </div>
           )}
         </div>

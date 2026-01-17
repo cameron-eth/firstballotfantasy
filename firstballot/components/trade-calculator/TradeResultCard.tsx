@@ -13,252 +13,180 @@ interface TradeResultCardProps {
 
 export function TradeResultCard({ result }: TradeResultCardProps) {
   const getFairnessColor = (fairness: string) => {
-    if (fairness === 'FAIR') return 'text-green-400 bg-green-500/20 border-green-500/30'
+    if (fairness === 'FAIR') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
     if (fairness.includes('SLIGHTLY'))
-      return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30'
-    if (fairness === 'UNEVEN') return 'text-orange-400 bg-orange-500/20 border-orange-500/30'
-    return 'text-red-400 bg-red-500/20 border-red-500/30'
+      return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20'
+    if (fairness === 'UNEVEN') return 'text-orange-400 bg-orange-500/10 border-orange-500/20'
+    return 'text-red-400 bg-red-500/10 border-red-500/20'
   }
 
   const getTierColor = (tier: string): string => {
     const tierMatch = tier.match(/Tier (\d+)/)
     const tierNum = tierMatch ? parseInt(tierMatch[1]) : 5
     const colors: Record<number, string> = {
-      1: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-      2: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      3: 'bg-green-500/20 text-green-300 border-green-500/30',
-      4: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-      5: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+      1: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+      2: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+      3: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+      4: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+      5: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
     }
     return colors[tierNum] || colors[5]
   }
 
   return (
-    <div className="space-y-6">
-      {/* Summary Card */}
-      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-yellow-950/30 border border-yellow-500/40 rounded-xl shadow-none">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-white flex items-center gap-2 font-mono">
-              <Scale className="h-5 w-5 text-yellow-400" />
-              Trade Evaluation
-            </CardTitle>
-            <Badge
-              variant="outline"
-              className={`${getFairnessColor(result.fairness)} font-mono font-semibold`}
-            >
-              {result.fairness}
-            </Badge>
+    <div className="space-y-10">
+      {/* Dossier Style Side-by-Side Comparison */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Side 1 Detailed Breakdown */}
+        <div className="relative group">
+          <div className="absolute -top-3 left-6 px-3 py-1 bg-slate-900 border border-white/5 rounded text-[10px] font-black font-mono text-blue-400 uppercase tracking-widest z-10 shadow-xl">
+            Asset Dossier: Side 1
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Side 1 */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-white font-semibold">Side 1 Total</h4>
+          <Card className="bg-slate-950/40 backdrop-blur-sm border border-blue-500/20 rounded-2xl shadow-none overflow-hidden">
+            <CardContent className="p-0">
+              <div className="bg-blue-500/5 p-6 border-b border-white/5 flex justify-between items-end">
+                <div>
+                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">Cumulative Index</div>
+                  <div className="text-4xl font-black text-white font-mono tracking-tighter">
+                    {result.side1_total.toLocaleString()}
+                  </div>
+                </div>
                 {result.side1_rank && (
-                  <Link
-                    href={`/rankings?player=${encodeURIComponent(result.side1[0]?.name || '')}`}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
-                  >
-                    Rank #{result.side1_rank}
-                  </Link>
+                  <div className="text-right">
+                    <div className="text-[9px] text-slate-600 font-mono uppercase mb-1">Primary Rank</div>
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 font-mono text-[10px] px-2">
+                      #{result.side1_rank}
+                    </Badge>
+                  </div>
                 )}
               </div>
-              <div className="text-2xl font-bold text-white">
-                {result.side1_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              <div className="p-6 space-y-3">
+                {result.side1.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 bg-slate-900/40 rounded-xl border border-white/5 hover:border-blue-500/20 transition-all group/asset"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover/asset:grayscale-0 transition-all">
+                          <PlayerHeadshot playerName={item.name} size={40} />
+                        </div>
+                        {item.rank && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded bg-blue-500 text-[8px] font-black font-mono flex items-center justify-center text-slate-900 shadow-lg">
+                            #{item.rank}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-white font-mono uppercase tracking-tight group-hover/asset:text-blue-400 transition-colors">{item.name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] text-slate-500 font-mono font-bold">{item.position}</span>
+                          <span className="text-[9px] text-slate-700 font-mono">•</span>
+                          <span className={`text-[9px] font-black font-mono uppercase tracking-tighter ${getTierColor(item.tier).split(' ')[1]}`}>
+                            {item.tier}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-black text-white font-mono">
+                        {item.total_score.toLocaleString()}
+                      </div>
+                      <div className="text-[8px] text-slate-600 font-mono uppercase">Value</div>
+                    </div>
+                  </div>
+                ))}
+                {result.side1_not_found.map((name, i) => (
+                  <div key={i} className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between">
+                    <span className="text-[10px] text-red-400 font-mono italic">Missing Data: {name}</span>
+                    <Minus className="h-3 w-3 text-red-900" />
+                  </div>
+                ))}
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Side 2 */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-white font-semibold">Side 2 Total</h4>
+        {/* Side 2 Detailed Breakdown */}
+        <div className="relative group">
+          <div className="absolute -top-3 left-6 px-3 py-1 bg-slate-900 border border-white/5 rounded text-[10px] font-black font-mono text-purple-400 uppercase tracking-widest z-10 shadow-xl">
+            Asset Dossier: Side 2
+          </div>
+          <Card className="bg-slate-950/40 backdrop-blur-sm border border-purple-500/20 rounded-2xl shadow-none overflow-hidden">
+            <CardContent className="p-0">
+              <div className="bg-purple-500/5 p-6 border-b border-white/5 flex justify-between items-end">
+                <div>
+                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">Cumulative Index</div>
+                  <div className="text-4xl font-black text-white font-mono tracking-tighter">
+                    {result.side2_total.toLocaleString()}
+                  </div>
+                </div>
                 {result.side2_rank && (
-                  <Link
-                    href={`/rankings?player=${encodeURIComponent(result.side2[0]?.name || '')}`}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
-                  >
-                    Rank #{result.side2_rank}
-                  </Link>
+                  <div className="text-right">
+                    <div className="text-[9px] text-slate-600 font-mono uppercase mb-1">Primary Rank</div>
+                    <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20 font-mono text-[10px] px-2">
+                      #{result.side2_rank}
+                    </Badge>
+                  </div>
                 )}
               </div>
-              <div className="text-2xl font-bold text-white">
-                {result.side2_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-slate-700">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Difference</span>
-              <div className="flex items-center gap-2">
-                {result.winner === 'SIDE 1' && <TrendingUp className="h-4 w-4 text-green-400" />}
-                {result.winner === 'SIDE 2' && <TrendingDown className="h-4 w-4 text-red-400" />}
-                {result.winner === 'EVEN' && <Minus className="h-4 w-4 text-gray-400" />}
-                <span className="text-white font-semibold">
-                  {result.difference.toLocaleString(undefined, { maximumFractionDigits: 0 })} (
-                  {result.difference_pct.toFixed(1)}%)
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 text-sm text-gray-400">
-              Winner: <span className="text-white font-semibold">{result.winner}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Side 1 Details */}
-      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-blue-950/20 border border-blue-500/30 rounded-xl shadow-none">
-        <CardHeader>
-          <CardTitle className="text-white font-mono">Side 1 Assets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {result.side1.length > 0 ? (
-            <div className="space-y-3">
-              {result.side1.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg border border-slate-600"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
-                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
-                        item.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
-                        item.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
-                        item.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
-                        'from-purple-600/30 to-violet-900/50'
-                      }`} />
-                      <PlayerHeadshot
-                        playerName={item.name}
-                        size={40}
-                        className="relative z-10"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-white font-semibold">{item.name}</span>
+              <div className="p-6 space-y-3">
+                {result.side2.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 bg-slate-900/40 rounded-xl border border-white/5 hover:border-purple-500/20 transition-all group/asset"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover/asset:grayscale-0 transition-all">
+                          <PlayerHeadshot playerName={item.name} size={40} />
+                        </div>
                         {item.rank && (
-                          <Link
-                            href={`/rankings?player=${encodeURIComponent(item.name)}`}
-                            className="text-blue-400 hover:text-blue-300 text-xs"
-                          >
+                          <div className="absolute -top-1 -right-1 w-4 h-4 rounded bg-purple-500 text-[8px] font-black font-mono flex items-center justify-center text-slate-900 shadow-lg">
                             #{item.rank}
-                          </Link>
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {item.position && (
-                          <Badge
-                            variant="outline"
-                            className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
-                          >
-                            {item.position}
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className={`${getTierColor(item.tier)} text-xs`}>
-                          {item.tier}
-                        </Badge>
+                      <div>
+                        <div className="text-xs font-black text-white font-mono uppercase tracking-tight group-hover/asset:text-purple-400 transition-colors">{item.name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] text-slate-500 font-mono font-bold">{item.position}</span>
+                          <span className="text-[9px] text-slate-700 font-mono">•</span>
+                          <span className={`text-[9px] font-black font-mono uppercase tracking-tighter ${getTierColor(item.tier).split(' ')[1]}`}>
+                            {item.tier}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white font-mono font-semibold">
-                      {item.total_score.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <div className="text-right">
+                      <div className="text-sm font-black text-white font-mono">
+                        {item.total_score.toLocaleString()}
+                      </div>
+                      <div className="text-[8px] text-slate-600 font-mono uppercase">Value</div>
                     </div>
-                    <div className="text-gray-400 text-xs">Value</div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">No assets added</p>
-          )}
-          {result.side1_not_found.length > 0 && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded">
-              <p className="text-red-400 text-sm font-semibold mb-1">Not Found:</p>
-              <p className="text-red-300 text-sm">{result.side1_not_found.join(', ')}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+                {result.side2_not_found.map((name, i) => (
+                  <div key={i} className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between">
+                    <span className="text-[10px] text-red-400 font-mono italic">Missing Data: {name}</span>
+                    <Minus className="h-3 w-3 text-red-900" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-      {/* Side 2 Details */}
-      <Card className="bg-gradient-to-br from-slate-800 via-slate-800 to-purple-950/20 border border-purple-500/30 rounded-xl shadow-none">
-        <CardHeader>
-          <CardTitle className="text-white font-mono">Side 2 Assets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {result.side2.length > 0 ? (
-            <div className="space-y-3">
-              {result.side2.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-700/50 to-slate-800/50 rounded-lg border border-slate-600/50 hover:border-purple-400/30 transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
-                      <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${
-                        item.position === 'QB' ? 'from-pink-600/30 to-purple-900/50' :
-                        item.position === 'RB' ? 'from-teal-600/30 to-emerald-900/50' :
-                        item.position === 'WR' ? 'from-blue-600/30 to-indigo-900/50' :
-                        'from-purple-600/30 to-violet-900/50'
-                      }`} />
-                      <PlayerHeadshot
-                        playerName={item.name}
-                        size={40}
-                        className="relative z-10"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-white font-semibold">{item.name}</span>
-                        {item.rank && (
-                          <Link
-                            href={`/rankings?player=${encodeURIComponent(item.name)}`}
-                            className="text-blue-400 hover:text-blue-300 text-xs"
-                          >
-                            #{item.rank}
-                          </Link>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {item.position && (
-                          <Badge
-                            variant="outline"
-                            className="bg-slate-600/30 text-slate-300 border-slate-500/30 text-xs"
-                          >
-                            {item.position}
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className={`${getTierColor(item.tier)} text-xs`}>
-                          {item.tier}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-white font-mono font-semibold">
-                      {item.total_score.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    </div>
-                    <div className="text-gray-400 text-xs">Value</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">No assets added</p>
-          )}
-          {result.side2_not_found.length > 0 && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded">
-              <p className="text-red-400 text-sm font-semibold mb-1">Not Found:</p>
-              <p className="text-red-300 text-sm">{result.side2_not_found.join(', ')}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Fairness Status Footnote */}
+      <div className="flex justify-center pt-4">
+        <Badge
+          variant="outline"
+          className={`${getFairnessColor(result.fairness)} px-6 py-2 rounded-full font-black font-mono text-[10px] uppercase tracking-[0.3em] shadow-2xl animate-pulse`}
+        >
+          {result.fairness}
+        </Badge>
+      </div>
     </div>
   )
 }

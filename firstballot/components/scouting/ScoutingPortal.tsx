@@ -4,16 +4,17 @@ import type React from 'react'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Header } from '@/components/header'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, Users, TrendingUp, RefreshCw, BarChart3 } from 'lucide-react'
+import { Eye, TrendingUp, BarChart3, Trophy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useSearchParams } from 'next/navigation'
 import {
   ProspectsTab,
   DraftBoardTab,
   ProspectDetailModal,
   ComparisonsModal,
   HistoricalRankingsTab,
+  AllTimeRankingsTab,
 } from '@/components/scouting'
 import type { Prospect } from '@/components/scouting/types'
 import { useDraftboard } from '@/hooks/use-draftboard'
@@ -39,9 +40,13 @@ interface RosterPlayer {
 
 interface ScoutingPortalProps {
   leagueId: string
+  initialTab?: string
 }
 
-export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
+export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
+  const searchParams = useSearchParams()
+  const urlTab = searchParams.get('tab')
+  
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
@@ -50,7 +55,15 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
   const [rosterError, setRosterError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
-  const [activeTab, setActiveTab] = useState('prospects')
+  const [draftYear, setDraftYear] = useState('2026')
+  const [activeTab, setActiveTab] = useState(urlTab || initialTab || 'prospects')
+
+  // Sync tab with URL if it changes
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab)
+    }
+  }, [urlTab])
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [draggedProspect, setDraggedProspect] = useState<Prospect | null>(null)
   const [dragOverPosition, setDragOverPosition] = useState<string | null>(null)
@@ -516,6 +529,17 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
     setSelectedProspectForComps(null)
   }, [])
 
+  const handleSaveNotes = useCallback((id: number, notes: string) => {
+    setProspects((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, notes } : p))
+    )
+    // Update selected prospect if it's the one being edited
+    setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
+    
+    // In a real app, we would save this to Supabase here
+    console.log(`Saving notes for prospect ${id}: ${notes}`)
+  }, [])
+
   // Draft Board handlers
   const handleAddToDraftBoard = useCallback((prospect: Prospect) => {
     if (!prospect?.id) {
@@ -720,7 +744,7 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
       setLoading(true)
       // Add timestamp to prevent caching
       const timestamp = Date.now()
-      const response = await fetch(`/api/prospects?t=${timestamp}`, {
+      const response = await fetch(`/api/prospects?draft_year=${draftYear}&t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
@@ -741,7 +765,7 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [draftYear, getProspectGrade])
 
   // Fetch on mount and when tab becomes visible
   useEffect(() => {
@@ -758,67 +782,56 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [fetchProspects])
+  }, [fetchProspects, draftYear])
 
   return (
     <div className="min-h-screen bg-slate-900 overflow-x-hidden">
       <Header />
 
-      <main className="w-full px-4 py-8 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-3 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white font-mono mb-2 truncate">
-                  SCOUTING PORTAL
-                </h1>
-                <p className="text-gray-400 font-mono text-sm sm:text-base break-words">
-                  League ID: {leagueId} • Dynasty SF 2026 Rookie Rankings
-                </p>
-              </div>
-              <div className="flex items-center space-x-3 flex-shrink-0">
-                <button
-                  onClick={fetchProspects}
-                  disabled={loading}
-                  className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Refresh prospects"
-                >
-                  <RefreshCw className={`h-4 w-4 text-gray-300 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-                <Badge className="bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  <Users className="h-3 w-3 mr-1" />
-                  {roster.length} Players
-                </Badge>
-              </div>
-            </div>
-          </div>
-
+      <main className="w-full px-4 py-10 overflow-x-hidden">
+        <div className="max-w-[1600px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-1">
-              <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700 h-9 sm:h-10 p-1">
+            <div className="mb-10">
+              <TabsList className="flex items-center gap-2 bg-transparent h-auto p-0 border-none justify-start overflow-x-auto pb-2 scrollbar-none">
                 <TabsTrigger
                   value="prospects"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 h-full"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/20 transition-all group overflow-hidden"
                 >
-                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                  Prospects
+                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Prospects</span>
+                  </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="draftboard"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 h-full"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-400 data-[state=active]:border-amber-500/20 transition-all group overflow-hidden"
                 >
-                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                  <span className="hidden sm:inline">Draft Board</span>
-                  <span className="sm:hidden">Draft</span>
+                  <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center gap-2">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span>Draft Board</span>
+                  </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="historical"
-                  className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 data-[state=active]:border-blue-500/30 whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 h-full"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400 data-[state=active]:border-purple-500/20 transition-all group overflow-hidden"
                 >
-                  <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5" />
-                  <span className="hidden sm:inline">Historical</span>
-                  <span className="sm:hidden">History</span>
+                  <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center gap-2">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    <span>Historical</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="alltime"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-yellow-500/10 data-[state=active]:text-yellow-400 data-[state=active]:border-yellow-500/20 transition-all group overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center gap-2">
+                    <Trophy className="h-3.5 w-3.5" />
+                    <span>All-Time</span>
+                  </div>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -835,12 +848,15 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                 setSearchTerm={setSearchTerm}
                 positionFilter={positionFilter}
                 setPositionFilter={setPositionFilter}
+                draftYear={draftYear}
+                setDraftYear={setDraftYear}
                 filteredProspects={filteredProspects}
                 allProspects={prospects}
                 draftBoard={draftBoard}
                 onProspectSelect={handleProspectSelect}
                 onShowComps={handleShowComps}
                 isDiamondTier={isProspectDiamondTier}
+                positionNeeds={positionNeeds}
               />
             </TabsContent>
 
@@ -871,6 +887,10 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
             <TabsContent value="historical" className="mt-6">
               <HistoricalRankingsTab currentProspects={prospects} />
             </TabsContent>
+
+            <TabsContent value="alltime" className="mt-6">
+              <AllTimeRankingsTab />
+            </TabsContent>
           </Tabs>
 
           <ProspectDetailModal
@@ -883,6 +903,7 @@ export function ScoutingPortal({ leagueId }: ScoutingPortalProps) {
                 handleCloseModal()
               }
             }}
+            onSaveNotes={handleSaveNotes}
             getProspectGrade={getProspectGrade}
             getDraftPick={getDraftPick}
             getProspectTier={getProspectTier}

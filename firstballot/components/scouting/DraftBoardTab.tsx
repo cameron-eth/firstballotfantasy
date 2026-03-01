@@ -410,37 +410,38 @@ export function DraftBoardTab({
 
   return (
     <main className="min-h-[70vh] bg-background">
-      <div className="border-b border-border bg-card/95 backdrop-blur-md">
-        <div className="w-full px-4 sm:px-5 lg:px-6 py-5 space-y-4">
+      <div className="w-full px-4 sm:px-5 lg:px-6 pt-4 pb-2">
+        <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-[0_16px_40px_-28px_rgba(0,0,0,0.9)]">
+          <div className="w-full px-5 sm:px-6 lg:px-7 py-6 space-y-5">
           <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
             <div className="space-y-2">
-              <h1 className="text-3xl font-mono font-bold text-foreground leading-none">
+              <h1 className="text-4xl sm:text-5xl font-mono font-bold text-foreground leading-none">
                 Big Board
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Drag to reorder. {consensusBoard.length} prospects across {boardSections.length}{' '}
                 class
                 {boardSections.length === 1 ? '' : 'es'}.
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2.5 py-1 rounded border border-border bg-background/60 text-[11px] font-medium text-muted-foreground">
+                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
                   Current Class: {currentDraftYear}
                 </span>
-                <span className="px-2.5 py-1 rounded border border-border bg-background/60 text-[11px] font-medium text-muted-foreground">
+                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
                   On Board: {draftBoard.length}
                 </span>
-                <span className="px-2.5 py-1 rounded border border-border bg-background/60 text-[11px] font-medium text-muted-foreground">
+                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
                   Available: {offBoardProspects.length}
                 </span>
-                <span className="px-2.5 py-1 rounded border border-border bg-background/60 text-[11px] font-medium text-muted-foreground">
+                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
                   Avg Grade: {boardStats.avgGrade.toFixed(1)}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-3 flex-wrap xl:justify-end">
-              <div className="min-w-[168px] text-center rounded-lg border border-border bg-background/60 px-4 py-2.5">
-                <div className="text-3xl leading-none font-mono font-bold text-primary">
+              <div className="min-w-[188px] text-center rounded-xl border border-border bg-background/60 px-5 py-3">
+                <div className="text-4xl leading-none font-mono font-bold text-primary">
                   {contrarianScore}
                 </div>
                 <div className={cn('text-xs font-medium mt-1', contrarianLabel.color)}>
@@ -459,14 +460,14 @@ export function DraftBoardTab({
 
               <button
                 onClick={resetBoard}
-                className="h-10 px-4 inline-flex items-center gap-2 text-sm font-medium rounded bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
                 Reset
               </button>
               <button
                 onClick={exportBoard}
-                className="h-10 px-4 inline-flex items-center gap-2 text-sm font-medium rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -480,7 +481,7 @@ export function DraftBoardTab({
                 key={pos}
                 onClick={() => setPosition(pos)}
                 className={cn(
-                  'h-10 px-4 text-sm font-medium rounded transition-colors',
+                  'h-11 px-5 text-base font-medium rounded-lg transition-colors',
                   position === pos
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-muted-foreground hover:text-foreground'
@@ -491,12 +492,13 @@ export function DraftBoardTab({
             ))}
             <button
               onClick={addTopAvailable}
-              className="h-10 px-4 text-sm font-medium rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              className="h-11 px-5 text-base font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
             >
               Add Next
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       <div className="w-full px-4 sm:px-5 lg:px-6 py-5">
@@ -540,21 +542,21 @@ export function DraftBoardTab({
                           onDrop={(e) => onBoardDrop(e, originalIndex)}
                           className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing border-t border-border/60 first:border-t-0"
                         >
-                          <div className="flex items-center gap-3 p-3.5">
+                          <div className="flex items-center gap-3 p-4">
                             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             <div className="w-8 text-center">
-                              <span className="text-xl font-mono font-bold text-primary">
+                              <span className="text-2xl font-mono font-bold text-primary">
                                 {index + 1}
                               </span>
                             </div>
 
-                            <div className="w-12 h-12 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                            <div className="w-14 h-14 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                               {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                 <Image
                                   src={getPlayerImageUrl(player)}
                                   alt={player.name}
-                                  width={48}
-                                  height={48}
+                                  width={56}
+                                  height={56}
                                   className="w-full h-full object-cover"
                                   onError={() =>
                                     setImageErrors((prev) => new Set(prev).add(player.name))
@@ -572,7 +574,7 @@ export function DraftBoardTab({
 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-foreground truncate">
+                                <span className="text-lg font-semibold text-foreground truncate">
                                   {player.name}
                                 </span>
                                 <span
@@ -597,7 +599,7 @@ export function DraftBoardTab({
                             </div>
 
                             <div className="text-right">
-                              <div className="text-xl font-mono font-bold text-foreground">
+                              <div className="text-2xl font-mono font-bold text-foreground">
                                 {player.grade.toFixed(1)}
                               </div>
                               <div className="text-[10px] text-muted-foreground">GRADE</div>
@@ -627,7 +629,7 @@ export function DraftBoardTab({
 
                             <button
                               onClick={() => onRemoveFromDraftBoard(prospect.id)}
-                              className="h-6 w-6 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                              className="h-8 w-8 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
                             >
                               ×
                             </button>

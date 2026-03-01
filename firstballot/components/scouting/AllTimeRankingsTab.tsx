@@ -15,10 +15,12 @@ import {
 import type { Prospect } from './types'
 
 export function AllTimeRankingsTab() {
+  const PAGE_SIZE = 30
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
     const fetchAllTime = async () => {
@@ -48,6 +50,11 @@ export function AllTimeRankingsTab() {
       return matchesSearch && matchesPosition
     })
   }, [prospects, searchTerm, positionFilter])
+  const visibleProspects = filteredProspects.slice(0, visibleCount)
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [searchTerm, positionFilter, loading])
 
   const getPositionStyles = (position: string) => {
     const styles: Record<string, string> = {
@@ -69,7 +76,7 @@ export function AllTimeRankingsTab() {
   return (
     <div className="space-y-6">
       {/* Header & Filters */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+      <div className="sticky top-20 z-20 -mx-2 px-4 py-3 liquid-glass rounded-xl flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h2 className="text-3xl font-black text-white font-mono tracking-tighter uppercase mb-2">
             All-Time <span className="text-yellow-400">Legends</span>
@@ -139,7 +146,7 @@ export function AllTimeRankingsTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.03]">
-                {filteredProspects.map((prospect, index) => (
+                {visibleProspects.map((prospect, index) => (
                   <tr
                     key={prospect.id}
                     className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
@@ -219,7 +226,7 @@ export function AllTimeRankingsTab() {
             </table>
           </div>
 
-          {filteredProspects.length === 0 && (
+          {visibleProspects.length === 0 && (
             <div className="py-20 text-center">
               <p className="text-sm font-black font-mono text-slate-500 uppercase tracking-widest">
                 No legends found in this sector
@@ -227,6 +234,16 @@ export function AllTimeRankingsTab() {
             </div>
           )}
         </Card>
+      )}
+      {!loading && visibleProspects.length < filteredProspects.length && (
+        <div className="pt-2 flex justify-center">
+          <button
+            onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+            className="px-5 py-2 text-sm rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          >
+            Load 30 More
+          </button>
+        </div>
       )}
     </div>
   )

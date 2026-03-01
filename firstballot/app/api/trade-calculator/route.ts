@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
           return {
             ...item,
             rank: playerRank?.rank || null,
+            headshot_url: playerRank?.headshot_url || null,
+            espn_id: playerRank?.espn_id || null,
           }
         }
         return item
@@ -59,6 +61,8 @@ export async function POST(request: NextRequest) {
           return {
             ...item,
             rank: playerRank?.rank || null,
+            headshot_url: playerRank?.headshot_url || null,
+            espn_id: playerRank?.espn_id || null,
           }
         }
         return item

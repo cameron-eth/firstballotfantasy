@@ -43,24 +43,37 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    // Handle search/autocomplete query
-    if (search) {
-      const searchLower = search.toLowerCase()
-      const matches = (data || [])
-        .map((player: any, index: number) => {
-          const name = player.player_name?.toLowerCase() || ''
-          if (name.includes(searchLower)) {
-            return {
+    // Handle search/autocomplete query. If search is blank, return top-ranked players.
+    if (search !== null) {
+      const searchLower = search.trim().toLowerCase()
+      const source = data || []
+      const matches =
+        searchLower.length === 0
+          ? source.slice(0, 20).map((player: any, index: number) => ({
               player_name: player.player_name,
               position: player.position,
               team: player.team,
-              rank: index + 1, // Actual rank in overall rankings
-            }
-          }
-          return null
-        })
-        .filter((player): player is NonNullable<typeof player> => player !== null)
-        .slice(0, 20) // Limit to 20 results
+              headshot_url: player.headshot_url || null,
+              espn_id: player.espn_id || null,
+              rank: index + 1,
+            }))
+          : source
+              .map((player: any, index: number) => {
+                const name = player.player_name?.toLowerCase() || ''
+                if (name.includes(searchLower)) {
+                  return {
+                    player_name: player.player_name,
+                    position: player.position,
+                    team: player.team,
+                    headshot_url: player.headshot_url || null,
+                    espn_id: player.espn_id || null,
+                    rank: index + 1,
+                  }
+                }
+                return null
+              })
+              .filter((player): player is NonNullable<typeof player> => player !== null)
+              .slice(0, 20)
 
       return NextResponse.json(
         { players: matches },
@@ -79,6 +92,11 @@ export async function GET(request: NextRequest) {
       // Convert total_score from string to number if needed
       const totalScore =
         typeof player.total_score === 'string' ? parseFloat(player.total_score) : player.total_score
+      const draftYearRaw = player.draft_year ?? player.draft_class ?? null
+      const draftYear =
+        draftYearRaw === null || draftYearRaw === undefined || draftYearRaw === ''
+          ? null
+          : Number(draftYearRaw)
 
       return {
         player_id: player.player_id,
@@ -88,6 +106,8 @@ export async function GET(request: NextRequest) {
         age: player.age,
         total_score: totalScore,
         tier: player.tier,
+        draft_year: Number.isFinite(draftYear) ? draftYear : null,
+        draft_class: Number.isFinite(draftYear) ? draftYear : null,
         headshot_url: player.headshot_url || null,
         espn_id: player.espn_id || null,
         // Backward compatibility fields
@@ -163,6 +183,8 @@ export async function GET(request: NextRequest) {
           name: playerName,
           total_score: player.total_score,
           tier: player.tier,
+          headshot_url: player.headshot_url || null,
+          espn_id: player.espn_id || null,
         }
       }
       return acc

@@ -29,6 +29,11 @@ export interface Prospect {
   team_color?: string | null
   // Stats
   college_stats?: Record<string, number> | null
+  college_production_score?: number | null
+  physical_measurables_score?: number | null
+  hs_recruiting_score?: number | null
+  draft_projection_score?: number | null
+  expert_consensus_score?: number | null
   draft_year: number | null
 }
 

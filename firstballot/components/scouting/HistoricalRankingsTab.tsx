@@ -24,12 +24,14 @@ interface HistoricalRankingsTabProps {
 }
 
 export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTabProps) {
+  const PAGE_SIZE = 30
   const [historicalProspects, setHistoricalProspects] = useState<HistoricalProspect[]>([])
   const [selectedYear, setSelectedYear] = useState<string>('2024') // Default to 2024 since 2025 is empty
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'charts' | 'athletes'>('athletes')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
     setMounted(true)
@@ -159,6 +161,11 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
         p.school.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [historicalProspects, searchTerm])
+  const visibleHistorical = filteredHistorical.slice(0, visibleCount)
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [selectedYear, searchTerm, viewMode, loading])
 
   if (loading) {
     return (
@@ -413,7 +420,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
       ) : (
         <div className="space-y-6">
           {/* Search bar for historical class */}
-          <div className="flex items-center justify-between gap-4 px-2">
+          <div className="sticky top-20 z-20 -mx-2 px-4 py-3 liquid-glass rounded-xl flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md group">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
               <Input
@@ -424,13 +431,13 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
               />
             </div>
             <div className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest bg-slate-900/40 px-3 py-2 rounded-lg border border-white/5">
-              Showing {filteredHistorical.length} Athletes
+              Showing {visibleHistorical.length} / {filteredHistorical.length} Athletes
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-10">
-            {filteredHistorical.length > 0 ? (
-              filteredHistorical.map((prospect) => (
+            {visibleHistorical.length > 0 ? (
+              visibleHistorical.map((prospect) => (
                 <ProspectCard
                   key={prospect.id}
                   prospect={prospect}
@@ -450,6 +457,16 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
               </div>
             )}
           </div>
+          {visibleHistorical.length < filteredHistorical.length && (
+            <div className="pb-8 flex justify-center">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                className="px-5 py-2 text-sm rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >
+                Load 30 More
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

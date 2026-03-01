@@ -8,7 +8,6 @@ import {
   BarChart3,
   Target,
   LayoutDashboard,
-  TrendingUp,
   ShoppingCart,
   Users,
   Search,
@@ -68,6 +67,12 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
           icon: Users,
         },
         {
+          name: 'Prospect Board',
+          href: '/prospect-board',
+          description: 'All-time prospect rankings & grades',
+          icon: Eye,
+        },
+        {
           name: 'Data Lab',
           href: '/analysis',
           description: 'Advanced market visualizations',
@@ -112,12 +117,6 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
           href: '/rankings',
           description: 'The definitive rookie & vet ranks',
           icon: BarChart3,
-        },
-        {
-          name: 'Advanced Metrics',
-          href: '/metrics',
-          description: 'Next Gen Stats analysis',
-          icon: TrendingUp,
         },
       ],
     },

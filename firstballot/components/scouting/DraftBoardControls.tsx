@@ -65,7 +65,7 @@ export function DraftBoardControls({
 
       {/* Status indicator */}
       {hasChanges && hasSavedBoard && !saving && !saveSuccess && (
-        <span className="text-xs text-amber-400 flex items-center gap-1">
+        <span className="text-xs text-blue-400 flex items-center gap-1">
           <CloudOff className="h-3 w-3" />
           Unsaved changes
         </span>

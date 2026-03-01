@@ -1,4 +1,5 @@
 export interface PlayerRanking {
+  player_id?: string | number | null
   rank: number
   player_name: string
   position: string
@@ -6,6 +7,8 @@ export interface PlayerRanking {
   age: number
   total_score: number
   tier: string
+  draft_year?: number | null
+  draft_class?: number | null
   espn_id?: string | null
   headshot_url?: string | null
   age_score?: number

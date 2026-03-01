@@ -76,7 +76,12 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                     <div className="flex items-center gap-4">
                       <div className="relative">
                         <div className="w-10 h-10 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover/asset:grayscale-0 transition-all">
-                          <PlayerHeadshot playerName={item.name} size={40} />
+                          <PlayerHeadshot
+                            playerName={item.name}
+                            headshotUrl={item.headshot_url}
+                            espnId={item.espn_id}
+                            size={40}
+                          />
                         </div>
                         {item.rank && (
                           <div className="absolute -top-1 -right-1 w-4 h-4 rounded bg-blue-500 text-[8px] font-black font-mono flex items-center justify-center text-slate-900 shadow-lg">
@@ -164,7 +169,12 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                     <div className="flex items-center gap-4">
                       <div className="relative">
                         <div className="w-10 h-10 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover/asset:grayscale-0 transition-all">
-                          <PlayerHeadshot playerName={item.name} size={40} />
+                          <PlayerHeadshot
+                            playerName={item.name}
+                            headshotUrl={item.headshot_url}
+                            espnId={item.espn_id}
+                            size={40}
+                          />
                         </div>
                         {item.rank && (
                           <div className="absolute -top-1 -right-1 w-4 h-4 rounded bg-purple-500 text-[8px] font-black font-mono flex items-center justify-center text-slate-900 shadow-lg">

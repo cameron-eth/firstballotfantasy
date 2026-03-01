@@ -55,7 +55,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const [rosterError, setRosterError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
-  const [draftYear, setDraftYear] = useState('2026')
+  const [draftYear, setDraftYear] = useState('all')
   const [activeTab, setActiveTab] = useState(urlTab || initialTab || 'prospects')
 
   // Sync tab with URL if it changes
@@ -158,8 +158,13 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       filtered = filtered.filter((prospect) => prospect.position === positionFilter)
     }
 
+    if (draftYear !== 'all') {
+      const year = Number(draftYear)
+      filtered = filtered.filter((prospect) => prospect.draft_year === year)
+    }
+
     return filtered
-  }, [prospects, searchTerm, positionFilter])
+  }, [prospects, searchTerm, positionFilter, draftYear])
 
   // Calculate #1 player at each position (Diamond Tier for prospects)
   const topOneProspectByPosition = useMemo(() => {
@@ -612,7 +617,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       // Find prospects by their IDs and preserve order
       const loadedProspects: Prospect[] = []
       savedBoard.prospect_ids.forEach((id) => {
-        const prospect = prospects.find((p) => p.id === id)
+        const numericId = Number(id)
+        const prospect = prospects.find((p) => Number(p.id) === numericId)
         if (prospect) {
           loadedProspects.push(prospect)
         }
@@ -742,7 +748,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       setLoading(true)
       // Add timestamp to prevent caching
       const timestamp = Date.now()
-      const response = await fetch(`/api/prospects?draft_year=${draftYear}&t=${timestamp}`, {
+      // Always fetch all classes so saved draft boards can hydrate even when they span years.
+      const response = await fetch(`/api/prospects?draft_year=all&t=${timestamp}`, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache',
@@ -763,7 +770,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     } finally {
       setLoading(false)
     }
-  }, [draftYear, getProspectGrade])
+  }, [getProspectGrade])
 
   // Fetch on mount and when tab becomes visible
   useEffect(() => {
@@ -780,10 +787,10 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [fetchProspects, draftYear])
+  }, [fetchProspects])
 
   return (
-    <div className="min-h-screen bg-slate-900 overflow-x-hidden">
+    <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden">
       <Header />
 
       <main className="w-full px-4 py-10 overflow-x-hidden">
@@ -793,7 +800,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
               <TabsList className="flex items-center gap-2 bg-transparent h-auto p-0 border-none justify-start overflow-x-auto pb-2 scrollbar-none">
                 <TabsTrigger
                   value="prospects"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/20 transition-all group overflow-hidden"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative flex items-center gap-2">
@@ -803,9 +810,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 </TabsTrigger>
                 <TabsTrigger
                   value="draftboard"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-400 data-[state=active]:border-amber-500/20 transition-all group overflow-hidden"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative flex items-center gap-2">
                     <TrendingUp className="h-3.5 w-3.5" />
                     <span>Draft Board</span>
@@ -813,9 +820,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 </TabsTrigger>
                 <TabsTrigger
                   value="historical"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400 data-[state=active]:border-purple-500/20 transition-all group overflow-hidden"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative flex items-center gap-2">
                     <BarChart3 className="h-3.5 w-3.5" />
                     <span>Historical</span>
@@ -823,9 +830,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 </TabsTrigger>
                 <TabsTrigger
                   value="alltime"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-white/5 bg-slate-950/40 text-slate-500 data-[state=active]:bg-yellow-500/10 data-[state=active]:text-yellow-400 data-[state=active]:border-yellow-500/20 transition-all group overflow-hidden"
+                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative flex items-center gap-2">
                     <Trophy className="h-3.5 w-3.5" />
                     <span>All-Time</span>
@@ -866,6 +873,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 positionFilter={positionFilter}
                 setPositionFilter={setPositionFilter}
                 filteredProspects={filteredProspects}
+                allProspects={prospects}
                 draftBoard={draftBoard}
                 onAddToDraftBoard={handleAddToDraftBoard}
                 onRemoveFromDraftBoard={handleRemoveFromDraftBoard}

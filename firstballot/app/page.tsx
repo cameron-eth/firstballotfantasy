@@ -5,7 +5,7 @@ import { LandingPage } from '@/components/landing'
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
       <LandingPage />
     </div>

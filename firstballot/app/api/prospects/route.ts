@@ -46,10 +46,18 @@ const getProjectedRound = (rank: number): string => {
 }
 
 // Helper to generate headshot URL from ESPN ID
-const getHeadshotUrl = (espnId: number | null): string | null => {
-  if (espnId)
-    return `https://a.espncdn.com/combiner/i?img=/i/headshots/college-football/players/full/${espnId}.png&w=350&h=254`
-  return null
+const getHeadshotUrl = (espnId: number | null, draftYear: number | null): string | null => {
+  if (!espnId) return null
+  if ((draftYear || 0) >= 2025) {
+    return `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png`
+  }
+  return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
+}
+
+const toNumberOrNull = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 export async function GET(request: NextRequest) {
@@ -86,7 +94,12 @@ export async function GET(request: NextRequest) {
         headshot_url,
         team_color,
         college_stats,
-        draft_year
+        draft_year,
+        college_production_score,
+        physical_measurables_score,
+        hs_recruiting_score,
+        draft_projection_score,
+        expert_consensus_score
       `
     )
 
@@ -127,10 +140,24 @@ export async function GET(request: NextRequest) {
         jersey: record.jersey,
         class: record.class || null,
         headshot_url:
-          record.headshot_url || getHeadshotUrl(record.espn_id ? Number(record.espn_id) : null),
+          record.headshot_url ||
+          getHeadshotUrl(toNumberOrNull(record.espn_id), toNumberOrNull(record.draft_year)),
         team_color: record.team_color,
         college_stats: record.college_stats || null,
         draft_year: record.draft_year,
+        college_production_score: record.college_production_score
+          ? Number(record.college_production_score)
+          : null,
+        physical_measurables_score: record.physical_measurables_score
+          ? Number(record.physical_measurables_score)
+          : null,
+        hs_recruiting_score: record.hs_recruiting_score ? Number(record.hs_recruiting_score) : null,
+        draft_projection_score: record.draft_projection_score
+          ? Number(record.draft_projection_score)
+          : null,
+        expert_consensus_score: record.expert_consensus_score
+          ? Number(record.expert_consensus_score)
+          : null,
       }
     })
 

@@ -4,6 +4,8 @@ export interface TradeItem {
   total_score: number
   tier: string
   rank?: number | null
+  headshot_url?: string | null
+  espn_id?: string | number | null
 }
 
 export interface TradeResult {
@@ -26,4 +28,5 @@ export interface PlayerSuggestion {
   position: string
   team: string
   headshot_url?: string | null
+  espn_id?: string | number | null
 }

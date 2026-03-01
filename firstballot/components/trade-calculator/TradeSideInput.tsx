@@ -16,46 +16,65 @@ interface TradeSideInputProps {
   sideLabel: string
 }
 
+interface AssetMetadata {
+  headshot_url?: string | null
+  espn_id?: string | number | null
+}
+
 export function TradeSideInput({ side, onChange, placeholder, sideLabel }: TradeSideInputProps) {
   const [inputValue, setInputValue] = useState('')
   const [suggestions, setSuggestions] = useState<PlayerSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [assetMetadata, setAssetMetadata] = useState<Record<string, AssetMetadata>>({})
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const debouncedSearch = useDebounce(inputValue, 300)
 
+  const fetchSuggestions = useCallback(async (query: string) => {
+    try {
+      const response = await fetch(`/api/rankings?search=${encodeURIComponent(query)}`)
+      if (response.ok) {
+        const data = await response.json()
+        const nextSuggestions = data.players || []
+        setSuggestions(nextSuggestions)
+        setShowSuggestions(nextSuggestions.length > 0)
+        setSelectedIndex(-1)
+      } else {
+        setSuggestions([])
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error)
+      setSuggestions([])
+    }
+  }, [])
+
   // Fetch player suggestions from API
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (debouncedSearch.trim().length < 2) {
-        setSuggestions([])
-        setShowSuggestions(false)
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/rankings?search=${encodeURIComponent(debouncedSearch)}`)
-        if (response.ok) {
-          const data = await response.json()
-          setSuggestions(data.players || [])
-          setShowSuggestions(true)
-          setSelectedIndex(-1)
-        }
-      } catch (error) {
-        console.error('Error fetching suggestions:', error)
-        setSuggestions([])
-      }
+    const query = debouncedSearch.trim()
+    if (query.length < 1) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
     }
 
-    fetchSuggestions()
-  }, [debouncedSearch])
+    fetchSuggestions(query)
+  }, [debouncedSearch, fetchSuggestions])
 
   const handleAddItem = useCallback(
-    (item?: string) => {
+    (item?: string, metadata?: AssetMetadata) => {
       const valueToAdd = item || inputValue.trim()
       if (valueToAdd && !side.includes(valueToAdd)) {
         onChange([...side, valueToAdd])
+        if (metadata?.headshot_url || metadata?.espn_id) {
+          setAssetMetadata((prev) => ({
+            ...prev,
+            [valueToAdd]: {
+              headshot_url: metadata.headshot_url ?? null,
+              espn_id: metadata.espn_id ?? null,
+            },
+          }))
+        }
         setInputValue('')
         setSuggestions([])
         setShowSuggestions(false)
@@ -73,7 +92,11 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
     if (e.key === 'Enter') {
       e.preventDefault()
       if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-        handleAddItem(suggestions[selectedIndex].player_name)
+        const selected = suggestions[selectedIndex]
+        handleAddItem(selected.player_name, {
+          headshot_url: selected.headshot_url,
+          espn_id: selected.espn_id,
+        })
       } else {
         handleAddItem()
       }
@@ -89,8 +112,11 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
     }
   }
 
-  const handleSuggestionClick = (playerName: string) => {
-    handleAddItem(playerName)
+  const handleSuggestionClick = (suggestion: PlayerSuggestion) => {
+    handleAddItem(suggestion.player_name, {
+      headshot_url: suggestion.headshot_url,
+      espn_id: suggestion.espn_id,
+    })
   }
 
   // Close suggestions when clicking outside
@@ -111,6 +137,50 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+
+  // Fill missing metadata for manually typed assets
+  useEffect(() => {
+    const unresolved = side.filter((item) => !assetMetadata[item])
+    if (unresolved.length === 0) return
+
+    let cancelled = false
+    const hydrateMetadata = async () => {
+      const lookups = await Promise.all(
+        unresolved.map(async (name) => {
+          try {
+            const response = await fetch(`/api/rankings?player=${encodeURIComponent(name)}`)
+            if (!response.ok) return null
+            const data = await response.json()
+            return {
+              name,
+              metadata: {
+                headshot_url: data.headshot_url ?? null,
+                espn_id: data.espn_id ?? null,
+              },
+            }
+          } catch {
+            return null
+          }
+        })
+      )
+
+      if (cancelled) return
+
+      setAssetMetadata((prev) => {
+        const merged = { ...prev }
+        for (const entry of lookups) {
+          if (!entry) continue
+          merged[entry.name] = entry.metadata
+        }
+        return merged
+      })
+    }
+
+    hydrateMetadata()
+    return () => {
+      cancelled = true
+    }
+  }, [side, assetMetadata])
 
   return (
     <div className="space-y-6">
@@ -135,7 +205,9 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
             }}
             onKeyDown={handleKeyPress}
             onFocus={() => {
-              if (suggestions.length > 0) {
+              if (inputValue.trim().length === 0) {
+                fetchSuggestions('')
+              } else if (suggestions.length > 0) {
                 setShowSuggestions(true)
               }
             }}
@@ -161,7 +233,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
             {suggestions.map((player, index) => (
               <div
                 key={`${player.player_name}-${index}`}
-                onClick={() => handleSuggestionClick(player.player_name)}
+                onClick={() => handleSuggestionClick(player)}
                 className={`px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
                   index === selectedIndex ? 'bg-white/5' : ''
                 }`}
@@ -171,6 +243,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
                     <div className="relative">
                       <PlayerHeadshot
                         headshotUrl={player.headshot_url}
+                        espnId={player.espn_id}
                         playerName={player.player_name}
                         size={32}
                       />
@@ -204,7 +277,12 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover:grayscale-0 transition-all">
-                <PlayerHeadshot playerName={item} size={32} />
+                <PlayerHeadshot
+                  playerName={item}
+                  headshotUrl={assetMetadata[item]?.headshot_url}
+                  espnId={assetMetadata[item]?.espn_id}
+                  size={32}
+                />
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-black text-slate-200 font-mono uppercase tracking-tight group-hover:text-white transition-colors">

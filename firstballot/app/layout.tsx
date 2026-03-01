@@ -1,17 +1,21 @@
 import type React from 'react'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { Fira_Code } from 'next/font/google'
+import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth'
 import { LeagueProvider } from '@/lib/league-context'
 import { Analytics } from '@vercel/analytics/next'
 
-const inter = Inter({ subsets: ['latin'] })
-
-const firaCode = Fira_Code({
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-inter',
+})
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-space-grotesk',
 })
 
 export const metadata: Metadata = {
@@ -22,10 +26,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${inter.className} ${firaCode.className} bg-slate-900 text-gray-100 min-h-screen`}
+        className={`${inter.variable} ${spaceGrotesk.variable} bg-background text-foreground min-h-screen font-sans antialiased`}
       >
+        {process.env.NODE_ENV === 'development' && (
+          <script src="https://unpkg.com/react-scan/dist/auto.global.js" crossOrigin="anonymous" />
+        )}
         <AuthProvider>
           <LeagueProvider>{children}</LeagueProvider>
         </AuthProvider>

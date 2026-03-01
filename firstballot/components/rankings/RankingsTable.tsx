@@ -58,11 +58,11 @@ function PlayerImageCell({
 
   const imageUrl = getImageUrl()
 
-  // Get ring/glow color based on tier
+  // Get ring color based on tier (no glow)
   const getRingStyle = () => {
-    if (isDiamond) return 'ring-2 ring-cyan-400/60 shadow-[0_0_20px_rgba(34,211,238,0.4)]'
-    if (tierNum === 1) return 'ring-2 ring-amber-400/60 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
-    if (tierNum === 2) return 'ring-1 ring-purple-400/40 shadow-[0_0_10px_rgba(192,132,252,0.2)]'
+    if (isDiamond) return 'ring-2 ring-cyan-400/40'
+    if (tierNum === 1) return 'ring-2 ring-amber-400/40'
+    if (tierNum === 2) return 'ring-1 ring-purple-400/30'
     return 'ring-1 ring-white/10'
   }
 
@@ -97,13 +97,13 @@ function PlayerImageCell({
       )}
       {/* Diamond sparkle indicator */}
       {isDiamond && (
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(34,211,238,0.6)]">
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center">
           <Gem className="w-3 h-3 text-white" />
         </div>
       )}
       {/* Gold crown indicator */}
       {!isDiamond && tierNum === 1 && (
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(251,191,36,0.5)]">
+        <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
           <Crown className="w-3 h-3 text-white" />
         </div>
       )}
@@ -177,67 +177,54 @@ export function RankingsTable({
                 return {
                   accent: 'text-cyan-400',
                   bar: 'bg-cyan-500',
-                  glow: 'shadow-[0_0_30px_rgba(34,211,238,0.15)]',
-                  border: 'border-cyan-500/30',
-                  bg: 'bg-gradient-to-r from-cyan-950/40 via-slate-900/60 to-slate-900/40',
-                  hoverBg:
-                    'group-hover:from-cyan-950/50 group-hover:via-slate-800/70 group-hover:to-slate-800/50',
-                  rankBg: 'bg-cyan-500/20',
+                  border: 'border-cyan-500/20',
+                  bg: 'bg-slate-800/50',
+                  hoverBg: 'group-hover:bg-slate-800/70',
+                  rankBg: 'bg-cyan-500/15',
                 }
               switch (tierNum) {
                 case 1:
                   return {
                     accent: 'text-amber-400',
                     bar: 'bg-amber-500',
-                    glow: 'shadow-[0_0_25px_rgba(251,191,36,0.12)]',
-                    border: 'border-amber-500/25',
-                    bg: 'bg-gradient-to-r from-amber-950/30 via-slate-900/60 to-slate-900/40',
-                    hoverBg:
-                      'group-hover:from-amber-950/40 group-hover:via-slate-800/70 group-hover:to-slate-800/50',
-                    rankBg: 'bg-amber-500/20',
+                    border: 'border-amber-500/15',
+                    bg: 'bg-slate-800/50',
+                    hoverBg: 'group-hover:bg-slate-800/70',
+                    rankBg: 'bg-amber-500/15',
                   }
                 case 2:
                   return {
                     accent: 'text-purple-400',
                     bar: 'bg-purple-500',
-                    glow: 'shadow-[0_0_20px_rgba(168,85,247,0.08)]',
-                    border: 'border-purple-500/20',
-                    bg: 'bg-gradient-to-r from-purple-950/20 via-slate-900/50 to-slate-900/40',
-                    hoverBg:
-                      'group-hover:from-purple-950/30 group-hover:via-slate-800/60 group-hover:to-slate-800/50',
-                    rankBg: 'bg-purple-500/15',
+                    border: 'border-purple-500/12',
+                    bg: 'bg-slate-800/40',
+                    hoverBg: 'group-hover:bg-slate-800/60',
+                    rankBg: 'bg-purple-500/10',
                   }
                 case 3:
                   return {
                     accent: 'text-blue-400',
                     bar: 'bg-blue-500',
-                    glow: '',
-                    border: 'border-blue-500/15',
-                    bg: 'bg-gradient-to-r from-blue-950/15 via-slate-900/40 to-slate-900/30',
-                    hoverBg:
-                      'group-hover:from-blue-950/25 group-hover:via-slate-800/50 group-hover:to-slate-800/40',
-                    rankBg: 'bg-blue-500/10',
+                    border: 'border-blue-500/10',
+                    bg: 'bg-slate-800/35',
+                    hoverBg: 'group-hover:bg-slate-800/55',
+                    rankBg: 'bg-blue-500/8',
                   }
                 default:
                   return {
                     accent: 'text-slate-400',
                     bar: 'bg-slate-600',
-                    glow: '',
                     border: 'border-white/5',
-                    bg: 'bg-slate-800/40',
-                    hoverBg: 'group-hover:bg-slate-800/60',
-                    rankBg: 'bg-slate-700/30',
+                    bg: 'bg-slate-800/30',
+                    hoverBg: 'group-hover:bg-slate-800/50',
+                    rankBg: 'bg-slate-700/20',
                   }
               }
             }
             const styles = getTierStyles()
 
-            // Special row class for diamonds and golds
             const getRowClass = () => {
-              let base = 'group relative transition-all duration-300 hover:translate-x-1'
-              if (isDiamond) return `${base} ${styles.glow}`
-              if (tierNum === 1) return `${base} ${styles.glow}`
-              return base
+              return 'group relative transition-all duration-200 hover:translate-x-0.5'
             }
 
             return (
@@ -284,7 +271,7 @@ export function RankingsTable({
                   className={`py-4 ${styles.bg} ${styles.hoverBg} border-y ${styles.border} transition-all duration-300 text-center`}
                 >
                   <span
-                    className={`text-[10px] font-black font-mono px-2.5 py-1 rounded-lg ${styles.bar} text-slate-900 ${isDiamond || tierNum === 1 ? 'shadow-sm' : ''}`}
+                    className={`text-[10px] font-black font-mono px-2.5 py-1 rounded-lg ${styles.bar} text-slate-900`}
                   >
                     {player.position}
                   </span>
@@ -345,7 +332,7 @@ export function RankingsTable({
                 >
                   <Badge
                     variant="outline"
-                    className={`${getTierColor(player.tier, isDiamond)} text-[10px] h-6 border-current/30 ${isDiamond ? 'shadow-[0_0_10px_rgba(34,211,238,0.3)]' : tierNum === 1 ? 'shadow-[0_0_8px_rgba(251,191,36,0.25)]' : ''}`}
+                    className={`${getTierColor(player.tier, isDiamond)} text-[10px] h-6 border-current/30`}
                   >
                     {getTierIcon(player.tier, isDiamond)}
                     <span className="hidden sm:inline ml-1 font-semibold">

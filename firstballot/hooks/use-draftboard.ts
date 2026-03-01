@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import type { Draftboard } from '@/types/draftboard'
 
@@ -17,7 +17,6 @@ export function useDraftboard(): UseDraftboardReturn {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const hasLoadedRef = useRef(false)
 
   // Load the user's single board
   const loadBoard = useCallback(async (): Promise<Draftboard | null> => {
@@ -99,16 +98,10 @@ export function useDraftboard(): UseDraftboardReturn {
     [user, savedBoard]
   )
 
-  // Load board on mount when user is available
-  // Small delay to ensure auth interceptor is set up
+  // Load board whenever user becomes available
   useEffect(() => {
-    if (user && !hasLoadedRef.current) {
-      hasLoadedRef.current = true
-      // Small delay to ensure fetch interceptor is ready
-      const timer = setTimeout(() => {
-        loadBoard()
-      }, 100)
-      return () => clearTimeout(timer)
+    if (user) {
+      loadBoard()
     }
   }, [user, loadBoard])
 

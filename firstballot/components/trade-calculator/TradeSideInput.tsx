@@ -29,21 +29,28 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
   const [assetMetadata, setAssetMetadata] = useState<Record<string, AssetMetadata>>({})
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const suggestionsRequestIdRef = useRef(0)
   const debouncedSearch = useDebounce(inputValue, 300)
 
   const fetchSuggestions = useCallback(async (query: string) => {
+    const requestId = suggestionsRequestIdRef.current + 1
+    suggestionsRequestIdRef.current = requestId
+
     try {
       const response = await fetch(`/api/rankings?search=${encodeURIComponent(query)}`)
       if (response.ok) {
         const data = await response.json()
+        if (requestId !== suggestionsRequestIdRef.current) return
         const nextSuggestions = data.players || []
         setSuggestions(nextSuggestions)
         setShowSuggestions(nextSuggestions.length > 0)
         setSelectedIndex(-1)
       } else {
+        if (requestId !== suggestionsRequestIdRef.current) return
         setSuggestions([])
       }
     } catch (error) {
+      if (requestId !== suggestionsRequestIdRef.current) return
       console.error('Error fetching suggestions:', error)
       setSuggestions([])
     }
@@ -53,6 +60,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
   useEffect(() => {
     const query = debouncedSearch.trim()
     if (query.length < 1) {
+      suggestionsRequestIdRef.current += 1
       setSuggestions([])
       setShowSuggestions(false)
       return
@@ -232,7 +240,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
           >
             {suggestions.map((player, index) => (
               <div
-                key={`${player.player_name}-${index}`}
+                key={`${player.espn_id ?? 'unknown'}-${player.player_name}`}
                 onClick={() => handleSuggestionClick(player)}
                 className={`px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${
                   index === selectedIndex ? 'bg-white/5' : ''
@@ -272,7 +280,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
       <div className="grid grid-cols-1 gap-2">
         {side.map((item, index) => (
           <div
-            key={index}
+            key={item}
             className="group flex items-center justify-between p-3 bg-slate-900/40 hover:bg-slate-900/60 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300"
           >
             <div className="flex items-center gap-3">

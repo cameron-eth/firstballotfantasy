@@ -22,23 +22,46 @@ export function AllTimeRankingsTab() {
   const [positionFilter, setPositionFilter] = useState('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
+  const handleSearchChange = (term: string) => {
+    setVisibleCount(PAGE_SIZE)
+    setSearchTerm(term)
+  }
+
+  const handlePositionFilterChange = (nextFilter: string) => {
+    setVisibleCount(PAGE_SIZE)
+    setPositionFilter(nextFilter)
+  }
+
   useEffect(() => {
+    let isCancelled = false
+    const controller = new AbortController()
+
     const fetchAllTime = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/prospects/all-time?limit=250')
+        const response = await fetch('/api/prospects/all-time?limit=250', {
+          signal: controller.signal,
+        })
         if (response.ok) {
           const data = await response.json()
+          if (isCancelled) return
           setProspects(data)
         }
       } catch (error) {
+        if (controller.signal.aborted) return
         console.error('Error fetching all-time prospects:', error)
       } finally {
+        if (isCancelled) return
         setLoading(false)
       }
     }
 
     fetchAllTime()
+
+    return () => {
+      isCancelled = true
+      controller.abort()
+    }
   }, [])
 
   const filteredProspects = useMemo(() => {
@@ -51,10 +74,6 @@ export function AllTimeRankingsTab() {
     })
   }, [prospects, searchTerm, positionFilter])
   const visibleProspects = filteredProspects.slice(0, visibleCount)
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [searchTerm, positionFilter, loading])
 
   const getPositionStyles = (position: string) => {
     const styles: Record<string, string> = {
@@ -92,12 +111,12 @@ export function AllTimeRankingsTab() {
             <Input
               placeholder="Search legends..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 h-10 bg-slate-950/60 border-white/5 text-white w-full sm:w-64 focus:border-yellow-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
             />
           </div>
 
-          <Select value={positionFilter} onValueChange={setPositionFilter}>
+          <Select value={positionFilter} onValueChange={handlePositionFilterChange}>
             <SelectTrigger className="h-10 w-full sm:w-36 bg-slate-950/60 border-white/5 text-white focus:border-yellow-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
               <SelectValue placeholder="Position" />
             </SelectTrigger>

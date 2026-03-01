@@ -68,9 +68,9 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                 )}
               </div>
               <div className="p-6 space-y-3">
-                {result.side1.map((item, index) => (
+                {result.side1.map((item) => (
                   <div
-                    key={index}
+                    key={`${item.name}-${item.position ?? 'asset'}-${item.rank ?? 'na'}-${item.total_score}`}
                     className="flex items-center justify-between p-4 bg-slate-900/40 rounded-xl border border-white/5 hover:border-blue-500/20 transition-all group/asset"
                   >
                     <div className="flex items-center gap-4">
@@ -114,9 +114,9 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                     </div>
                   </div>
                 ))}
-                {result.side1_not_found.map((name, i) => (
+                {result.side1_not_found.map((name) => (
                   <div
-                    key={i}
+                    key={`missing-side1-${name}`}
                     className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between"
                   >
                     <span className="text-[10px] text-red-400 font-mono italic">
@@ -161,9 +161,9 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                 )}
               </div>
               <div className="p-6 space-y-3">
-                {result.side2.map((item, index) => (
+                {result.side2.map((item) => (
                   <div
-                    key={index}
+                    key={`${item.name}-${item.position ?? 'asset'}-${item.rank ?? 'na'}-${item.total_score}`}
                     className="flex items-center justify-between p-4 bg-slate-900/40 rounded-xl border border-white/5 hover:border-purple-500/20 transition-all group/asset"
                   >
                     <div className="flex items-center gap-4">
@@ -207,9 +207,9 @@ export function TradeResultCard({ result }: TradeResultCardProps) {
                     </div>
                   </div>
                 ))}
-                {result.side2_not_found.map((name, i) => (
+                {result.side2_not_found.map((name) => (
                   <div
-                    key={i}
+                    key={`missing-side2-${name}`}
                     className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl flex items-center justify-between"
                   >
                     <span className="text-[10px] text-red-400 font-mono italic">

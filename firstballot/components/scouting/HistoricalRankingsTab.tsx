@@ -33,27 +33,55 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   const [viewMode, setViewMode] = useState<'charts' | 'athletes'>('athletes')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
+  const handleYearChange = (year: string) => {
+    setVisibleCount(PAGE_SIZE)
+    setSelectedYear(year)
+  }
+
+  const handleSearchChange = (term: string) => {
+    setVisibleCount(PAGE_SIZE)
+    setSearchTerm(term)
+  }
+
+  const handleViewModeChange = (mode: 'charts' | 'athletes') => {
+    setVisibleCount(PAGE_SIZE)
+    setViewMode(mode)
+  }
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
+    let isCancelled = false
+    const controller = new AbortController()
+
     const fetchHistorical = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/prospects?draft_year=${selectedYear}`)
+        const response = await fetch(`/api/prospects?draft_year=${selectedYear}`, {
+          signal: controller.signal,
+        })
         if (response.ok) {
           const data = await response.json()
+          if (isCancelled) return
           setHistoricalProspects(data)
         }
       } catch (error) {
+        if (controller.signal.aborted) return
         console.error('Error fetching historical prospects:', error)
       } finally {
+        if (isCancelled) return
         setLoading(false)
       }
     }
 
     fetchHistorical()
+
+    return () => {
+      isCancelled = true
+      controller.abort()
+    }
   }, [selectedYear])
 
   // Compare position distribution
@@ -163,10 +191,6 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   }, [historicalProspects, searchTerm])
   const visibleHistorical = filteredHistorical.slice(0, visibleCount)
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [selectedYear, searchTerm, viewMode, loading])
-
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -189,7 +213,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                   Compare to Class
                 </CardTitle>
               </div>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <Select value={selectedYear} onValueChange={handleYearChange}>
                 <SelectTrigger className="w-28 bg-slate-900 border-white/5 text-white h-9 text-xs font-mono">
                   <SelectValue />
                 </SelectTrigger>
@@ -210,7 +234,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
 
             <div className="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
               <button
-                onClick={() => setViewMode('athletes')}
+                onClick={() => handleViewModeChange('athletes')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black font-mono uppercase tracking-widest transition-all ${
                   viewMode === 'athletes'
                     ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
@@ -220,7 +244,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                 Athletes
               </button>
               <button
-                onClick={() => setViewMode('charts')}
+                onClick={() => handleViewModeChange('charts')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black font-mono uppercase tracking-widest transition-all ${
                   viewMode === 'charts'
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
@@ -426,7 +450,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
               <Input
                 placeholder={`Search ${selectedYear} class...`}
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10 h-10 bg-slate-950/60 border-white/5 text-white w-full focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
               />
             </div>

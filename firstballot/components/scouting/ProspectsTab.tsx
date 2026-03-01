@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { ProspectCard } from './ProspectCard'
 import {
@@ -48,9 +48,20 @@ export function ProspectsTab({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const visibleProspects = filteredProspects.slice(0, visibleCount)
 
-  useEffect(() => {
+  const handleSearchChange = (term: string) => {
     setVisibleCount(PAGE_SIZE)
-  }, [searchTerm, positionFilter, draftYear, loading])
+    setSearchTerm(term)
+  }
+
+  const handleDraftYearChange = (year: string) => {
+    setVisibleCount(PAGE_SIZE)
+    setDraftYear(year)
+  }
+
+  const handlePositionChange = (nextPosition: string) => {
+    setVisibleCount(PAGE_SIZE)
+    setPositionFilter(nextPosition)
+  }
 
   return (
     <div className="relative">
@@ -72,12 +83,12 @@ export function ProspectsTab({
               <Input
                 placeholder="Search prospects..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10 h-10 bg-background border-border text-foreground w-full sm:w-64 focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
               />
             </div>
 
-            <Select value={draftYear} onValueChange={setDraftYear}>
+            <Select value={draftYear} onValueChange={handleDraftYearChange}>
               <SelectTrigger className="h-10 w-full sm:w-32 bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
@@ -95,7 +106,7 @@ export function ProspectsTab({
               </SelectContent>
             </Select>
 
-            <Select value={positionFilter} onValueChange={setPositionFilter}>
+            <Select value={positionFilter} onValueChange={handlePositionChange}>
               <SelectTrigger className="h-10 w-full sm:w-36 bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Position" />
               </SelectTrigger>

@@ -125,7 +125,7 @@ function getTierColor(tier: string): { bg: string; text: string; border: string 
 }
 
 function StatBar({ label, value, delay }: { label: string; value: number; delay: number }) {
-  return (
+    return (
     <div className="flex items-center gap-2">
       <span className="text-[10px] font-medium text-muted-foreground w-8">{label}</span>
       <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
@@ -137,9 +137,9 @@ function StatBar({ label, value, delay }: { label: string; value: number; delay:
         />
       </div>
       <span className="text-xs font-mono text-foreground w-6 text-right">{Math.round(value)}</span>
-    </div>
-  )
-}
+      </div>
+    )
+  }
 
 function UnifiedProspectCard({
   player,
@@ -157,7 +157,7 @@ function UnifiedProspectCard({
   const [imageError, setImageError] = useState(false)
   const tierColor = getTierColor(player.tier)
 
-  return (
+    return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -173,8 +173,8 @@ function UnifiedProspectCard({
         <span className="text-3xl font-mono font-bold text-primary drop-shadow-lg">
           {player.position}
           {player.rank}
-        </span>
-      </div>
+                  </span>
+        </div>
 
       <div className="absolute top-3 right-3 z-10">
         <span
@@ -212,9 +212,9 @@ function UnifiedProspectCard({
                 .split(' ')
                 .map((n) => n[0])
                 .join('')}
-            </span>
-          </div>
-        )}
+                  </span>
+                </div>
+              )}
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -230,9 +230,9 @@ function UnifiedProspectCard({
             )}
           >
             {player.year ?? '--'} {player.isCollege ? 'PROSPECT' : 'CLASS'}
-          </span>
+                </span>
         </motion.div>
-      </div>
+              </div>
 
       <div className="p-4">
         <h3 className="font-mono text-lg font-bold text-foreground tracking-tight mb-0.5 truncate">
@@ -332,7 +332,7 @@ export function DraftBoardItem({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-3xl font-mono font-bold text-primary leading-none">
-            {index + 1}
+        {index + 1}
           </span>
           <div className="w-12 h-12 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
             {!imageError && getPlayerImageUrl(player) ? (
@@ -370,15 +370,15 @@ export function DraftBoardItem({
           >
             {player.tier}
           </span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove()
-            }}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
             className="h-7 w-7 inline-flex items-center justify-center rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
-          >
+        >
             <X className="h-3.5 w-3.5" />
-          </button>
+        </button>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between">
@@ -442,7 +442,7 @@ export function AddProspectItem({
             <div className="text-xs text-muted-foreground truncate">
               #{player.rank} • {player.position} • {player.school}
             </div>
-          </div>
+      </div>
         </div>
         <span
           className={cn(

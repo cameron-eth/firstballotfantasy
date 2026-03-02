@@ -1,7 +1,8 @@
 'use client'
 
+import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, Reorder } from 'framer-motion'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import {
@@ -36,6 +37,7 @@ interface DraftBoardTabProps {
   onAddToDraftBoard: (prospect: Prospect) => void
   onRemoveFromDraftBoard: (prospectId: number) => void
   onShowComps?: (prospect: Prospect) => void
+  onReorderDraftBoard: (nextBoard: Prospect[]) => void
   onBoardDragStart: (e: React.DragEvent, prospect: Prospect, index: number) => void
   onBoardDragOver: (e: React.DragEvent, index: number) => void
   onBoardDrop: (e: React.DragEvent, index: number) => void
@@ -80,6 +82,10 @@ const tierColors: Record<string, { bg: string; text: string; border: string }> =
 }
 
 const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
+const ReorderAny = Reorder as unknown as {
+  Group: React.ComponentType<Record<string, unknown>>
+  Item: React.ComponentType<Record<string, unknown>>
+}
 
 function getTierLabel(gradeTier: string | null, grade: number): string {
   if (gradeTier) return gradeTier
@@ -117,7 +123,7 @@ function parseComparisonName(comp: string): string {
   return comp.trim()
 }
 
-function getComparisonNames(comparisons: string | null | undefined, max = 3): string[] {
+function getComparisonNames(comparisons: string | null | undefined, max = 6): string[] {
   if (!comparisons) return []
   const names = splitComparisons(comparisons).map(parseComparisonName).filter(Boolean)
   return Array.from(new Set(names)).slice(0, max)
@@ -208,9 +214,10 @@ export function DraftBoardTab({
   onAddToDraftBoard,
   onRemoveFromDraftBoard,
   onShowComps,
-  onBoardDragStart,
-  onBoardDragOver,
-  onBoardDrop,
+  onReorderDraftBoard,
+  onBoardDragStart: _onBoardDragStart,
+  onBoardDragOver: _onBoardDragOver,
+  onBoardDrop: _onBoardDrop,
   onClearDraftBoard,
   hasSavedBoard = false,
   savingBoard = false,
@@ -413,6 +420,20 @@ export function DraftBoardTab({
     if (firstMissing) onAddToDraftBoard(firstMissing)
   }
 
+  const handleSectionReorder = (year: number, reorderedSection: Prospect[]) => {
+    const targetIds = new Set(reorderedSection.map((p) => p.id))
+    if (targetIds.size === 0) return
+
+    let cursor = 0
+    const nextBoard = draftBoard.map((entry) => {
+      if (!targetIds.has(entry.id)) return entry
+      const replacement = reorderedSection[cursor]
+      cursor += 1
+      return replacement || entry
+    })
+    onReorderDraftBoard(nextBoard)
+  }
+
   const offBoardProspects = useMemo(() => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
     const pool =
@@ -576,7 +597,13 @@ export function DraftBoardTab({
                     <div className="px-3 py-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground bg-secondary/25">
                       {section.year || 'Unknown'} Class
                     </div>
-                    {section.prospects.map((prospect, index) => {
+                    <ReorderAny.Group
+                      axis="y"
+                      values={section.prospects}
+                      onReorder={(next: Prospect[]) => handleSectionReorder(section.year, next)}
+                      className="relative"
+                    >
+                      {section.prospects.map((prospect, index) => {
                       const player = toBoardPlayer(prospect)
                       const classCohort = consensusBoard
                         .filter((p) => p.draftYear === player.draftYear)
@@ -588,32 +615,37 @@ export function DraftBoardTab({
                       const tierColor = tierColors[player.tier] || tierColors.Depth
                       const archetype = getArchetype(player)
                       const ArchetypeIcon = archetype.icon
-                      const originalIndex = draftBoard.findIndex((p) => p.id === prospect.id)
                       const comparisonNames = getComparisonNames(prospect.nfl_comparisons)
 
                       return (
-                        <div
-                          key={`${section.year}-${player.name}`}
-                          draggable
-                          onDragStart={(e) => onBoardDragStart(e, prospect, originalIndex)}
-                          onDragOver={(e) => onBoardDragOver(e, originalIndex)}
-                          onDrop={(e) => onBoardDrop(e, originalIndex)}
-                          onClick={(e) => {
-                            if ((e.target as HTMLElement).closest('[data-no-row-click="true"]'))
-                              return
-                            onShowComps?.(prospect)
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              onShowComps?.(prospect)
-                            }
-                          }}
-                          tabIndex={0}
-                          role="button"
-                          className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing border-t border-border/60 first:border-t-0 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                        <ReorderAny.Item
+                          key={`${section.year}-${prospect.id}-${index}`}
+                          value={prospect}
+                          layout
+                          initial={{ opacity: 0, y: 10, scale: 0.99 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.99 }}
+                          transition={{ duration: 0.22, ease: 'easeOut' }}
+                          className={cn(
+                            'relative bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing border-t border-border/60 first:border-t-0 focus:outline-none focus:ring-1 focus:ring-primary/40',
+                            'data-[drag=true]:z-20 data-[drag=true]:ring-2 data-[drag=true]:ring-primary/50 data-[drag=true]:shadow-xl'
+                          )}
                         >
-                          <div className="flex items-center gap-3 p-4">
+                          <div
+                            onClick={(e) => {
+                              if ((e.target as HTMLElement).closest('[data-no-row-click="true"]')) return
+                              onShowComps?.(prospect)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                onShowComps?.(prospect)
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            className="flex items-center gap-3 p-4"
+                          >
                             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             <div className="w-8 text-center">
                               <span className="text-2xl font-mono font-bold text-primary">
@@ -669,7 +701,7 @@ export function DraftBoardTab({
                               </div>
                               {comparisonNames.length > 0 && (
                                 <div className="mt-1.5 flex items-center gap-2">
-                                  <div className="flex -space-x-1.5">
+                                  <div className="flex -space-x-2">
                                     {comparisonNames.map((compName) => {
                                       const compMeta = compHeadshotMap.get(normalizeName(compName))
                                       return (
@@ -678,8 +710,8 @@ export function DraftBoardTab({
                                           playerName={compName}
                                           headshotUrl={compMeta?.headshotUrl}
                                           espnId={compMeta?.espnId}
-                                          size={22}
-                                          className="border border-border/80 bg-secondary shadow-sm"
+                                          size={32}
+                                          className="border-2 border-border/80 bg-secondary shadow-sm"
                                         />
                                       )
                                     })}
@@ -728,9 +760,10 @@ export function DraftBoardTab({
                               ×
                             </button>
                           </div>
-                        </div>
+                        </ReorderAny.Item>
                       )
                     })}
+                    </ReorderAny.Group>
                   </div>
                 ))}
               </AnimatePresence>

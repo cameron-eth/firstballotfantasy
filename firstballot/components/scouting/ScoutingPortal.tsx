@@ -564,6 +564,10 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     setDraftBoard((prev) => prev.filter((p) => p.id !== prospectId))
   }, [])
 
+  const handleReorderDraftBoard = useCallback((nextBoard: Prospect[]) => {
+    setDraftBoard(nextBoard)
+  }, [])
+
   const handleBoardDragStart = useCallback(
     (e: React.DragEvent, prospect: Prospect, index: number) => {
       setDraggedBoardProspect({ prospect, index })
@@ -889,6 +893,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 onAddToDraftBoard={handleAddToDraftBoard}
                 onRemoveFromDraftBoard={handleRemoveFromDraftBoard}
                 onShowComps={handleShowComps}
+                onReorderDraftBoard={handleReorderDraftBoard}
                 onBoardDragStart={handleBoardDragStart}
                 onBoardDragOver={handleBoardDragOver}
                 onBoardDrop={handleBoardDrop}

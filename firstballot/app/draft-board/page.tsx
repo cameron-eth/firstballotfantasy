@@ -218,7 +218,7 @@ export default function DraftBoardPage() {
 
   return (
     <main className="min-h-screen fb-app-surface bg-background">
-      <Header />
+          <Header />
       <div className="border-b border-border bg-card/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

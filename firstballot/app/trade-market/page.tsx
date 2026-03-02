@@ -519,7 +519,7 @@ function TradeMarketContent() {
         0
       )
       const winner = tradeTeams.reduce((max: any, team: any) =>
-        team.netValueGain > max.netValueGain ? team : max
+          team.netValueGain > max.netValueGain ? team : max
       ).rosterId
 
       analyzedTrades.push({
@@ -689,46 +689,46 @@ function TradeMarketContent() {
         <div className="max-w-4xl mx-auto text-center py-12">
           <p className="text-muted-foreground mb-6">
             No league ID found. Enter your Sleeper league ID.
-          </p>
-          <div className="flex items-center justify-center space-x-2 mb-6">
-            <input
-              type="text"
-              placeholder="Enter league ID"
+            </p>
+            <div className="flex items-center justify-center space-x-2 mb-6">
+              <input
+                type="text"
+                placeholder="Enter league ID"
               className="px-3 py-2 bg-card border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/60"
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const input = e.target as HTMLInputElement
-                  if (input.value.trim()) {
+                  if (e.key === 'Enter') {
+                    const input = e.target as HTMLInputElement
+                    if (input.value.trim()) {
                     const next = input.value.trim()
                     setLeagueId(next)
                     leagueCache.setLeagueId(next)
-                    setNoLeagueId(false)
-                    setLoading(true)
+                      setNoLeagueId(false)
+                      setLoading(true)
+                    }
                   }
-                }
-              }}
-            />
-            <Button
-              onClick={() => {
-                const input = document.querySelector(
-                  'input[placeholder="Enter league ID"]'
+                }}
+              />
+              <Button
+                onClick={() => {
+                  const input = document.querySelector(
+                    'input[placeholder="Enter league ID"]'
                 ) as HTMLInputElement | null
-                if (input?.value.trim()) {
+                  if (input?.value.trim()) {
                   const next = input.value.trim()
                   setLeagueId(next)
                   leagueCache.setLeagueId(next)
-                  setNoLeagueId(false)
-                  setLoading(true)
-                }
-              }}
-            >
-              Load League
-            </Button>
-          </div>
+                    setNoLeagueId(false)
+                    setLoading(true)
+                  }
+                }}
+              >
+                Load League
+              </Button>
+            </div>
           <Button variant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
+              Go Back
+            </Button>
         </div>
       </div>
     )
@@ -742,8 +742,8 @@ function TradeMarketContent() {
           <p className="text-red-400 mb-6">{error}</p>
           <Button variant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
+              Go Back
+            </Button>
         </div>
       </div>
     )
@@ -764,12 +764,12 @@ function TradeMarketContent() {
               <p className="text-xs text-muted-foreground font-mono mt-1">
                 League trade performance and value capture tracker
               </p>
-            </div>
+              </div>
             <div className="flex items-center gap-4">
               <GradeFilter selected={gradeFilter} onChange={setGradeFilter} />
               <div className="font-mono text-sm text-muted-foreground">
                 {time.toLocaleTimeString()} EST
-              </div>
+            </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -779,9 +779,9 @@ function TradeMarketContent() {
                 Back
               </Button>
             </div>
-          </div>
-        </div>
-      </div>
+                </div>
+                </div>
+              </div>
 
       <TickerStrip
         players={playerPerformanceRows.length > 0 ? playerPerformanceRows : filteredRows}
@@ -797,7 +797,7 @@ function TradeMarketContent() {
 
         <div className="mb-3 text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Team Trading Quality
-        </div>
+                                </div>
         <div className="grid md:grid-cols-2 gap-4">
           <MarketPanel
             title="HIGH-QUALITY TRADERS"
@@ -813,11 +813,11 @@ function TradeMarketContent() {
             color="amber"
             defaultExpanded
           />
-        </div>
+                          </div>
 
         <div className="mt-6 mb-3 text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Player Performance
-        </div>
+                              </div>
         <div className="grid md:grid-cols-2 gap-4">
           <MarketPanel
             title="OVERPERFORMING PLAYERS"
@@ -833,7 +833,7 @@ function TradeMarketContent() {
             color="red"
             defaultExpanded
           />
-        </div>
+                      </div>
 
         <div className="mt-8 pt-6 border-t border-border">
           <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground font-mono">
@@ -843,23 +843,23 @@ function TradeMarketContent() {
               <span>{traderStats.length} active traders</span>
               <span>|</span>
               <span>{tradedPicks.length} traded picks</span>
-            </div>
+                              </div>
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1">
                 <TrendingUp className="w-3 h-3 text-emerald-400" />
                 Beat market
-              </span>
+                                        </span>
               <span className="flex items-center gap-1 ml-4">
                 <TrendingDown className="w-3 h-3 text-red-400" />
                 Lost market
-              </span>
+                              </span>
               <span className="ml-4 text-blue-400">
                 Total Value: {formatValue(tradeAnalysis.reduce((s, t) => s + t.totalTradeValue, 0))}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                        </div>
     </main>
   )
 }

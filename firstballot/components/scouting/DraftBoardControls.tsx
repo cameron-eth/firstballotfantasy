@@ -39,7 +39,16 @@ export function DraftBoardControls({
         size="sm"
         onClick={handleSave}
         disabled={saving || (!hasChanges && hasSavedBoard)}
-        className={`h-8 text-xs transition-all ${
+        title={
+          saving
+            ? 'Saving...'
+            : saveSuccess
+              ? 'Saved'
+              : hasSavedBoard
+                ? 'Save changes'
+                : 'Save board'
+        }
+        className={`h-7 px-2.5 text-[11px] transition-all ${
           saveSuccess
             ? 'bg-green-600 hover:bg-green-700'
             : hasChanges
@@ -48,24 +57,26 @@ export function DraftBoardControls({
         }`}
       >
         {saving ? (
-          <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+          <Loader2 className="h-3 w-3 animate-spin" />
         ) : saveSuccess ? (
-          <Check className="h-3 w-3 mr-1.5" />
+          <Check className="h-3 w-3" />
         ) : (
-          <Save className="h-3 w-3 mr-1.5" />
+          <Save className="h-3 w-3" />
         )}
-        {saving
-          ? 'Saving...'
-          : saveSuccess
-            ? 'Saved!'
-            : hasSavedBoard
-              ? 'Save Changes'
-              : 'Save Board'}
+        <span className="sr-only">
+          {saving
+            ? 'Saving...'
+            : saveSuccess
+              ? 'Saved!'
+              : hasSavedBoard
+                ? 'Save Changes'
+                : 'Save Board'}
+        </span>
       </Button>
 
       {/* Status indicator */}
       {hasChanges && hasSavedBoard && !saving && !saveSuccess && (
-        <span className="text-xs text-blue-400 flex items-center gap-1">
+        <span className="hidden sm:inline-flex text-xs text-blue-400 items-center gap-1">
           <CloudOff className="h-3 w-3" />
           Unsaved changes
         </span>

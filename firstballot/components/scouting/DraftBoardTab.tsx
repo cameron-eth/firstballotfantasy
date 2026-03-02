@@ -10,11 +10,9 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardList,
-  Download,
   GripVertical,
   Minus,
   Plus,
-  RotateCcw,
   Scale,
   Target,
   TrendingDown,
@@ -295,6 +293,22 @@ export function DraftBoardTab({
       }))
   }, [boardProspects])
 
+  const boardPlayerMap = useMemo(() => {
+    const map = new Map<number, BoardPlayer>()
+    for (const p of boardProspects) {
+      map.set(p.id, toBoardPlayer(p))
+    }
+    return map
+  }, [boardProspects])
+
+  const comparisonNamesMap = useMemo(() => {
+    const map = new Map<number, string[]>()
+    for (const p of boardProspects) {
+      map.set(p.id, getComparisonNames(p.nfl_comparisons))
+    }
+    return map
+  }, [boardProspects])
+
   // If existing board entries belong to an older class, seed once with the current class.
   useEffect(() => {
     const currentYearOnBoard = draftBoard.filter((p) => p.draft_year === currentDraftYear).length
@@ -310,6 +324,16 @@ export function DraftBoardTab({
     seededYearRef.current = currentDraftYear
   }, [draftBoard, currentDraftYear, currentYearProspects, onAddToDraftBoard, onClearDraftBoard])
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
+  const consensusRankById = useMemo(() => {
+    const map = new Map<number, number>()
+    consensusBoard.forEach((p, idx) => map.set(p.id, idx + 1))
+    return map
+  }, [consensusBoard])
+  const consensusRankByName = useMemo(() => {
+    const map = new Map<string, number>()
+    consensusBoard.forEach((p, idx) => map.set(p.name, idx + 1))
+    return map
+  }, [consensusBoard])
 
   const contrarianScore = calculateContrarianScore(userBoard, consensusBoard)
   const contrarianLabel = getContrarianLabel(contrarianScore)
@@ -346,19 +370,25 @@ export function DraftBoardTab({
         ? allEligibleProspects
         : allEligibleProspects.filter((p) => p.position === position)
 
-    const perPlayerClassBaseline = userBoard
-      .map((player) => {
-        const cohortRaw = scoped.filter((p) => (p.draft_year ?? null) === player.draftYear)
-        const cohort = cohortRaw.map(toBoardPlayer)
-        if (cohort.length === 0) return null
-
-        return {
-          grade: cohort.reduce((sum, p) => sum + p.grade, 0) / cohort.length,
-          physical: cohort.reduce((sum, p) => sum + p.physical, 0) / cohort.length,
-          production: cohort.reduce((sum, p) => sum + p.production, 0) / cohort.length,
-        }
+    const cohortAveragesByYear = new Map<number | null, { grade: number; physical: number; production: number }>()
+    const grouped = new Map<number | null, BoardPlayer[]>()
+    for (const prospect of scoped) {
+      const year = prospect.draft_year ?? null
+      if (!grouped.has(year)) grouped.set(year, [])
+      grouped.get(year)!.push(toBoardPlayer(prospect))
+    }
+    for (const [year, cohort] of grouped.entries()) {
+      if (cohort.length === 0) continue
+      cohortAveragesByYear.set(year, {
+        grade: cohort.reduce((sum, p) => sum + p.grade, 0) / cohort.length,
+        physical: cohort.reduce((sum, p) => sum + p.physical, 0) / cohort.length,
+        production: cohort.reduce((sum, p) => sum + p.production, 0) / cohort.length,
       })
-      .filter((x): x is { grade: number; physical: number; production: number } => x !== null)
+    }
+
+    const perPlayerClassBaseline = userBoard
+      .map((player) => cohortAveragesByYear.get(player.draftYear))
+      .filter((x): x is { grade: number; physical: number; production: number } => x !== undefined)
 
     if (perPlayerClassBaseline.length === 0) {
       return {
@@ -389,27 +419,14 @@ export function DraftBoardTab({
     }
   }, [consensusBoard, allEligibleProspects, position, userBoard])
 
-  const resetBoard = () => {
-    onClearDraftBoard()
-    const source =
-      position === 'ALL'
-        ? currentYearProspects
-        : currentYearProspects.filter((p) => p.position === position)
-    source.forEach((p) => onAddToDraftBoard(p))
-  }
-
-  const exportBoard = () => {
-    const csv = userBoard
-      .map((p, i) => `${i + 1},${p.name},${p.position},${p.school},${p.grade}`)
-      .join('\n')
-    const blob = new Blob([`Rank,Name,Position,School,Grade\n${csv}`], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `draftboard-${position}-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const boardConsensusDiffs = useMemo(
+    () =>
+      userBoard.map((p, i) => ({
+        player: p,
+        diff: (consensusRankByName.get(p.name) ?? i + 1) - (i + 1),
+      })),
+    [userBoard, consensusRankByName]
+  )
 
   const addTopAvailable = () => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
@@ -424,6 +441,15 @@ export function DraftBoardTab({
   const handleSectionReorder = (year: number, reorderedSection: Prospect[]) => {
     const targetIds = new Set(reorderedSection.map((p) => p.id))
     if (targetIds.size === 0) return
+
+    const currentSectionIds = draftBoard.filter((entry) => targetIds.has(entry.id)).map((p) => p.id)
+    const nextSectionIds = reorderedSection.map((p) => p.id)
+    if (
+      currentSectionIds.length === nextSectionIds.length &&
+      currentSectionIds.every((id, idx) => id === nextSectionIds[idx])
+    ) {
+      return
+    }
 
     let cursor = 0
     const nextBoard = draftBoard.map((entry) => {
@@ -497,11 +523,15 @@ export function DraftBoardTab({
                 <h1 className="text-4xl sm:text-5xl font-mono font-bold text-foreground leading-none">
                   Big Board
                 </h1>
-                <p className="text-base text-muted-foreground">
-                  Drag to reorder. {consensusBoard.length} prospects across {boardSections.length}{' '}
-                  class
-                  {boardSections.length === 1 ? '' : 'es'}.
-                </p>
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 w-fit">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Contrarian</span>
+                  <div className="text-lg sm:text-xl leading-none font-mono font-bold text-primary">
+                    {contrarianScore}
+                  </div>
+                  <div className={cn('text-xs font-medium', contrarianLabel.color)}>
+                    {contrarianLabel.label}
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
                     Current Class: {currentDraftYear}
@@ -518,16 +548,7 @@ export function DraftBoardTab({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 flex-wrap xl:justify-end">
-                <div className="min-w-[188px] text-center rounded-xl border border-border bg-background/60 px-5 py-3">
-                  <div className="text-4xl leading-none font-mono font-bold text-primary">
-                    {contrarianScore}
-                  </div>
-                  <div className={cn('text-xs font-medium mt-1', contrarianLabel.color)}>
-                    {contrarianLabel.label}
-                  </div>
-                </div>
-
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap xl:justify-end">
                 {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
                   <DraftBoardControls
                     hasSavedBoard={hasSavedBoard}
@@ -537,20 +558,6 @@ export function DraftBoardTab({
                   />
                 )}
 
-                <button
-                  onClick={resetBoard}
-                  className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset
-                </button>
-                <button
-                  onClick={exportBoard}
-                  className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
               </div>
             </div>
 
@@ -560,7 +567,7 @@ export function DraftBoardTab({
                   key={pos}
                   onClick={() => setPosition(pos)}
                   className={cn(
-                    'h-11 px-5 text-base font-medium rounded-lg transition-colors',
+                    'h-9 sm:h-11 px-3 sm:px-5 text-sm sm:text-base font-medium rounded-lg transition-colors',
                     position === pos
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-secondary text-muted-foreground hover:text-foreground'
@@ -571,7 +578,7 @@ export function DraftBoardTab({
               ))}
               <button
                 onClick={addTopAvailable}
-                className="h-11 px-5 text-base font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                className="h-9 sm:h-11 px-3 sm:px-5 text-sm sm:text-base font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
                 Add Next
               </button>
@@ -589,8 +596,7 @@ export function DraftBoardTab({
                 <span className="text-xs text-muted-foreground">{userBoard.length} players</span>
               </div>
 
-              <AnimatePresence>
-                {boardSections.map((section) => (
+              {boardSections.map((section) => (
                   <div
                     key={`year-${section.year}`}
                     className="border-b border-border/60 last:border-0"
@@ -606,32 +612,19 @@ export function DraftBoardTab({
                       className="relative divide-y divide-border/60"
                     >
                       {section.prospects.map((prospect, index) => {
-                      const player = toBoardPlayer(prospect)
-                      const classCohort = consensusBoard
-                        .filter((p) => p.draftYear === player.draftYear)
-                        .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : b.grade - a.grade))
-                      const consensusRank =
-                        classCohort.findIndex((p) => p.id === player.id) + 1 ||
-                        consensusBoard.findIndex((p) => p.id === player.id) + 1
+                      const player = boardPlayerMap.get(prospect.id) || toBoardPlayer(prospect)
+                      const consensusRank = consensusRankById.get(player.id) ?? index + 1
                       const rankDiff = consensusRank - (index + 1)
                       const tierColor = tierColors[player.tier] || tierColors.Depth
                       const archetype = getArchetype(player)
                       const ArchetypeIcon = archetype.icon
-                      const comparisonNames = getComparisonNames(prospect.nfl_comparisons)
+                      const comparisonNames = comparisonNamesMap.get(prospect.id) || []
 
                       return (
                         <ReorderAny.Item
                           key={`${section.year}-${prospect.id}`}
                           value={prospect}
-                          layout
-                          layoutId={`draft-row-${section.year}-${prospect.id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                            transition: { type: 'spring', stiffness: 500, damping: 30 },
-                          }}
-                          exit={{ opacity: 0, y: -10 }}
+                          layout="position"
                           transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
                           drag="y"
                           dragDirectionLock
@@ -653,21 +646,21 @@ export function DraftBoardTab({
                             'data-[drag=true]:z-20 data-[drag=true]:ring-2 data-[drag=true]:ring-primary/50 data-[drag=true]:shadow-xl'
                           )}
                         >
-                          <div className="flex items-center gap-3 p-4">
+                          <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
                             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            <div className="w-8 text-center">
-                              <span className="text-2xl font-mono font-bold text-primary">
+                            <div className="w-7 sm:w-8 text-center">
+                              <span className="text-xl sm:text-2xl font-mono font-bold text-primary">
                                 {index + 1}
                               </span>
                             </div>
 
-                            <div className="w-14 h-14 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                               {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                 <Image
                                   src={getPlayerImageUrl(player)}
                                   alt={player.name}
-                                  width={56}
-                                  height={56}
+                                  width={48}
+                                  height={48}
                                   className="w-full h-full object-cover"
                                   onError={() =>
                                     setImageErrors((prev) => new Set(prev).add(player.name))
@@ -684,8 +677,8 @@ export function DraftBoardTab({
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-lg font-semibold text-foreground truncate">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="text-base sm:text-lg font-semibold text-foreground truncate">
                                   {player.name}
                                 </span>
                                 <span
@@ -699,10 +692,10 @@ export function DraftBoardTab({
                                   {player.tier}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
                                 <span className="font-mono text-primary">{player.position}</span>
-                                <span>{player.school}</span>
-                                <span className={cn('flex items-center gap-0.5', archetype.color)}>
+                                <span className="truncate max-w-[110px] sm:max-w-none">{player.school}</span>
+                                <span className={cn('hidden sm:inline-flex items-center gap-0.5', archetype.color)}>
                                   <ArchetypeIcon className="w-3 h-3" />
                                   {archetype.name}
                                 </span>
@@ -724,21 +717,21 @@ export function DraftBoardTab({
                                       )
                                     })}
                                   </div>
-                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                                  <span className="hidden sm:inline text-[10px] text-muted-foreground uppercase tracking-wide">
                                     Historical comps
                                   </span>
                                 </div>
                               )}
                             </div>
 
-                            <div className="text-right">
-                              <div className="text-2xl font-mono font-bold text-foreground">
+                            <div className="text-right hidden md:block">
+                              <div className="text-xl lg:text-2xl font-mono font-bold text-foreground">
                                 {player.grade.toFixed(1)}
                               </div>
                               <div className="text-[10px] text-muted-foreground">GRADE</div>
                             </div>
 
-                            <div className="w-14 text-right">
+                            <div className="w-14 text-right hidden lg:block">
                               {rankDiff !== 0 && (
                                 <div
                                   className={cn(
@@ -782,7 +775,6 @@ export function DraftBoardTab({
                     </ReorderAny.Group>
                   </div>
                 ))}
-              </AnimatePresence>
             </div>
           </div>
 
@@ -870,18 +862,6 @@ export function DraftBoardTab({
                   className="px-3 py-2 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 >
                   Add Next
-                </button>
-                <button
-                  onClick={resetBoard}
-                  className="px-3 py-2 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                >
-                  Reset View
-                </button>
-                <button
-                  onClick={exportBoard}
-                  className="px-3 py-2 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Export CSV
                 </button>
                 <button
                   onClick={onClearDraftBoard}
@@ -1021,11 +1001,7 @@ export function DraftBoardTab({
                   <TrendingUp className="w-3 h-3" /> HIGHER THAN CONSENSUS
                 </h4>
                 <div className="space-y-1">
-                  {userBoard
-                    .map((p, i) => ({
-                      player: p,
-                      diff: consensusBoard.findIndex((c) => c.name === p.name) + 1 - (i + 1),
-                    }))
+                  {boardConsensusDiffs
                     .filter((x) => x.diff > 0)
                     .sort((a, b) => b.diff - a.diff)
                     .slice(0, 3)
@@ -1043,11 +1019,7 @@ export function DraftBoardTab({
                   <TrendingDown className="w-3 h-3" /> LOWER THAN CONSENSUS
                 </h4>
                 <div className="space-y-1">
-                  {userBoard
-                    .map((p, i) => ({
-                      player: p,
-                      diff: consensusBoard.findIndex((c) => c.name === p.name) + 1 - (i + 1),
-                    }))
+                  {boardConsensusDiffs
                     .filter((x) => x.diff < 0)
                     .sort((a, b) => a.diff - b.diff)
                     .slice(0, 3)

@@ -229,6 +229,7 @@ export function DraftBoardTab({
   const [showBreakdown, setShowBreakdown] = useState(true)
   const [offBoardSearch, setOffBoardSearch] = useState('')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [draggingProspectId, setDraggingProspectId] = useState<number | null>(null)
   const seededYearRef = useRef<number | null>(null)
 
   const currentDraftYear = useMemo(() => {
@@ -601,7 +602,8 @@ export function DraftBoardTab({
                       axis="y"
                       values={section.prospects}
                       onReorder={(next: Prospect[]) => handleSectionReorder(section.year, next)}
-                      className="relative"
+                      layoutScroll
+                      className="relative divide-y divide-border/60"
                     >
                       {section.prospects.map((prospect, index) => {
                       const player = toBoardPlayer(prospect)
@@ -619,33 +621,39 @@ export function DraftBoardTab({
 
                       return (
                         <ReorderAny.Item
-                          key={`${section.year}-${prospect.id}-${index}`}
+                          key={`${section.year}-${prospect.id}`}
                           value={prospect}
                           layout
-                          initial={{ opacity: 0, y: 10, scale: 0.99 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -8, scale: 0.99 }}
-                          transition={{ duration: 0.22, ease: 'easeOut' }}
+                          layoutId={`draft-row-${section.year}-${prospect.id}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{
+                            opacity: 1,
+                            y: 0,
+                            transition: { type: 'spring', stiffness: 500, damping: 30 },
+                          }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
+                          drag="y"
+                          dragDirectionLock
+                          dragMomentum={false}
+                          dragElastic={0.08}
+                          onDragStart={() => setDraggingProspectId(prospect.id)}
+                          onDragEnd={() => {
+                            setDraggingProspectId(null)
+                          }}
+                          whileDrag={{
+                            scale: 1.02,
+                            zIndex: 40,
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                            cursor: 'grabbing',
+                          }}
                           className={cn(
-                            'relative bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing border-t border-border/60 first:border-t-0 focus:outline-none focus:ring-1 focus:ring-primary/40',
+                            'relative bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing focus:outline-none focus:ring-1 focus:ring-primary/40',
+                            draggingProspectId === prospect.id && 'ring-2 ring-primary/50 bg-secondary/40',
                             'data-[drag=true]:z-20 data-[drag=true]:ring-2 data-[drag=true]:ring-primary/50 data-[drag=true]:shadow-xl'
                           )}
                         >
-                          <div
-                            onClick={(e) => {
-                              if ((e.target as HTMLElement).closest('[data-no-row-click="true"]')) return
-                              onShowComps?.(prospect)
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                onShowComps?.(prospect)
-                              }
-                            }}
-                            tabIndex={0}
-                            role="button"
-                            className="flex items-center gap-3 p-4"
-                          >
+                          <div className="flex items-center gap-3 p-4">
                             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             <div className="w-8 text-center">
                               <span className="text-2xl font-mono font-bold text-primary">
@@ -751,6 +759,14 @@ export function DraftBoardTab({
                               )}
                               <div className="text-[9px] text-muted-foreground">vs consensus</div>
                             </div>
+
+                            <button
+                              onClick={() => onShowComps?.(prospect)}
+                              data-no-row-click="true"
+                              className="h-8 px-2 rounded border border-border text-[10px] font-medium text-muted-foreground hover:text-foreground hover:border-primary/40"
+                            >
+                              Comps
+                            </button>
 
                             <button
                               onClick={() => onRemoveFromDraftBoard(prospect.id)}

@@ -132,11 +132,12 @@ function formatHeight(inches: number | null): string {
 // Transform raw API data into the normalized Player shape
 // ---------------------------------------------------------------------------
 
-function normalize(raw: RawProspect, idx: number): Player {
+function normalize(raw: RawProspect): Player {
   const fortyRaw = raw.college_stats?.forty_time
   return {
     id: raw.id,
-    rank: idx + 1,
+    // Keep API-provided positional rank (e.g., RB3) rather than deriving from list index.
+    rank: raw.rank,
     name: raw.name,
     position: raw.position as Position,
     school: raw.school || 'TBD',
@@ -172,7 +173,7 @@ export async function fetchAllProspects(): Promise<Record<Position, Player[]>> {
     const filtered = data
       .filter((p) => p.position === pos && p.overall_grade !== null)
       .sort((a, b) => (b.overall_grade || 0) - (a.overall_grade || 0))
-    result[pos] = filtered.map((raw, idx) => normalize(raw, idx))
+    result[pos] = filtered.map((raw) => normalize(raw))
   }
 
   return result

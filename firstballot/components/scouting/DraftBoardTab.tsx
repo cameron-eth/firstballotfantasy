@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
 import type { Prospect } from './types'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 
 interface DraftBoardTabProps {
   loading: boolean
@@ -34,6 +35,7 @@ interface DraftBoardTabProps {
   draftBoard: Prospect[]
   onAddToDraftBoard: (prospect: Prospect) => void
   onRemoveFromDraftBoard: (prospectId: number) => void
+  onShowComps?: (prospect: Prospect) => void
   onBoardDragStart: (e: React.DragEvent, prospect: Prospect, index: number) => void
   onBoardDragOver: (e: React.DragEvent, index: number) => void
   onBoardDrop: (e: React.DragEvent, index: number) => void
@@ -63,6 +65,11 @@ interface BoardPlayer {
   headshotUrl: string | null
 }
 
+interface CompAvatarMeta {
+  headshotUrl?: string | null
+  espnId?: number | string | null
+}
+
 const tierColors: Record<string, { bg: string; text: string; border: string }> = {
   Elite: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/50' },
   'Blue Chip': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
@@ -90,6 +97,30 @@ function parseForty(stats?: Record<string, number> | null): number | null {
   if (raw === undefined || raw === null || raw === '') return null
   const val = Number(raw)
   return Number.isFinite(val) ? val : null
+}
+
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function splitComparisons(raw: string): string[] {
+  if (raw.includes('), ')) {
+    const parts = raw.split('), ')
+    return parts.map((part, idx) => (idx < parts.length - 1 ? `${part})` : part))
+  }
+  return raw.split(', ')
+}
+
+function parseComparisonName(comp: string): string {
+  const match = comp.match(/^(.+?)\s*\(/)
+  if (match) return match[1].trim()
+  return comp.trim()
+}
+
+function getComparisonNames(comparisons: string | null | undefined, max = 3): string[] {
+  if (!comparisons) return []
+  const names = splitComparisons(comparisons).map(parseComparisonName).filter(Boolean)
+  return Array.from(new Set(names)).slice(0, max)
 }
 
 function toBoardPlayer(p: Prospect): BoardPlayer {
@@ -176,6 +207,7 @@ export function DraftBoardTab({
   draftBoard,
   onAddToDraftBoard,
   onRemoveFromDraftBoard,
+  onShowComps,
   onBoardDragStart,
   onBoardDragOver,
   onBoardDrop,
@@ -250,7 +282,8 @@ export function DraftBoardTab({
       .sort((a, b) => b[0] - a[0])
       .map(([year, prospects]) => ({
         year,
-        prospects: prospects.sort(sortByRankThenGrade),
+        // Keep user-defined drag order within each class section.
+        prospects,
       }))
   }, [boardProspects])
 
@@ -397,6 +430,30 @@ export function DraftBoardTab({
     )
   }, [offBoardProspects, offBoardSearch])
 
+  const compHeadshotMap = useMemo(() => {
+    const map = new Map<string, CompAvatarMeta>()
+    for (const prospect of allProspects) {
+      if (!prospect?.name) continue
+      const key = normalizeName(prospect.name)
+      const nextMeta: CompAvatarMeta = {
+        headshotUrl: prospect.headshot_url ?? null,
+        espnId: prospect.espn_id ?? null,
+      }
+      const existing = map.get(key)
+      if (!existing) {
+        map.set(key, nextMeta)
+        continue
+      }
+      // Prefer entries with actual image data.
+      if (!existing.headshotUrl && nextMeta.headshotUrl) {
+        map.set(key, nextMeta)
+      } else if (!existing.espnId && nextMeta.espnId) {
+        map.set(key, { ...existing, espnId: nextMeta.espnId })
+      }
+    }
+    return map
+  }, [allProspects])
+
   if (loading) {
     return (
       <div className="min-h-[60vh] bg-background flex items-center justify-center rounded-lg border border-border">
@@ -413,92 +470,92 @@ export function DraftBoardTab({
       <div className="w-full px-4 sm:px-5 lg:px-6 pt-4 pb-2">
         <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-[0_16px_40px_-28px_rgba(0,0,0,0.9)]">
           <div className="w-full px-5 sm:px-6 lg:px-7 py-6 space-y-5">
-          <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
-            <div className="space-y-2">
-              <h1 className="text-4xl sm:text-5xl font-mono font-bold text-foreground leading-none">
-                Big Board
-              </h1>
-              <p className="text-base text-muted-foreground">
-                Drag to reorder. {consensusBoard.length} prospects across {boardSections.length}{' '}
-                class
-                {boardSections.length === 1 ? '' : 'es'}.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                  Current Class: {currentDraftYear}
-                </span>
-                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                  On Board: {draftBoard.length}
-                </span>
-                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                  Available: {offBoardProspects.length}
-                </span>
-                <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                  Avg Grade: {boardStats.avgGrade.toFixed(1)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap xl:justify-end">
-              <div className="min-w-[188px] text-center rounded-xl border border-border bg-background/60 px-5 py-3">
-                <div className="text-4xl leading-none font-mono font-bold text-primary">
-                  {contrarianScore}
-                </div>
-                <div className={cn('text-xs font-medium mt-1', contrarianLabel.color)}>
-                  {contrarianLabel.label}
+            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+              <div className="space-y-2">
+                <h1 className="text-4xl sm:text-5xl font-mono font-bold text-foreground leading-none">
+                  Big Board
+                </h1>
+                <p className="text-base text-muted-foreground">
+                  Drag to reorder. {consensusBoard.length} prospects across {boardSections.length}{' '}
+                  class
+                  {boardSections.length === 1 ? '' : 'es'}.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
+                    Current Class: {currentDraftYear}
+                  </span>
+                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
+                    On Board: {draftBoard.length}
+                  </span>
+                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
+                    Available: {offBoardProspects.length}
+                  </span>
+                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
+                    Avg Grade: {boardStats.avgGrade.toFixed(1)}
+                  </span>
                 </div>
               </div>
 
-              {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
-                <DraftBoardControls
-                  hasSavedBoard={hasSavedBoard}
-                  saving={savingBoard}
-                  hasChanges={hasUnsavedChanges}
-                  onSave={onSaveBoard}
-                />
-              )}
+              <div className="flex items-center gap-3 flex-wrap xl:justify-end">
+                <div className="min-w-[188px] text-center rounded-xl border border-border bg-background/60 px-5 py-3">
+                  <div className="text-4xl leading-none font-mono font-bold text-primary">
+                    {contrarianScore}
+                  </div>
+                  <div className={cn('text-xs font-medium mt-1', contrarianLabel.color)}>
+                    {contrarianLabel.label}
+                  </div>
+                </div>
 
-              <button
-                onClick={resetBoard}
-                className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset
-              </button>
-              <button
-                onClick={exportBoard}
-                className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            {positionTabs.map((pos) => (
-              <button
-                key={pos}
-                onClick={() => setPosition(pos)}
-                className={cn(
-                  'h-11 px-5 text-base font-medium rounded-lg transition-colors',
-                  position === pos
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
+                  <DraftBoardControls
+                    hasSavedBoard={hasSavedBoard}
+                    saving={savingBoard}
+                    hasChanges={hasUnsavedChanges}
+                    onSave={onSaveBoard}
+                  />
                 )}
+
+                <button
+                  onClick={resetBoard}
+                  className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset
+                </button>
+                <button
+                  onClick={exportBoard}
+                  className="h-11 px-5 inline-flex items-center gap-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              {positionTabs.map((pos) => (
+                <button
+                  key={pos}
+                  onClick={() => setPosition(pos)}
+                  className={cn(
+                    'h-11 px-5 text-base font-medium rounded-lg transition-colors',
+                    position === pos
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {pos}
+                </button>
+              ))}
+              <button
+                onClick={addTopAvailable}
+                className="h-11 px-5 text-base font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
-                {pos}
+                Add Next
               </button>
-            ))}
-            <button
-              onClick={addTopAvailable}
-              className="h-11 px-5 text-base font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-            >
-              Add Next
-            </button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       <div className="w-full px-4 sm:px-5 lg:px-6 py-5">
@@ -532,6 +589,7 @@ export function DraftBoardTab({
                       const archetype = getArchetype(player)
                       const ArchetypeIcon = archetype.icon
                       const originalIndex = draftBoard.findIndex((p) => p.id === prospect.id)
+                      const comparisonNames = getComparisonNames(prospect.nfl_comparisons)
 
                       return (
                         <div
@@ -540,7 +598,20 @@ export function DraftBoardTab({
                           onDragStart={(e) => onBoardDragStart(e, prospect, originalIndex)}
                           onDragOver={(e) => onBoardDragOver(e, originalIndex)}
                           onDrop={(e) => onBoardDrop(e, originalIndex)}
-                          className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing border-t border-border/60 first:border-t-0"
+                          onClick={(e) => {
+                            if ((e.target as HTMLElement).closest('[data-no-row-click="true"]'))
+                              return
+                            onShowComps?.(prospect)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              onShowComps?.(prospect)
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing border-t border-border/60 first:border-t-0 focus:outline-none focus:ring-1 focus:ring-primary/40"
                         >
                           <div className="flex items-center gap-3 p-4">
                             <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -596,6 +667,28 @@ export function DraftBoardTab({
                                   {archetype.name}
                                 </span>
                               </div>
+                              {comparisonNames.length > 0 && (
+                                <div className="mt-1.5 flex items-center gap-2">
+                                  <div className="flex -space-x-1.5">
+                                    {comparisonNames.map((compName) => {
+                                      const compMeta = compHeadshotMap.get(normalizeName(compName))
+                                      return (
+                                        <PlayerHeadshot
+                                          key={`${prospect.id}-${compName}`}
+                                          playerName={compName}
+                                          headshotUrl={compMeta?.headshotUrl}
+                                          espnId={compMeta?.espnId}
+                                          size={22}
+                                          className="border border-border/80 bg-secondary shadow-sm"
+                                        />
+                                      )
+                                    })}
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                                    Historical comps
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             <div className="text-right">
@@ -629,6 +722,7 @@ export function DraftBoardTab({
 
                             <button
                               onClick={() => onRemoveFromDraftBoard(prospect.id)}
+                              data-no-row-click="true"
                               className="h-8 w-8 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
                             >
                               ×

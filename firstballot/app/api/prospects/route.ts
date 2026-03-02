@@ -8,6 +8,7 @@ export const revalidate = 0
 interface Prospect {
   id: number
   rank: number
+  overall_rank?: number
   name: string
   first_name: string | null
   last_name: string | null
@@ -107,19 +108,50 @@ export async function GET(request: NextRequest) {
       query = query.eq('draft_year', yearNum)
     }
 
+    if (isAllYears) {
+      query = query
+        .order('draft_year', { ascending: false })
+        .order('overall_grade', { ascending: false })
+        .order('rank', { ascending: true })
+    } else {
+      query = query.order('overall_grade', { ascending: false }).order('rank', { ascending: true })
+    }
+
     const { data: dynastyData, error: dynastyError } = await query
-      .order('draft_year', { ascending: false })
-      .order('rank', { ascending: true })
 
     if (dynastyError) {
       console.error('Database error fetching prospects from dynasty_prospects:', dynastyError)
+    }
+
+    // Rank shown on cards should be positional rank within the same draft class,
+    // based on authoritative class ordering (overall rank), not response sort order.
+    const positionalRankById = new Map<number, number>()
+    const posRankCounters = new Map<string, number>()
+    const rankSource = [...(dynastyData || [])].sort((a, b) => {
+      const yearA = Number(a.draft_year) || 0
+      const yearB = Number(b.draft_year) || 0
+      if (yearA !== yearB) return yearB - yearA
+      const rankA = Number(a.rank) || 9999
+      const rankB = Number(b.rank) || 9999
+      if (rankA !== rankB) return rankA - rankB
+      const nameA = String(a.name || '')
+      const nameB = String(b.name || '')
+      return nameA.localeCompare(nameB)
+    })
+
+    for (const record of rankSource) {
+      const posKey = `${record.draft_year ?? 'na'}::${record.position ?? ''}`
+      const nextPosRank = (posRankCounters.get(posKey) || 0) + 1
+      posRankCounters.set(posKey, nextPosRank)
+      positionalRankById.set(Number(record.id), nextPosRank)
     }
 
     // Map data
     const prospects: Prospect[] = (dynastyData || []).map((record) => {
       return {
         id: Number(record.id),
-        rank: Number(record.rank) || 999,
+        rank: positionalRankById.get(Number(record.id)) || 999,
+        overall_rank: Number(record.rank) || 999,
         name: record.name || '',
         first_name: record.first_name || (record.name || '').split(' ')[0],
         last_name: record.last_name || (record.name || '').split(' ').slice(1).join(' '),

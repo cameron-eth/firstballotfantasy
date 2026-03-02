@@ -1,8 +1,10 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { TradeResult } from '@/types/trade-calculator'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { PlayerHeadshot } from '@/components/ui/player-headshot'
 
 interface TradeScoresProps {
   result: TradeResult
@@ -13,6 +15,66 @@ export function TradeScores({ result }: TradeScoresProps) {
   const side1Pct = totalValue > 0 ? (result.side1_total / totalValue) * 100 : 50
   const side2Pct = totalValue > 0 ? (result.side2_total / totalValue) * 100 : 50
   const isEven = result.winner === 'EVEN'
+  const side1Wins = result.winner === 'SIDE 1'
+  const side2Wins = result.winner === 'SIDE 2'
+  const side1TopAssets = result.side1.slice(0, 4)
+  const side2TopAssets = result.side2.slice(0, 4)
+  const [hydratedHeadshots, setHydratedHeadshots] = useState<
+    Record<string, { headshot_url?: string | null; espn_id?: string | number | null }>
+  >({})
+
+  useEffect(() => {
+    const abortController = new AbortController()
+
+    const hydrateMissingHeadshots = async () => {
+      const allAssets = [...result.side1, ...result.side2]
+      const candidates = allAssets.filter((item) => {
+        const isDraftPick = /^\d{4}\s+\d+\.\d+$/.test(item.name)
+        const missing = !item.headshot_url && !item.espn_id
+        return !isDraftPick && missing
+      })
+
+      if (candidates.length === 0) return
+
+      const uniqueNames = Array.from(new Set(candidates.map((item) => item.name)))
+      const responses = await Promise.all(
+        uniqueNames.map(async (name) => {
+          try {
+            const res = await fetch(`/api/rankings?player=${encodeURIComponent(name)}`, {
+              signal: abortController.signal,
+              cache: 'no-store',
+            })
+            if (!res.ok) return { name, data: null as null | any }
+            const data = await res.json()
+            return { name, data }
+          } catch {
+            return { name, data: null as null | any }
+          }
+        })
+      )
+
+      if (abortController.signal.aborted) return
+
+      const next = responses.reduce(
+        (acc, entry) => {
+          const headshot = entry.data?.headshot_url ?? null
+          const espn = entry.data?.espn_id ?? null
+          if (headshot || espn) {
+            acc[entry.name] = { headshot_url: headshot, espn_id: espn }
+          }
+          return acc
+        },
+        {} as Record<string, { headshot_url?: string | null; espn_id?: string | number | null }>
+      )
+
+      if (Object.keys(next).length > 0) {
+        setHydratedHeadshots((prev) => ({ ...prev, ...next }))
+      }
+    }
+
+    hydrateMissingHeadshots()
+    return () => abortController.abort()
+  }, [result.side1, result.side2])
 
   return (
     <div className="mb-10 relative group">
@@ -26,88 +88,159 @@ export function TradeScores({ result }: TradeScoresProps) {
         />
 
         <div className="relative z-10">
-          {/* Decision HUD */}
-          <div className="flex flex-col items-center text-center mb-8 border-b border-white/5 pb-8">
-            <span className="text-[10px] text-slate-500 font-mono font-black uppercase tracking-[0.3em] mb-3">
-              Analysis Decision
-            </span>
-            <div className="flex items-center gap-4">
-              {!isEven && result.winner === 'SIDE 1' && (
-                <TrendingUp className="h-6 w-6 text-blue-400 animate-bounce" />
-              )}
-              <div className="text-4xl font-black text-white font-mono tracking-tighter uppercase">
-                Decision:{' '}
-                <span className={isEven ? 'text-slate-500' : 'text-yellow-400'}>
-                  {result.winner}
-                </span>
-              </div>
-              {!isEven && result.winner === 'SIDE 2' && (
-                <TrendingDown className="h-6 w-6 text-purple-400 animate-bounce rotate-180" />
-              )}
-            </div>
-            <div className="mt-4 flex items-center gap-6">
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-600 font-mono uppercase">Value Delta</span>
-                <span className="text-sm font-black text-white font-mono">
-                  +{result.difference.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-              </div>
-              <div className="w-px h-6 bg-white/5" />
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-600 font-mono uppercase">Index Delta</span>
-                <span className="text-sm font-black text-yellow-400 font-mono">
-                  {result.difference_pct.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-end mb-6">
-            {/* Side 1 Info */}
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
-                  Side 1 Assets
-                </span>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-6 items-center mb-6">
+            {/* Side 1 */}
+            <div
+              className={`rounded-2xl border p-4 ${
+                side1Wins
+                  ? 'border-blue-400/50 bg-blue-500/10 shadow-[0_0_26px_rgba(59,130,246,0.25)]'
+                  : 'border-white/10 bg-white/[0.02]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
+                    Side 1
+                  </span>
+                </div>
+                {side1Wins && (
+                  <Badge className="bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[10px]">
+                    WINNER
+                  </Badge>
+                )}
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-black text-white font-mono tracking-tighter">
                   {result.side1_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
-                <span className="text-blue-500/40 font-mono text-[10px] font-bold">INDEX</span>
+                <span className="text-blue-500/50 font-mono text-[10px] font-bold">INDEX</span>
               </div>
-              {result.side1_rank && (
-                <Badge
-                  variant="outline"
-                  className="mt-2 w-fit bg-blue-500/5 text-blue-400 border-blue-500/20 font-mono text-[9px] uppercase px-2 py-0"
-                >
-                  Top Rank #{result.side1_rank}
-                </Badge>
+              <div className="mt-3 flex items-center gap-3">
+                {result.side1_rank && (
+                  <Badge
+                    variant="outline"
+                    className="w-fit bg-blue-500/5 text-blue-400 border-blue-500/20 font-mono text-[9px] uppercase px-2 py-0"
+                  >
+                    Top Rank #{result.side1_rank}
+                  </Badge>
+                )}
+                <span className="text-[10px] font-mono text-blue-300/80 uppercase">
+                  {side1Pct.toFixed(1)}%
+                </span>
+              </div>
+              {side1TopAssets.length > 0 && (
+                <div className="mt-4 flex items-center">
+                  {side1TopAssets.map((item) => (
+                    <div
+                      key={`side1-${item.name}-${item.position ?? 'asset'}-${item.rank ?? 'na'}-${item.total_score}`}
+                      className="-mr-4 first:mr-0"
+                      title={item.name}
+                    >
+                      <PlayerHeadshot
+                        playerName={item.name}
+                        headshotUrl={
+                          item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url
+                        }
+                        espnId={item.espn_id ?? hydratedHeadshots[item.name]?.espn_id}
+                        size={54}
+                        className="ring-2 ring-slate-900 shadow-[0_0_0_2px_rgba(59,130,246,0.45)]"
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Side 2 Info */}
-            <div className="flex flex-col items-end text-right">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
-                  Side 2 Assets
-                </span>
-                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+            {/* Center Decision */}
+            <div className="text-center px-2">
+              <span className="text-[10px] text-slate-500 font-mono font-black uppercase tracking-[0.28em]">
+                Analysis Decision
+              </span>
+              <div className="mt-2 text-3xl font-black text-white font-mono tracking-tighter uppercase">
+                {isEven ? (
+                  <span className="text-slate-300">EVEN</span>
+                ) : (
+                  <>
+                    <span className="text-slate-300">SIDE </span>
+                    <span className="text-yellow-400">{result.winner.split(' ')[1]}</span>
+                  </>
+                )}
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-purple-500/40 font-mono text-[10px] font-bold">INDEX</span>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                {side1Wins && <TrendingUp className="h-4 w-4 text-blue-400" />}
+                {side2Wins && <TrendingUp className="h-4 w-4 text-purple-400" />}
+                {isEven && <Minus className="h-4 w-4 text-slate-400" />}
+                <span className="text-xs font-mono text-yellow-300">
+                  {result.difference_pct.toFixed(1)}%
+                </span>
+              </div>
+              <div className="text-[10px] font-mono text-slate-500 mt-1">
+                {result.difference.toLocaleString(undefined, { maximumFractionDigits: 0 })} value
+                delta
+              </div>
+            </div>
+
+            {/* Side 2 */}
+            <div
+              className={`rounded-2xl border p-4 text-right ${
+                side2Wins
+                  ? 'border-purple-400/50 bg-purple-500/10 shadow-[0_0_26px_rgba(168,85,247,0.25)]'
+                  : 'border-white/10 bg-white/[0.02]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                {side2Wins && (
+                  <Badge className="bg-purple-500/20 border border-purple-400/40 text-purple-300 text-[10px]">
+                    WINNER
+                  </Badge>
+                )}
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
+                    Side 2
+                  </span>
+                  <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2 justify-end">
+                <span className="text-purple-500/50 font-mono text-[10px] font-bold">INDEX</span>
                 <span className="text-4xl font-black text-white font-mono tracking-tighter">
                   {result.side2_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
-              {result.side2_rank && (
-                <Badge
-                  variant="outline"
-                  className="mt-2 w-fit bg-purple-500/5 text-purple-400 border-purple-500/20 font-mono text-[9px] uppercase px-2 py-0"
-                >
-                  Top Rank #{result.side2_rank}
-                </Badge>
+              <div className="mt-3 flex items-center justify-end gap-3">
+                <span className="text-[10px] font-mono text-purple-300/80 uppercase">
+                  {side2Pct.toFixed(1)}%
+                </span>
+                {result.side2_rank && (
+                  <Badge
+                    variant="outline"
+                    className="w-fit bg-purple-500/5 text-purple-400 border-purple-500/20 font-mono text-[9px] uppercase px-2 py-0"
+                  >
+                    Top Rank #{result.side2_rank}
+                  </Badge>
+                )}
+              </div>
+              {side2TopAssets.length > 0 && (
+                <div className="mt-4 flex items-center justify-end">
+                  {side2TopAssets.map((item) => (
+                    <div
+                      key={`side2-${item.name}-${item.position ?? 'asset'}-${item.rank ?? 'na'}-${item.total_score}`}
+                      className="-ml-4 first:ml-0"
+                      title={item.name}
+                    >
+                      <PlayerHeadshot
+                        playerName={item.name}
+                        headshotUrl={
+                          item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url
+                        }
+                        espnId={item.espn_id ?? hydratedHeadshots[item.name]?.espn_id}
+                        size={54}
+                        className="ring-2 ring-slate-900 shadow-[0_0_0_2px_rgba(168,85,247,0.5)]"
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

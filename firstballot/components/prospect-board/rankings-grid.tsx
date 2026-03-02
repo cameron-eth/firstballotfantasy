@@ -67,17 +67,22 @@ export function RankingsGrid() {
     .filter((p) => filter === 'all' || p.tier === filter)
     .sort((a, b) => {
       if (sortBy === 'rank') {
-        if (selectedYear === 'all') return b.grade - a.grade
+        // Requested ordering: highest grade first, then position rank as tie-breaker.
+        if (b.grade !== a.grade) return b.grade - a.grade
         return a.rank - b.rank
       }
-      if (sortBy === 'grade') return b.grade - a.grade
+      if (sortBy === 'grade') {
+        if (b.grade !== a.grade) return b.grade - a.grade
+        return a.rank - b.rank
+      }
       if (sortBy === 'physical') return b.physical - a.physical
       if (sortBy === 'production') return b.production - a.production
       return 0
     })
-    .map((player, index) => ({
+    .map((player) => ({
       ...player,
-      rank: selectedYear === 'all' ? index + 1 : player.rank,
+      // Always show positional rank badge from API (e.g., RB3, WR1).
+      rank: player.rank,
     }))
 
   const yearFilteredPlayers = players.filter(
@@ -236,11 +241,7 @@ export function RankingsGrid() {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
           >
             {visiblePlayers.map((player, index) => (
-              <PlayerCard
-                key={`${player.position}-${player.espnId || player.name}`}
-                player={player}
-                index={index}
-              />
+              <PlayerCard key={player.id} player={player} index={index} />
             ))}
           </motion.div>
         )}

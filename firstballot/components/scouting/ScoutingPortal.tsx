@@ -568,6 +568,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     (e: React.DragEvent, prospect: Prospect, index: number) => {
       setDraggedBoardProspect({ prospect, index })
       e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', String(prospect.id))
     },
     []
   )
@@ -582,12 +583,22 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       e.preventDefault()
 
       if (draggedBoardProspect) {
-        const { prospect, index: dragIndex } = draggedBoardProspect
-
         setDraftBoard((prev) => {
+          const dragIndex = prev.findIndex((p) => p.id === draggedBoardProspect.prospect.id)
+          if (
+            dragIndex < 0 ||
+            dropIndex < 0 ||
+            dropIndex >= prev.length ||
+            dragIndex === dropIndex
+          ) {
+            return prev
+          }
+
+          // True drag-swap behavior: exchange two rows instead of insert/shift.
           const newBoard = [...prev]
-          newBoard.splice(dragIndex, 1)
-          newBoard.splice(dropIndex, 0, prospect)
+          const temp = newBoard[dragIndex]
+          newBoard[dragIndex] = newBoard[dropIndex]
+          newBoard[dropIndex] = temp
           return newBoard
         })
 
@@ -877,6 +888,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 draftBoard={draftBoard}
                 onAddToDraftBoard={handleAddToDraftBoard}
                 onRemoveFromDraftBoard={handleRemoveFromDraftBoard}
+                onShowComps={handleShowComps}
                 onBoardDragStart={handleBoardDragStart}
                 onBoardDragOver={handleBoardDragOver}
                 onBoardDrop={handleBoardDrop}

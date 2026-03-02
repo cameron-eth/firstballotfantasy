@@ -17,6 +17,17 @@ export function Header() {
   const { isMember, loading: membershipLoading } = useMembership()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } finally {
+      setMobileMenuOpen(false)
+      if (typeof window !== 'undefined') {
+        window.location.assign('/login')
+      }
+    }
+  }
+
   return (
     <>
       <header className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50">
@@ -86,7 +97,7 @@ export function Header() {
                       </span>
 
                       <motion.button
-                        onClick={signOut}
+                        onClick={handleSignOut}
                         className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded"
                         title="Sign out"
                         whileHover={{ scale: 1.1 }}
@@ -128,7 +139,7 @@ export function Header() {
                       </Link>
 
                       <motion.button
-                        onClick={signOut}
+                        onClick={handleSignOut}
                         className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded"
                         title="Sign out"
                         whileHover={{ scale: 1.1 }}
@@ -216,10 +227,7 @@ export function Header() {
                       <span>BILLING</span>
                     </Link>
                     <button
-                      onClick={() => {
-                        signOut()
-                        setMobileMenuOpen(false)
-                      }}
+                      onClick={handleSignOut}
                       className="flex items-center justify-center space-x-2 p-3 bg-red-500/10 rounded-xl text-sm font-mono text-red-400"
                     >
                       <LogOut className="h-4 w-4" />

@@ -88,8 +88,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    cacheUtils.clear()
+    try {
+      // Prefer local signout so stale/invalid refresh tokens don't block logout UX.
+      const { error: localError } = await supabase.auth.signOut({ scope: 'local' })
+      if (localError) {
+        const { error: fallbackError } = await supabase.auth.signOut()
+        if (fallbackError) {
+          throw fallbackError
+        }
+      }
+    } catch (error) {
+      console.error('Sign out error:', error)
+    } finally {
+      // Hard cleanup of persisted auth keys as final safety net.
+      if (typeof window !== 'undefined') {
+        const authKeyPrefix = 'sb-aanoqbjauukcczrlnxka-auth-token'
+        try {
+          localStorage.removeItem(authKeyPrefix)
+          sessionStorage.removeItem(authKeyPrefix)
+        } catch (storageError) {
+          console.error('Failed to clear local auth storage:', storageError)
+        }
+      }
+      // Ensure client UI updates immediately even if provider/network signout fails.
+      setUser(null)
+    }
   }
 
   const value = {

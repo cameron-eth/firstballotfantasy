@@ -12,7 +12,7 @@ export function FeaturesSection() {
           YOUR <span className="text-yellow-400">ARSENAL</span>
         </h2>
         <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-          Elite tools engineered for dynasty dominance
+          Elite tools engineered for FIRSTBALLOT
         </p>
       </div>
 

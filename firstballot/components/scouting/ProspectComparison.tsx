@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,6 +39,7 @@ import {
 interface ProspectComparisonProps {
   prospects: Prospect[]
   onProspectSelect?: (prospect: Prospect) => void
+  onSelectionChange?: (prospects: Prospect[]) => void
 }
 
 const COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444']
@@ -343,9 +344,17 @@ function SelectedPlayerCard({ prospect, onRemove }: { prospect: Prospect; onRemo
   )
 }
 
-export function ProspectComparison({ prospects, onProspectSelect }: ProspectComparisonProps) {
+export function ProspectComparison({
+  prospects,
+  onProspectSelect,
+  onSelectionChange,
+}: ProspectComparisonProps) {
   const [selectedProspects, setSelectedProspects] = useState<Prospect[]>([])
   const [positionFilter, setPositionFilter] = useState<string>('ALL')
+
+  useEffect(() => {
+    onSelectionChange?.(selectedProspects)
+  }, [selectedProspects, onSelectionChange])
 
   const filteredProspects = useMemo(() => {
     return prospects

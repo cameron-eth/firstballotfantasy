@@ -48,10 +48,8 @@ export function HeroSection() {
           style={{ animationDelay: '0.1s' }}
         >
           <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter font-mono leading-[0.85] uppercase">
-            DYNASTY
-            <br />
             <span className="text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.2)]">
-              DOMINANCE
+              FIRSTBALLOT
             </span>
           </h1>
           <div className="max-w-2xl mx-auto flex items-center gap-4">

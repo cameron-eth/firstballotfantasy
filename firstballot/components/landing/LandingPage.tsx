@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import {
   LayoutGrid,
   BarChart3,
@@ -87,35 +87,53 @@ function useTypewriter(text: string, speed = 50, delay = 0) {
   return displayed
 }
 
-function MatrixRain() {
+// ── Pure CSS matrix rain — zero JS per frame ────────────────────────
+const MatrixRain = memo(function MatrixRain() {
   return (
     <div className="absolute inset-0 overflow-hidden opacity-[0.03] pointer-events-none">
-      {Array.from({ length: 20 }).map((_, i) => (
-        <motion.div
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes matrix-fall {
+              from { transform: translateY(-100px); }
+              to   { transform: translateY(100vh); }
+            }
+            .matrix-col {
+              position: absolute;
+              top: 0;
+              font-family: monospace;
+              font-size: 12px;
+              color: hsl(var(--primary));
+              animation: matrix-fall var(--dur) linear infinite;
+              animation-delay: var(--delay);
+            }
+          `,
+        }}
+      />
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div
           key={`rain-col-${i}`}
-          className="absolute top-0 text-primary font-mono text-xs"
-          style={{ left: `${i * 5}%` }}
-          initial={{ y: -100 }}
-          animate={{ y: '100vh' }}
-          transition={{
-            duration: 10 + (i % 7) * 1.5,
-            repeat: Infinity,
-            delay: (i % 5) * 0.7,
-            ease: 'linear',
-          }}
+          className="matrix-col"
+          style={
+            {
+              left: `${i * 8.3}%`,
+              '--dur': `${10 + (i % 5) * 2}s`,
+              '--delay': `${(i % 4) * 0.8}s`,
+            } as React.CSSProperties
+          }
         >
-          {Array.from({ length: 30 }).map((__, j) => (
+          {Array.from({ length: 20 }).map((__, j) => (
             <div key={`rain-char-${i}-${j}`} className="opacity-50">
               {String.fromCharCode(65 + ((i * 7 + j * 11) % 26))}
             </div>
           ))}
-        </motion.div>
+        </div>
       ))}
     </div>
   )
-}
+})
 
-function Scanlines() {
+const Scanlines = memo(function Scanlines() {
   return (
     <div
       className="absolute inset-0 pointer-events-none opacity-[0.02]"
@@ -125,9 +143,30 @@ function Scanlines() {
       }}
     />
   )
+})
+
+// ── Isolated clock — only this 8px label re-renders every second ────
+function ClockDisplay() {
+  const [time, setTime] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setTime(new Date())
+    const interval = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <span className="font-mono text-[10px] text-muted-foreground">
+      {time ? time.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'} UTC
+    </span>
+  )
 }
 
-function LiveTicker({ players }: { players: HeroPlayer[] }) {
+// ── LiveTicker — memoized, only re-renders when player data changes ──
+const LiveTicker = memo(function LiveTicker({ players }: { players: HeroPlayer[] }) {
+  // Pre-duplicate once
+  const doubled = useMemo(() => [...players, ...players], [players])
+
   return (
     <div className="relative overflow-hidden border-y border-primary/20 bg-black/50 backdrop-blur">
       <div className="flex items-center">
@@ -137,12 +176,21 @@ function LiveTicker({ players }: { players: HeroPlayer[] }) {
             LIVE
           </span>
         </div>
-        <motion.div
-          className="flex gap-8 py-2 px-4"
-          animate={{ x: [0, -1000] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        >
-          {[...players, ...players].map((player, i) => {
+        <div className="ticker-track flex gap-8 py-2 px-4">
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                @keyframes ticker-scroll {
+                  from { transform: translateX(0); }
+                  to   { transform: translateX(-50%); }
+                }
+                .ticker-track {
+                  animation: ticker-scroll 20s linear infinite;
+                }
+              `,
+            }}
+          />
+          {doubled.map((player, i) => {
             const hasOverUnder = Number.isFinite(player.overUnderPct)
             const change = hasOverUnder ? Number(player.overUnderPct) : null
             const displayValue = hasOverUnder
@@ -171,11 +219,11 @@ function LiveTicker({ players }: { players: HeroPlayer[] }) {
               </div>
             )
           })}
-        </motion.div>
+        </div>
       </div>
     </div>
   )
-}
+})
 
 function GlitchText({ text, className }: { text: string; className?: string }) {
   return (
@@ -191,7 +239,15 @@ function GlitchText({ text, className }: { text: string; className?: string }) {
   )
 }
 
-function AllTimePlayerCard({ player, rank, delay }: { player: HeroPlayer; rank: number; delay: number }) {
+const AllTimePlayerCard = memo(function AllTimePlayerCard({
+  player,
+  rank,
+  delay,
+}: {
+  player: HeroPlayer
+  rank: number
+  delay: number
+}) {
   const [imageError, setImageError] = useState(false)
   const tierColors: Record<string, { bg: string; border: string; text: string }> = {
     Elite: { bg: 'bg-amber-500/20', border: 'border-amber-500/50', text: 'text-amber-400' },
@@ -246,7 +302,10 @@ function AllTimePlayerCard({ player, rank, delay }: { player: HeroPlayer; rank: 
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <span className="text-2xl font-bold text-muted-foreground/20">
-                {player.name.split(' ').map((n) => n[0]).join('')}
+                {player.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')}
               </span>
             </div>
           )}
@@ -288,7 +347,7 @@ function AllTimePlayerCard({ player, rank, delay }: { player: HeroPlayer; rank: 
       </div>
     </motion.div>
   )
-}
+})
 
 const features = [
   { icon: LayoutGrid, title: 'Rankings', href: '/prospect-board', cmd: 'prospect --list' },
@@ -304,20 +363,9 @@ const features = [
   { icon: GitCompare, title: 'Compare', href: '/analysis', cmd: 'compare --players' },
 ]
 
-export function LandingPage() {
-  const { data } = useSWR('/api/prospects?draft_year=all', fetcher)
-  const [time, setTime] = useState(new Date())
+// ── Isolated feature rotator — only its tile highlights re-render ────
+function FeatureGrid() {
   const [activeFeature, setActiveFeature] = useState(0)
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    const interval = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -325,6 +373,73 @@ export function LandingPage() {
     }, 3000)
     return () => clearInterval(interval)
   }, [])
+
+  return (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {features.map((feature, i) => (
+        <motion.div
+          key={feature.title}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: i * 0.1 }}
+          onMouseEnter={() => setActiveFeature(i)}
+        >
+          <Link href={feature.href}>
+            <div
+              className={cn(
+                'p-3 border rounded-lg transition-all duration-300 group cursor-pointer',
+                activeFeature === i
+                  ? 'bg-primary/10 border-primary/50'
+                  : 'bg-black/30 border-border/50 hover:border-primary/30'
+              )}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className={cn(
+                    'w-8 h-8 rounded flex items-center justify-center transition-colors',
+                    activeFeature === i ? 'bg-primary/20' : 'bg-secondary'
+                  )}
+                >
+                  <feature.icon
+                    className={cn(
+                      'w-4 h-4 transition-colors',
+                      activeFeature === i ? 'text-primary' : 'text-muted-foreground'
+                    )}
+                  />
+                </div>
+                <div>
+                  <div className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    {feature.title}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    <span className="text-primary/60">$</span> {feature.cmd}
+                  </div>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  'h-0.5 bg-secondary rounded-full overflow-hidden',
+                  activeFeature === i && 'animate-pulse'
+                )}
+              >
+                <motion.div
+                  className="h-full bg-primary"
+                  initial={{ width: 0 }}
+                  animate={{ width: activeFeature === i ? '100%' : '0%' }}
+                  transition={{ duration: 3 }}
+                />
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+export function LandingPage() {
+  const { data } = useSWR('/api/prospects?draft_year=all', fetcher)
 
   const headline = useTypewriter('FIRST', 80, 500)
   const headline2 = useTypewriter('BALLOT_', 80, 1200)
@@ -362,7 +477,7 @@ export function LandingPage() {
       <MatrixRain />
       <Scanlines />
 
-      <div className="border-b border-border/50 bg-black/50 backdrop-blur sticky  z-40 -mt-px">
+      <div className="border-b border-border/50 bg-black/50 backdrop-blur sticky z-40 -mt-px">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-8">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
@@ -373,9 +488,7 @@ export function LandingPage() {
               {allPlayers.length || 0} ASSETS TRACKED
             </span>
           </div>
-          <div className="font-mono text-[10px] text-muted-foreground">
-            {isMounted ? time.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'} UTC
-          </div>
+          <ClockDisplay />
         </div>
       </div>
 
@@ -523,66 +636,7 @@ export function LandingPage() {
             <p className="font-mono text-sm text-muted-foreground">{'>'} select module to initialize</p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {features.map((feature, i) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                onMouseEnter={() => setActiveFeature(i)}
-              >
-                <Link href={feature.href}>
-                  <div
-                    className={cn(
-                      'p-3 border rounded-lg transition-all duration-300 group cursor-pointer',
-                      activeFeature === i
-                        ? 'bg-primary/10 border-primary/50'
-                        : 'bg-black/30 border-border/50 hover:border-primary/30'
-                    )}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div
-                        className={cn(
-                          'w-8 h-8 rounded flex items-center justify-center transition-colors',
-                          activeFeature === i ? 'bg-primary/20' : 'bg-secondary'
-                        )}
-                      >
-                        <feature.icon
-                          className={cn(
-                            'w-4 h-4 transition-colors',
-                            activeFeature === i ? 'text-primary' : 'text-muted-foreground'
-                          )}
-                        />
-                      </div>
-                      <div>
-                        <div className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                          {feature.title}
-                        </div>
-                        <div className="font-mono text-[10px] text-muted-foreground">
-                          <span className="text-primary/60">$</span> {feature.cmd}
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      className={cn(
-                        'h-0.5 bg-secondary rounded-full overflow-hidden',
-                        activeFeature === i && 'animate-pulse'
-                      )}
-                    >
-                      <motion.div
-                        className="h-full bg-primary"
-                        initial={{ width: 0 }}
-                        animate={{ width: activeFeature === i ? '100%' : '0%' }}
-                        transition={{ duration: 3 }}
-                      />
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+          <FeatureGrid />
         </div>
       </section>
 

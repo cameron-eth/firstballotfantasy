@@ -335,8 +335,11 @@ export function DraftBoardTab({
     return map
   }, [consensusBoard])
 
-  const contrarianScore = calculateContrarianScore(userBoard, consensusBoard)
-  const contrarianLabel = getContrarianLabel(contrarianScore)
+  const contrarianScore = useMemo(
+    () => calculateContrarianScore(userBoard, consensusBoard),
+    [userBoard, consensusBoard]
+  )
+  const contrarianLabel = useMemo(() => getContrarianLabel(contrarianScore), [contrarianScore])
 
   const boardStats = useMemo(
     () => ({
@@ -438,7 +441,13 @@ export function DraftBoardTab({
     if (firstMissing) onAddToDraftBoard(firstMissing)
   }
 
-  const handleSectionReorder = (year: number, reorderedSection: Prospect[]) => {
+  // ── Deferred drag reorder ──────────────────────────────────────────
+  // During an active drag, stash the latest section order in a ref
+  // instead of pushing to parent state. This avoids the full re-render
+  // cascade (parent + all memos) on every drag frame. Commit once on drop.
+  const pendingReorderRef = useRef<{ year: number; prospects: Prospect[] } | null>(null)
+
+  const commitSectionReorder = (year: number, reorderedSection: Prospect[]) => {
     const targetIds = new Set(reorderedSection.map((p) => p.id))
     if (targetIds.size === 0) return
 
@@ -459,6 +468,16 @@ export function DraftBoardTab({
       return replacement || entry
     })
     onReorderDraftBoard(nextBoard)
+  }
+
+  const handleSectionReorder = (year: number, reorderedSection: Prospect[]) => {
+    // During active drag: stash in ref, skip parent state update entirely.
+    // Framer Motion keeps visual order internally — zero React re-renders.
+    if (draggingProspectId !== null) {
+      pendingReorderRef.current = { year, prospects: reorderedSection }
+      return
+    }
+    commitSectionReorder(year, reorderedSection)
   }
 
   const offBoardProspects = useMemo(() => {
@@ -632,6 +651,12 @@ export function DraftBoardTab({
                           dragElastic={0.08}
                           onDragStart={() => setDraggingProspectId(prospect.id)}
                           onDragEnd={() => {
+                            // Commit any pending reorder to parent (single state update)
+                            const pending = pendingReorderRef.current
+                            if (pending) {
+                              commitSectionReorder(pending.year, pending.prospects)
+                              pendingReorderRef.current = null
+                            }
                             setDraggingProspectId(null)
                           }}
                           whileDrag={{

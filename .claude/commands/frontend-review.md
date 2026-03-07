@@ -99,9 +99,41 @@ players.map((p) => <Card key={p.id} player={p} />)
 - Container: fetches data, owns state, passes clean props.
 - Presentational: receives props, renders UI, no fetch/mutation logic.
 - If a component mixes both, split it.
+- Rule of thumb: if it could be previewed in Storybook with fake props, it should be presentational.
 
-### Custom Hooks for Domain Logic
+### Keep Components Small and Focused
+- A component should do one thing well. If you can't describe it in one sentence, it's probably doing too much.
+- Flag anything over ~150–200 lines for a split.
+- If a component handles fetch + state + filtering + mutation + rendering, break it up.
+
+```
+// Bad: one component does everything
+UserDashboard (fetch, charts, forms, filters)
+
+// Better: each piece has a job
+UserDashboard
+ ├── DashboardHeader
+ ├── StatsChart
+ ├── FiltersPanel
+ └── UserForm
+```
+
+### Separate UI From Logic
+- Do not put filter/sort/transform logic inline in JSX.
+- Compute it above the return or in a custom hook.
+
+```tsx
+// Bad
+return <div>{items.filter(x => x.active).map(x => <Row key={x.id} item={x} />)}</div>
+
+// Good
+const activeItems = useMemo(() => items.filter(x => x.active), [items])
+return <div>{activeItems.map(x => <Row key={x.id} item={x} />)}</div>
+```
+
+### Custom Hooks for Reusable Logic
 - If logic appears in more than one component, extract a hook.
+- Hooks encapsulate behavior, not UI.
 - Hooks in this project: `usePlayerStats`, `useTradeCalculator`, `useRosterState`, `usePlayerSearch`, `useSubscriptionStatus`, `useDraftBoard`.
 - New hooks belong in `firstballot/hooks/` or co-located in a feature folder.
 
@@ -127,9 +159,43 @@ players.map((p) => <Card key={p.id} player={p} />)
 - Every route under `app/` that renders meaningful content should have a `layout.tsx` with metadata.
 
 ### State Ownership
-- State lives in the lowest component that needs it.
-- Lift only when siblings genuinely share it.
-- Use context for: auth user, current league, theme, feature flags. Not for fast-changing or large mutable state.
+- State lives in the **lowest** component that needs it. Do not lift it higher than necessary.
+- Lift only when siblings genuinely share the same state.
+
+```
+// Bad: search state stored in App even though only SearchInput uses it
+App → Dashboard → SearchInput
+
+// Good: SearchInput owns its own state
+Dashboard → SearchInput (owns state)
+```
+
+### Avoid Deep Prop Drilling
+- If props pass through 3+ levels to reach a consumer, reconsider the approach.
+- Options in order of preference:
+  - Move state down (see State Ownership)
+  - React Context (for: auth user, current league, theme, feature flags — not fast-changing state)
+  - Zustand (for cross-page interactive state, draft board, shared filter state)
+  - Jotai (for fine-grained atom-level state)
+- Do not use context for large mutable state or frequently-changing values — it causes broad rerenders.
+
+### Derive State, Do Not Store It
+- If a value can be calculated from existing state, compute it directly. Do not store a copy.
+
+```tsx
+// Bad
+const [items, setItems] = useState([])
+const [itemCount, setItemCount] = useState(0) // redundant
+
+// Good
+const itemCount = items.length
+```
+
+### Avoid useEffect When Possible
+- Most `useEffect` usage is unnecessary. Before reaching for it, ask: can this be computed directly?
+- Valid uses: network requests (prefer useSWR), subscriptions, DOM imperatives.
+- Invalid uses: deriving state from other state, transforming data, setting state in response to a prop change.
+- If you find yourself writing `useEffect(() => { setSomething(...) }, [dep])`, that's almost always wrong.
 
 ### Feature Folder Structure
 ```
@@ -142,6 +208,20 @@ firstballot/
 ```
 Related components, hooks, and types should stay co-located. Avoid dumping everything flat.
 
+### Data Flows Top → Down
+- React data flow is unidirectional: parent passes to child, not the other way around.
+- Avoid circular dependencies between components.
+- Mental model:
+  ```
+  Data Layer (server / SWR)
+       ↓
+  Hooks (domain logic)
+       ↓
+  Components (UI)
+       ↓
+  Layout / Pages
+  ```
+
 ---
 
 ## Code Quality Checks
@@ -149,7 +229,7 @@ Related components, hooks, and types should stay co-located. Avoid dumping every
 - **Component size**: flag anything over ~150 lines for a split consideration.
 - **Logic in JSX**: filter/sort/transform before the return, not inline.
 - **Loading/error/empty states**: every async UI must handle all four: `loading`, `error`, `success`, `empty`.
-- **TypeScript**: all props, hook return values, and data shapes must be typed. No implicit `any`.
+- **TypeScript**: all props, hook return values, and data shapes must be explicitly typed. No implicit `any`. Use union types for constrained values (e.g. `"QB" | "WR" | "RB" | "TE"`).
 - **useMemo/useCallback**: do not add speculatively. Only where a profiler or obvious render loop warrants it.
 
 ---

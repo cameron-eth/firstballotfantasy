@@ -71,11 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data.user) {
       try {
         const response = await userApi.addUserProfile(
-          JSON.stringify({
+          {
             authId: data.user.id,
-            email: data.user.email,
-            username: username,
-          })
+            email: data.user.email ?? email,
+            username,
+          }
         )
 
         if (!response.ok) {

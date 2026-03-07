@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
-import { createClient } from '@supabase/supabase-js'
+
+interface CreateProfileRequestBody {
+  email?: string
+  username?: string
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,27 +40,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, username } = await request.json()
+    const { email, username } = (await request.json()) as CreateProfileRequestBody
     const authId = request.headers.get('x-user-id')
     const userJwt = request.headers.get('x-user-jwt')
 
-    if (!authId || !email || !username) {
+    if (!authId || !userJwt) {
+      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+    }
+
+    if (!email || !username) {
       return NextResponse.json(
-        { error: 'Auth ID, email, and username are required' },
+        { error: 'Email and username are required' },
         { status: 400 }
       )
     }
 
-    // Try using the user's JWT token for profile creation
-    let serviceClient
-    if (userJwt) {
-      serviceClient = createAuthenticatedSupabaseClient(userJwt)
-    } else {
-      serviceClient = createClient(
-        'https://aanoqbjauukcczrlnxka.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhbm9xYmphdXVrY2N6cmxueGthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MzM1NjQsImV4cCI6MjA1NjEwOTU2NH0.5QMnDzOI-y_XiIRGTmnLfzZ6i8vDbBXfO5sHuxqd0EU'
-      )
-    }
+    const serviceClient = createAuthenticatedSupabaseClient(userJwt)
 
     // Check if profile already exists
     const { data: existingProfile } = await serviceClient

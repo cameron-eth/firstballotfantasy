@@ -58,6 +58,8 @@ import { sleeperApi } from '@/lib/nextjs-cache'
 // Import extracted types and components
 import type {
   LeagueBuddyProps,
+  LeagueSection,
+  OverviewActions,
   TeamData,
   PlayerData,
   TeamTrends,
@@ -112,11 +114,9 @@ const GRADE_COLORS = {
 export default function LeagueBuddy({
   leagueId,
   user,
-  leagues = [],
-  onLeagueChange,
 }: LeagueBuddyProps) {
   const router = useRouter()
-  const [activeSection, setActiveSection] = useState<'overview' | 'roster' | 'league'>('overview')
+  const [activeSection, setActiveSection] = useState<LeagueSection>('overview')
   const [lineupMode, setLineupMode] = useState<'current' | 'optimized'>('current')
   const [whatIfLineup, setWhatIfLineup] = useState<string[]>([])
   const [selectedStarterToSwap, setSelectedStarterToSwap] = useState<string | null>(null)
@@ -184,6 +184,21 @@ export default function LeagueBuddy({
   const handlePlayoffOddsClick = useCallback(() => {
     router.push(`/playoff-odds?leagueId=${leagueId}`)
   }, [router, leagueId])
+
+  const overviewActions = useMemo<OverviewActions>(
+    () => ({
+      onTradeMarketClick: handleTradeMarketClick,
+      onScoutingPortalClick: handleScoutingPortalClick,
+      onDraftBuddyClick: handleDraftBuddyClick,
+      onPlayoffOddsClick: handlePlayoffOddsClick,
+    }),
+    [
+      handleDraftBuddyClick,
+      handlePlayoffOddsClick,
+      handleScoutingPortalClick,
+      handleTradeMarketClick,
+    ]
+  )
 
   if (loading) {
     return (
@@ -450,9 +465,6 @@ export default function LeagueBuddy({
       <LeagueBuddySidebar
         selectedTeam={selectedTeam}
         sortedTeams={sortedTeams}
-        leagues={leagues}
-        leagueId={leagueId}
-        onLeagueChange={onLeagueChange}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         currentWeek={currentWeek}
@@ -508,10 +520,7 @@ export default function LeagueBuddy({
                 playerRankings={playerRankings}
                 currentMatchups={currentMatchups}
                 currentWeek={currentWeek}
-                onTradeMarketClick={handleTradeMarketClick}
-                onScoutingPortalClick={handleScoutingPortalClick}
-                onDraftBuddyClick={handleDraftBuddyClick}
-                onPlayoffOddsClick={handlePlayoffOddsClick}
+                actions={overviewActions}
               />
 
               {/* Lineup Manager - Current vs Optimized with What-If */}

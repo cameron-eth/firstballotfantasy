@@ -1,10 +1,33 @@
+import type { SleeperUser } from '@/lib/sleeper-api'
+import type { UserLeague } from '@/types/league'
+
 // Type definitions for LeagueBuddy component
 
 export interface LeagueBuddyProps {
   leagueId: string
-  user?: any
-  leagues?: any[]
+  user?: SleeperUser | null
+  leagues?: UserLeague[]
   onLeagueChange?: (leagueId: string) => void
+}
+
+export type LeagueSection = 'overview' | 'roster' | 'league'
+
+export interface PlayerRankingSummary {
+  rank: number
+  position: string
+  team: string
+  name: string
+  tier: number
+  projection?: number
+}
+
+export type PlayerRankingsMap = Record<string, PlayerRankingSummary>
+
+export interface OverviewActions {
+  onTradeMarketClick: () => void
+  onScoutingPortalClick: () => void
+  onDraftBuddyClick: () => void
+  onPlayoffOddsClick?: () => void
 }
 
 export interface TeamData {

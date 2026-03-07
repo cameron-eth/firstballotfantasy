@@ -4,7 +4,13 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
 import { Trophy, Eye, Users, Target } from 'lucide-react'
-import type { TeamData, MatchupData, LeagueOverview } from './types'
+import type {
+  LeagueOverview,
+  MatchupData,
+  OverviewActions,
+  PlayerRankingsMap,
+  TeamData,
+} from './types'
 import { GRADE_COLORS } from './types'
 
 interface LeagueOverviewSectionProps {
@@ -13,10 +19,8 @@ interface LeagueOverviewSectionProps {
   currentMatchups: MatchupData[]
   currentWeek: number
   sortedTeams: TeamData[]
-  playerRankings: Record<string, any>
-  onTradeMarketClick: () => void
-  onScoutingPortalClick: () => void
-  onDraftBuddyClick: () => void
+  playerRankings: PlayerRankingsMap
+  actions: OverviewActions
 }
 
 export function LeagueOverviewSection({
@@ -26,9 +30,7 @@ export function LeagueOverviewSection({
   currentWeek,
   sortedTeams,
   playerRankings,
-  onTradeMarketClick,
-  onScoutingPortalClick,
-  onDraftBuddyClick,
+  actions,
 }: LeagueOverviewSectionProps) {
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
@@ -38,8 +40,7 @@ export function LeagueOverviewSection({
   const teamRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
   const totalProjection = selectedTeam.players.reduce((sum, player) => {
-    const playerRank = playerRankings[`${player.playerName}` as keyof typeof playerRankings]
-    return sum + (playerRank?.projection || 0)
+    return sum + (playerRankings[player.playerName]?.projection || 0)
   }, 0)
 
   return (
@@ -85,21 +86,21 @@ export function LeagueOverviewSection({
           <div className="hidden md:flex items-center space-x-2">
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onTradeMarketClick}
+              onClick={actions.onTradeMarketClick}
             >
               <Trophy className="h-4 w-4" />
               <span>Trade</span>
             </button>
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onScoutingPortalClick}
+              onClick={actions.onScoutingPortalClick}
             >
               <Eye className="h-4 w-4" />
               <span>Scout</span>
             </button>
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onDraftBuddyClick}
+              onClick={actions.onDraftBuddyClick}
             >
               <Users className="h-4 w-4" />
               <span>Draft</span>
@@ -178,14 +179,14 @@ export function LeagueOverviewSection({
         <div className="md:hidden flex items-center justify-center space-x-3 mt-3">
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-            onClick={onTradeMarketClick}
+            onClick={actions.onTradeMarketClick}
           >
             <Trophy className="h-4 w-4" />
             <span>Trade</span>
           </button>
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-            onClick={onScoutingPortalClick}
+            onClick={actions.onScoutingPortalClick}
           >
             <Eye className="h-4 w-4" />
             <span>Scout</span>

@@ -104,7 +104,7 @@ export function DraftBoardGrid({
       .then((profile) => {
         const sleeperUser = cacheUtils.get(cacheUtils.keys.SLEEPER_USER)
         if (profile?.sleeper_username || sleeperUser.user_id) {
-          setUserId(profile.sleeper_id)
+          setUserId(profile.sleeper_id ?? null)
           // Find the roster for this user
           const userPick = picks.find(
             (p) => p.picked_by === (profile.sleeper_id ?? sleeperUser.user_id)

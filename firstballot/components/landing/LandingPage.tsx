@@ -505,9 +505,11 @@ export function LandingPage() {
   }, [prospects])
 
   const topAllTime = useMemo(() => {
-    // Top 5 per class, then sorted by grade
+    // Top 5 from 2026 + top 5 from 2027, sorted by grade
+    const targetYears = [2026, 2027]
     const byYear = new Map<number, HeroPlayer[]>()
     for (const p of [...allPlayers].sort((a, b) => b.grade - a.grade)) {
+      if (!targetYears.includes(p.year)) continue
       const arr = byYear.get(p.year) || []
       if (arr.length < 5) {
         arr.push(p)

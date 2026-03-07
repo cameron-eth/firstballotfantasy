@@ -422,7 +422,6 @@ function TradeMarketContent() {
       return
     }
     setNoLeagueId(true)
-    setLoading(false)
   }, [searchParams])
 
   useEffect(() => {
@@ -690,7 +689,6 @@ function TradeMarketContent() {
                     setLeagueId(next)
                     leagueCache.setLeagueId(next)
                       setNoLeagueId(false)
-                      setLoading(true)
                     }
                   }
                 }}
@@ -705,7 +703,6 @@ function TradeMarketContent() {
                   setLeagueId(next)
                   leagueCache.setLeagueId(next)
                     setNoLeagueId(false)
-                    setLoading(true)
                   }
                 }}
               >

@@ -308,10 +308,15 @@ export function LandingPage() {
   const { data } = useSWR('/api/prospects?draft_year=all', fetcher)
   const [time, setTime] = useState(new Date())
   const [activeFeature, setActiveFeature] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    setIsMounted(true)
   }, [])
 
   useEffect(() => {
@@ -369,7 +374,7 @@ export function LandingPage() {
             </span>
           </div>
           <div className="font-mono text-[10px] text-muted-foreground">
-            {time.toLocaleTimeString('en-US', { hour12: false })} UTC
+            {isMounted ? time.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'} UTC
           </div>
         </div>
       </div>

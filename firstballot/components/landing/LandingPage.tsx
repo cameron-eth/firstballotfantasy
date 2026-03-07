@@ -469,7 +469,16 @@ export function LandingPage() {
   }, [prospects])
 
   const topAllTime = useMemo(() => {
-    return [...allPlayers].sort((a, b) => b.grade - a.grade).slice(0, 10)
+    // Top 3 per class, then sorted by grade
+    const byYear = new Map<number, HeroPlayer[]>()
+    for (const p of [...allPlayers].sort((a, b) => b.grade - a.grade)) {
+      const arr = byYear.get(p.year) || []
+      if (arr.length < 3) {
+        arr.push(p)
+        byYear.set(p.year, arr)
+      }
+    }
+    return [...byYear.values()].flat().sort((a, b) => b.grade - a.grade)
   }, [allPlayers])
 
   return (
@@ -587,7 +596,7 @@ export function LandingPage() {
                 <div className="flex items-center justify-between px-4 py-2 border-b border-primary/20 bg-primary/5">
                   <div className="flex items-center gap-2">
                     <Crown className="w-4 h-4 text-amber-400" />
-                    <span className="font-mono text-sm font-bold text-foreground">2027 RANKINGS</span>
+                    <span className="font-mono text-sm font-bold text-foreground">TOP PROSPECTS</span>
                   </div>
                   <Link
                     href="/prospect-board"
@@ -598,7 +607,7 @@ export function LandingPage() {
                 </div>
 
                 <div className="p-3">
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     {topAllTime.map((player, i) => (
                       <AllTimePlayerCard
                         key={`${player.name}-${player.year}-${i}`}
@@ -612,8 +621,7 @@ export function LandingPage() {
 
                 <div className="px-4 py-2 border-t border-primary/20 bg-primary/5">
                   <div className="font-mono text-[10px] text-muted-foreground flex items-center gap-2">
-                    <span className="text-emerald-400">$</span> sorted by grade desc // all positions // all
-                    classes
+                    <span className="text-emerald-400">$</span> sorted by grade desc // top 3 per class // all positions
                   </div>
                 </div>
               </div>

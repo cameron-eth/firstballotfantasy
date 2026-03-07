@@ -324,21 +324,68 @@ export function DraftBoardTab({
     seededYearRef.current = currentDraftYear
   }, [draftBoard, currentDraftYear, currentYearProspects, onAddToDraftBoard, onClearDraftBoard])
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
-  const consensusRankById = useMemo(() => {
-    const map = new Map<number, number>()
-    consensusBoard.forEach((p, idx) => map.set(p.id, idx + 1))
-    return map
-  }, [consensusBoard])
-  const consensusRankByName = useMemo(() => {
-    const map = new Map<string, number>()
-    consensusBoard.forEach((p, idx) => map.set(p.name, idx + 1))
-    return map
-  }, [consensusBoard])
 
-  const contrarianScore = useMemo(
-    () => calculateContrarianScore(userBoard, consensusBoard),
-    [userBoard, consensusBoard]
-  )
+  // Per-class consensus ranks — so "vs consensus" compares within the same draft class
+  const consensusRankByClassId = useMemo(() => {
+    const byYear = new Map<number, Map<number, number>>()
+    const pool =
+      position === 'ALL'
+        ? allEligibleProspects
+        : allEligibleProspects.filter((p) => p.position === position)
+
+    // Group by year, then rank within each year
+    const grouped = new Map<number, Prospect[]>()
+    for (const p of pool) {
+      const year = p.draft_year ?? 0
+      if (!grouped.has(year)) grouped.set(year, [])
+      grouped.get(year)!.push(p)
+    }
+    for (const [year, prospects] of grouped.entries()) {
+      const rankMap = new Map<number, number>()
+      prospects.forEach((p, idx) => rankMap.set(p.id, idx + 1))
+      byYear.set(year, rankMap)
+    }
+    return byYear
+  }, [allEligibleProspects, position])
+
+  const consensusRankByClassName = useMemo(() => {
+    const byYear = new Map<number, Map<string, number>>()
+    const pool =
+      position === 'ALL'
+        ? allEligibleProspects
+        : allEligibleProspects.filter((p) => p.position === position)
+
+    const grouped = new Map<number, Prospect[]>()
+    for (const p of pool) {
+      const year = p.draft_year ?? 0
+      if (!grouped.has(year)) grouped.set(year, [])
+      grouped.get(year)!.push(p)
+    }
+    for (const [year, prospects] of grouped.entries()) {
+      const rankMap = new Map<string, number>()
+      prospects.forEach((p, idx) => rankMap.set(p.name, idx + 1))
+      byYear.set(year, rankMap)
+    }
+    return byYear
+  }, [allEligibleProspects, position])
+
+  // Contrarian score scoped to the primary class on board
+  const contrarianScore = useMemo(() => {
+    // Find the primary year on the board (most players)
+    const yearCounts = new Map<number, number>()
+    for (const p of userBoard) {
+      const year = p.draftYear ?? 0
+      yearCounts.set(year, (yearCounts.get(year) || 0) + 1)
+    }
+    let primaryYear = 0
+    let maxCount = 0
+    for (const [year, count] of yearCounts) {
+      if (count > maxCount) { primaryYear = year; maxCount = count }
+    }
+    const classUsers = userBoard.filter((p) => (p.draftYear ?? 0) === primaryYear)
+    const classConsensus = consensusBoard.filter((p) => (p.draftYear ?? 0) === primaryYear)
+    return calculateContrarianScore(classUsers, classConsensus)
+  }, [userBoard, consensusBoard])
   const contrarianLabel = useMemo(() => getContrarianLabel(contrarianScore), [contrarianScore])
 
   const boardStats = useMemo(
@@ -422,14 +469,24 @@ export function DraftBoardTab({
     }
   }, [consensusBoard, allEligibleProspects, position, userBoard])
 
-  const boardConsensusDiffs = useMemo(
-    () =>
-      userBoard.map((p, i) => ({
-        player: p,
-        diff: (consensusRankByName.get(p.name) ?? i + 1) - (i + 1),
-      })),
-    [userBoard, consensusRankByName]
-  )
+  const boardConsensusDiffs = useMemo(() => {
+    // Group user board by year to compute within-class index
+    const byYear = new Map<number, BoardPlayer[]>()
+    for (const p of userBoard) {
+      const year = p.draftYear ?? 0
+      if (!byYear.has(year)) byYear.set(year, [])
+      byYear.get(year)!.push(p)
+    }
+    const results: { player: BoardPlayer; diff: number }[] = []
+    for (const [year, players] of byYear) {
+      const classNameMap = consensusRankByClassName.get(year)
+      players.forEach((p, idx) => {
+        const consensusRank = classNameMap?.get(p.name) ?? idx + 1
+        results.push({ player: p, diff: consensusRank - (idx + 1) })
+      })
+    }
+    return results
+  }, [userBoard, consensusRankByClassName])
 
   const addTopAvailable = () => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
@@ -563,19 +620,19 @@ export function DraftBoardTab({
                   </span>
                   <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
                     Avg Grade: {boardStats.avgGrade.toFixed(1)}
-                  </span>
+            </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap xl:justify-end">
-                {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
-                  <DraftBoardControls
-                    hasSavedBoard={hasSavedBoard}
-                    saving={savingBoard}
-                    hasChanges={hasUnsavedChanges}
-                    onSave={onSaveBoard}
-                  />
-                )}
+              {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
+                <DraftBoardControls
+                  hasSavedBoard={hasSavedBoard}
+                  saving={savingBoard}
+                  hasChanges={hasUnsavedChanges}
+                  onSave={onSaveBoard}
+                />
+              )}
 
               </div>
             </div>
@@ -603,8 +660,8 @@ export function DraftBoardTab({
               </button>
             </div>
           </div>
-        </div>
-      </div>
+                  </div>
+                  </div>
 
       <div className="w-full px-4 sm:px-5 lg:px-6 py-5">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
@@ -613,7 +670,7 @@ export function DraftBoardTab({
               <div className="p-3 border-b border-border flex items-center justify-between">
                 <h2 className="font-mono font-bold text-foreground">Your Rankings</h2>
                 <span className="text-xs text-muted-foreground">{userBoard.length} players</span>
-              </div>
+                </div>
 
               {boardSections.map((section) => (
                   <div
@@ -632,7 +689,8 @@ export function DraftBoardTab({
                     >
                       {section.prospects.map((prospect, index) => {
                       const player = boardPlayerMap.get(prospect.id) || toBoardPlayer(prospect)
-                      const consensusRank = consensusRankById.get(player.id) ?? index + 1
+                      const classRankMap = consensusRankByClassId.get(section.year)
+                      const consensusRank = classRankMap?.get(player.id) ?? index + 1
                       const rankDiff = consensusRank - (index + 1)
                       const tierColor = tierColors[player.tier] || tierColors.Depth
                       const archetype = getArchetype(player)
@@ -873,10 +931,10 @@ export function DraftBoardTab({
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    )
-                  })
-                )}
-              </div>
+                      )
+                    })
+                  )}
+                </div>
             </div>
 
             <div className="bg-card border border-border rounded-lg p-4">
@@ -967,8 +1025,8 @@ export function DraftBoardTab({
                               </div>
                             )
                           })}
-                        </div>
-                      </div>
+              </div>
+            </div>
 
                       <div>
                         <h4 className="text-xs font-medium text-muted-foreground mb-2">
@@ -1017,7 +1075,7 @@ export function DraftBoardTab({
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+                </div>
 
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-mono font-bold text-foreground mb-3">Your Biggest Takes</h3>
@@ -1035,11 +1093,11 @@ export function DraftBoardTab({
                         <span className="text-muted-foreground truncate">{player.name}</span>
                         <span className="text-emerald-400 font-mono">+{diff}</span>
                       </div>
-                    ))}
-                </div>
-              </div>
+                      ))}
+                    </div>
+                  </div>
 
-              <div>
+                  <div>
                 <h4 className="text-xs text-rose-400 font-medium mb-2 flex items-center gap-1">
                   <TrendingDown className="w-3 h-3" /> LOWER THAN CONSENSUS
                 </h4>
@@ -1053,10 +1111,10 @@ export function DraftBoardTab({
                         <span className="text-muted-foreground truncate">{player.name}</span>
                         <span className="text-rose-400 font-mono">{diff}</span>
                       </div>
-                    ))}
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
             <div className="bg-card border border-border rounded-lg p-4">
               <h3 className="font-mono font-bold text-foreground mb-3">vs Class Average</h3>
@@ -1093,7 +1151,7 @@ export function DraftBoardTab({
                           ({diff > 0 ? '+' : ''}
                           {diff.toFixed(1)})
                         </span>
-                      </div>
+                  </div>
                     </div>
                   )
                 })}
@@ -1101,7 +1159,7 @@ export function DraftBoardTab({
             </div>
           </div>
         </div>
-      </div>
+    </div>
     </main>
   )
 }

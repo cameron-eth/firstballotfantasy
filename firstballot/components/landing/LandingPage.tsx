@@ -451,7 +451,7 @@ export function LandingPage() {
   }, [data])
 
   const allPlayers: HeroPlayer[] = useMemo(() => {
-    return prospects.slice(0, 24).map((p) => {
+    return prospects.map((p) => {
       const grade = Number(p.overall_grade || 0)
       const year = Number(p.draft_year || 2026)
       return {

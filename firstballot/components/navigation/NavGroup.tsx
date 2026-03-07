@@ -2,7 +2,6 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -52,59 +51,56 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
         />
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="absolute top-full left-0 mt-1 w-64 z-50"
-          >
-            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 backdrop-blur-md bg-opacity-95">
-              <div className="grid gap-1">
-                {items.map((item) => {
-                  const isDisabled = item.requiresAuth && !isLoggedIn
-                  const Icon = item.icon
-
-                  return (
-                    <Link
-                      key={item.name}
-                      href={isDisabled ? '#' : item.href}
-                      className={cn(
-                        'flex items-start p-3 rounded-lg transition-all duration-200',
-                        isDisabled
-                          ? 'opacity-50 cursor-not-allowed grayscale'
-                          : 'hover:bg-slate-700/50 group'
-                      )}
-                      onClick={(e) => {
-                        if (isDisabled) e.preventDefault()
-                        setIsOpen(false)
-                      }}
-                    >
-                      {Icon && (
-                        <div className="p-2 bg-slate-700/50 rounded-lg mr-3 group-hover:bg-yellow-400/10 transition-colors">
-                          <Icon className="h-4 w-4 text-gray-400 group-hover:text-yellow-400" />
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-sm font-bold text-gray-200 group-hover:text-white">
-                          {item.name}
-                        </div>
-                        {item.description && (
-                          <div className="text-xs text-gray-400 mt-0.5 group-hover:text-gray-300">
-                            {item.description}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          </motion.div>
+      <div
+        className={cn(
+          'absolute top-full left-0 mt-1 w-64 z-50 transition-all duration-150 ease-out origin-top',
+          isOpen
+            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 scale-95 translate-y-1 pointer-events-none'
         )}
-      </AnimatePresence>
+      >
+        <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 backdrop-blur-md bg-opacity-95">
+          <div className="grid gap-1">
+            {items.map((item) => {
+              const isDisabled = item.requiresAuth && !isLoggedIn
+              const Icon = item.icon
+
+              return (
+                <Link
+                  key={item.name}
+                  href={isDisabled ? '#' : item.href}
+                  className={cn(
+                    'flex items-start p-3 rounded-lg transition-all duration-200',
+                    isDisabled
+                      ? 'opacity-50 cursor-not-allowed grayscale'
+                      : 'hover:bg-slate-700/50 group'
+                  )}
+                  onClick={(e) => {
+                    if (isDisabled) e.preventDefault()
+                    setIsOpen(false)
+                  }}
+                >
+                  {Icon && (
+                    <div className="p-2 bg-slate-700/50 rounded-lg mr-3 group-hover:bg-yellow-400/10 transition-colors">
+                      <Icon className="h-4 w-4 text-gray-400 group-hover:text-yellow-400" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-bold text-gray-200 group-hover:text-white">
+                      {item.name}
+                    </div>
+                    {item.description && (
+                      <div className="text-xs text-gray-400 mt-0.5 group-hover:text-gray-300">
+                        {item.description}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

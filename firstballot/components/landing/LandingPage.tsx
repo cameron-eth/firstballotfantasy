@@ -185,7 +185,7 @@ const LiveTicker = memo(function LiveTicker({ players }: { players: HeroPlayer[]
                   to   { transform: translateX(-50%); }
                 }
                 .ticker-track {
-                  animation: ticker-scroll 20s linear infinite;
+                  animation: ticker-scroll 45s linear infinite;
                 }
               `,
             }}

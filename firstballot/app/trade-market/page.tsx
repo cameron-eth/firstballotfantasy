@@ -373,10 +373,24 @@ function GradeFilter({
   )
 }
 
+// Isolated clock — only this tiny component re-renders every second
+function TradeMarketClock() {
+  const [time, setTime] = useState(new Date())
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+  return (
+    <div className="font-mono text-sm text-muted-foreground">
+      {time.toLocaleTimeString()} EST
+    </div>
+  )
+}
+
 function TradeMarketContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { selectedLeagueId } = useLeagueContext()
+  const { selectedLeagueId, isLoading: contextLoading } = useLeagueContext()
   const [leagueId, setLeagueId] = useState<string>('')
 
   const {
@@ -402,15 +416,17 @@ function TradeMarketContent() {
   const transactions: any[] = tradeData?.transactions || []
   const tradedPicks: any[] = tradeData?.tradedPicks || []
   const dynastyRankings: Record<string, any> = tradeData?.dynastyRankings || {}
-  const [noLeagueId, setNoLeagueId] = useState(false)
   const [gradeFilter, setGradeFilter] = useState('ALL')
-  const [time, setTime] = useState(new Date())
 
+  // Resolve leagueId from context, URL, or cache — context wins if available
   useEffect(() => {
-    if (selectedLeagueId) setLeagueId(selectedLeagueId)
-  }, [selectedLeagueId])
+    if (selectedLeagueId) {
+      setLeagueId(selectedLeagueId)
+      return
+    }
+    // Only fall back to URL/cache once context has finished loading
+    if (contextLoading) return
 
-  useEffect(() => {
     const urlLeagueId = searchParams.get('leagueId')
     if (urlLeagueId) {
       setLeagueId(urlLeagueId)
@@ -419,15 +435,11 @@ function TradeMarketContent() {
     const cachedLeagueId = leagueCache.getLeagueId()
     if (cachedLeagueId) {
       setLeagueId(cachedLeagueId)
-      return
     }
-    setNoLeagueId(true)
-  }, [searchParams])
+  }, [selectedLeagueId, contextLoading, searchParams])
 
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
+  // Derive noLeagueId from actual state — no stale boolean flag
+  const noLeagueId = !leagueId && !contextLoading
 
 
   const tradeAnalysis = useMemo<TradeAnalysis[]>(() => {
@@ -751,9 +763,7 @@ function TradeMarketContent() {
               </div>
             <div className="flex items-center gap-4">
               <GradeFilter selected={gradeFilter} onChange={setGradeFilter} />
-              <div className="font-mono text-sm text-muted-foreground">
-                {time.toLocaleTimeString()} EST
-            </div>
+              <TradeMarketClock />
               <Button
                 variant="ghost"
                 size="sm"

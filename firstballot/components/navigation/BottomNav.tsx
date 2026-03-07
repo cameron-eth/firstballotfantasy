@@ -3,7 +3,6 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { Trophy, Search, ShoppingCart, BarChart3, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,22 +37,14 @@ export function BottomNav() {
                 <div className="relative">
                   <Icon className="h-6 w-6" />
                   {isActive && (
-                    <motion.div
-                      layoutId="bottom-nav-active"
-                      className="absolute -inset-1 bg-yellow-400/10 rounded-lg -z-10"
-                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                    />
+                    <div className="absolute -inset-1 bg-yellow-400/10 rounded-lg -z-10 transition-all duration-300" />
                   )}
                 </div>
                 <span className="text-[10px] font-mono mt-1 font-bold tracking-tight">
                   {item.name.toUpperCase()}
                 </span>
                 {isActive && (
-                  <motion.div
-                    layoutId="bottom-nav-dot"
-                    className="w-1 h-1 bg-yellow-400 rounded-full mt-0.5"
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                  />
+                  <div className="w-1 h-1 bg-yellow-400 rounded-full mt-0.5 transition-all duration-300" />
                 )}
               </Link>
             )

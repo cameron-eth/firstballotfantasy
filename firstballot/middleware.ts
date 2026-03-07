@@ -12,7 +12,6 @@ async function middleware(request: NextRequest) {
     '/api/roster-stats',
     '/api/trade-market',
     '/api/prospects',
-    '/api/league-roster',
     '/api/draft-analysis',
   ]
 

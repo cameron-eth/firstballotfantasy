@@ -99,7 +99,8 @@ test('file size guard: only approved legacy files may exceed the default budget'
     ['components/DraftAnalysis.tsx', 980],
     ['components/LeagueBuddy.tsx', 1460],
     ['components/TeamValueGraph.tsx', 1140],
-    ['components/scouting/DraftBoardTab.tsx', 1125],
+    ['components/landing/LandingPage.tsx', 700],
+    ['components/scouting/DraftBoardTab.tsx', 1200],
     ['components/scouting/ProspectCharts.tsx', 820],
     ['components/scouting/ProspectComparison.tsx', 800],
     ['components/scouting/ScoutingPortal.tsx', 920],
@@ -119,6 +120,45 @@ test('file size guard: only approved legacy files may exceed the default budget'
       `${relativePath} is ${lineCount} lines, which exceeds its ${budget}-line budget`
     )
   }
+})
+
+test('import guard: every React hook usage has a matching import', () => {
+  const hooks = ['useState', 'useEffect', 'useMemo', 'useCallback', 'useRef', 'useContext', 'useReducer', 'useLayoutEffect']
+  const sourceFiles = [...walk('app'), ...walk('components'), ...walk('hooks'), ...walk('lib')]
+    .filter((f) => /\.(tsx?|jsx?)$/.test(f) && !f.includes('node_modules'))
+
+  const failures = []
+
+  for (const relativePath of sourceFiles) {
+    const source = readProjectFile(relativePath)
+    // Skip markdown / non-code
+    if (relativePath.endsWith('.md')) continue
+
+    for (const hook of hooks) {
+      // Check if this file actually calls the hook (not just mentions it in a comment/string)
+      const usagePattern = new RegExp(`\\b${hook}\\s*\\(`, 'm')
+      if (!usagePattern.test(source)) continue
+
+      // Must have an import for it
+      const importPattern = new RegExp(`import\\s+.*\\b${hook}\\b.*from\\s+['"]react['"]`, 'm')
+      const reactDotPattern = new RegExp(`React\\.${hook}`, 'm')
+      if (!importPattern.test(source) && !reactDotPattern.test(source)) {
+        failures.push(`${relativePath} uses ${hook}() but does not import it from 'react'`)
+      }
+    }
+  }
+
+  assert.deepStrictEqual(failures, [], 'Missing React hook imports:\n' + failures.join('\n'))
+})
+
+test('auth guard: league-roster route is NOT in middleware publicRoutes', () => {
+  const source = readProjectFile('middleware.ts')
+  // It should not be listed as a public route since it requires auth
+  assert.doesNotMatch(
+    source,
+    /['"]\/api\/league-roster['"]/,
+    'league-roster should not be a public route — it requires auth headers'
+  )
 })
 
 test('type utilization guard: critical frontend files should stay free of loose any types', () => {

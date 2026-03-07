@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -82,11 +83,26 @@ const gradeColors = {
 }
 
 export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
-  const [data, setData] = useState<DraftAnalysisData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data = null,
+    isLoading: loading,
+    error,
+  } = useSWR<DraftAnalysisData | null>(
+    draftId ? `/api/draft-analysis?draftId=${draftId}` : null,
+    (url) =>
+      fetch(url).then((r) => {
+        if (!r.ok) throw new Error('Failed to fetch draft analysis')
+        return r.json()
+      })
+  )
   const [sortMode, setSortMode] = useState<'grade' | 'team'>('grade')
   const [picksPage, setPicksPage] = useState(1)
+  const [picksPageDraftId, setPicksPageDraftId] = useState(draftId)
+  // Reset page during render when draftId changes (avoids useEffect-driven setState)
+  if (picksPageDraftId !== draftId) {
+    setPicksPageDraftId(draftId)
+    setPicksPage(1)
+  }
   const PICKS_PER_PAGE = 50
   const [isExpanded, setIsExpanded] = useState(false)
   const [chartsIndex, setChartsIndex] = useState(0)
@@ -317,31 +333,6 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
   ]
   const currentChart = charts[chartsIndex]
 
-  useEffect(() => {
-    setPicksPage(1) // Reset page on new draft
-  }, [draftId])
-
-  useEffect(() => {
-    const fetchAnalysis = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/draft-analysis?draftId=${draftId}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch draft analysis')
-        }
-        const analysisData = await response.json()
-        setData(analysisData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (draftId) {
-      fetchAnalysis()
-    }
-  }, [draftId])
 
   if (loading) {
     return (
@@ -357,7 +348,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
   if (error) {
     return (
       <div className="p-4 text-center">
-        <p className="text-red-600">Error: {error}</p>
+        <p className="text-red-600">Error: {error?.message ?? String(error)}</p>
       </div>
     )
   }
@@ -686,7 +677,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                       )?.display_name ||
                       `Team ${pick.roster_id}`
                     return (
-                      <TableRow key={index}>
+                      <TableRow key={`${pick.round}-${pick.pick_no}`}>
                         <TableCell className="text-slate-200">{pick.round}</TableCell>
                         <TableCell className="text-slate-200">{pick.pick_no}</TableCell>
                         <TableCell className="text-slate-200">
@@ -760,8 +751,8 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.tradedPicks.map((trade, index) => (
-                      <TableRow key={index}>
+                    {data.tradedPicks.map((trade) => (
+                      <TableRow key={`${trade.previous_owner_id}-${trade.owner_id}-${trade.round}-${trade.season}`}>
                         <TableCell className="text-slate-200">{trade.round}</TableCell>
                         <TableCell className="text-slate-200">{trade.previous_owner_id}</TableCell>
                         <TableCell className="text-slate-200">{trade.owner_id}</TableCell>

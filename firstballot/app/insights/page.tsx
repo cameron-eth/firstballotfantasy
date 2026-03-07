@@ -210,8 +210,8 @@ export default function InsightsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {breakoutCandidates.slice(0, 15).map((player, index) => (
-                    <div key={index} className="relative">
+                  {breakoutCandidates.slice(0, 15).map((player) => (
+                    <div key={`${player.player_name}-${player.season}`} className="relative">
                       <PlayerCard player={transformPlayerForCard(player, true)} />
                       {/* Enhanced overlay with additional data */}
                       <div className="absolute top-2 right-2 bg-green-400 text-slate-900 px-2 py-1 rounded text-xs font-mono font-bold">
@@ -335,8 +335,8 @@ export default function InsightsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {bustCandidates.slice(0, 15).map((player, index) => (
-                    <div key={index} className="relative">
+                  {bustCandidates.slice(0, 15).map((player) => (
+                    <div key={`${player.player_name}-${player.season}`} className="relative">
                       <PlayerCard player={transformPlayerForCard(player, false)} />
                       {/* Enhanced overlay with additional data */}
                       <div className="absolute top-2 right-2 bg-red-400 text-slate-900 px-2 py-1 rounded text-xs font-mono font-bold">

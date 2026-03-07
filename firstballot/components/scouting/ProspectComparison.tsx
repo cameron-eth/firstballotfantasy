@@ -111,7 +111,7 @@ function StatComparison({
         {values.map((value, i) => {
           const isBest = best !== null && value === best && validValues.length > 1
           return (
-            <div key={i} className="text-center">
+            <div key={`stat-${label}-${i}`} className="text-center">
               <span
                 className={cn(
                   'text-xl font-mono font-bold',
@@ -154,7 +154,7 @@ function BarComparison({
       </div>
       <div className="space-y-2">
         {values.map((value, i) => (
-          <div key={i} className="flex items-center gap-3">
+          <div key={`bar-${label}-${i}`} className="flex items-center gap-3">
             <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
@@ -521,8 +521,8 @@ export function ProspectComparison({
               className="grid gap-4"
               style={{ gridTemplateColumns: `repeat(${selectedProspects.length}, 1fr)` }}
             >
-              {selectedProspects.map((player, i) => (
-                <div key={i} className="text-center">
+              {selectedProspects.map((player) => (
+                <div key={player.id} className="text-center">
                   <div className="text-sm font-bold text-foreground">{player.name}</div>
                   <div className="text-xs text-muted-foreground">{player.position}</div>
                 </div>

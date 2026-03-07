@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import useSWR from 'swr'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,7 +27,38 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
   const [suggestions, setSuggestions] = useState<PlayerSuggestion[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
-  const [assetMetadata, setAssetMetadata] = useState<Record<string, AssetMetadata>>({})
+  // Build SWR key from unique non-draft-pick side items
+  const metadataKey = useMemo(() => {
+    const nonPicks = side.filter((name) => !/^\d{4}\s+\d+\.\d+$/.test(name))
+    return nonPicks.length > 0 ? nonPicks.join('|') : null
+  }, [side])
+
+  const { data: assetMetadata = {} } = useSWR<Record<string, AssetMetadata>>(
+    metadataKey,
+    async (namesKey: string) => {
+      const names = namesKey.split('|')
+      const lookups = await Promise.all(
+        names.map(async (name) => {
+          try {
+            const response = await fetch(`/api/rankings?player=${encodeURIComponent(name)}`)
+            if (!response.ok) return null
+            const data = await response.json()
+            return {
+              name,
+              metadata: { headshot_url: data.headshot_url ?? null, espn_id: data.espn_id ?? null },
+            }
+          } catch {
+            return null
+          }
+        })
+      )
+      const result: Record<string, AssetMetadata> = {}
+      for (const entry of lookups) {
+        if (entry) result[entry.name] = entry.metadata
+      }
+      return result
+    }
+  )
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
   const suggestionsRequestIdRef = useRef(0)
@@ -146,49 +178,6 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
     }
   }, [])
 
-  // Fill missing metadata for manually typed assets
-  useEffect(() => {
-    const unresolved = side.filter((item) => !assetMetadata[item])
-    if (unresolved.length === 0) return
-
-    let cancelled = false
-    const hydrateMetadata = async () => {
-      const lookups = await Promise.all(
-        unresolved.map(async (name) => {
-          try {
-            const response = await fetch(`/api/rankings?player=${encodeURIComponent(name)}`)
-            if (!response.ok) return null
-            const data = await response.json()
-            return {
-              name,
-              metadata: {
-                headshot_url: data.headshot_url ?? null,
-                espn_id: data.espn_id ?? null,
-              },
-            }
-          } catch {
-            return null
-          }
-        })
-      )
-
-      if (cancelled) return
-
-      setAssetMetadata((prev) => {
-        const merged = { ...prev }
-        for (const entry of lookups) {
-          if (!entry) continue
-          merged[entry.name] = entry.metadata
-        }
-        return merged
-      })
-    }
-
-    hydrateMetadata()
-    return () => {
-      cancelled = true
-    }
-  }, [side, assetMetadata])
 
   return (
     <div className="space-y-6">

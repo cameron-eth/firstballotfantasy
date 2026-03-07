@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Search, Trophy, Medal, Star, Filter, ArrowUpRight, School } from 'lucide-react'
@@ -16,8 +17,10 @@ import type { Prospect } from './types'
 
 export function AllTimeRankingsTab() {
   const PAGE_SIZE = 30
-  const [prospects, setProspects] = useState<Prospect[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: prospects = [], isLoading: loading } = useSWR<Prospect[]>(
+    '/api/prospects/all-time?limit=250',
+    (url) => fetch(url).then((r) => r.json())
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -32,37 +35,6 @@ export function AllTimeRankingsTab() {
     setPositionFilter(nextFilter)
   }
 
-  useEffect(() => {
-    let isCancelled = false
-    const controller = new AbortController()
-
-    const fetchAllTime = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/prospects/all-time?limit=250', {
-          signal: controller.signal,
-        })
-        if (response.ok) {
-          const data = await response.json()
-          if (isCancelled) return
-          setProspects(data)
-        }
-      } catch (error) {
-        if (controller.signal.aborted) return
-        console.error('Error fetching all-time prospects:', error)
-      } finally {
-        if (isCancelled) return
-        setLoading(false)
-      }
-    }
-
-    fetchAllTime()
-
-    return () => {
-      isCancelled = true
-      controller.abort()
-    }
-  }, [])
 
   const filteredProspects = useMemo(() => {
     return prospects.filter((p) => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import useSWR from 'swr'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp, TrendingDown } from 'lucide-react'
@@ -12,33 +12,17 @@ interface PlayerNGSStatsProps {
 }
 
 export function PlayerNGSStats({ playerName, position, compact = false }: PlayerNGSStatsProps) {
-  const [stats, setStats] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: result, isLoading: loading } = useSWR(
+    '/api/player-stats?season=2025&limit=500',
+    (url) => fetch(url).then((r) => r.json())
+  )
 
-  useEffect(() => {
-    const fetchPlayerStats = async () => {
-      try {
-        // Use master_player_stats which has complete fantasy + NGS data
-        const response = await fetch(`/api/player-stats?season=2025&limit=500`)
-        const result = await response.json()
-
-        // Find player by name match
-        const playerStats = result.data?.find((p: any) =>
-          p.player_display_name
-            ?.toLowerCase()
-            .includes(playerName.toLowerCase().split(' ')[1] || playerName.toLowerCase())
-        )
-
-        setStats(playerStats)
-      } catch (error) {
-        console.error('Failed to fetch player NGS stats:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPlayerStats()
-  }, [playerName, position])
+  // Find player by name match from the fetched data
+  const stats = result?.data?.find((p: any) =>
+    p.player_display_name
+      ?.toLowerCase()
+      .includes(playerName.toLowerCase().split(' ')[1] || playerName.toLowerCase())
+  )
 
   if (loading) {
     return (

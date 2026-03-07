@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProspectComparison } from '@/components/scouting/ProspectComparison'
@@ -49,54 +50,27 @@ interface BreakoutBust {
 }
 
 export default function AnalysisPage() {
-  const [modelPerformance, setModelPerformance] = useState<ModelPerformance[]>([])
-  const [breakoutBust, setBreakoutBust] = useState<BreakoutBust[]>([])
-  const [allProspects, setAllProspects] = useState<Prospect[]>([])
-  const [availableYears, setAvailableYears] = useState<number[]>([])
   const [comparedProspects, setComparedProspects] = useState<Prospect[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        setError(null)
+  const { data: analysisResult, isLoading: analysisLoading, error: analysisError } = useSWR(
+    '/api/analysis?type=all',
+    (url: string) => fetch(url).then((r) => r.json())
+  )
+  const { data: prospectsResult, isLoading: prospectsLoading } = useSWR<Prospect[]>(
+    '/api/prospects?draft_year=all',
+    (url: string) => fetch(url).then((r) => r.json())
+  )
 
-        // Fetch all analysis data and ALL prospects in parallel
-        const [analysisRes, prospectsRes] = await Promise.all([
-          fetch('/api/analysis?type=all'),
-          fetch('/api/prospects?draft_year=all'),
-        ])
-
-        const [analysisResult, prospectsResult] = await Promise.all([
-          analysisRes.json(),
-          prospectsRes.json(),
-        ])
-
-        setModelPerformance(analysisResult.modelPerformance || [])
-        setBreakoutBust(analysisResult.breakoutBust || [])
-
-        // Set all prospects
-        const prospects = prospectsResult || []
-        setAllProspects(prospects)
-
-        // Extract available years and sort descending (newest first)
-        const years = [
-          ...new Set(prospects.map((p: Prospect) => p.draft_year).filter(Boolean)),
-        ] as number[]
-        years.sort((a, b) => b - a)
-        setAvailableYears(years)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError('Failed to load analytics data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
+  const loading = analysisLoading || prospectsLoading
+  const error: string | null = analysisError ? 'Failed to load analytics data' : null
+  const modelPerformance: ModelPerformance[] = analysisResult?.modelPerformance || []
+  const breakoutBust: BreakoutBust[] = analysisResult?.breakoutBust || []
+  const allProspects: Prospect[] = prospectsResult || []
+  const availableYears: number[] = useMemo(() => {
+    const years = [...new Set(allProspects.map((p) => p.draft_year).filter(Boolean))] as number[]
+    years.sort((a, b) => b - a)
+    return years
+  }, [allProspects])
 
   // Calculate Overachievers and Underachievers based on NFL performance vs Prediction
   const achievementData = useMemo(() => {

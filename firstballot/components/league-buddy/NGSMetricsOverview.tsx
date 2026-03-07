@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TeamLogo } from '@/components/team-logo'
 import { TrendingUp, TrendingDown, Target, Zap, Activity, BarChart3 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import useSWR from 'swr'
 
 interface NGSMetricsOverviewProps {
   selectedTeam: any
@@ -36,40 +36,24 @@ interface NGSPlayerMetrics {
 }
 
 export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
-  const [ngsData, setNgsData] = useState<NGSPlayerMetrics[]>([])
-  const [loading, setLoading] = useState(true)
+  const playerNamesKey = selectedTeam?.players
+    ? selectedTeam.players.map((p: any) => p.playerName).join(',')
+    : null
 
-  useEffect(() => {
-    if (!selectedTeam?.players) return
-
-    const fetchNGSData = async () => {
-      try {
-        setLoading(true)
-        // Fetch NGS data for all team players
-        const playerNames = selectedTeam.players.map((p: any) => p.playerName)
-
-        const responses = await Promise.all(
-          playerNames.map((name: string) =>
-            fetch(`/api/player-stats?playerName=${encodeURIComponent(name)}`)
-              .then((res) => res.json())
-              .catch(() => null)
-          )
+  const { data: ngsData = [], isLoading: loading } = useSWR<NGSPlayerMetrics[]>(
+    playerNamesKey,
+    async (namesKey: string) => {
+      const playerNames = namesKey.split(',')
+      const responses = await Promise.all(
+        playerNames.map((name: string) =>
+          fetch(`/api/player-stats?playerName=${encodeURIComponent(name)}`)
+            .then((res) => res.json())
+            .catch(() => null)
         )
-
-        const validData = responses
-          .filter((r) => r?.data && r.data.length > 0)
-          .map((r) => r.data[0])
-
-        setNgsData(validData)
-      } catch (error) {
-        console.error('Error fetching NGS data:', error)
-      } finally {
-        setLoading(false)
-      }
+      )
+      return responses.filter((r) => r?.data && r.data.length > 0).map((r) => r.data[0])
     }
-
-    fetchNGSData()
-  }, [selectedTeam])
+  )
 
   if (!selectedTeam) return null
 
@@ -158,11 +142,11 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Completion % Over Expected</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topCPOE.map((player, idx) => {
+              {topCPOE.map((player) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
-                    key={idx}
+                    key={player.player_name}
                     className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg hover:bg-slate-800/80 transition-all duration-200 border border-slate-700/50"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -217,11 +201,11 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Rush Efficiency Score</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topRushEfficiency.map((player, idx) => {
+              {topRushEfficiency.map((player) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
-                    key={idx}
+                    key={player.player_name}
                     className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg hover:bg-slate-800/80 transition-all duration-200 border border-slate-700/50"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -273,11 +257,11 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Rush Yards Over Expected</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topRYOE.map((player, idx) => {
+              {topRYOE.map((player) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
-                    key={idx}
+                    key={player.player_name}
                     className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg hover:bg-slate-800/80 transition-all duration-200 border border-slate-700/50"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -332,11 +316,11 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Average Separation (yards)</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topSeparation.map((player, idx) => {
+              {topSeparation.map((player) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
-                    key={idx}
+                    key={player.player_name}
                     className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg hover:bg-slate-800/80 transition-all duration-200 border border-slate-700/50"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -388,11 +372,11 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Catch Percentage</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topCatchPercentage.map((player, idx) => {
+              {topCatchPercentage.map((player) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
-                    key={idx}
+                    key={player.player_name}
                     className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg hover:bg-slate-800/80 transition-all duration-200 border border-slate-700/50"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -444,11 +428,11 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Yards After Catch Above Expected</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topYAC.map((player, idx) => {
+              {topYAC.map((player) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
-                    key={idx}
+                    key={player.player_name}
                     className="flex items-center justify-between p-3 bg-slate-800/60 rounded-lg hover:bg-slate-800/80 transition-all duration-200 border border-slate-700/50"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">

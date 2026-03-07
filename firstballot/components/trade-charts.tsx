@@ -16,6 +16,21 @@ interface TradeChartsProps {
 }
 
 export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsProps) {
+  // Aggregate daily trade volume — must be before any early returns (Rules of Hooks)
+  const dailyVolume = React.useMemo(() => {
+    const volumeMap: Record<string, number> = {}
+    if (!Array.isArray(tradeAnalysis)) return []
+    tradeAnalysis.forEach((trade) => {
+      const date = trade.date // already formatted as locale date string
+      if (!volumeMap[date]) volumeMap[date] = 0
+      volumeMap[date] += trade.totalTradeValue
+    })
+    // Convert to sorted array
+    return Object.entries(volumeMap)
+      .map(([date, value]) => ({ date, value }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }, [tradeAnalysis])
+
   if (!traderStats || traderStats.length === 0) {
     return (
       <Card className="bg-slate-800 border-slate-700">
@@ -31,21 +46,6 @@ export function TradeCharts({ traderStats, teams, tradeAnalysis }: TradeChartsPr
   const maxValueGained = Math.max(...traderStats.map((t) => t.totalValueGained))
   const maxValueMoved = Math.max(...traderStats.map((t) => t.totalValueMoved))
   const maxTrades = Math.max(...traderStats.map((t) => t.totalTrades))
-
-  // Aggregate daily trade volume
-  const dailyVolume = React.useMemo(() => {
-    const volumeMap: Record<string, number> = {}
-    if (!Array.isArray(tradeAnalysis)) return []
-    tradeAnalysis.forEach((trade) => {
-      const date = trade.date // already formatted as locale date string
-      if (!volumeMap[date]) volumeMap[date] = 0
-      volumeMap[date] += trade.totalTradeValue
-    })
-    // Convert to sorted array
-    return Object.entries(volumeMap)
-      .map(([date, value]) => ({ date, value }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  }, [tradeAnalysis])
 
   return (
     <div className="space-y-6">

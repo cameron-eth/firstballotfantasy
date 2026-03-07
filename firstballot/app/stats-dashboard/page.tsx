@@ -89,7 +89,7 @@ export default function StatsDashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {[...Array(10)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <Skeleton key={`passing-skeleton-${i}`} className="h-12 w-full" />
                   ))}
                 </div>
               </CardContent>
@@ -104,7 +104,7 @@ export default function StatsDashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <NGSStatsTable data={data} statType="passing" season={season} />
+            <NGSStatsTable key="passing" data={data} statType="passing" season={season} />
           )}
         </TabsContent>
 
@@ -117,7 +117,7 @@ export default function StatsDashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {[...Array(10)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <Skeleton key={`rushing-skeleton-${i}`} className="h-12 w-full" />
                   ))}
                 </div>
               </CardContent>
@@ -132,7 +132,7 @@ export default function StatsDashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <NGSStatsTable data={data} statType="rushing" season={season} />
+            <NGSStatsTable key="rushing" data={data} statType="rushing" season={season} />
           )}
         </TabsContent>
 
@@ -145,7 +145,7 @@ export default function StatsDashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {[...Array(10)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
+                    <Skeleton key={`receiving-skeleton-${i}`} className="h-12 w-full" />
                   ))}
                 </div>
               </CardContent>
@@ -160,7 +160,7 @@ export default function StatsDashboardPage() {
               </CardContent>
             </Card>
           ) : (
-            <NGSStatsTable data={data} statType="receiving" season={season} />
+            <NGSStatsTable key="receiving" data={data} statType="receiving" season={season} />
           )}
         </TabsContent>
       </Tabs>

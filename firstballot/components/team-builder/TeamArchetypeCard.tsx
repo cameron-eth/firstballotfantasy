@@ -60,8 +60,8 @@ export function TeamArchetypeCard({
           <div>
             <h4 className="text-white font-mono mb-2">PROS</h4>
             <ul className="text-sm text-green-400 space-y-1">
-              {archetype.pros.map((pro, index) => (
-                <li key={index} className="font-mono">
+              {archetype.pros.map((pro) => (
+                <li key={pro} className="font-mono">
                   • {pro}
                 </li>
               ))}
@@ -70,8 +70,8 @@ export function TeamArchetypeCard({
           <div>
             <h4 className="text-white font-mono mb-2">CONS</h4>
             <ul className="text-sm text-red-400 space-y-1">
-              {archetype.cons.map((con, index) => (
-                <li key={index} className="font-mono">
+              {archetype.cons.map((con) => (
+                <li key={con} className="font-mono">
                   • {con}
                 </li>
               ))}
@@ -82,8 +82,8 @@ export function TeamArchetypeCard({
         <div>
           <h4 className="text-white font-mono mb-2">DRAFT STRATEGY</h4>
           <ul className="text-sm text-yellow-400 space-y-1">
-            {archetype.draftStrategy.map((strategy, index) => (
-              <li key={index} className="font-mono">
+            {archetype.draftStrategy.map((strategy) => (
+              <li key={strategy} className="font-mono">
                 • {strategy}
               </li>
             ))}

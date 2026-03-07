@@ -34,7 +34,7 @@ export function StatsSection() {
           <div className="flex items-end space-x-1 h-16 mt-4">
             {[40, 65, 45, 80, 70, 85, 95, 100].map((height, i) => (
               <div
-                key={i}
+                key={`bar-${height}-${i}`}
                 className="flex-1 bg-gradient-to-t from-yellow-400 to-yellow-300 rounded-t origin-bottom opacity-80 group-hover:opacity-100 transition-opacity"
                 style={{
                   height: `${height}%`,
@@ -86,7 +86,7 @@ export function StatsSection() {
               { label: 'WRs', value: 100, color: 'bg-yellow-400' },
               { label: 'TEs', value: 45, color: 'bg-green-400' },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={item.label} className="flex items-center gap-2">
                 <div className="text-xs text-gray-400 font-mono w-8">{item.label}</div>
                 <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
                   <div

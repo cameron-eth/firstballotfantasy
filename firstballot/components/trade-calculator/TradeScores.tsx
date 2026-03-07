@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import useSWR from 'swr'
 import type { TradeResult } from '@/types/trade-calculator'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
@@ -19,62 +19,44 @@ export function TradeScores({ result }: TradeScoresProps) {
   const side2Wins = result.winner === 'SIDE 2'
   const side1TopAssets = result.side1.slice(0, 4)
   const side2TopAssets = result.side2.slice(0, 4)
-  const [hydratedHeadshots, setHydratedHeadshots] = useState<
+  const candidateNames = Array.from(
+    new Set(
+      [...result.side1, ...result.side2]
+        .filter((item) => !/^\d{4}\s+\d+\.\d+$/.test(item.name) && !item.headshot_url && !item.espn_id)
+        .map((item) => item.name)
+    )
+  )
+
+  const { data: hydratedHeadshots = {} } = useSWR<
     Record<string, { headshot_url?: string | null; espn_id?: string | number | null }>
-  >({})
-
-  useEffect(() => {
-    const abortController = new AbortController()
-
-    const hydrateMissingHeadshots = async () => {
-      const allAssets = [...result.side1, ...result.side2]
-      const candidates = allAssets.filter((item) => {
-        const isDraftPick = /^\d{4}\s+\d+\.\d+$/.test(item.name)
-        const missing = !item.headshot_url && !item.espn_id
-        return !isDraftPick && missing
-      })
-
-      if (candidates.length === 0) return
-
-      const uniqueNames = Array.from(new Set(candidates.map((item) => item.name)))
+  >(
+    candidateNames.length > 0 ? candidateNames.join('|') : null,
+    async (namesKey: string) => {
+      const names = namesKey.split('|')
       const responses = await Promise.all(
-        uniqueNames.map(async (name) => {
+        names.map(async (name) => {
           try {
             const res = await fetch(`/api/rankings?player=${encodeURIComponent(name)}`, {
-              signal: abortController.signal,
               cache: 'no-store',
             })
             if (!res.ok) return { name, data: null as null | any }
-            const data = await res.json()
-            return { name, data }
+            return { name, data: await res.json() }
           } catch {
             return { name, data: null as null | any }
           }
         })
       )
-
-      if (abortController.signal.aborted) return
-
-      const next = responses.reduce(
+      return responses.reduce(
         (acc, entry) => {
           const headshot = entry.data?.headshot_url ?? null
           const espn = entry.data?.espn_id ?? null
-          if (headshot || espn) {
-            acc[entry.name] = { headshot_url: headshot, espn_id: espn }
-          }
+          if (headshot || espn) acc[entry.name] = { headshot_url: headshot, espn_id: espn }
           return acc
         },
         {} as Record<string, { headshot_url?: string | null; espn_id?: string | number | null }>
       )
-
-      if (Object.keys(next).length > 0) {
-        setHydratedHeadshots((prev) => ({ ...prev, ...next }))
-      }
     }
-
-    hydrateMissingHeadshots()
-    return () => abortController.abort()
-  }, [result.side1, result.side2])
+  )
 
   return (
     <div className="mb-10 relative group">

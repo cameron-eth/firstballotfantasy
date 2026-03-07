@@ -103,7 +103,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       // Hard cleanup of persisted auth keys as final safety net.
       if (typeof window !== 'undefined') {
-        const authKeyPrefix = 'sb-aanoqbjauukcczrlnxka-auth-token'
+        const projectRef =
+          process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/\/\/([^.]+)\./)?.[1] ?? ''
+        const authKeyPrefix = `sb-${projectRef}-auth-token`
         try {
           localStorage.removeItem(authKeyPrefix)
           sessionStorage.removeItem(authKeyPrefix)

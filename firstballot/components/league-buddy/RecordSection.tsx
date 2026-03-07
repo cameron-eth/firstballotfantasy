@@ -218,8 +218,8 @@ export function RecordSection() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {breakoutCandidates.slice(0, 15).map((player, index) => (
-                      <div key={index} className="relative">
+                    {breakoutCandidates.slice(0, 15).map((player) => (
+                      <div key={`${player.player_name}-${player.season}`} className="relative">
                         <PlayerCard player={transformPlayerForCard(player, true)} />
                         <div className="absolute top-2 right-2 bg-green-400 text-slate-900 px-2 py-1 rounded text-xs font-mono font-bold">
                           +{player.surprise_factor.toFixed(1)}
@@ -321,8 +321,8 @@ export function RecordSection() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {bustCandidates.slice(0, 15).map((player, index) => (
-                      <div key={index} className="relative">
+                    {bustCandidates.slice(0, 15).map((player) => (
+                      <div key={`${player.player_name}-${player.season}`} className="relative">
                         <PlayerCard player={transformPlayerForCard(player, false)} />
                         <div className="absolute top-2 right-2 bg-red-400 text-slate-900 px-2 py-1 rounded text-xs font-mono font-bold">
                           {player.surprise_factor.toFixed(1)}
@@ -423,7 +423,7 @@ export function RecordSection() {
               </CardContent>
             </Card>
           ) : (
-            <NGSStatsTable data={statsData} statType={statType} season={season} />
+            <NGSStatsTable key={statType} data={statsData} statType={statType} season={season} />
           )}
         </TabsContent>
       </Tabs>

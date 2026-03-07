@@ -85,7 +85,7 @@ export const CurrentLineup = memo(function CurrentLineup({
         const underperformed = pointsDiff < 0
 
         return (
-          <div key={`${playerId}-${index}`} className="group relative">
+          <div key={playerId} className="group relative">
             <div
               className={`absolute -inset-0.5 rounded-lg blur transition duration-300 ${
                 gamePlayed

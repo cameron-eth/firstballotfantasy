@@ -8,7 +8,8 @@ import { LoadingSpinner } from '@/components/loading-spinner'
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
+import useSWR from 'swr'
 
 export function PlayoffOddsView() {
   const searchParams = useSearchParams()
@@ -26,70 +27,46 @@ export function PlayoffOddsView() {
     })
   }, [teams])
 
-  // State for schedule
-  const [scheduleData, setScheduleData] = useState<
+  // Fetch remaining schedule — SWR key includes leagueId + currentWeek to avoid fetch-in-effect
+  const scheduleKey =
+    leagueId && currentWeek && currentWeek <= 14
+      ? `schedule:${leagueId}:${currentWeek}`
+      : null
+
+  const { data: scheduleData } = useSWR<
     { [week: number]: { [rosterId: number]: number } } | undefined
-  >(undefined)
+  >(scheduleKey, async (key: string) => {
+    const [, lid, startWeekStr] = key.split(':')
+    const startWeek = Number(startWeekStr)
+    const scheduleMap: { [week: number]: { [rosterId: number]: number } } = {}
 
-  // Fetch remaining schedule (including current week if games in progress)
-  useEffect(() => {
-    if (!leagueId || !currentWeek || currentWeek > 14) {
-      setScheduleData(undefined)
-      return
-    }
-
-    const fetchSchedule = async () => {
-      const scheduleMap: { [week: number]: { [rosterId: number]: number } } = {}
-
-      try {
-        // Fetch matchups for current week AND remaining weeks
-        // Include current week because games may still be in progress
-        for (let week = currentWeek; week <= 14; week++) {
-          const response = await fetch(
-            `https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`,
-            { cache: 'no-store' }
-          )
-          if (response.ok) {
-            const matchups = await response.json()
-            scheduleMap[week] = {}
-
-            // Build matchup pairs using matchup_id
-            const matchupGroups = new Map<number, { roster_id: number; points: number }[]>()
-            matchups.forEach(
-              (matchup: { roster_id: number; matchup_id: number; points: number }) => {
-                const matchupId = matchup.matchup_id
-                if (matchupId !== null && matchupId !== undefined) {
-                  if (!matchupGroups.has(matchupId)) {
-                    matchupGroups.set(matchupId, [])
-                  }
-                  matchupGroups.get(matchupId)!.push({
-                    roster_id: matchup.roster_id,
-                    points: matchup.points || 0,
-                  })
-                }
-              }
-            )
-
-            // Map each team to their opponent
-            matchupGroups.forEach((teamsInMatchup) => {
-              if (teamsInMatchup.length === 2) {
-                const [team1, team2] = teamsInMatchup
-                scheduleMap[week][team1.roster_id] = team2.roster_id
-                scheduleMap[week][team2.roster_id] = team1.roster_id
-              }
-            })
-          }
+    for (let week = startWeek; week <= 14; week++) {
+      const response = await fetch(
+        `https://api.sleeper.app/v1/league/${lid}/matchups/${week}`,
+        { cache: 'no-store' }
+      )
+      if (!response.ok) continue
+      const matchups = await response.json()
+      scheduleMap[week] = {}
+      const matchupGroups = new Map<number, { roster_id: number; points: number }[]>()
+      matchups.forEach((matchup: { roster_id: number; matchup_id: number; points: number }) => {
+        const matchupId = matchup.matchup_id
+        if (matchupId != null) {
+          if (!matchupGroups.has(matchupId)) matchupGroups.set(matchupId, [])
+          matchupGroups.get(matchupId)!.push({ roster_id: matchup.roster_id, points: matchup.points || 0 })
         }
-
-        setScheduleData(Object.keys(scheduleMap).length > 0 ? scheduleMap : undefined)
-      } catch (err) {
-        console.error('Error fetching schedule:', err)
-        setScheduleData(undefined)
-      }
+      })
+      matchupGroups.forEach((teamsInMatchup) => {
+        if (teamsInMatchup.length === 2) {
+          const [team1, team2] = teamsInMatchup
+          scheduleMap[week][team1.roster_id] = team2.roster_id
+          scheduleMap[week][team2.roster_id] = team1.roster_id
+        }
+      })
     }
 
-    fetchSchedule()
-  }, [leagueId, currentWeek])
+    return Object.keys(scheduleMap).length > 0 ? scheduleMap : undefined
+  })
 
   if (!leagueId) {
     return (

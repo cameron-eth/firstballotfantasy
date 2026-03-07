@@ -358,7 +358,7 @@ export function MatchupView({
 
                       return (
                         <div
-                          key={idx}
+                          key={`${player.playerName}-${player.team}`}
                           className="p-3 bg-slate-600 rounded-lg border border-slate-500 hover:border-yellow-400/50 transition-all"
                         >
                           <div className="flex items-center justify-between gap-3">
@@ -459,9 +459,9 @@ export function MatchupView({
             <div>
               <h4 className="text-yellow-400 font-mono text-xs mb-3">{selectedTeam.teamName}</h4>
               <div className="space-y-2">
-                {selectedTeam.players.slice(0, 5).map((player, idx) => (
+                {selectedTeam.players.slice(0, 5).map((player) => (
                   <div
-                    key={idx}
+                    key={`${player.playerName}-${player.team}`}
                     className="flex items-center justify-between p-2 bg-slate-600 rounded"
                   >
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -491,9 +491,9 @@ export function MatchupView({
             <div>
               <h4 className="text-blue-400 font-mono text-xs mb-3">{opponent.teamName}</h4>
               <div className="space-y-2">
-                {opponent.players.slice(0, 5).map((player, idx) => (
+                {opponent.players.slice(0, 5).map((player) => (
                   <div
-                    key={idx}
+                    key={`${player.playerName}-${player.team}`}
                     className="flex items-center justify-between p-2 bg-slate-600 rounded"
                   >
                     <div className="flex items-center space-x-2 flex-1 min-w-0">

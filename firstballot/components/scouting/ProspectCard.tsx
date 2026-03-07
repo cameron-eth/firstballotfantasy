@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Prospect } from './types'
@@ -124,22 +123,20 @@ function getTierColor(tier: string): { bg: string; text: string; border: string 
   }
 }
 
-function StatBar({ label, value, delay }: { label: string; value: number; delay: number }) {
-    return (
+function StatBar({ label, value }: { label: string; value: number; delay?: number }) {
+  return (
     <div className="flex items-center gap-2">
       <span className="text-[10px] font-medium text-muted-foreground w-8">{label}</span>
       <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          transition={{ duration: 0.6, delay, ease: 'easeOut' }}
-          className="h-full bg-primary rounded-full"
+        <div
+          className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${value}%` }}
         />
       </div>
       <span className="text-xs font-mono text-foreground w-6 text-right">{Math.round(value)}</span>
-      </div>
-    )
-  }
+    </div>
+  )
+}
 
 function UnifiedProspectCard({
   player,
@@ -157,24 +154,21 @@ function UnifiedProspectCard({
   const [imageError, setImageError] = useState(false)
   const tierColor = getTierColor(player.tier)
 
-    return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.5) }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+  return (
+    <div
       className={cn(
-        'group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors duration-300 cursor-pointer',
+        'group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 hover:-translate-y-1 transition-all duration-300 cursor-pointer animate-[fadeInUp_0.3s_ease_both]',
         className
       )}
+      style={{ animationDelay: `${Math.min(index * 30, 500)}ms` }}
       onClick={onClick}
     >
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
         <span className="text-3xl font-mono font-bold text-primary drop-shadow-lg">
           {player.position}
           {player.rank}
-                  </span>
-        </div>
+        </span>
+      </div>
 
       <div className="absolute top-3 right-3 z-10">
         <span
@@ -212,15 +206,10 @@ function UnifiedProspectCard({
                 .split(' ')
                 .map((n) => n[0])
                 .join('')}
-                  </span>
-                </div>
-              )}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: Math.min(index * 0.03, 0.5) + 0.2 }}
-          className="absolute bottom-2 left-3 z-10"
-        >
+            </span>
+          </div>
+        )}
+        <div className="absolute bottom-2 left-3 z-10">
           <span
             className={cn(
               'px-2 py-0.5 text-[10px] font-medium rounded border',
@@ -230,9 +219,9 @@ function UnifiedProspectCard({
             )}
           >
             {player.year ?? '--'} {player.isCollege ? 'PROSPECT' : 'CLASS'}
-                </span>
-        </motion.div>
-              </div>
+          </span>
+        </div>
+      </div>
 
       <div className="p-4">
         <h3 className="font-mono text-lg font-bold text-foreground tracking-tight mb-0.5 truncate">
@@ -264,15 +253,11 @@ function UnifiedProspectCard({
         </div>
 
         <div className="space-y-2">
-          <StatBar
-            label="PROD"
-            value={player.production}
-            delay={Math.min(index * 0.03, 0.5) + 0.3}
-          />
-          <StatBar label="PHYS" value={player.physical} delay={Math.min(index * 0.03, 0.5) + 0.4} />
+          <StatBar label="PROD" value={player.production} />
+          <StatBar label="PHYS" value={player.physical} />
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 

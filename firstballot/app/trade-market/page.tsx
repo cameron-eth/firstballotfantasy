@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, Suspense } from 'react'
+import useSWR from 'swr'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
@@ -378,13 +379,29 @@ function TradeMarketContent() {
   const { selectedLeagueId } = useLeagueContext()
   const [leagueId, setLeagueId] = useState<string>('')
 
-  const [teams, setTeams] = useState<any[]>([])
-  const [allPlayers, setAllPlayers] = useState<Record<string, any>>({})
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [tradedPicks, setTradedPicks] = useState<any[]>([])
-  const [dynastyRankings, setDynastyRankings] = useState<Record<string, any>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: tradeData,
+    isLoading: loading,
+    error: fetchError,
+  } = useSWR(
+    leagueId ? `/api/trade-market?leagueId=${leagueId}` : null,
+    (url) =>
+      fetch(url, { cache: 'no-store' }).then(async (r) => {
+        if (!r.ok) {
+          const text = await r.text()
+          throw new Error(`Failed to fetch trade market data: ${r.status} ${text}`)
+        }
+        const result = await r.json()
+        if (!result.success) throw new Error(result.error || 'Failed to fetch trade market data')
+        return result.data
+      })
+  )
+  const error: string | null = fetchError?.message ?? null
+  const teams: any[] = tradeData?.teams || []
+  const allPlayers: Record<string, any> = tradeData?.allPlayers || {}
+  const transactions: any[] = tradeData?.transactions || []
+  const tradedPicks: any[] = tradeData?.tradedPicks || []
+  const dynastyRankings: Record<string, any> = tradeData?.dynastyRankings || {}
   const [noLeagueId, setNoLeagueId] = useState(false)
   const [gradeFilter, setGradeFilter] = useState('ALL')
   const [time, setTime] = useState(new Date())
@@ -413,36 +430,6 @@ function TradeMarketContent() {
     return () => clearInterval(timer)
   }, [])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!leagueId) return
-      setNoLeagueId(false)
-      try {
-        setLoading(true)
-        setError(null)
-        const response = await fetch(`/api/trade-market?leagueId=${leagueId}`, {
-          cache: 'no-store',
-        })
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Failed to fetch trade market data: ${response.status} ${errorText}`)
-        }
-        const result = await response.json()
-        if (!result.success) throw new Error(result.error || 'Failed to fetch trade market data')
-        const { data } = result
-        setTeams(data.teams || [])
-        setAllPlayers(data.allPlayers || {})
-        setTransactions(data.transactions || [])
-        setTradedPicks(data.tradedPicks || [])
-        setDynastyRankings(data.dynastyRankings || {})
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load trade market data')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [leagueId])
 
   const tradeAnalysis = useMemo<TradeAnalysis[]>(() => {
     if (loading || !dynastyRankings || Object.keys(dynastyRankings).length === 0) return []

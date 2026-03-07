@@ -141,8 +141,8 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
                 <span>Week {currentWeek} Matchups</span>
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {currentMatchups.slice(0, 4).map((matchup, index) => (
-                  <div key={index} className="group relative">
+                {currentMatchups.slice(0, 4).map((matchup) => (
+                  <div key={`${matchup.teamName}-${matchup.opponentTeamName}`} className="group relative">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-green-400/20 to-yellow-400/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
                     <Card className="relative bg-slate-700/30 backdrop-blur-sm border border-slate-600/50 hover:border-green-400/50 transition-all duration-200">
                       <CardContent className="p-5 sm:p-6">

@@ -95,8 +95,8 @@ export function UpgradePrompt({
       <div className="space-y-3">
         <h3 className="text-lg font-semibold text-white">What's included:</h3>
         <div className="grid grid-cols-1 gap-2">
-          {features.map((feature, index) => (
-            <div key={index} className="flex items-center space-x-3">
+          {features.map((feature) => (
+            <div key={feature} className="flex items-center space-x-3">
               <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
               <span className="text-gray-300">{feature}</span>
             </div>

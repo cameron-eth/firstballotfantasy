@@ -58,6 +58,8 @@ import { sleeperApi } from '@/lib/nextjs-cache'
 // Import extracted types and components
 import type {
   LeagueBuddyProps,
+  LeagueSection,
+  OverviewActions,
   TeamData,
   PlayerData,
   TeamTrends,
@@ -112,11 +114,9 @@ const GRADE_COLORS = {
 export default function LeagueBuddy({
   leagueId,
   user,
-  leagues = [],
-  onLeagueChange,
 }: LeagueBuddyProps) {
   const router = useRouter()
-  const [activeSection, setActiveSection] = useState<'overview' | 'roster' | 'league'>('overview')
+  const [activeSection, setActiveSection] = useState<LeagueSection>('overview')
   const [lineupMode, setLineupMode] = useState<'current' | 'optimized'>('current')
   const [whatIfLineup, setWhatIfLineup] = useState<string[]>([])
   const [selectedStarterToSwap, setSelectedStarterToSwap] = useState<string | null>(null)
@@ -185,6 +185,21 @@ export default function LeagueBuddy({
     router.push(`/playoff-odds?leagueId=${leagueId}`)
   }, [router, leagueId])
 
+  const overviewActions = useMemo<OverviewActions>(
+    () => ({
+      onTradeMarketClick: handleTradeMarketClick,
+      onScoutingPortalClick: handleScoutingPortalClick,
+      onDraftBuddyClick: handleDraftBuddyClick,
+      onPlayoffOddsClick: handlePlayoffOddsClick,
+    }),
+    [
+      handleDraftBuddyClick,
+      handlePlayoffOddsClick,
+      handleScoutingPortalClick,
+      handleTradeMarketClick,
+    ]
+  )
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 overflow-x-hidden">
@@ -204,7 +219,7 @@ export default function LeagueBuddy({
               <CardContent className="p-6">
                 <div className="flex space-x-2">
                   {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="flex-1 h-14 rounded-lg !bg-slate-700" />
+                    <Skeleton key={`action-btn-skeleton-${i}`} className="flex-1 h-14 rounded-lg !bg-slate-700" />
                   ))}
                 </div>
               </CardContent>
@@ -221,7 +236,7 @@ export default function LeagueBuddy({
                   </div>
                   <div className="space-y-2">
                     {[...Array(3)].map((_, i) => (
-                      <Skeleton key={i} className="h-8 w-8 rounded !bg-slate-700" />
+                      <Skeleton key={`team-info-skeleton-${i}`} className="h-8 w-8 rounded !bg-slate-700" />
                     ))}
                   </div>
                 </div>
@@ -262,7 +277,7 @@ export default function LeagueBuddy({
                 <div className="space-y-4">
                   {[...Array(6)].map((_, i) => (
                     <div
-                      key={i}
+                      key={`lineup-skeleton-${i}`}
                       className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg"
                     >
                       <div className="flex items-center space-x-4">
@@ -370,7 +385,7 @@ export default function LeagueBuddy({
                       <Skeleton className="h-6 w-40 !bg-slate-700" />
                       <div className="grid grid-cols-1 gap-3">
                         {[...Array(9)].map((_, i) => (
-                          <div key={i} className="bg-slate-700/30 rounded-lg p-3">
+                          <div key={`slot-skeleton-${i}`} className="bg-slate-700/30 rounded-lg p-3">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3 flex-1">
                                 <Skeleton className="h-12 w-12 rounded !bg-slate-700" />
@@ -450,9 +465,6 @@ export default function LeagueBuddy({
       <LeagueBuddySidebar
         selectedTeam={selectedTeam}
         sortedTeams={sortedTeams}
-        leagues={leagues}
-        leagueId={leagueId}
-        onLeagueChange={onLeagueChange}
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         currentWeek={currentWeek}
@@ -508,10 +520,7 @@ export default function LeagueBuddy({
                 playerRankings={playerRankings}
                 currentMatchups={currentMatchups}
                 currentWeek={currentWeek}
-                onTradeMarketClick={handleTradeMarketClick}
-                onScoutingPortalClick={handleScoutingPortalClick}
-                onDraftBuddyClick={handleDraftBuddyClick}
-                onPlayoffOddsClick={handlePlayoffOddsClick}
+                actions={overviewActions}
               />
 
               {/* Lineup Manager - Current vs Optimized with What-If */}
@@ -688,7 +697,7 @@ export default function LeagueBuddy({
 
                                 return (
                                   <div
-                                    key={idx}
+                                    key={`${removedSlot.player.playerId}-${addedSlot.player.playerId}`}
                                     className="flex items-center justify-between gap-3 text-xs bg-slate-800/50 rounded p-2"
                                   >
                                     <div className="flex items-center space-x-2 flex-1">
@@ -738,7 +747,7 @@ export default function LeagueBuddy({
                           </h3>
                           {/* Mobile: Compact horizontal rows, Desktop: Grid cards */}
                           <div className="md:hidden space-y-2">
-                            {lineup.map((slot, idx) => {
+                            {lineup.map((slot) => {
                               const { opponentTeam, isHome, matchupRating } = getOpponentInfo(
                                 slot.player,
                                 nflGames
@@ -806,7 +815,7 @@ export default function LeagueBuddy({
 
                               return (
                                 <div
-                                  key={idx}
+                                  key={slot.player.playerId}
                                   className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
                                     hasBetterBench && lineupMode === 'current'
                                       ? 'bg-yellow-400/10 border-yellow-400/50 ring-2 ring-yellow-400/30'
@@ -944,7 +953,7 @@ export default function LeagueBuddy({
 
                           {/* Desktop: Original grid layout */}
                           <div className="hidden md:grid grid-cols-2 gap-3">
-                            {lineup.map((slot, idx) => {
+                            {lineup.map((slot) => {
                               const { opponentTeam, isHome, matchupRating } = getOpponentInfo(
                                 slot.player,
                                 nflGames
@@ -1041,7 +1050,7 @@ export default function LeagueBuddy({
 
                               return (
                                 <div
-                                  key={idx}
+                                  key={slot.player.playerId}
                                   className={`p-3 rounded-lg border transition-all hover:shadow-lg ${
                                     hasBetterBench && lineupMode === 'current'
                                       ? 'bg-yellow-400/10 border-yellow-400/50 ring-2 ring-yellow-400/30'
@@ -1248,7 +1257,7 @@ export default function LeagueBuddy({
 
                                   return (
                                     <div
-                                      key={idx}
+                                      key={player.playerId}
                                       className={`p-3 rounded-lg bg-slate-700/50 border border-slate-700 hover:bg-slate-700/70 transition-all ${matchupColor}`}
                                     >
                                       <div className="flex items-center justify-between gap-3">

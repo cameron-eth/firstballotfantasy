@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -25,10 +26,12 @@ interface HistoricalRankingsTabProps {
 
 export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTabProps) {
   const PAGE_SIZE = 30
-  const [historicalProspects, setHistoricalProspects] = useState<HistoricalProspect[]>([])
   const [selectedYear, setSelectedYear] = useState<string>('2024') // Default to 2024 since 2025 is empty
-  const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const { data: historicalProspects = [], isLoading: loading } = useSWR<HistoricalProspect[]>(
+    `/api/prospects?draft_year=${selectedYear}`,
+    (url) => fetch(url).then((r) => r.json())
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'charts' | 'athletes'>('athletes')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -51,38 +54,6 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    let isCancelled = false
-    const controller = new AbortController()
-
-    const fetchHistorical = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/prospects?draft_year=${selectedYear}`, {
-          signal: controller.signal,
-        })
-        if (response.ok) {
-          const data = await response.json()
-          if (isCancelled) return
-          setHistoricalProspects(data)
-        }
-      } catch (error) {
-        if (controller.signal.aborted) return
-        console.error('Error fetching historical prospects:', error)
-      } finally {
-        if (isCancelled) return
-        setLoading(false)
-      }
-    }
-
-    fetchHistorical()
-
-    return () => {
-      isCancelled = true
-      controller.abort()
-    }
-  }, [selectedYear])
 
   // Compare position distribution
   const positionComparison = useMemo(() => {

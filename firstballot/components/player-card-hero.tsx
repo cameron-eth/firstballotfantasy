@@ -80,8 +80,8 @@ export default function PlayerCardHero({
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 pt-2 border-t border-border/50">
-          {stats.map((stat, index) => (
-            <div key={index} className="space-y-1">
+          {stats.map((stat) => (
+            <div key={stat.label} className="space-y-1">
               <div className="text-xl font-light">{stat.value}</div>
               <div className="text-xs text-muted-foreground font-mono">{stat.label}</div>
             </div>

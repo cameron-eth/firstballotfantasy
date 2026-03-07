@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -13,6 +13,29 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { ArrowUpDown, TrendingUp, TrendingDown } from 'lucide-react'
+
+// Module-level component — avoids creating a new instance every render
+function SortButton({
+  column,
+  onSort,
+  children,
+}: {
+  column: string
+  onSort: (column: string) => void
+  children: React.ReactNode
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => onSort(column)}
+      className="hover:bg-slate-700 -ml-3"
+    >
+      {children}
+      <ArrowUpDown className="ml-2 h-4 w-4" />
+    </Button>
+  )
+}
 
 interface NGSPlayer {
   player_gsis_id: string
@@ -54,11 +77,6 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 16
-
-  // Reset to page 1 when data changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [data, statType])
 
   // Calculate tier and value based on season rank
   const getPlayerRankData = (player: NGSPlayer, playerRank: number, totalPlayers: number) => {
@@ -220,18 +238,6 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
     setCurrentPage(1) // Reset to page 1 when sorting
   }
 
-  const SortButton = ({ column, children }: { column: string; children: React.ReactNode }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => handleSort(column)}
-      className="hover:bg-slate-700 -ml-3"
-    >
-      {children}
-      <ArrowUpDown className="ml-2 h-4 w-4" />
-    </Button>
-  )
-
   const getTitle = () => {
     if (statType === 'passing') return 'Quarterback Fantasy Values'
     if (statType === 'rushing') return 'Rushing Fantasy Values'
@@ -254,7 +260,7 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
               <TableRow className="bg-slate-900/50 font-mono text-slate-400">
                 <TableHead className="w-12 text-slate-400">#</TableHead>
                 <TableHead className="text-slate-400">
-                  <SortButton column="player_display_name">Player</SortButton>
+                  <SortButton onSort={handleSort} column="player_display_name">Player</SortButton>
                 </TableHead>
                 <TableHead className="w-20 text-slate-400">Pos</TableHead>
                 <TableHead className="w-20 text-slate-400">Team</TableHead>
@@ -262,28 +268,28 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
                 <TableHead className="text-center text-slate-400">Value</TableHead>
                 <TableHead className="text-center text-slate-400">Grade</TableHead>
                 <TableHead className="text-right text-slate-400">
-                  <SortButton column="fantasy_points">Total Pts</SortButton>
+                  <SortButton onSort={handleSort} column="fantasy_points">Total Pts</SortButton>
                 </TableHead>
                 <TableHead className="text-right text-slate-400">
-                  <SortButton column="fantasy_ppg">PPG</SortButton>
+                  <SortButton onSort={handleSort} column="fantasy_ppg">PPG</SortButton>
                 </TableHead>
 
                 {statType === 'passing' && (
                   <>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="pass_yards">Yards</SortButton>
+                      <SortButton onSort={handleSort} column="pass_yards">Yards</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="pass_touchdowns">TD</SortButton>
+                      <SortButton onSort={handleSort} column="pass_touchdowns">TD</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="interceptions">INT</SortButton>
+                      <SortButton onSort={handleSort} column="interceptions">INT</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="passer_rating">Rating</SortButton>
+                      <SortButton onSort={handleSort} column="passer_rating">Rating</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="completion_percentage_above_expectation">CPOE</SortButton>
+                      <SortButton onSort={handleSort} column="completion_percentage_above_expectation">CPOE</SortButton>
                     </TableHead>
                   </>
                 )}
@@ -291,16 +297,16 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
                 {statType === 'rushing' && (
                   <>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="rush_yards">Yards</SortButton>
+                      <SortButton onSort={handleSort} column="rush_yards">Yards</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="rush_touchdowns">TD</SortButton>
+                      <SortButton onSort={handleSort} column="rush_touchdowns">TD</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="rush_attempts">Att</SortButton>
+                      <SortButton onSort={handleSort} column="rush_attempts">Att</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="efficiency">Efficiency</SortButton>
+                      <SortButton onSort={handleSort} column="efficiency">Efficiency</SortButton>
                     </TableHead>
                   </>
                 )}
@@ -308,19 +314,19 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
                 {statType === 'receiving' && (
                   <>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="targets">Targets</SortButton>
+                      <SortButton onSort={handleSort} column="targets">Targets</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="receptions">Rec</SortButton>
+                      <SortButton onSort={handleSort} column="receptions">Rec</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="yards">Yards</SortButton>
+                      <SortButton onSort={handleSort} column="yards">Yards</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="rec_touchdowns">TD</SortButton>
+                      <SortButton onSort={handleSort} column="rec_touchdowns">TD</SortButton>
                     </TableHead>
                     <TableHead className="text-right text-slate-400">
-                      <SortButton column="avg_separation">Sep</SortButton>
+                      <SortButton onSort={handleSort} column="avg_separation">Sep</SortButton>
                     </TableHead>
                   </>
                 )}
@@ -510,9 +516,9 @@ export function NGSStatsTable({ data, statType, season = '2025' }: NGSStatsTable
               { grade: 'C-', min: 50, color: 'orange', desc: 'Below Avg' },
               { grade: 'D', min: 40, color: 'orange', desc: 'Poor' },
               { grade: 'F', min: 0, color: 'red', desc: 'Bench' },
-            ].map((item, index) => (
+            ].map((item) => (
               <div
-                key={index}
+                key={item.grade}
                 className={`p-2 rounded border text-center ${
                   item.color === 'yellow'
                     ? 'bg-yellow-400/10 border-yellow-400/30'

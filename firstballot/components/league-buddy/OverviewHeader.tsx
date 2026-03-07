@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
 import { Trophy, Eye, Users, Target, BarChart3 } from 'lucide-react'
-import type { TeamData, MatchupData } from './types'
+import type { MatchupData, OverviewActions, PlayerRankingsMap, TeamData } from './types'
 
 const GRADE_COLORS = {
   'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
@@ -25,13 +25,10 @@ const GRADE_COLORS = {
 interface OverviewHeaderProps {
   selectedTeam: TeamData
   sortedTeams: TeamData[]
-  playerRankings: Record<string, any>
+  playerRankings: PlayerRankingsMap
   currentMatchups: MatchupData[]
   currentWeek: number
-  onTradeMarketClick: () => void
-  onScoutingPortalClick: () => void
-  onDraftBuddyClick: () => void
-  onPlayoffOddsClick: () => void
+  actions: OverviewActions
 }
 
 export function OverviewHeader({
@@ -40,10 +37,7 @@ export function OverviewHeader({
   playerRankings,
   currentMatchups,
   currentWeek,
-  onTradeMarketClick,
-  onScoutingPortalClick,
-  onDraftBuddyClick,
-  onPlayoffOddsClick,
+  actions,
 }: OverviewHeaderProps) {
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
@@ -83,14 +77,9 @@ export function OverviewHeader({
                 </span>
                 <span className="text-slate-500">•</span>
                 <span className="text-yellow-400 font-mono text-xs">
-                  {(() => {
-                    const totalProjection = selectedTeam.players.reduce((sum, player) => {
-                      const playerRank =
-                        playerRankings[`${player.playerName}` as keyof typeof playerRankings]
-                      return sum + (playerRank?.projection || 0)
-                    }, 0)
-                    return `${totalProjection.toFixed(1)} avg`
-                  })()}
+                {`${selectedTeam.players
+                  .reduce((sum, player) => sum + (playerRankings[player.playerName]?.projection || 0), 0)
+                  .toFixed(1)} avg`}
                 </span>
               </div>
             </div>
@@ -100,28 +89,28 @@ export function OverviewHeader({
           <div className="hidden md:flex items-center space-x-2">
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onTradeMarketClick}
+              onClick={actions.onTradeMarketClick}
             >
               <Trophy className="h-4 w-4" />
               <span>Trade</span>
             </button>
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onScoutingPortalClick}
+              onClick={actions.onScoutingPortalClick}
             >
               <Eye className="h-4 w-4" />
               <span>Scout</span>
             </button>
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onDraftBuddyClick}
+              onClick={actions.onDraftBuddyClick}
             >
               <Users className="h-4 w-4" />
               <span>Draft</span>
             </button>
             <button
               className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-              onClick={onPlayoffOddsClick}
+              onClick={actions.onPlayoffOddsClick}
             >
               <BarChart3 className="h-4 w-4" />
               <span>Playoff Odds</span>
@@ -198,28 +187,28 @@ export function OverviewHeader({
         <div className="md:hidden flex items-center justify-center space-x-3 mt-3 flex-wrap gap-2">
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-            onClick={onTradeMarketClick}
+            onClick={actions.onTradeMarketClick}
           >
             <Trophy className="h-4 w-4" />
             <span>Trade</span>
           </button>
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-            onClick={onScoutingPortalClick}
+            onClick={actions.onScoutingPortalClick}
           >
             <Eye className="h-4 w-4" />
             <span>Scout</span>
           </button>
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-            onClick={onDraftBuddyClick}
+            onClick={actions.onDraftBuddyClick}
           >
             <Users className="h-4 w-4" />
             <span>Draft</span>
           </button>
           <button
             className="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-yellow-400 font-mono text-xs px-3 py-2 rounded-lg border border-slate-600 hover:border-yellow-400/50 transition-all"
-            onClick={onPlayoffOddsClick}
+            onClick={actions.onPlayoffOddsClick}
           >
             <BarChart3 className="h-4 w-4" />
             <span>Playoff Odds</span>

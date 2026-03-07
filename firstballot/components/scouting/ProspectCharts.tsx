@@ -775,7 +775,7 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
         <div className="flex justify-center gap-2 mt-3">
           {Array.from({ length: chartCount }).map((_, index) => (
             <button
-              key={index}
+              key={`slide-${index}`}
               onClick={() => api?.scrollTo(index)}
               className={`h-1.5 rounded-full transition-all ${
                 current === index ? 'w-6 bg-yellow-400' : 'w-1.5 bg-slate-600'

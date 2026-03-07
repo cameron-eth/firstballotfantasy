@@ -8,6 +8,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "lint": "next lint",
     "start": "next start",
+    "test": "node --test tests/frontend-guard.test.mjs",
     "type-check": "tsc --noEmit",
     "type-check:emit": "tsc"
   },

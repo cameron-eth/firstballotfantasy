@@ -3,6 +3,7 @@
 import type React from 'react'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Eye, TrendingUp, BarChart3, Trophy } from 'lucide-react'
@@ -43,6 +44,92 @@ interface ScoutingPortalProps {
   initialTab?: string
 }
 
+// Module-level pure function — no component state needed
+function calculatePlayerValue(rank: number, position?: string): number {
+  if (!rank || rank <= 0 || rank > 1000) return 1
+
+  let baseValue: number
+  let tierFloor: number
+  let k: number
+  let tierStart: number
+
+  if (rank <= 10) {
+    baseValue = 120; tierFloor = 88; k = 0.08; tierStart = 1
+  } else if (rank <= 30) {
+    baseValue = 88; tierFloor = 60; k = 0.05; tierStart = 11
+  } else if (rank <= 80) {
+    baseValue = 60; tierFloor = 21; k = 0.03; tierStart = 31
+  } else if (rank <= 200) {
+    baseValue = 21; tierFloor = 15; k = 0.01; tierStart = 81
+  } else {
+    return 15
+  }
+
+  let value = baseValue * Math.exp(-k * (rank - tierStart)) + tierFloor
+
+  if (position) {
+    const positionMultipliers: Record<string, number> = { QB: 1.3, RB: 0.9, WR: 1.0, TE: 1.1 }
+    value *= positionMultipliers[position] || 1.0
+  }
+
+  return Math.round(value * 100) / 100
+}
+
+async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) throw new Error('Please log in to view your roster')
+
+  const response = await fetch(`/api/league-roster?leagueId=${leagueId}`, {
+    headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(errorData.error || 'Failed to fetch your roster')
+  }
+
+  const data = await response.json()
+  const allSleeperPlayerIds = data.roster.map((p: any) => p.player_id).filter(Boolean)
+  const rosterStatsMap: Record<string, { fantasy_ppg: number; total_fantasy_points: number; games_played: number }> = {}
+
+  if (allSleeperPlayerIds.length > 0) {
+    try {
+      const statsResponse = await fetch(`/api/roster-stats?player_ids=${allSleeperPlayerIds.join(',')}`, { cache: 'no-store' })
+      if (statsResponse.ok) {
+        const result = await statsResponse.json()
+        result.data.forEach((playerStats: any) => {
+          rosterStatsMap[playerStats.sleeper_player_id] = {
+            fantasy_ppg: parseFloat(playerStats.fantasy_ppg) || 0,
+            total_fantasy_points: parseFloat(playerStats.total_fantasy_points) || 0,
+            games_played: playerStats.games_played || 0,
+          }
+        })
+      }
+    } catch (err) {
+      console.error('Failed to fetch stats:', err)
+    }
+  }
+
+  return data.roster.map((player: any) => {
+    const stats = rosterStatsMap[player.player_id] || {}
+    return {
+      id: player.player_id,
+      name: `${player.first_name} ${player.last_name}`,
+      position: player.position,
+      team: player.team,
+      age: player.age || 25,
+      experience: player.years_exp || 3,
+      value: calculatePlayerValue(player.search_rank || 100, player.position),
+      sleeper_id: player.player_id,
+      search_rank: player.search_rank,
+      fantasy_pos_rank: player.fantasy_pos_rank,
+      injury_status: player.injury_status,
+      fantasy_ppg: (stats as any).fantasy_ppg,
+      games_played: (stats as any).games_played,
+    }
+  })
+}
+
 export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const searchParams = useSearchParams()
   const urlTab = searchParams.get('tab')
@@ -51,8 +138,25 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
   const [loading, setLoading] = useState(true)
-  const [rosterLoading, setRosterLoading] = useState(true)
-  const [rosterError, setRosterError] = useState<string | null>(null)
+
+  // Fetch roster via useSWR — avoids fetch-in-effect pattern
+  const {
+    data: fetchedRoster,
+    isLoading: rosterLoading,
+    error: rosterFetchError,
+  } = useSWR<RosterPlayer[]>(
+    leagueId ? `roster:${leagueId}` : null,
+    (key: string) => fetchRosterWithStats(key.split(':')[1])
+  )
+  const rosterError: string | null = rosterFetchError?.message ?? null
+
+  // Sync roster state from SWR data when it first loads or leagueId changes
+  const [syncedRosterKey, setSyncedRosterKey] = useState<string | null>(null)
+  if (fetchedRoster && syncedRosterKey !== leagueId) {
+    setSyncedRosterKey(leagueId)
+    setRoster(fetchedRoster)
+    setOriginalRoster(fetchedRoster)
+  }
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [draftYear, setDraftYear] = useState('all')
@@ -406,66 +510,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     []
   )
 
-  // Player Valuation System (for roster players) - Hybrid Exponential-Tiered Value Curve
-  const calculatePlayerValue = useCallback((rank: number, position?: string): number => {
-    if (!rank || rank <= 0 || rank > 1000) {
-      return 1 // Unranked
-    }
-
-    // Hybrid Exponential-Tiered Value Curve
-    // Value(rank) = BaseValue(tier) × e^(-k × (rank - TierStart)) + TierFloor
-
-    let baseValue: number
-    let tierFloor: number
-    let k: number
-    let tierStart: number
-
-    // Define tiers with their parameters
-    if (rank <= 10) {
-      // Elite Tier (1-10)
-      baseValue = 120
-      tierFloor = 88
-      k = 0.08
-      tierStart = 1
-    } else if (rank <= 30) {
-      // Tier 2 (11-30)
-      baseValue = 88
-      tierFloor = 60
-      k = 0.05
-      tierStart = 11
-    } else if (rank <= 80) {
-      // Tier 3 (31-80)
-      baseValue = 60
-      tierFloor = 21
-      k = 0.03
-      tierStart = 31
-    } else if (rank <= 200) {
-      // Tier 4 (81-200)
-      baseValue = 21
-      tierFloor = 15
-      k = 0.01
-      tierStart = 81
-    } else {
-      // Depth Tier (201+)
-      return 15 // Fixed value for depth players
-    }
-
-    // Calculate value using exponential decay within tier
-    let value = baseValue * Math.exp(-k * (rank - tierStart)) + tierFloor
-
-    // Position multipliers for established players
-    if (position) {
-      const positionMultipliers: Record<string, number> = {
-        QB: 1.3, // QB premium but less than prospects
-        RB: 0.9, // RB discount but less than prospects
-        WR: 1.0, // Baseline
-        TE: 1.1, // TE premium but less than prospects
-      }
-      value *= positionMultipliers[position] || 1.0
-    }
-
-    return Math.round(value * 100) / 100
-  }, [])
 
   const getDraftPick = useCallback((prospect: Prospect): string => {
     const round = prospect.projectedRound || 'UDFA'
@@ -656,106 +700,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     }
   }, [draftBoard, savedBoard, initialBoardLoaded])
 
-  // Fetch roster from Sleeper API
-  useEffect(() => {
-    const fetchRoster = async () => {
-      if (!leagueId) return
-
-      try {
-        setRosterLoading(true)
-        setRosterError(null)
-
-        // Get authentication token
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        if (!session?.access_token) {
-          setRosterError('Please log in to view your roster')
-          return
-        }
-
-        const response = await fetch(`/api/league-roster?leagueId=${leagueId}`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-
-          // Fetch stats for all roster players using Sleeper IDs (SAME PATTERN AS LEAGUE BUDDY)
-          const allSleeperPlayerIds = data.roster.map((p: any) => p.player_id).filter(Boolean)
-          const rosterStatsMap: Record<
-            string,
-            { fantasy_ppg: number; total_fantasy_points: number; games_played: number }
-          > = {}
-
-          if (allSleeperPlayerIds.length > 0) {
-            try {
-              const playerIdsParam = allSleeperPlayerIds.join(',')
-              const statsResponse = await fetch(`/api/roster-stats?player_ids=${playerIdsParam}`, {
-                cache: 'no-store',
-              })
-
-              if (statsResponse.ok) {
-                const result = await statsResponse.json()
-                console.log('📊 Scouting Portal - Roster Stats Response:', result.count, 'players')
-
-                // Map by Sleeper player ID
-                result.data.forEach((playerStats: any) => {
-                  rosterStatsMap[playerStats.sleeper_player_id] = {
-                    fantasy_ppg: parseFloat(playerStats.fantasy_ppg) || 0,
-                    total_fantasy_points: parseFloat(playerStats.total_fantasy_points) || 0,
-                    games_played: playerStats.games_played || 0,
-                  }
-                })
-
-                console.log('✅ Loaded stats for', Object.keys(rosterStatsMap).length, 'players')
-              } else {
-                console.error('❌ Failed to fetch stats:', statsResponse.statusText)
-              }
-            } catch (err) {
-              console.error('❌ Failed to fetch stats:', err)
-            }
-          }
-
-          const rosterPlayers: RosterPlayer[] = data.roster.map((player: any) => {
-            const playerName = `${player.first_name} ${player.last_name}`
-            const stats = rosterStatsMap[player.player_id] || {}
-
-            return {
-              id: player.player_id,
-              name: playerName,
-              position: player.position,
-              team: player.team,
-              age: player.age || 25,
-              experience: player.years_exp || 3,
-              value: calculatePlayerValue(player.search_rank || 100, player.position),
-              sleeper_id: player.player_id,
-              search_rank: player.search_rank,
-              fantasy_pos_rank: player.fantasy_pos_rank,
-              injury_status: player.injury_status,
-              fantasy_ppg: stats.fantasy_ppg,
-              games_played: stats.games_played,
-            }
-          })
-          setRoster(rosterPlayers)
-          setOriginalRoster(rosterPlayers)
-        } else {
-          const errorData = await response.json()
-          setRosterError(errorData.error || 'Failed to fetch your roster')
-        }
-      } catch (error) {
-        console.error('Error fetching roster:', error)
-        setRosterError('Failed to load your roster. Please try again.')
-      } finally {
-        setRosterLoading(false)
-      }
-    }
-
-    fetchRoster()
-  }, [leagueId, calculatePlayerValue])
 
   // Fetch prospects data from Supabase
   const fetchProspects = useCallback(async () => {

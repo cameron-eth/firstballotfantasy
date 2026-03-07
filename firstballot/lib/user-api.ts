@@ -1,12 +1,35 @@
+interface UserProfileResponse {
+  id: string
+  auth_id: string
+  username: string
+  email: string
+  sleeper_username?: string | null
+  sleeper_id?: string | null
+}
+
+interface UserSettingsResponse {
+  sleeper_username?: string | null
+}
+
+interface UpdateSleeperProfileInput {
+  sleeper_username: string
+}
+
+interface CreateUserProfileInput {
+  authId: string
+  email: string
+  username: string
+}
+
 export interface IUserApi {
-  getUserProfile(): Promise<any>
-  updateUserSleeperProfile(data: any): Promise<Response>
-  addUserProfile(data: any): Promise<Response>
-  getUserSettings(): Promise<any> // Add this to the interface
+  getUserProfile(): Promise<UserProfileResponse>
+  updateUserSleeperProfile(data: UpdateSleeperProfileInput): Promise<Response>
+  addUserProfile(data: CreateUserProfileInput): Promise<Response>
+  getUserSettings(): Promise<UserSettingsResponse>
 }
 
 export class UserApi implements IUserApi {
-  public async getUserSettings() {
+  public async getUserSettings(): Promise<UserSettingsResponse> {
     const response = await fetch('/api/settings', {
       method: 'GET',
       headers: {
@@ -16,7 +39,7 @@ export class UserApi implements IUserApi {
     return response.json()
   }
 
-  public async getUserProfile() {
+  public async getUserProfile(): Promise<UserProfileResponse> {
     const response = await fetch('/api/user-profile', {
       cache: 'force-cache',
       method: 'GET',
@@ -28,7 +51,7 @@ export class UserApi implements IUserApi {
     return response.json()
   }
 
-  public async updateUserSleeperProfile(data: any) {
+  public async updateUserSleeperProfile(data: UpdateSleeperProfileInput): Promise<Response> {
     const response = await fetch('/api/user-profile', {
       method: 'PATCH',
       headers: {
@@ -40,15 +63,16 @@ export class UserApi implements IUserApi {
     })
     return response
   }
-  public async addUserProfile(data: any) {
+
+  public async addUserProfile(data: CreateUserProfileInput): Promise<Response> {
     const response = await fetch('/api/user-profile', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        authId: data.user.id,
-        email: data.user.email,
+        authId: data.authId,
+        email: data.email,
         username: data.username,
       }),
     })

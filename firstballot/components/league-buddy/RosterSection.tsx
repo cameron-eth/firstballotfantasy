@@ -85,9 +85,9 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                 .filter((p) => p.fantasy_ppg && p.fantasy_ppg > 8)
                 .sort((a, b) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
                 .slice(0, 3)
-                .map((player, idx) => (
+                .map((player) => (
                   <div
-                    key={idx}
+                    key={`efficient-${player.playerName}-${player.team}`}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -137,9 +137,9 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                 .filter((p) => p.rank >= 50 && p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg > 5)
                 .sort((a, b) => (b.fantasy_ppg || 0) - (a.fantasy_ppg || 0))
                 .slice(0, 3)
-                .map((player, idx) => (
+                .map((player) => (
                   <div
-                    key={idx}
+                    key={`trade-${player.playerName}-${player.team}`}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -185,9 +185,9 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                 .filter((p) => p.age && p.age <= 24 && p.rank <= 150)
                 .sort((a, b) => (a.rank || 999) - (b.rank || 999))
                 .slice(0, 3)
-                .map((player, idx) => (
+                .map((player) => (
                   <div
-                    key={idx}
+                    key={`breakout-${player.playerName}-${player.team}`}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -230,9 +230,9 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                 .filter((p) => p.rank <= 100 && p.fantasy_ppg && p.fantasy_ppg < 8)
                 .sort((a, b) => (a.fantasy_ppg || 0) - (b.fantasy_ppg || 0))
                 .slice(0, 3)
-                .map((player, idx) => (
+                .map((player) => (
                   <div
-                    key={idx}
+                    key={`underperform-${player.playerName}-${player.team}`}
                     className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg hover:bg-slate-800/80 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -274,9 +274,9 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h3 className="text-green-400 font-mono text-lg mb-4">FULL ROSTER</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {selectedTeam.players.map((player, index) => (
+          {selectedTeam.players.map((player) => (
             <Card
-              key={index}
+              key={`roster-${player.playerName}-${player.team}`}
               className="p-3 bg-slate-700 border-slate-600 hover:border-green-400/50 transition-colors"
             >
               <div className="flex items-center space-x-3 mb-3">

@@ -104,16 +104,9 @@ function BillingSimpleContent() {
           throw new Error('No valid session')
         }
 
-        const response = await userApi.getUserProfile()
-
-        if (response.ok) {
-          const data = await response.json()
-          // Use sleeper_username if available, otherwise fallback to email
-          setUserEmail(data.sleeper_username || data.email || user.email || '')
-        } else {
-          // Fallback to auth user email
-          setUserEmail(user.email || '')
-        }
+        const profile = await userApi.getUserProfile()
+        // Use sleeper_username if available, otherwise fallback to email
+        setUserEmail(profile.sleeper_username || profile.email || user.email || '')
       } catch (error) {
         console.error('Error fetching user profile:', error)
         // Fallback to auth user email

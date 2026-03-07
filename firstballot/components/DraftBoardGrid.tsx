@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import useSWR from 'swr'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { RefreshCw, Clock, Maximize2, Minimize2, Sparkles } from 'lucide-react'
@@ -24,8 +25,18 @@ export function DraftBoardGrid({
   lastRefresh,
 }: DraftBoardGridProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [rankings, setRankings] = useState<any[]>([])
-  const [rankingsLoading, setRankingsLoading] = useState(true)
+  const { data: rankingsResult, isLoading: rankingsLoading } = useSWR(
+    '/api/rankings',
+    (url) =>
+      fetch(url, { cache: 'force-cache', next: { revalidate: 3600 } } as RequestInit).then((r) =>
+        r.json()
+      )
+  )
+  const rankings: any[] = Array.isArray(rankingsResult?.data)
+    ? rankingsResult.data
+    : Array.isArray(rankingsResult)
+      ? rankingsResult
+      : []
   const [highlightUser, setHighlightUser] = useState(false)
   const [highlightTeam, setHighlightTeam] = useState<number | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -93,7 +104,7 @@ export function DraftBoardGrid({
       .then((profile) => {
         const sleeperUser = cacheUtils.get(cacheUtils.keys.SLEEPER_USER)
         if (profile?.sleeper_username || sleeperUser.user_id) {
-          setUserId(profile.sleeper_id)
+          setUserId(profile.sleeper_id ?? null)
           // Find the roster for this user
           const userPick = picks.find(
             (p) => p.picked_by === (profile.sleeper_id ?? sleeperUser.user_id)
@@ -110,33 +121,6 @@ export function DraftBoardGrid({
       })
   }, [picks])
 
-  useEffect(() => {
-    const fetchRankings = async () => {
-      try {
-        const response = await fetch('/api/rankings', {
-          cache: 'force-cache',
-          next: { revalidate: 3600 }, // 1 hour
-        })
-        if (response.ok) {
-          const result = await response.json()
-          // API returns { data: [...], rankingsMap: {...} }
-          // Extract the data array if it exists, otherwise use the result directly if it's an array
-          const rankingsData = Array.isArray(result?.data)
-            ? result.data
-            : Array.isArray(result)
-              ? result
-              : []
-          setRankings(rankingsData)
-        }
-      } catch (e) {
-        console.error('Error fetching rankings:', e)
-        setRankings([])
-      } finally {
-        setRankingsLoading(false)
-      }
-    }
-    fetchRankings()
-  }, [])
 
   // Memoized event handlers
   const toggleExpand = useCallback(() => setIsExpanded(!isExpanded), [isExpanded])

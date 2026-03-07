@@ -4,13 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Trophy, Zap, Calendar, Target, Eye, ChevronDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -28,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { UserAvatar } from '@/components/user-avatar'
 import { useRouter } from 'next/navigation'
 import { leagueCache } from '@/lib/league-cache'
+import type { LeagueOverview, LeagueSection, TeamData } from './types'
 
 const GRADE_COLORS = {
   S: 'text-purple-400 border-purple-400',
@@ -47,23 +41,17 @@ const GRADE_COLORS = {
 }
 
 interface LeagueBuddySidebarProps {
-  selectedTeam: any
-  sortedTeams: any[]
-  leagues: any[]
-  leagueId: string
-  onLeagueChange?: (leagueId: string) => void
-  activeSection: 'overview' | 'roster' | 'league'
-  setActiveSection: (section: 'overview' | 'roster' | 'league') => void
+  selectedTeam: TeamData | null
+  sortedTeams: TeamData[]
+  activeSection: LeagueSection
+  setActiveSection: (section: LeagueSection) => void
   currentWeek: number
-  leagueOverview: any
+  leagueOverview: LeagueOverview | null
 }
 
 export function LeagueBuddySidebar({
   selectedTeam,
   sortedTeams,
-  leagues,
-  leagueId,
-  onLeagueChange,
   activeSection,
   setActiveSection,
   currentWeek,

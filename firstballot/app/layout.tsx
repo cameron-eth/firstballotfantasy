@@ -19,8 +19,11 @@ const spaceGrotesk = Space_Grotesk({
 })
 
 export const metadata: Metadata = {
-  title: 'FIRST BALLOT FANTASY',
-  description: 'Advanced Fantasy Football Analytics • 2015-2024',
+  title: {
+    default: 'First Ballot Fantasy',
+    template: '%s | First Ballot Fantasy',
+  },
+  description: 'Advanced dynasty fantasy football analytics — trade tools, prospect scouting, player rankings, and league intelligence.',
   generator: 'v0.dev',
 }
 

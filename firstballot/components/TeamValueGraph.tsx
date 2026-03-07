@@ -50,6 +50,68 @@ interface TeamValueGraphProps {
   dynastyRankings: Record<string, any>
 }
 
+// Module-level helpers — pure functions, no component state needed
+function getPlayerValueFromRankings(player: any, rankings: Record<string, any>) {
+  const ranking = rankings[player.full_name] || rankings[player.name]
+
+  if (ranking) {
+    const valuationData: PlayerValuationData | undefined = ranking.total_score
+      ? {
+          total_score: ranking.total_score,
+          tier: ranking.tier_name || ranking.tier,
+          player_name: ranking.name,
+          position: ranking.position,
+        }
+      : undefined
+
+    const valueResult = getPlayerValue(valuationData, player.fantasy_ppg, player.games_played)
+
+    return {
+      totalValue: valueResult.value,
+      valueWithPpg: valueResult.valueWithPpg || valueResult.value,
+    }
+  }
+
+  // Unranked players: 3-15 points based on recent performance
+  let unrankedValue = 8
+  if (player.fantasy_ppg && player.games_played >= 3) {
+    const ppg = player.fantasy_ppg
+    if (ppg >= 15) unrankedValue = 15
+    else if (ppg >= 12) unrankedValue = 12
+    else if (ppg >= 9) unrankedValue = 10
+    else if (ppg >= 6) unrankedValue = 7
+    else if (ppg >= 3) unrankedValue = 5
+    else unrankedValue = 3
+  }
+
+  return { totalValue: unrankedValue, valueWithPpg: unrankedValue }
+}
+
+function getDraftPickValue(pick: any) {
+  const round = pick.round || 1
+  const season = pick.season || new Date().getFullYear()
+  const currentYear = new Date().getFullYear()
+  const yearsOut = season - currentYear
+
+  let baseValue: number
+  if (round === 1) baseValue = 55
+  else if (round === 2) baseValue = 25
+  else if (round === 3) baseValue = 15
+  else if (round === 4) baseValue = 8
+  else baseValue = Math.max(3, 8 - (round - 4))
+
+  if (season === 2027) {
+    if (round === 1) baseValue *= 1.25
+    else if (round === 2) baseValue *= 1.35
+    else if (round === 3) baseValue *= 1.3
+    else baseValue *= 1.25
+  }
+
+  if (yearsOut > 0) baseValue *= Math.pow(0.85, yearsOut)
+
+  return Math.round(baseValue)
+}
+
 export function TeamValueGraph({
   teams,
   transactions,
@@ -59,111 +121,7 @@ export function TeamValueGraph({
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set())
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null)
 
-  // Early return if no teams
-  if (!teams || teams.length === 0) {
-    return (
-      <div className="space-y-6">
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-yellow-400 font-mono flex items-center">
-              <Activity className="h-5 w-5 mr-2" />
-              TEAM VALUE TRENDS
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <Activity className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">Loading team data...</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Helper function to get player value using unified FirstBallotModel valuation system
-  const getPlayerValueFromRankings = (player: any, rankings: Record<string, any>) => {
-    const ranking = rankings[player.full_name] || rankings[player.name]
-
-    if (ranking) {
-      // Use new valuation system with total_score if available
-      const valuationData: PlayerValuationData | undefined = ranking.total_score
-        ? {
-            total_score: ranking.total_score,
-            tier: ranking.tier_name || ranking.tier,
-            player_name: ranking.name,
-            position: ranking.position,
-          }
-        : undefined
-
-      const valueResult = getPlayerValue(valuationData, player.fantasy_ppg, player.games_played)
-
-      return {
-        totalValue: valueResult.value,
-        valueWithPpg: valueResult.valueWithPpg || valueResult.value,
-      }
-    }
-
-    // Unranked players: 3-15 points based on recent performance
-    let unrankedValue = 8 // Default middle value
-    if (player.fantasy_ppg && player.games_played >= 3) {
-      // Scale 3-15 based on PPG (assuming 5-25 PPG range)
-      const ppg = player.fantasy_ppg
-      if (ppg >= 15) unrankedValue = 15
-      else if (ppg >= 12) unrankedValue = 12
-      else if (ppg >= 9) unrankedValue = 10
-      else if (ppg >= 6) unrankedValue = 7
-      else if (ppg >= 3) unrankedValue = 5
-      else unrankedValue = 3
-    }
-
-    return {
-      totalValue: unrankedValue,
-      valueWithPpg: unrankedValue,
-    }
-  }
-
-  // Helper function to get draft pick value
-  const getDraftPickValue = (pick: any) => {
-    const round = pick.round || 1
-    const season = pick.season || new Date().getFullYear()
-    const currentYear = new Date().getFullYear()
-    const yearsOut = season - currentYear
-
-    // Base values
-    let baseValue: number
-    if (round === 1) {
-      baseValue = 55
-    } else if (round === 2) {
-      baseValue = 25
-    } else if (round === 3) {
-      baseValue = 15
-    } else if (round === 4) {
-      baseValue = 8
-    } else {
-      baseValue = Math.max(3, 8 - (round - 4)) // 4th+ rounds: 8-3 points
-    }
-
-    // 2027 Class Bonus
-    if (season === 2027) {
-      if (round === 1)
-        baseValue *= 1.25 // +25%
-      else if (round === 2)
-        baseValue *= 1.35 // +35%
-      else if (round === 3)
-        baseValue *= 1.3 // +30%
-      else baseValue *= 1.25 // +25% for 4th+
-    }
-
-    // Future picks discounted 15% per year
-    if (yearsOut > 0) {
-      baseValue *= Math.pow(0.85, yearsOut)
-    }
-
-    return Math.round(baseValue)
-  }
-
-  // Calculate team value changes from transactions
+  // Calculate team value changes from transactions — must be before any early returns (Rules of Hooks)
   const teamValueData = useMemo(() => {
     if (!teams.length || !transactions.length) return []
 
@@ -402,6 +360,28 @@ export function TeamValueGraph({
     return teamHistory.sort((a, b) => a.currentRank - b.currentRank)
   }, [teams, transactions, allPlayers, dynastyRankings])
 
+  // Early return after all hooks
+  if (!teams || teams.length === 0) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-yellow-400 font-mono flex items-center">
+              <Activity className="h-5 w-5 mr-2" />
+              TEAM VALUE TRENDS
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-12">
+              <Activity className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">Loading team data...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const toggleTeam = (teamId: string) => {
     const newSelected = new Set(selectedTeams)
     if (newSelected.has(teamId)) {
@@ -521,8 +501,8 @@ export function TeamValueGraph({
                         <>
                           {/* Y-axis labels and grid lines */}
                           <div className="absolute left-0 top-0 bottom-10 w-16 flex flex-col justify-between">
-                            {yAxisLabels.map((value, i) => (
-                              <div key={i} className="relative">
+                            {yAxisLabels.map((value) => (
+                              <div key={value} className="relative">
                                 <span className="absolute right-2 -translate-y-1/2 text-xs text-slate-400 font-mono font-semibold">
                                   {Math.round(value)}
                                 </span>
@@ -533,18 +513,18 @@ export function TeamValueGraph({
                           {/* Horizontal grid lines */}
                           <div className="absolute left-16 right-0 top-0 bottom-10">
                             <div className="relative w-full h-full">
-                              {[0, 33, 66, 100].map((percent, i) => (
+                              {[0, 33, 66, 100].map((percent) => (
                                 <div
-                                  key={i}
+                                  key={percent}
                                   className="absolute w-full border-t border-slate-700/40"
                                   style={{ top: `${percent}%` }}
                                 />
                               ))}
 
                               {/* Vertical grid lines for months */}
-                              {teamValueData[0].valueHistory.map((_, idx) => (
+                              {teamValueData[0].valueHistory.map((point, idx) => (
                                 <div
-                                  key={idx}
+                                  key={point.monthLabel || `month-${point.month}-${idx}`}
                                   className="absolute h-full border-l border-slate-700/20"
                                   style={{
                                     left: `${(idx / (teamValueData[0].valueHistory.length - 1)) * 100}%`,
@@ -623,9 +603,9 @@ export function TeamValueGraph({
                                     />
 
                                     {/* Data points */}
-                                    {points.map((point, idx) => (
+                                    {points.map((point) => (
                                       <circle
-                                        key={idx}
+                                        key={`${point.x}-${point.y}`}
                                         cx={point.x}
                                         cy={point.y}
                                         r={isHovered ? '3' : '2'}
@@ -646,8 +626,8 @@ export function TeamValueGraph({
                           {/* X-axis labels (months) */}
                           {teamValueData.length > 0 && teamValueData[0].valueHistory.length > 0 && (
                             <div className="absolute left-16 right-0 bottom-0 h-10 flex items-center justify-between">
-                              {teamValueData[0].valueHistory.map((point: any, idx: number) => (
-                                <div key={idx} className="flex-1 text-center">
+                              {teamValueData[0].valueHistory.map((point: any) => (
+                                <div key={point.monthLabel || `month-${point.month}`} className="flex-1 text-center">
                                   <span className="text-xs font-semibold text-slate-400 font-mono">
                                     {point.monthLabel || `M${point.month}`}
                                   </span>
@@ -1074,9 +1054,9 @@ export function TeamValueGraph({
                                 </div>
                                 <div className="space-y-1.5">
                                   {trade.playersAdded.map(
-                                    (player: { name: string; value: number }, idx: number) => (
+                                    (player: { name: string; value: number }) => (
                                       <div
-                                        key={idx}
+                                        key={player.name}
                                         className="flex items-center justify-between p-2 bg-green-400/5 rounded border border-green-400/20"
                                       >
                                         <span className="text-slate-200 text-sm">
@@ -1100,9 +1080,9 @@ export function TeamValueGraph({
                                 </div>
                                 <div className="space-y-1.5">
                                   {trade.playersDropped.map(
-                                    (player: { name: string; value: number }, idx: number) => (
+                                    (player: { name: string; value: number }) => (
                                       <div
-                                        key={idx}
+                                        key={player.name}
                                         className="flex items-center justify-between p-2 bg-red-400/5 rounded border border-red-400/20"
                                       >
                                         <span className="text-slate-200 text-sm">

@@ -75,9 +75,9 @@ export function ComparisonBadges({ comparisons, maxDisplay, size = 'sm' }: Compa
 
   return (
     <div className="flex flex-wrap gap-1 overflow-hidden">
-      {parsed.map((comp, idx) => (
+      {parsed.map((comp) => (
         <Badge
-          key={idx}
+          key={comp.name}
           variant="outline"
           className="bg-slate-600/30 text-slate-300 border-slate-500/40 hover:border-slate-400/60 hover:bg-slate-600/50 transition-all max-w-full"
         >
@@ -100,7 +100,7 @@ export function ComparisonList({ comparisons }: { comparisons: string | null }) 
     <div className="space-y-2">
       {parsed.map((comp, idx) => (
         <div
-          key={idx}
+          key={`${comp.name}-${idx}`}
           className="flex items-center justify-between p-2.5 rounded-lg border bg-slate-700/50 border-slate-600/50 hover:border-slate-500/70 transition-all"
         >
           <span className="text-white font-semibold">{comp.name}</span>

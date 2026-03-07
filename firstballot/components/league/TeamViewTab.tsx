@@ -80,9 +80,9 @@ export const TeamViewTab = memo(function TeamViewTab({ userTeam, currentWeek }: 
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {userTeam.players.map((player: PlayerData, index: number) => (
+            {userTeam.players.map((player: PlayerData) => (
               <Card
-                key={index}
+                key={player.playerId}
                 className="bg-card border-border hover:border-foreground/50 transition-colors"
               >
                 <CardContent className="p-4">

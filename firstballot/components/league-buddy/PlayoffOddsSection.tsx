@@ -572,7 +572,7 @@ export function PlayoffOddsSection({
                               <div className="flex flex-wrap gap-1.5">
                                 {path.details.slice(0, 2).map((detail, i) => (
                                   <span
-                                    key={i}
+                                    key={`${detail}-${i}`}
                                     className="text-[10px] text-slate-400 bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-700/50"
                                   >
                                     {detail}

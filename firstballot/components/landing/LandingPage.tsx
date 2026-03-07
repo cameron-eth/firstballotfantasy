@@ -162,63 +162,99 @@ function ClockDisplay() {
   )
 }
 
-// ── LiveTicker — memoized, only re-renders when player data changes ──
-const LiveTicker = memo(function LiveTicker({ players }: { players: HeroPlayer[] }) {
-  // Pre-duplicate once
+// ── Ticker Row — single scrolling line ──
+function TickerRow({
+  players,
+  direction,
+  speed,
+}: {
+  players: HeroPlayer[]
+  direction: 'left' | 'right'
+  speed: number
+}) {
   const doubled = useMemo(() => [...players, ...players], [players])
+  const trackClass = direction === 'left' ? 'ticker-row-left' : 'ticker-row-right'
 
   return (
-    <div className="relative overflow-hidden border-y border-primary/20 bg-black/50 backdrop-blur">
-      <div className="flex items-center">
-        <div className="flex-shrink-0 px-4 py-2 bg-primary/20 border-r border-primary/30">
-          <span className="font-mono text-xs text-primary font-bold flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+    <div className="overflow-hidden">
+      <div className={cn(trackClass, 'flex gap-6 py-1.5 px-4')} style={{ animationDuration: `${speed}s` }}>
+        {doubled.map((player, i) => {
+          const hasOverUnder = Number.isFinite(player.overUnderPct)
+          const change = hasOverUnder ? Number(player.overUnderPct) : null
+          const displayValue = hasOverUnder
+            ? `${change! >= 0 ? '+' : ''}${change!.toFixed(1)}%`
+            : `${player.grade.toFixed(1)} GRD`
+          const isPositive = hasOverUnder ? change! >= 0 : player.grade >= 82
+          return (
+            <Link
+              key={`ticker-${direction}-${player.name}-${i}`}
+              href="/prospect-board"
+              className="flex items-center gap-2 flex-shrink-0 hover:bg-primary/10 rounded px-2 py-0.5 transition-colors cursor-pointer"
+            >
+              <span className="font-mono text-xs text-foreground font-semibold max-w-[140px] truncate">
+                {player.name}
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground">{player.position}</span>
+              <span
+                className={cn(
+                  'font-mono text-xs font-bold',
+                  isPositive ? 'text-emerald-400' : 'text-red-400'
+                )}
+              >
+                {displayValue}
+              </span>
+              {isPositive ? (
+                <TrendingUp className="w-3 h-3 text-emerald-400" />
+              ) : (
+                <TrendingDown className="w-3 h-3 text-red-400" />
+              )}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── LiveTicker — 2-line ticker, memoized ──
+const LiveTicker = memo(function LiveTicker({ players }: { players: HeroPlayer[] }) {
+  const mid = Math.ceil(players.length / 2)
+  const row1 = useMemo(() => players.slice(0, mid), [players, mid])
+  const row2 = useMemo(() => players.slice(mid), [players, mid])
+
+  return (
+    <div className="relative border-y border-primary/20 bg-black/50 backdrop-blur">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes ticker-left {
+              from { transform: translateX(0); }
+              to   { transform: translateX(-50%); }
+            }
+            @keyframes ticker-right {
+              from { transform: translateX(-50%); }
+              to   { transform: translateX(0); }
+            }
+            .ticker-row-left {
+              animation: ticker-left var(--duration, 90s) linear infinite;
+            }
+            .ticker-row-right {
+              animation: ticker-right var(--duration, 100s) linear infinite;
+            }
+          `,
+        }}
+      />
+      <div className="flex items-stretch">
+        <div className="flex-shrink-0 px-3 py-2 bg-primary/20 border-r border-primary/30 flex items-center">
+          <span className="font-mono text-[10px] text-primary font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             LIVE
           </span>
         </div>
-        <div className="ticker-track flex gap-8 py-2 px-4">
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
-                @keyframes ticker-scroll {
-                  from { transform: translateX(0); }
-                  to   { transform: translateX(-50%); }
-                }
-                .ticker-track {
-                  animation: ticker-scroll 45s linear infinite;
-                }
-              `,
-            }}
-          />
-          {doubled.map((player, i) => {
-            const hasOverUnder = Number.isFinite(player.overUnderPct)
-            const change = hasOverUnder ? Number(player.overUnderPct) : null
-            const displayValue = hasOverUnder
-              ? `${change! >= 0 ? '+' : ''}${change!.toFixed(1)}%`
-              : `${player.grade.toFixed(1)} GRD`
-            const isPositive = hasOverUnder ? change! >= 0 : player.grade >= 82
-            return (
-              <div key={`ticker-${player.name}-${i}`} className="flex items-center gap-3 flex-shrink-0">
-                <span className="font-mono text-sm text-foreground font-semibold max-w-[150px] truncate">
-                  {player.name}
-                </span>
-                <span className="font-mono text-xs text-muted-foreground">{player.position}</span>
-                <span
-                  className={cn(
-                    'font-mono text-sm font-bold',
-                    isPositive ? 'text-emerald-400' : 'text-red-400'
-                  )}
-                >
-                  {displayValue}
-                </span>
-                {isPositive ? (
-                  <TrendingUp className="w-3 h-3 text-emerald-400" />
-                ) : (
-                  <TrendingDown className="w-3 h-3 text-red-400" />
-                )}
-              </div>
-            )
-          })}
+        <div className="flex-1 min-w-0">
+          <TickerRow players={row1} direction="left" speed={90} />
+          <div className="border-t border-primary/10" />
+          <TickerRow players={row2} direction="right" speed={100} />
         </div>
       </div>
     </div>
@@ -469,11 +505,11 @@ export function LandingPage() {
   }, [prospects])
 
   const topAllTime = useMemo(() => {
-    // Top 3 per class, then sorted by grade
+    // Top 5 per class, then sorted by grade
     const byYear = new Map<number, HeroPlayer[]>()
     for (const p of [...allPlayers].sort((a, b) => b.grade - a.grade)) {
       const arr = byYear.get(p.year) || []
-      if (arr.length < 3) {
+      if (arr.length < 5) {
         arr.push(p)
         byYear.set(p.year, arr)
       }
@@ -607,7 +643,7 @@ export function LandingPage() {
                 </div>
 
                 <div className="p-3">
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {topAllTime.map((player, i) => (
                       <AllTimePlayerCard
                         key={`${player.name}-${player.year}-${i}`}
@@ -621,7 +657,7 @@ export function LandingPage() {
 
                 <div className="px-4 py-2 border-t border-primary/20 bg-primary/5">
                   <div className="font-mono text-[10px] text-muted-foreground flex items-center gap-2">
-                    <span className="text-emerald-400">$</span> sorted by grade desc // top 3 per class // all positions
+                    <span className="text-emerald-400">$</span> sorted by grade desc // top 5 per class // all positions
                   </div>
                 </div>
               </div>

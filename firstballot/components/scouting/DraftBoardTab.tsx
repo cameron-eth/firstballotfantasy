@@ -593,38 +593,24 @@ export function DraftBoardTab({
     <main className="min-h-[70vh] bg-background">
       <div className="w-full px-4 sm:px-5 lg:px-6 pt-4 pb-2">
         <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-[0_16px_40px_-28px_rgba(0,0,0,0.9)]">
-          <div className="w-full px-5 sm:px-6 lg:px-7 py-6 space-y-5">
-            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
-              <div className="space-y-2">
-                <h1 className="text-4xl sm:text-5xl font-mono font-bold text-foreground leading-none">
+          <div className="w-full px-5 sm:px-6 lg:px-7 py-5 space-y-3">
+            {/* Row 1 — Title + Contrarian + Save */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <h1 className="text-3xl sm:text-4xl font-mono font-bold text-foreground leading-none tracking-tight">
                   Big Board
                 </h1>
-                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 w-fit">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Contrarian</span>
-                  <div className="text-lg sm:text-xl leading-none font-mono font-bold text-primary">
+                <div className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Contrarian</span>
+                  <span className="text-lg leading-none font-mono font-bold text-primary">
                     {contrarianScore}
-                  </div>
-                  <div className={cn('text-xs font-medium', contrarianLabel.color)}>
+                  </span>
+                  <span className={cn('text-[10px] font-semibold', contrarianLabel.color)}>
                     {contrarianLabel.label}
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                    Current Class: {currentDraftYear}
                   </span>
-                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                    On Board: {draftBoard.length}
-                  </span>
-                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                    Available: {offBoardProspects.length}
-                  </span>
-                  <span className="px-3 py-1.5 rounded border border-border bg-background/60 text-xs font-medium text-muted-foreground">
-                    Avg Grade: {boardStats.avgGrade.toFixed(1)}
-            </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap xl:justify-end">
               {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
                 <DraftBoardControls
                   hasSavedBoard={hasSavedBoard}
@@ -633,35 +619,54 @@ export function DraftBoardTab({
                   onSave={onSaveBoard}
                 />
               )}
+            </div>
 
+            {/* Contrarian badge — mobile only */}
+            <div className="flex sm:hidden items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 w-fit">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Contrarian</span>
+              <span className="text-lg leading-none font-mono font-bold text-primary">{contrarianScore}</span>
+              <span className={cn('text-[10px] font-semibold', contrarianLabel.color)}>{contrarianLabel.label}</span>
+            </div>
+
+            {/* Row 2 — Stats + Position Filters */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
+                <span className="text-foreground font-semibold">{currentDraftYear}</span>
+                <span className="w-px h-3.5 bg-border" />
+                <span><span className="text-foreground font-semibold">{draftBoard.length}</span> on board</span>
+                <span className="w-px h-3.5 bg-border" />
+                <span><span className="text-foreground font-semibold">{offBoardProspects.length}</span> available</span>
+                <span className="w-px h-3.5 bg-border" />
+                <span>avg <span className="text-foreground font-semibold">{boardStats.avgGrade.toFixed(1)}</span></span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                {positionTabs.map((pos) => (
+                  <button
+                    key={pos}
+                    onClick={() => setPosition(pos)}
+                    className={cn(
+                      'h-8 px-3 text-xs font-semibold rounded-md transition-colors',
+                      position === pos
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    )}
+                  >
+                    {pos}
+                  </button>
+                ))}
+                <span className="w-px h-5 bg-border mx-1" />
+                <button
+                  onClick={addTopAvailable}
+                  className="h-8 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors"
+                >
+                  Add Next
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-2 flex-wrap">
-              {positionTabs.map((pos) => (
-                <button
-                  key={pos}
-                  onClick={() => setPosition(pos)}
-                  className={cn(
-                    'h-9 sm:h-11 px-3 sm:px-5 text-sm sm:text-base font-medium rounded-lg transition-colors',
-                    position === pos
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {pos}
-                </button>
-              ))}
-              <button
-                onClick={addTopAvailable}
-                className="h-9 sm:h-11 px-3 sm:px-5 text-sm sm:text-base font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-              >
-                Add Next
-              </button>
-            </div>
           </div>
-                  </div>
-                  </div>
+        </div>
+      </div>
 
       <div className="w-full px-4 sm:px-5 lg:px-6 py-5">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">

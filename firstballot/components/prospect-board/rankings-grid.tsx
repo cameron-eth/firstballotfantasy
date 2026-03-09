@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Player, Position, fetchAllProspects } from '@/lib/players'
 import { PlayerCard } from './player-card'
 import { SkeletonGrid } from './player-skeleton'
@@ -10,10 +9,10 @@ import { cn } from '@/lib/utils'
 type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot'
 
 const positions: { key: Position; label: string }[] = [
-  { key: 'QB', label: 'Quarterbacks' },
-  { key: 'RB', label: 'Running Backs' },
-  { key: 'WR', label: 'Wide Receivers' },
-  { key: 'TE', label: 'Tight Ends' },
+  { key: 'QB', label: 'QB' },
+  { key: 'RB', label: 'RB' },
+  { key: 'WR', label: 'WR' },
+  { key: 'TE', label: 'TE' },
 ]
 
 export function RankingsGrid() {
@@ -32,7 +31,6 @@ export function RankingsGrid() {
   const [isLoading, setIsLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  // Load all prospects once on mount
   useEffect(() => {
     fetchAllProspects()
       .then((data) => {
@@ -53,7 +51,6 @@ export function RankingsGrid() {
       setFilter('all')
       setSortBy('rank')
     })
-    // Brief loading state for visual feedback
     setTimeout(() => setIsLoading(false), 400)
   }
 
@@ -67,7 +64,6 @@ export function RankingsGrid() {
     .filter((p) => filter === 'all' || p.tier === filter)
     .sort((a, b) => {
       if (sortBy === 'rank') {
-        // Requested ordering: highest grade first, then position rank as tie-breaker.
         if (b.grade !== a.grade) return b.grade - a.grade
         return a.rank - b.rank
       }
@@ -81,7 +77,6 @@ export function RankingsGrid() {
     })
     .map((player) => ({
       ...player,
-      // Always show positional rank badge from API (e.g., RB3, WR1).
       rank: player.rank,
     }))
 
@@ -112,102 +107,106 @@ export function RankingsGrid() {
 
   return (
     <div>
-      <div className="sticky top-16 z-20 -mx-2 -mt-2 px-2 pt-4 pb-2 mb-2 liquid-glass rounded-xl">
-        {/* Position Tabs */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
+      {/* ── Sticky toolbar — flat, single container ── */}
+      <div className="sticky top-16 z-20 -mx-2 -mt-2 px-4 pt-4 pb-3 mb-2 liquid-glass rounded-xl space-y-2.5">
+        {/* Row 1: Position + Draft Class */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          <div className="flex items-center gap-1.5">
             {positions.map((pos) => (
-              <motion.button
+              <button
                 key={pos.key}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
                 onClick={() => handlePositionChange(pos.key)}
                 className={cn(
-                  'px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-lg transition-all duration-200',
+                  'h-8 px-4 text-xs font-bold uppercase tracking-wide rounded-md transition-colors',
                   position === pos.key
-                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
                 )}
               >
-                <span className="mr-2">{pos.key}</span>
-                <span className="hidden sm:inline opacity-70">{pos.label}</span>
-              </motion.button>
+                {pos.label}
+              </button>
             ))}
           </div>
-        </div>
 
-        {/* Year Filter */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-muted-foreground uppercase tracking-wider">
-              Draft Class
+          <span className="hidden sm:block w-px h-5 bg-border" />
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mr-0.5">
+              Class
             </span>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => setSelectedYear('all')}
               className={cn(
-                'px-3 py-1.5 text-xs font-mono rounded transition-all',
+                'h-7 px-2.5 text-[11px] font-mono rounded transition-colors',
                 selectedYear === 'all'
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
               )}
             >
               ALL
-            </motion.button>
+            </button>
             {years.map((year) => (
-              <motion.button
+              <button
                 key={year}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
                 onClick={() => setSelectedYear(year)}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-mono rounded transition-all',
+                  'h-7 px-2.5 text-[11px] font-mono rounded transition-colors',
                   selectedYear === year
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                    : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
                 )}
               >
                 {year}
-              </motion.button>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Controls */}
-        <motion.div
-          layout
-          className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-secondary/30 rounded-lg border border-border"
-        >
-          {/* Tier Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground mr-2 uppercase tracking-wider">
+        {/* Row 2: Tier + Sort — flat, no inner card */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mr-0.5">
               Tier
             </span>
             {availableTiers.map((tier) => (
-              <FilterButton
+              <button
                 key={tier}
-                active={filter === tier}
                 onClick={() => setFilter(tier)}
-                count={tierCounts[tier]}
+                className={cn(
+                  'h-7 px-2.5 text-[11px] font-medium rounded transition-colors',
+                  filter === tier
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
               >
                 {tier === 'all' ? 'All' : tier}
-              </FilterButton>
+                <span className={cn('ml-1 text-[9px]', filter === tier ? 'opacity-80' : 'opacity-50')}>
+                  ({tierCounts[tier]})
+                </span>
+              </button>
             ))}
           </div>
 
-          {/* Sort Options */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground mr-2 uppercase tracking-wider">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mr-0.5">
               Sort
             </span>
             {(['rank', 'grade', 'physical', 'production'] as const).map((sort) => (
-              <SortButton key={sort} active={sortBy === sort} onClick={() => setSortBy(sort)}>
+              <button
+                key={sort}
+                onClick={() => setSortBy(sort)}
+                className={cn(
+                  'h-7 px-2 text-[11px] font-mono rounded transition-colors',
+                  sortBy === sort
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
                 {sort === 'physical' ? 'PHYS' : sort === 'production' ? 'PROD' : sort.toUpperCase()}
-              </SortButton>
+              </button>
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {!isLoading && (
@@ -219,33 +218,16 @@ export function RankingsGrid() {
         </div>
       )}
 
-      {/* Grid with Loading State */}
-      <AnimatePresence mode="wait">
-        {isLoading || isPending ? (
-          <motion.div
-            key="skeleton"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <SkeletonGrid count={20} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key={`${position}-${selectedYear}-${filter}-${sortBy}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
-          >
-            {visiblePlayers.map((player, index) => (
-              <PlayerCard key={player.id} player={player} index={index} />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Grid */}
+      {isLoading || isPending ? (
+        <SkeletonGrid count={20} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+          {visiblePlayers.map((player, index) => (
+            <PlayerCard key={player.id} player={player} index={index} />
+          ))}
+        </div>
+      )}
 
       {!isLoading && visiblePlayers.length < filteredPlayers.length && (
         <div className="mt-6 flex justify-center">
@@ -259,69 +241,10 @@ export function RankingsGrid() {
       )}
 
       {!isLoading && filteredPlayers.length === 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+        <div className="text-center py-12">
           <p className="text-muted-foreground">No players match your criteria</p>
-        </motion.div>
+        </div>
       )}
     </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function FilterButton({
-  active,
-  onClick,
-  children,
-  count,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-  count: number
-}) {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className={cn(
-        'px-3 py-1.5 text-xs font-medium rounded transition-all',
-        active
-          ? 'bg-primary text-primary-foreground'
-          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-      )}
-    >
-      {children}
-      <span className={cn('ml-1.5 text-[10px]', active ? 'opacity-80' : 'opacity-50')}>
-        ({count})
-      </span>
-    </motion.button>
-  )
-}
-
-function SortButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className={cn(
-        'px-2 py-1 text-xs font-mono transition-all rounded',
-        active ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
-      )}
-    >
-      {children}
-    </motion.button>
   )
 }

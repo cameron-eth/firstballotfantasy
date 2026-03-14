@@ -102,19 +102,11 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
   }, [debouncedSearch, fetchSuggestions])
 
   const handleAddItem = useCallback(
-    (item?: string, metadata?: AssetMetadata) => {
+    (item?: string, _metadata?: AssetMetadata) => {
       const valueToAdd = item || inputValue.trim()
       if (valueToAdd && !side.includes(valueToAdd)) {
         onChange([...side, valueToAdd])
-        if (metadata?.headshot_url || metadata?.espn_id) {
-          setAssetMetadata((prev) => ({
-            ...prev,
-            [valueToAdd]: {
-              headshot_url: metadata.headshot_url ?? null,
-              espn_id: metadata.espn_id ?? null,
-            },
-          }))
-        }
+        // SWR will auto-refetch headshots when `side` changes via metadataKey
         setInputValue('')
         setSuggestions([])
         setShowSuggestions(false)

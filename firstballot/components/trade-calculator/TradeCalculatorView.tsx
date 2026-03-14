@@ -1,11 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { Header } from '@/components/header'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { TradeSideInput } from './TradeSideInput'
 import { TradeResultCard } from './TradeResultCard'
-import { Scale, Loader2, X } from 'lucide-react'
+import { Scale, Loader2, X, BarChart3, List } from 'lucide-react'
 import { useTradeCalculator } from '@/hooks/use-trade-calculator'
 import { TradeScores } from './TradeScores'
 
@@ -13,13 +14,57 @@ export function TradeCalculatorView() {
   const { side1, setSide1, side2, setSide2, result, loading, error, handleEvaluate } =
     useTradeCalculator()
 
+  // Mobile result view: 'overview' = graph, 'breakdown' = dossier
+  const [mobileResultTab, setMobileResultTab] = useState<'overview' | 'breakdown'>('overview')
+
   return (
     <div className="min-h-screen bg-slate-900">
       <Header />
 
       <main className="w-full px-3 py-4 md:px-4 md:py-8">
         <div className="max-w-7xl mx-auto">
-          {result && <TradeScores result={result} />}
+
+          {/* ── Mobile result section with tab toggle ── */}
+          {result && (
+            <div className="md:hidden mb-4">
+              {/* Tab toggle */}
+              <div className="flex gap-1 mb-3 bg-slate-950/60 rounded-lg p-1 border border-white/5">
+                <button
+                  onClick={() => setMobileResultTab('overview')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                    mobileResultTab === 'overview'
+                      ? 'bg-yellow-400 text-slate-900'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <BarChart3 className="h-3 w-3" />
+                  Overview
+                </button>
+                <button
+                  onClick={() => setMobileResultTab('breakdown')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                    mobileResultTab === 'breakdown'
+                      ? 'bg-yellow-400 text-slate-900'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <List className="h-3 w-3" />
+                  Breakdown
+                </button>
+              </div>
+
+              {/* Slides */}
+              {mobileResultTab === 'overview' && <TradeScores result={result} />}
+              {mobileResultTab === 'breakdown' && <TradeResultCard result={result} />}
+            </div>
+          )}
+
+          {/* ── Desktop: show both inline ── */}
+          {result && (
+            <div className="hidden md:block">
+              <TradeScores result={result} />
+            </div>
+          )}
 
           {/* ── Mobile: flat input layout (no card nesting) ── */}
           <div className="md:hidden space-y-4 mb-4">
@@ -134,8 +179,9 @@ export function TradeCalculatorView() {
             </div>
           )}
 
+          {/* Desktop: dossier always visible */}
           {result && (
-            <div className="mt-4 md:mt-10">
+            <div className="hidden md:block mt-10">
               <TradeResultCard result={result} />
             </div>
           )}

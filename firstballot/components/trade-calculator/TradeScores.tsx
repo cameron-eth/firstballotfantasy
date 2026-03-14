@@ -60,7 +60,7 @@ export function TradeScores({ result }: TradeScoresProps) {
 
   return (
     <div className="mb-4 md:mb-10 relative group">
-      <div className="bg-slate-950/40 backdrop-blur-md border border-white/5 rounded-xl md:rounded-3xl p-4 md:p-8 shadow-2xl overflow-hidden">
+      <div className="bg-slate-950/40 backdrop-blur-md border border-white/5 rounded-xl md:rounded-3xl p-3 md:p-8 shadow-2xl overflow-hidden">
         {/* Animated background glow */}
         <div
           className="absolute inset-0 opacity-10 blur-3xl transition-all duration-1000"
@@ -70,40 +70,148 @@ export function TradeScores({ result }: TradeScoresProps) {
         />
 
         <div className="relative z-10">
-          {/* Mobile: stacked compact, Desktop: 3-col */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-3 md:gap-6 items-center mb-3 md:mb-6">
-
-            {/* Center Decision — on mobile, show FIRST above the sides */}
-            <div className="text-center px-2 order-first lg:order-none">
-              <span className="text-[9px] md:text-[10px] text-slate-500 font-mono font-black uppercase tracking-[0.28em]">
-                Result
+          {/* Result Header */}
+          <div className="text-center mb-3 md:mb-6">
+            <span className="text-[9px] md:text-[10px] text-slate-500 font-mono font-black uppercase tracking-[0.28em]">
+              Result
+            </span>
+            <div className="mt-0.5 text-xl md:text-3xl font-black text-white font-mono tracking-tighter uppercase">
+              {isEven ? (
+                <span className="text-slate-300">EVEN</span>
+              ) : (
+                <>
+                  <span className="text-slate-300">SIDE </span>
+                  <span className="text-yellow-400">{result.winner.split(' ')[1]}</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-0.5">
+              {side1Wins && <TrendingUp className="h-3.5 w-3.5 text-blue-400" />}
+              {side2Wins && <TrendingUp className="h-3.5 w-3.5 text-purple-400" />}
+              {isEven && <Minus className="h-3.5 w-3.5 text-slate-400" />}
+              <span className="text-xs font-mono text-yellow-300">
+                {result.difference_pct.toFixed(1)}%
               </span>
-              <div className="mt-1 text-2xl md:text-3xl font-black text-white font-mono tracking-tighter uppercase">
-                {isEven ? (
-                  <span className="text-slate-300">EVEN</span>
-                ) : (
-                  <>
-                    <span className="text-slate-300">SIDE </span>
-                    <span className="text-yellow-400">{result.winner.split(' ')[1]}</span>
-                  </>
+              <span className="text-[9px] font-mono text-slate-600">
+                ({result.difference.toLocaleString(undefined, { maximumFractionDigits: 0 })} Δ)
+              </span>
+            </div>
+          </div>
+
+          {/* ── Mobile: compact inline face-off ── */}
+          <div className="md:hidden">
+            <div className="flex items-stretch gap-2 mb-3">
+              {/* Side 1 */}
+              <div
+                className={`flex-1 rounded-lg border p-2.5 ${
+                  side1Wins ? 'border-blue-400/50 bg-blue-500/10' : 'border-white/10 bg-white/[0.02]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <span className="text-[8px] font-black font-mono text-slate-500 uppercase">S1</span>
+                  </div>
+                  {side1Wins && (
+                    <Badge className="bg-blue-500/20 border border-blue-400/40 text-blue-300 text-[8px] px-1 py-0 leading-tight">
+                      WIN
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xl font-black text-white font-mono tracking-tighter leading-none">
+                  {result.side1_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {result.side1_rank && (
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-500/5 text-blue-400 border-blue-500/20 font-mono text-[7px] px-1 py-0"
+                    >
+                      #{result.side1_rank}
+                    </Badge>
+                  )}
+                  <span className="text-[8px] font-mono text-blue-300/80">{side1Pct.toFixed(1)}%</span>
+                </div>
+                {side1TopAssets.length > 0 && (
+                  <div className="mt-1.5 flex items-center">
+                    {side1TopAssets.map((item) => (
+                      <div
+                        key={`side1-m-${item.name}-${item.total_score}`}
+                        className="-mr-2 first:mr-0"
+                        title={item.name}
+                      >
+                        <PlayerHeadshot
+                          playerName={item.name}
+                          headshotUrl={item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url}
+                          espnId={item.espn_id ?? hydratedHeadshots[item.name]?.espn_id}
+                          size={32}
+                          className="ring-2 ring-slate-900 shadow-[0_0_0_1px_rgba(59,130,246,0.45)]"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div className="flex items-center justify-center gap-2 mt-0.5">
-                {side1Wins && <TrendingUp className="h-3.5 w-3.5 text-blue-400" />}
-                {side2Wins && <TrendingUp className="h-3.5 w-3.5 text-purple-400" />}
-                {isEven && <Minus className="h-3.5 w-3.5 text-slate-400" />}
-                <span className="text-xs font-mono text-yellow-300">
-                  {result.difference_pct.toFixed(1)}%
-                </span>
-                <span className="text-[9px] font-mono text-slate-600">
-                  ({result.difference.toLocaleString(undefined, { maximumFractionDigits: 0 })} Δ)
-                </span>
+
+              {/* Side 2 */}
+              <div
+                className={`flex-1 rounded-lg border p-2.5 text-right ${
+                  side2Wins ? 'border-purple-400/50 bg-purple-500/10' : 'border-white/10 bg-white/[0.02]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  {side2Wins && (
+                    <Badge className="bg-purple-500/20 border border-purple-400/40 text-purple-300 text-[8px] px-1 py-0 leading-tight">
+                      WIN
+                    </Badge>
+                  )}
+                  <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-[8px] font-black font-mono text-slate-500 uppercase">S2</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                  </div>
+                </div>
+                <div className="text-xl font-black text-white font-mono tracking-tighter leading-none">
+                  {result.side2_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </div>
+                <div className="flex items-center justify-end gap-1.5 mt-1">
+                  <span className="text-[8px] font-mono text-purple-300/80">{side2Pct.toFixed(1)}%</span>
+                  {result.side2_rank && (
+                    <Badge
+                      variant="outline"
+                      className="bg-purple-500/5 text-purple-400 border-purple-500/20 font-mono text-[7px] px-1 py-0"
+                    >
+                      #{result.side2_rank}
+                    </Badge>
+                  )}
+                </div>
+                {side2TopAssets.length > 0 && (
+                  <div className="mt-1.5 flex items-center justify-end">
+                    {side2TopAssets.map((item) => (
+                      <div
+                        key={`side2-m-${item.name}-${item.total_score}`}
+                        className="-ml-2 first:ml-0"
+                        title={item.name}
+                      >
+                        <PlayerHeadshot
+                          playerName={item.name}
+                          headshotUrl={item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url}
+                          espnId={item.espn_id ?? hydratedHeadshots[item.name]?.espn_id}
+                          size={32}
+                          className="ring-2 ring-slate-900 shadow-[0_0_0_1px_rgba(168,85,247,0.5)]"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
+          </div>
 
+          {/* ── Desktop: 3-column layout ── */}
+          <div className="hidden md:grid grid-cols-[1fr_auto_1fr] gap-6 items-center mb-6">
             {/* Side 1 */}
             <div
-              className={`rounded-xl md:rounded-2xl border p-3 md:p-4 ${
+              className={`rounded-2xl border p-4 ${
                 side1Wins
                   ? 'border-blue-400/50 bg-blue-500/10'
                   : 'border-white/10 bg-white/[0.02]'
@@ -112,7 +220,7 @@ export function TradeScores({ result }: TradeScoresProps) {
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  <span className="text-[9px] font-black font-mono text-slate-500 uppercase tracking-widest">
+                  <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
                     Side 1
                   </span>
                 </div>
@@ -123,7 +231,7 @@ export function TradeScores({ result }: TradeScoresProps) {
                 )}
               </div>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl md:text-4xl font-black text-white font-mono tracking-tighter">
+                <span className="text-4xl font-black text-white font-mono tracking-tighter">
                   {result.side1_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
                 <span className="text-blue-500/50 font-mono text-[9px] font-bold">IDX</span>
@@ -140,7 +248,7 @@ export function TradeScores({ result }: TradeScoresProps) {
                 <span className="text-[9px] font-mono text-blue-300/80">{side1Pct.toFixed(1)}%</span>
               </div>
               {side1TopAssets.length > 0 && (
-                <div className="mt-2 md:mt-4 flex items-center">
+                <div className="mt-4 flex items-center">
                   {side1TopAssets.map((item) => (
                     <div
                       key={`side1-${item.name}-${item.position ?? 'asset'}-${item.rank ?? 'na'}-${item.total_score}`}
@@ -149,9 +257,7 @@ export function TradeScores({ result }: TradeScoresProps) {
                     >
                       <PlayerHeadshot
                         playerName={item.name}
-                        headshotUrl={
-                          item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url
-                        }
+                        headshotUrl={item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url}
                         espnId={item.espn_id ?? hydratedHeadshots[item.name]?.espn_id}
                         size={40}
                         className="ring-2 ring-slate-900 shadow-[0_0_0_2px_rgba(59,130,246,0.45)]"
@@ -162,9 +268,12 @@ export function TradeScores({ result }: TradeScoresProps) {
               )}
             </div>
 
+            {/* Center spacer (decision is above on desktop too) */}
+            <div className="w-px" />
+
             {/* Side 2 */}
             <div
-              className={`rounded-xl md:rounded-2xl border p-3 md:p-4 text-right ${
+              className={`rounded-2xl border p-4 text-right ${
                 side2Wins
                   ? 'border-purple-400/50 bg-purple-500/10'
                   : 'border-white/10 bg-white/[0.02]'
@@ -177,7 +286,7 @@ export function TradeScores({ result }: TradeScoresProps) {
                   </Badge>
                 )}
                 <div className="flex items-center gap-1.5 ml-auto">
-                  <span className="text-[9px] font-black font-mono text-slate-500 uppercase tracking-widest">
+                  <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
                     Side 2
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
@@ -185,7 +294,7 @@ export function TradeScores({ result }: TradeScoresProps) {
               </div>
               <div className="flex items-baseline gap-1.5 justify-end">
                 <span className="text-purple-500/50 font-mono text-[9px] font-bold">IDX</span>
-                <span className="text-2xl md:text-4xl font-black text-white font-mono tracking-tighter">
+                <span className="text-4xl font-black text-white font-mono tracking-tighter">
                   {result.side2_total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
@@ -201,7 +310,7 @@ export function TradeScores({ result }: TradeScoresProps) {
                 )}
               </div>
               {side2TopAssets.length > 0 && (
-                <div className="mt-2 md:mt-4 flex items-center justify-end">
+                <div className="mt-4 flex items-center justify-end">
                   {side2TopAssets.map((item) => (
                     <div
                       key={`side2-${item.name}-${item.position ?? 'asset'}-${item.rank ?? 'na'}-${item.total_score}`}
@@ -210,9 +319,7 @@ export function TradeScores({ result }: TradeScoresProps) {
                     >
                       <PlayerHeadshot
                         playerName={item.name}
-                        headshotUrl={
-                          item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url
-                        }
+                        headshotUrl={item.headshot_url ?? hydratedHeadshots[item.name]?.headshot_url}
                         espnId={item.espn_id ?? hydratedHeadshots[item.name]?.espn_id}
                         size={40}
                         className="ring-2 ring-slate-900 shadow-[0_0_0_2px_rgba(168,85,247,0.5)]"
@@ -225,7 +332,7 @@ export function TradeScores({ result }: TradeScoresProps) {
           </div>
 
           {/* Unified Value Meter */}
-          <div className="relative h-3 md:h-4 w-full bg-slate-900 rounded-full border border-white/5 overflow-hidden shadow-inner">
+          <div className="relative h-2.5 md:h-4 w-full bg-slate-900 rounded-full border border-white/5 overflow-hidden shadow-inner">
             <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10 z-20" />
             <div
               className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-1000 ease-out"
@@ -241,7 +348,7 @@ export function TradeScores({ result }: TradeScoresProps) {
             />
           </div>
 
-          <div className="flex justify-between mt-1.5 md:mt-3 px-1">
+          <div className="flex justify-between mt-1 md:mt-3 px-1">
             <span className="text-[9px] md:text-[10px] font-black font-mono text-blue-400 uppercase tracking-tighter">
               {side1Pct.toFixed(1)}%
             </span>

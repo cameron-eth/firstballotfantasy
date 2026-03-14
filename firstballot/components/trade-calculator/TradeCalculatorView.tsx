@@ -21,7 +21,50 @@ export function TradeCalculatorView() {
         <div className="max-w-7xl mx-auto">
           {result && <TradeScores result={result} />}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8 mb-4 md:mb-8 relative">
+          {/* ── Mobile: flat input layout (no card nesting) ── */}
+          <div className="md:hidden space-y-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span className="text-[9px] font-black font-mono text-blue-400 uppercase tracking-widest">Side 1</span>
+              </div>
+              <TradeSideInput
+                side={side1}
+                onChange={setSide1}
+                placeholder="Search player or pick..."
+                sideLabel="Give"
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span className="text-[9px] font-black font-mono text-purple-400 uppercase tracking-widest">Side 2</span>
+              </div>
+              <TradeSideInput
+                side={side2}
+                onChange={setSide2}
+                placeholder="Search player or pick..."
+                sideLabel="Get"
+              />
+            </div>
+            {(side1.length > 0 || side2.length > 0) && (
+              <Button
+                onClick={handleEvaluate}
+                disabled={loading}
+                className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black font-mono h-11 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Scale className="h-4 w-4 mr-2" />
+                )}
+                Evaluate
+              </Button>
+            )}
+          </div>
+
+          {/* ── Desktop: card layout with centered evaluate button ── */}
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 relative">
             {/* Centered Evaluate Button for Desktop */}
             {(side1.length > 0 || side2.length > 0) && (
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden lg:block">
@@ -44,11 +87,11 @@ export function TradeCalculatorView() {
 
             {/* Side 1 Input */}
             <div className="relative group">
-              <div className="absolute -top-2.5 left-4 md:left-6 px-2 py-0.5 md:px-3 md:py-1 bg-slate-900 border border-white/5 rounded text-[9px] md:text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
+              <div className="absolute -top-2.5 left-6 px-3 py-1 bg-slate-900 border border-white/5 rounded text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
                 Side 1
               </div>
-              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-xl md:rounded-2xl shadow-none hover:border-blue-500/20 transition-all overflow-hidden">
-                <CardContent className="p-4 md:p-8">
+              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-2xl shadow-none hover:border-blue-500/20 transition-all overflow-hidden">
+                <CardContent className="p-8">
                   <TradeSideInput
                     side={side1}
                     onChange={setSide1}
@@ -61,11 +104,11 @@ export function TradeCalculatorView() {
 
             {/* Side 2 Input */}
             <div className="relative group">
-              <div className="absolute -top-2.5 left-4 md:left-6 px-2 py-0.5 md:px-3 md:py-1 bg-slate-900 border border-white/5 rounded text-[9px] md:text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-purple-400 group-hover:border-purple-500/30 transition-colors">
+              <div className="absolute -top-2.5 left-6 px-3 py-1 bg-slate-900 border border-white/5 rounded text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-purple-400 group-hover:border-purple-500/30 transition-colors">
                 Side 2
               </div>
-              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-xl md:rounded-2xl shadow-none hover:border-purple-500/20 transition-all overflow-hidden">
-                <CardContent className="p-4 md:p-8">
+              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-2xl shadow-none hover:border-purple-500/20 transition-all overflow-hidden">
+                <CardContent className="p-8">
                   <TradeSideInput
                     side={side2}
                     onChange={setSide2}
@@ -76,24 +119,6 @@ export function TradeCalculatorView() {
               </Card>
             </div>
           </div>
-
-          {/* Evaluate Button — below both sides on mobile */}
-          {(side1.length > 0 || side2.length > 0) && (
-            <div className="lg:hidden mb-4">
-              <Button
-                onClick={handleEvaluate}
-                disabled={loading}
-                className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black font-mono h-11 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95"
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Scale className="h-4 w-4 mr-2" />
-                )}
-                Evaluate
-              </Button>
-            </div>
-          )}
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 md:p-4 mb-4 md:mb-8 flex items-center gap-3">

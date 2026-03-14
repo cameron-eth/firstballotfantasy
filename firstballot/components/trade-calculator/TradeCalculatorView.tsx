@@ -17,11 +17,11 @@ export function TradeCalculatorView() {
     <div className="min-h-screen bg-slate-900">
       <Header />
 
-      <main className="w-full px-4 py-8">
+      <main className="w-full px-3 py-4 md:px-4 md:py-8">
         <div className="max-w-7xl mx-auto">
           {result && <TradeScores result={result} />}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8 mb-4 md:mb-8 relative">
             {/* Centered Evaluate Button for Desktop */}
             {(side1.length > 0 || side2.length > 0) && (
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 hidden lg:block">
@@ -42,36 +42,18 @@ export function TradeCalculatorView() {
               </div>
             )}
 
-            {/* Mobile Evaluate Button */}
-            {(side1.length > 0 || side2.length > 0) && (
-              <div className="lg:hidden mb-6">
-                <Button
-                  onClick={handleEvaluate}
-                  disabled={loading}
-                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black font-mono h-14 rounded-xl uppercase tracking-widest transition-all active:scale-95"
-                >
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  ) : (
-                    <Scale className="h-5 w-5 mr-2" />
-                  )}
-                  Evaluate Assets
-                </Button>
-              </div>
-            )}
-
             {/* Side 1 Input */}
             <div className="relative group">
-              <div className="absolute -top-3 left-6 px-3 py-1 bg-slate-900 border border-white/5 rounded text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
-                Origin Side
+              <div className="absolute -top-2.5 left-4 md:left-6 px-2 py-0.5 md:px-3 md:py-1 bg-slate-900 border border-white/5 rounded text-[9px] md:text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-colors">
+                Side 1
               </div>
-              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-2xl shadow-none hover:border-blue-500/20 transition-all overflow-hidden">
-                <CardContent className="p-8">
+              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-xl md:rounded-2xl shadow-none hover:border-blue-500/20 transition-all overflow-hidden">
+                <CardContent className="p-4 md:p-8">
                   <TradeSideInput
                     side={side1}
                     onChange={setSide1}
                     placeholder="Search player or pick..."
-                    sideLabel="Primary Assets"
+                    sideLabel="Give"
                   />
                 </CardContent>
               </Card>
@@ -79,25 +61,44 @@ export function TradeCalculatorView() {
 
             {/* Side 2 Input */}
             <div className="relative group">
-              <div className="absolute -top-3 left-6 px-3 py-1 bg-slate-900 border border-white/5 rounded text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-purple-400 group-hover:border-purple-500/30 transition-colors">
-                Acquisition Side
+              <div className="absolute -top-2.5 left-4 md:left-6 px-2 py-0.5 md:px-3 md:py-1 bg-slate-900 border border-white/5 rounded text-[9px] md:text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest z-10 group-hover:text-purple-400 group-hover:border-purple-500/30 transition-colors">
+                Side 2
               </div>
-              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-2xl shadow-none hover:border-purple-500/20 transition-all overflow-hidden">
-                <CardContent className="p-8">
+              <Card className="bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-xl md:rounded-2xl shadow-none hover:border-purple-500/20 transition-all overflow-hidden">
+                <CardContent className="p-4 md:p-8">
                   <TradeSideInput
                     side={side2}
                     onChange={setSide2}
                     placeholder="Search player or pick..."
-                    sideLabel="Secondary Assets"
+                    sideLabel="Get"
                   />
                 </CardContent>
               </Card>
             </div>
           </div>
+
+          {/* Evaluate Button — below both sides on mobile */}
+          {(side1.length > 0 || side2.length > 0) && (
+            <div className="lg:hidden mb-4">
+              <Button
+                onClick={handleEvaluate}
+                disabled={loading}
+                className="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black font-mono h-11 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Scale className="h-4 w-4 mr-2" />
+                )}
+                Evaluate
+              </Button>
+            </div>
+          )}
+
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-8 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                <X className="h-4 w-4 text-red-400" />
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 md:p-4 mb-4 md:mb-8 flex items-center gap-3">
+              <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <X className="h-3 w-3 md:h-4 md:w-4 text-red-400" />
               </div>
               <div>
                 <p className="text-red-400 font-black font-mono text-[10px] uppercase tracking-widest">
@@ -109,21 +110,21 @@ export function TradeCalculatorView() {
           )}
 
           {result && (
-            <div className="mt-10">
+            <div className="mt-4 md:mt-10">
               <TradeResultCard result={result} />
             </div>
           )}
 
           {!result && !loading && side1.length === 0 && side2.length === 0 && (
-            <Card className="bg-slate-950/40 border border-white/5 rounded-2xl shadow-none mt-10">
-              <CardContent className="p-20 text-center">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/5 border border-white/10 mb-8 rotate-3 hover:rotate-0 transition-transform duration-500">
-                  <Scale className="h-10 w-10 text-slate-600" />
+            <Card className="bg-slate-950/40 border border-white/5 rounded-2xl shadow-none mt-6 md:mt-10">
+              <CardContent className="p-10 md:p-20 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-white/5 border border-white/10 mb-4 md:mb-8 rotate-3 hover:rotate-0 transition-transform duration-500">
+                  <Scale className="h-7 w-7 md:h-10 md:w-10 text-slate-600" />
                 </div>
-                <h3 className="text-white font-black font-mono text-lg uppercase tracking-tight mb-2">
+                <h3 className="text-white font-black font-mono text-base md:text-lg uppercase tracking-tight mb-2">
                   Initialize Trade Matrix
                 </h3>
-                <p className="text-slate-500 font-mono text-xs uppercase tracking-widest max-w-sm mx-auto leading-relaxed">
+                <p className="text-slate-500 font-mono text-[10px] md:text-xs uppercase tracking-widest max-w-sm mx-auto leading-relaxed">
                   Add assets to both sides to activate the ML valuation engine.
                 </p>
               </CardContent>

@@ -180,13 +180,13 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 md:space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-black font-mono text-slate-400 uppercase tracking-[0.2em]">
+        <h3 className="text-[10px] md:text-xs font-black font-mono text-slate-400 uppercase tracking-[0.2em]">
           {sideLabel}
         </h3>
         <div className="px-2 py-0.5 rounded bg-slate-900 border border-white/5 text-[9px] font-black font-mono text-slate-500 uppercase">
-          {side.length} Asset{side.length !== 1 ? 's' : ''}
+          {side.length}
         </div>
       </div>
 
@@ -208,15 +208,15 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
                 setShowSuggestions(true)
               }
             }}
-            className="bg-slate-900/50 border-white/5 text-white w-full h-12 pl-4 pr-12 rounded-xl focus:border-blue-500/30 focus:ring-0 transition-all font-mono text-xs placeholder:text-slate-700"
+            className="bg-slate-900/50 border-white/5 text-white w-full h-10 md:h-12 pl-3 md:pl-4 pr-10 md:pr-12 rounded-lg md:rounded-xl focus:border-blue-500/30 focus:ring-0 transition-all font-mono text-xs placeholder:text-slate-700"
           />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+          <div className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2">
             <Button
               onClick={() => handleAddItem()}
               size="sm"
-              className="h-8 w-8 p-0 bg-white/5 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 border border-white/5 rounded-lg transition-all"
+              className="h-7 w-7 md:h-8 md:w-8 p-0 bg-white/5 hover:bg-blue-500/20 text-slate-400 hover:text-blue-400 border border-white/5 rounded-lg transition-all"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -266,42 +266,37 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
       </div>
 
       {/* Items list - Asset Tokens */}
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-1.5 md:gap-2">
         {side.map((item, index) => (
           <div
             key={item}
-            className="group flex items-center justify-between p-3 bg-slate-900/40 hover:bg-slate-900/60 rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300"
+            className="group flex items-center justify-between p-2 md:p-3 bg-slate-900/40 hover:bg-slate-900/60 rounded-lg md:rounded-xl border border-white/5 hover:border-white/10 transition-all duration-300"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden grayscale group-hover:grayscale-0 transition-all">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-md md:rounded-lg bg-slate-800 border border-white/5 flex items-center justify-center overflow-hidden">
                 <PlayerHeadshot
                   playerName={item}
                   headshotUrl={assetMetadata[item]?.headshot_url}
                   espnId={assetMetadata[item]?.espn_id}
-                  size={32}
+                  size={28}
                 />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-slate-200 font-mono uppercase tracking-tight group-hover:text-white transition-colors">
-                  {item}
-                </span>
-                <span className="text-[9px] text-slate-600 font-mono uppercase">
-                  Verified Asset
-                </span>
-              </div>
+              <span className="text-[11px] md:text-xs font-black text-slate-200 font-mono uppercase tracking-tight">
+                {item}
+              </span>
             </div>
             <button
               onClick={() => handleRemoveItem(index)}
-              className="h-6 w-6 flex items-center justify-center rounded-md text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+              className="h-6 w-6 flex items-center justify-center rounded-md text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
             >
               <X className="h-3 w-3" />
             </button>
           </div>
         ))}
         {side.length === 0 && (
-          <div className="py-10 border-2 border-dashed border-white/5 rounded-2xl flex flex-center justify-center">
-            <span className="text-[10px] font-black font-mono text-slate-700 uppercase tracking-widest">
-              Empty Asset Queue
+          <div className="py-5 md:py-10 border border-dashed border-white/5 rounded-xl md:rounded-2xl flex justify-center">
+            <span className="text-[9px] md:text-[10px] font-black font-mono text-slate-700 uppercase tracking-widest">
+              No Assets
             </span>
           </div>
         )}

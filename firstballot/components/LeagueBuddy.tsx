@@ -54,6 +54,7 @@ import {
 
 import { leagueCache } from '@/lib/league-cache'
 import { sleeperApi } from '@/lib/nextjs-cache'
+import { isOffSeason } from '@/lib/season-utils'
 
 // Import extracted types and components
 import type {
@@ -633,13 +634,16 @@ export default function LeagueBuddy({
                           <div>
                             <CardTitle className="text-yellow-400 font-mono flex items-center text-lg">
                               <Target className="h-5 w-5 mr-2" />
-                              {lineupMode === 'current' ? 'CURRENT' : 'OPTIMIZED'} LINEUP - WEEK{' '}
-                              {currentWeek}
+                              {isOffSeason()
+                                ? `${lineupMode === 'current' ? 'CURRENT' : 'OPTIMIZED'} ROSTER`
+                                : `${lineupMode === 'current' ? 'CURRENT' : 'OPTIMIZED'} LINEUP — WEEK ${currentWeek}`}
                             </CardTitle>
                             <p className="text-slate-400 text-sm mt-1">
-                              {lineupMode === 'current'
-                                ? 'Your active lineup on Sleeper'
-                                : 'AI-optimized based on rankings, stats, and matchups'}
+                              {isOffSeason()
+                                ? 'Off-season roster view — prep for the upcoming season'
+                                : lineupMode === 'current'
+                                  ? 'Your active lineup on Sleeper'
+                                  : 'AI-optimized based on rankings, stats, and matchups'}
                             </p>
                           </div>
                         </div>
@@ -1364,70 +1368,88 @@ export default function LeagueBuddy({
             <RosterSection selectedTeam={selectedTeam} sortedTeams={sortedTeams} teams={teams} />
           )}
 
-          {/* LEAGUE SECTION - Matchup Details */}
+          {/* LEAGUE SECTION - Matchup Details (or off-season standings) */}
           {activeSection === 'league' && selectedTeam && (
             <>
               <div className="space-y-4">
-                {(() => {
-                  // Find current matchup for this team
-                  const teamMatchup = currentMatchups.find(
-                    (m) => m.rosterId === selectedTeam.rosterId
-                  )
-
-                  if (!teamMatchup) {
-                    return (
-                      <Card className="bg-slate-700 border-slate-600">
-                        <CardContent className="p-12 text-center">
-                          <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-                          <p className="text-slate-400 mb-2">No matchup available</p>
-                          <p className="text-sm text-slate-500">
-                            {currentWeek === 1
-                              ? "Season hasn't started yet"
-                              : 'Matchup data will appear once the week begins'}
-                          </p>
-                        </CardContent>
-                      </Card>
+                {isOffSeason() ? (
+                  <>
+                    {/* Off-season: skip matchup view, show standings + rankings */}
+                    <LeagueStandingsSection
+                      teams={teams}
+                      selectedTeam={selectedTeam}
+                      leaguePositionRankings={leaguePositionRankings}
+                      onTeamSelect={handleTeamSelect}
+                    />
+                    <PositionRankings
+                      teams={teams}
+                      selectedTeam={selectedTeam}
+                      leaguePositionRankings={leaguePositionRankings}
+                      onTeamSelect={handleTeamSelect}
+                    />
+                  </>
+                ) : (
+                  (() => {
+                    // Find current matchup for this team
+                    const teamMatchup = currentMatchups.find(
+                      (m) => m.rosterId === selectedTeam.rosterId
                     )
-                  }
 
-                  const opponent = teams.find((t) => t.rosterId === teamMatchup.opponentRosterId)
+                    if (!teamMatchup) {
+                      return (
+                        <Card className="bg-slate-700 border-slate-600">
+                          <CardContent className="p-12 text-center">
+                            <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
+                            <p className="text-slate-400 mb-2">No matchup available</p>
+                            <p className="text-sm text-slate-500">
+                              {currentWeek === 1
+                                ? "Season hasn't started yet"
+                                : 'Matchup data will appear once the week begins'}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )
+                    }
 
-                  if (!opponent) {
+                    const opponent = teams.find((t) => t.rosterId === teamMatchup.opponentRosterId)
+
+                    if (!opponent) {
+                      return (
+                        <Card className="bg-slate-700 border-slate-600">
+                          <CardContent className="p-12 text-center">
+                            <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
+                            <p className="text-slate-400">Opponent data not available</p>
+                          </CardContent>
+                        </Card>
+                      )
+                    }
+
                     return (
-                      <Card className="bg-slate-700 border-slate-600">
-                        <CardContent className="p-12 text-center">
-                          <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-                          <p className="text-slate-400">Opponent data not available</p>
-                        </CardContent>
-                      </Card>
+                      <>
+                        <MatchupView
+                          selectedTeam={selectedTeam}
+                          opponent={opponent}
+                          teamMatchup={teamMatchup}
+                          currentWeek={currentWeek}
+                          leaguePositionRankings={leaguePositionRankings}
+                          sortedTeams={sortedTeams}
+                        />
+                        <LeagueStandingsSection
+                          teams={teams}
+                          selectedTeam={selectedTeam}
+                          leaguePositionRankings={leaguePositionRankings}
+                          onTeamSelect={handleTeamSelect}
+                        />
+                        <PositionRankings
+                          teams={teams}
+                          selectedTeam={selectedTeam}
+                          leaguePositionRankings={leaguePositionRankings}
+                          onTeamSelect={handleTeamSelect}
+                        />
+                      </>
                     )
-                  }
-
-                  return (
-                    <>
-                      <MatchupView
-                        selectedTeam={selectedTeam}
-                        opponent={opponent}
-                        teamMatchup={teamMatchup}
-                        currentWeek={currentWeek}
-                        leaguePositionRankings={leaguePositionRankings}
-                        sortedTeams={sortedTeams}
-                      />
-                      <LeagueStandingsSection
-                        teams={teams}
-                        selectedTeam={selectedTeam}
-                        leaguePositionRankings={leaguePositionRankings}
-                        onTeamSelect={handleTeamSelect}
-                      />
-                      <PositionRankings
-                        teams={teams}
-                        selectedTeam={selectedTeam}
-                        leaguePositionRankings={leaguePositionRankings}
-                        onTeamSelect={handleTeamSelect}
-                      />
-                    </>
-                  )
-                })()}
+                  })()
+                )}
               </div>
             </>
           )}

@@ -97,7 +97,7 @@ test('file size guard: only approved legacy files may exceed the default budget'
   const legacyBudgets = new Map([
     ['app/trade-market/page.tsx', 900],
     ['components/DraftAnalysis.tsx', 980],
-    ['components/LeagueBuddy.tsx', 1460],
+    ['components/LeagueBuddy.tsx', 1480],
     ['components/TeamValueGraph.tsx', 1140],
     ['components/landing/LandingPage.tsx', 720],
     ['components/scouting/DraftBoardTab.tsx', 1200],

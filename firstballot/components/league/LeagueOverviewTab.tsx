@@ -3,10 +3,11 @@
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Trophy, Zap, Eye, Users, Clipboard } from 'lucide-react'
+import { Calendar, Trophy, Zap, Eye, Users, Clipboard, Sun } from 'lucide-react'
 import { MatchupData, Transaction, TeamData } from '@/types/league'
 import { CurrentLineup } from './CurrentLineup'
 import { leagueCache } from '@/lib/league-cache'
+import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 
 interface LeagueOverviewTabProps {
   currentMatchups: MatchupData[]
@@ -131,90 +132,106 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
             </div>
           </div>
 
-          {/* Current Week Matchups */}
-          {currentMatchups.length > 0 ? (
+          {/* Current Week Matchups (hidden during off-season) */}
+          {isOffSeason() ? (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-white mb-6 flex items-center space-x-3">
-                <div className="p-2 bg-green-400/20 backdrop-blur-sm rounded-lg border border-green-400/30">
-                  <Calendar className="h-5 w-5 text-green-400" />
-                </div>
-                <span>Week {currentWeek} Matchups</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {currentMatchups.slice(0, 4).map((matchup) => (
-                  <div key={`${matchup.teamName}-${matchup.opponentTeamName}`} className="group relative">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-green-400/20 to-yellow-400/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
-                    <Card className="relative bg-slate-700/30 backdrop-blur-sm border border-slate-600/50 hover:border-green-400/50 transition-all duration-200">
-                      <CardContent className="p-5 sm:p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 text-left min-w-0">
-                            <div className="font-semibold text-white truncate mb-2 text-sm sm:text-base">
-                              {matchup.teamName}
-                            </div>
-                            <div className="text-xs sm:text-sm text-gray-400 font-mono">
-                              {matchup.actualPoints > 0
-                                ? `${matchup.actualPoints.toFixed(1)} pts`
-                                : 'No score yet'}
-                            </div>
-                          </div>
-                          <div className="mx-4 sm:mx-6 text-green-400 text-center flex-shrink-0 font-mono font-bold text-sm sm:text-base">
-                            VS
-                          </div>
-                          <div className="flex-1 text-right min-w-0">
-                            <div className="font-semibold text-white truncate text-right mb-2 text-sm sm:text-base">
-                              {matchup.opponentTeamName}
-                            </div>
-                            <div className="text-xs sm:text-sm text-gray-400 text-right font-mono">
-                              {matchup.opponentActualPoints > 0
-                                ? `${matchup.opponentActualPoints.toFixed(1)} pts`
-                                : 'No score yet'}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-green-400" />
-                <span>Week {currentWeek} Matchups</span>
-              </h3>
-              <Card className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/50">
+              <Card className="bg-gradient-to-r from-yellow-400/5 to-amber-400/5 backdrop-blur-sm border border-yellow-400/20">
                 <CardContent className="p-6 text-center">
-                  <div className="text-gray-400">
-                    {currentWeek === 1 ? (
-                      <p>Season hasn't started yet. Matchups will appear here once games begin.</p>
-                    ) : (
-                      <p>
-                        No matchups found for Week {currentWeek}. This could be a bye week or the
-                        season hasn't started.
-                      </p>
-                    )}
-                  </div>
+                  <Sun className="h-8 w-8 text-yellow-400 mx-auto mb-3" />
+                  <p className="text-yellow-400 font-mono text-sm font-semibold mb-1">OFF-SEASON</p>
+                  <p className="text-gray-400 text-sm">
+                    {offSeasonCountdown() ?? 'Matchups and lineups will appear once the season begins.'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {/* Current Week Lineup */}
-          {userMatchup && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-white mb-6 flex items-center space-x-3">
-                <div className="p-2 bg-blue-400/20 backdrop-blur-sm rounded-lg border border-blue-400/30">
-                  <Clipboard className="h-5 w-5 text-blue-400" />
+          ) : (
+            <>
+              {currentMatchups.length > 0 ? (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-white mb-6 flex items-center space-x-3">
+                    <div className="p-2 bg-green-400/20 backdrop-blur-sm rounded-lg border border-green-400/30">
+                      <Calendar className="h-5 w-5 text-green-400" />
+                    </div>
+                    <span>Week {currentWeek} Matchups</span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    {currentMatchups.slice(0, 4).map((matchup) => (
+                      <div key={`${matchup.teamName}-${matchup.opponentTeamName}`} className="group relative">
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-green-400/20 to-yellow-400/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+                        <Card className="relative bg-slate-700/30 backdrop-blur-sm border border-slate-600/50 hover:border-green-400/50 transition-all duration-200">
+                          <CardContent className="p-5 sm:p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 text-left min-w-0">
+                                <div className="font-semibold text-white truncate mb-2 text-sm sm:text-base">
+                                  {matchup.teamName}
+                                </div>
+                                <div className="text-xs sm:text-sm text-gray-400 font-mono">
+                                  {matchup.actualPoints > 0
+                                    ? `${matchup.actualPoints.toFixed(1)} pts`
+                                    : 'No score yet'}
+                                </div>
+                              </div>
+                              <div className="mx-4 sm:mx-6 text-green-400 text-center flex-shrink-0 font-mono font-bold text-sm sm:text-base">
+                                VS
+                              </div>
+                              <div className="flex-1 text-right min-w-0">
+                                <div className="font-semibold text-white truncate text-right mb-2 text-sm sm:text-base">
+                                  {matchup.opponentTeamName}
+                                </div>
+                                <div className="text-xs sm:text-sm text-gray-400 text-right font-mono">
+                                  {matchup.opponentActualPoints > 0
+                                    ? `${matchup.opponentActualPoints.toFixed(1)} pts`
+                                    : 'No score yet'}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span>Your Week {currentWeek} Lineup</span>
-              </h3>
-              <CurrentLineup
-                matchup={userMatchup}
-                allPlayers={allPlayers}
-                playerProjections={playerProjections}
-              />
-            </div>
+              ) : (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                    <Calendar className="h-5 w-5 text-green-400" />
+                    <span>Week {currentWeek} Matchups</span>
+                  </h3>
+                  <Card className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/50">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-gray-400">
+                        {currentWeek === 1 ? (
+                          <p>Season hasn&apos;t started yet. Matchups will appear here once games begin.</p>
+                        ) : (
+                          <p>
+                            No matchups found for Week {currentWeek}. This could be a bye week or the
+                            season hasn&apos;t started.
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Current Week Lineup */}
+              {userMatchup && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-white mb-6 flex items-center space-x-3">
+                    <div className="p-2 bg-blue-400/20 backdrop-blur-sm rounded-lg border border-blue-400/30">
+                      <Clipboard className="h-5 w-5 text-blue-400" />
+                    </div>
+                    <span>Your Week {currentWeek} Lineup</span>
+                  </h3>
+                  <CurrentLineup
+                    matchup={userMatchup}
+                    allPlayers={allPlayers}
+                    playerProjections={playerProjections}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {/* Recent Transactions */}
@@ -223,7 +240,7 @@ export const LeagueOverviewTab = memo(function LeagueOverviewTab({
               <div className="p-2 bg-yellow-400/20 backdrop-blur-sm rounded-lg border border-yellow-400/30">
                 <Zap className="h-5 w-5 text-yellow-400" />
               </div>
-              <span>Week {currentWeek} Transactions</span>
+              <span>{isOffSeason() ? 'Recent Transactions' : `Week ${currentWeek} Transactions`}</span>
             </h3>
 
             <div className="flex flex-row gap-4 sm:gap-6 overflow-x-auto pb-4">

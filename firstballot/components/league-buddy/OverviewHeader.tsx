@@ -3,8 +3,9 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
-import { Trophy, Eye, Users, Target, BarChart3 } from 'lucide-react'
+import { Trophy, Eye, Users, Target, BarChart3, Sun } from 'lucide-react'
 import type { MatchupData, OverviewActions, PlayerRankingsMap, TeamData } from './types'
+import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 
 const GRADE_COLORS = {
   'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
@@ -118,8 +119,16 @@ export function OverviewHeader({
           </div>
         </div>
 
-        {/* Matchup Score - Compact with Avatars */}
-        {userMatchup ? (
+        {/* Matchup Score - Compact with Avatars (hidden during off-season) */}
+        {isOffSeason() ? (
+          <div className="bg-gradient-to-r from-yellow-400/10 to-amber-400/10 rounded-lg p-4 mt-3 border border-yellow-400/20 text-center">
+            <Sun className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
+            <p className="text-yellow-400 font-mono text-sm font-semibold">OFF-SEASON MODE</p>
+            <p className="text-slate-400 text-xs mt-1">
+              {offSeasonCountdown() ?? 'Prep your roster for the upcoming season'}
+            </p>
+          </div>
+        ) : userMatchup ? (
           <div className="bg-slate-700/30 rounded-lg p-3 mt-3">
             <div className="text-center mb-2">
               <div className="text-slate-500 font-mono text-xs mb-1">WEEK {currentWeek}</div>

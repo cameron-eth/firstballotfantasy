@@ -57,7 +57,7 @@ function normalizeTier(tier: string | null, grade: number): string {
   if (tier) return tier
   if (grade >= 90) return 'Elite'
   if (grade >= 85) return 'Blue Chip'
-  if (grade >= 80) return 'Starter'
+  if (grade >= 78) return 'Starter'
   if (grade >= 70) return 'Rotational'
   if (grade >= 60) return 'Depth'
   return 'Longshot'

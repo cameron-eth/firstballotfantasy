@@ -308,7 +308,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     if (prospect.overall_grade) {
       if (prospect.overall_grade >= 90) return 'Elite'
       if (prospect.overall_grade >= 85) return 'Blue Chip'
-      if (prospect.overall_grade >= 80) return 'Starter'
+      if (prospect.overall_grade >= 78) return 'Starter'
       if (prospect.overall_grade >= 70) return 'Rotational'
       if (prospect.overall_grade >= 60) return 'Backup'
       return 'Depth'
@@ -752,49 +752,49 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden">
       <Header />
 
-      <main className="w-full px-4 py-10 overflow-x-hidden">
+      <main className="w-full px-3 py-6 md:px-4 md:py-10 overflow-x-hidden">
         <div className="max-w-[1600px] mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="mb-10">
-              <TabsList className="flex items-center gap-2 bg-transparent h-auto p-0 border-none justify-start overflow-x-auto pb-2 scrollbar-none">
+            <div className="mb-6 md:mb-10">
+              <TabsList className="grid grid-cols-4 md:flex md:items-center gap-1.5 md:gap-2 bg-transparent h-auto p-0 border-none md:justify-start">
                 <TabsTrigger
                   value="prospects"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-2">
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>Prospects</span>
+                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
+                    <Eye className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="truncate">Prospects</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="draftboard"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-2">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    <span>Draft Board</span>
+                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
+                    <TrendingUp className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="truncate">Board</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="historical"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-2">
-                    <BarChart3 className="h-3.5 w-3.5" />
-                    <span>Historical</span>
+                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
+                    <BarChart3 className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="truncate">History</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="alltime"
-                  className="relative h-10 px-6 rounded-xl text-[10px] font-black font-mono uppercase tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-2">
-                    <Trophy className="h-3.5 w-3.5" />
-                    <span>All-Time</span>
+                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
+                    <Trophy className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="truncate">All-Time</span>
                   </div>
                 </TabsTrigger>
               </TabsList>

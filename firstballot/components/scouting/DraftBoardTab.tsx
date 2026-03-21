@@ -55,6 +55,7 @@ interface BoardPlayer {
   draftYear: number | null
   grade: number
   tier: string
+  height: number | null
   weight: number
   fortyTime: number | null
   production: number
@@ -136,6 +137,7 @@ function toBoardPlayer(p: Prospect): BoardPlayer {
     draftYear: p.draft_year ?? null,
     grade: Number(p.overall_grade || 0),
     tier: getTierLabel(p.grade_tier, Number(p.overall_grade || 0)),
+    height: p.height ? Number(p.height) : null,
     weight: Number(p.weight || 0),
     fortyTime: parseForty(p.college_stats || null),
     production: Math.round(Number(p.college_production_score || 0)),
@@ -175,6 +177,28 @@ function getContrarianLabel(score: number): { label: string; color: string } {
   if (score < 50) return { label: 'Independent Thinker', color: 'text-emerald-400' }
   if (score < 70) return { label: 'Bold Ranker', color: 'text-amber-400' }
   return { label: 'Against the Grain', color: 'text-rose-400' }
+}
+
+function formatHeight(inches: number | null): string {
+  if (!inches || inches <= 0) return '—'
+  const ft = Math.floor(inches / 12)
+  const inch = inches % 12
+  return `${ft}'${inch}"`
+}
+
+/** Returns percentile 0–1 for value within a list. 1 = best. */
+function rankPercentile(value: number, values: number[], lowerIsBetter = false): number {
+  if (values.length < 2) return 0.5
+  const better = values.filter((v) => (lowerIsBetter ? v > value : v < value)).length
+  return better / (values.length - 1)
+}
+
+/** Maps a 0–1 percentile to background + text color for heat cells. */
+function heatCell(pct: number): { bg: string; color: string } {
+  if (pct >= 0.75) return { bg: 'rgba(16,185,129,0.18)', color: 'rgb(52,211,153)' }
+  if (pct >= 0.50) return { bg: 'rgba(59,130,246,0.16)', color: 'rgb(96,165,250)' }
+  if (pct >= 0.25) return { bg: 'rgba(245,158,11,0.16)', color: 'rgb(251,191,36)' }
+  return { bg: 'rgba(239,68,68,0.16)', color: 'rgb(248,113,113)' }
 }
 
 export function DraftBoardTab({
@@ -301,6 +325,28 @@ export function DraftBoardTab({
     seededYearRef.current = currentDraftYear
   }, [draftBoard, currentDraftYear, currentYearProspects, onAddToDraftBoard, onClearDraftBoard])
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
+
+  /** Per-position per-year stat arrays for heat-map percentile coloring. */
+  const positionalHeatStats = useMemo(() => {
+    type StatSet = { grade: number[]; rank: number[]; height: number[]; weight: number[]; forty: number[] }
+    const map = new Map<string, StatSet>()
+    for (const p of allEligibleProspects) {
+      const key = `${p.position}_${p.draft_year ?? 0}`
+      if (!map.has(key)) map.set(key, { grade: [], rank: [], height: [], weight: [], forty: [] })
+      const set = map.get(key)!
+      const grade = Number(p.overall_grade || 0)
+      const rank = Number(p.rank || 0)
+      const height = p.height ? Number(p.height) : 0
+      const weight = Number(p.weight || 0)
+      const forty = parseForty(p.college_stats || null)
+      if (grade > 0) set.grade.push(grade)
+      if (rank > 0 && rank < 9999) set.rank.push(rank)
+      if (height > 0) set.height.push(height)
+      if (weight > 0) set.weight.push(weight)
+      if (forty !== null) set.forty.push(forty)
+    }
+    return map
+  }, [allEligibleProspects])
 
   // Per-class consensus ranks — so "vs consensus" compares within the same draft class
   const consensusRankByClassId = useMemo(() => {
@@ -635,20 +681,19 @@ export function DraftBoardTab({
           <div>
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               {/* Column header */}
-              <div className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
-                style={{ gridTemplateColumns: '16px 36px 36px 1fr 36px minmax(0,1fr) 52px 48px 36px 36px 38px 44px 24px' }}>
-                <span />
-                <span className="text-center">#</span>
+              <div
+                className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
+                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 24px' }}
+              >
                 <span />
                 <span className="pl-1.5">Player</span>
                 <span className="text-center">Pos</span>
-                <span className="hidden sm:block pl-1">School</span>
-                <span className="text-right">Grade</span>
-                <span className="hidden lg:block text-center">Tier</span>
-                <span className="hidden lg:block text-right">Phys</span>
-                <span className="hidden lg:block text-right">Prod</span>
-                <span className="hidden lg:block text-right">40</span>
-                <span className="hidden lg:block text-right pr-1">Δ Cons.</span>
+                <span className="text-center">Rank</span>
+                <span className="text-center">Grade</span>
+                <span className="text-center">My #</span>
+                <span className="text-center">40</span>
+                <span className="text-center">Ht</span>
+                <span className="text-center">Wt</span>
                 <span />
               </div>
 
@@ -695,129 +740,148 @@ export function DraftBoardTab({
                           whileDrag={{ scale: 1.01, zIndex: 40, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', cursor: 'grabbing' }}
                           className={cn(
                             'relative border-b border-border/40 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
-                            isEven ? 'bg-secondary/10 hover:bg-secondary/25' : 'bg-card hover:bg-secondary/20',
+                            isEven ? 'bg-secondary/10 hover:bg-secondary/20' : 'bg-card hover:bg-secondary/15',
                             draggingProspectId === prospect.id && 'ring-1 ring-inset ring-primary/40 bg-primary/5',
                           )}
                         >
-                          <div
-                            className="grid items-center px-2 py-3"
-                            style={{ gridTemplateColumns: '16px 36px 36px 1fr 36px minmax(0,1fr) 52px 48px 36px 36px 38px 44px 24px' }}
-                          >
-                            {/* Drag handle */}
-                            <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+                          {(() => {
+                            const myRank = index + 1
+                            const heatKey = `${player.position}_${section.year}`
+                            const stats = positionalHeatStats.get(heatKey)
+                            const gradePct = stats ? rankPercentile(player.grade, stats.grade) : 0.5
+                            const rankPct = stats ? rankPercentile(player.rank, stats.rank, true) : 0.5
+                            const classSize = section.prospects.length
+                            const myRankPct = classSize > 1
+                              ? Math.max(0, Math.min(1, 0.5 + (consensusRank - myRank) / (classSize * 2)))
+                              : 0.5
+                            const fortyPct = (stats && player.fortyTime) ? rankPercentile(player.fortyTime, stats.forty, true) : 0.5
+                            const heightPct = (stats && player.height) ? rankPercentile(player.height, stats.height) : 0.5
+                            const weightPct = (stats && player.weight) ? rankPercentile(player.weight, stats.weight) : 0.5
 
-                            {/* Rank */}
-                            <span className="text-center text-base font-mono font-bold text-primary tabular-nums">
-                              {index + 1}
-                            </span>
+                            const gradeHeat = heatCell(gradePct)
+                            const rankHeat = heatCell(rankPct)
+                            const myRankHeat = heatCell(myRankPct)
+                            const fortyHeat = heatCell(fortyPct)
+                            const heightHeat = heatCell(heightPct)
+                            const weightHeat = heatCell(weightPct)
 
-                            {/* Headshot */}
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
-                              {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
-                                <Image
-                                  src={getPlayerImageUrl(player)}
-                                  alt={player.name}
-                                  width={32}
-                                  height={32}
-                                  className="w-full h-full object-cover"
-                                  onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground">
-                                  {player.name.split(' ').map((n) => n[0]).join('')}
+                            return (
+                              <div
+                                className="grid items-stretch h-12 px-2"
+                                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 24px' }}
+                              >
+                                {/* Drag handle */}
+                                <div className="flex items-center">
+                                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
                                 </div>
-                              )}
-                            </div>
 
-                            {/* Name + comps */}
-                            <div className="pl-1.5 min-w-0">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm font-semibold text-foreground truncate leading-none">
-                                  {player.name}
-                                </span>
-                                {comparisonNames.length > 0 && (
-                                  <div className="hidden sm:flex -space-x-1.5 flex-shrink-0">
-                                    {comparisonNames.slice(0, 3).map((compName) => {
-                                      const compMeta = compHeadshotMap.get(normalizeName(compName))
-                                      return (
-                                        <PlayerHeadshot
-                                          key={`${prospect.id}-${compName}`}
-                                          playerName={compName}
-                                          headshotUrl={compMeta?.headshotUrl}
-                                          espnId={compMeta?.espnId}
-                                          size={20}
-                                          className="border border-border/60 bg-secondary"
-                                        />
-                                      )
-                                    })}
+                                {/* Player: headshot + name + school */}
+                                <div className="flex items-center gap-2 min-w-0 py-1">
+                                  <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                                    {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
+                                      <Image
+                                        src={getPlayerImageUrl(player)}
+                                        alt={player.name}
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                        onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                                        {player.name.split(' ').map((n) => n[0]).join('')}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold text-foreground truncate leading-tight">
+                                      {player.name}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground truncate leading-tight">
+                                      {player.school}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Position */}
+                                <div className="flex items-center justify-center">
+                                  <span className="text-xs font-mono font-bold text-primary">{player.position}</span>
+                                </div>
+
+                                {/* Consensus Rank — heat cell */}
+                                <div className="flex items-center justify-center py-2 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-xs font-mono font-bold tabular-nums"
+                                    style={{ backgroundColor: rankHeat.bg, color: rankHeat.color }}
+                                  >
+                                    #{player.rank < 9999 ? player.rank : '—'}
+                                  </div>
+                                </div>
+
+                                {/* Grade — heat cell */}
+                                <div className="flex items-center justify-center py-2 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums"
+                                    style={{ backgroundColor: gradeHeat.bg, color: gradeHeat.color }}
+                                  >
+                                    {player.grade.toFixed(1)}
+                                  </div>
+                                </div>
+
+                                {/* My Rank — heat cell (green = bullish vs consensus) */}
+                                <div className="flex items-center justify-center py-2 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-xs font-mono font-bold tabular-nums"
+                                    style={{ backgroundColor: myRankHeat.bg, color: myRankHeat.color }}
+                                  >
+                                    #{myRank}
+                                  </div>
+                                </div>
+
+                                {/* 40 time — heat cell */}
+                                <div className="flex items-center justify-center py-2 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-xs font-mono tabular-nums"
+                                    style={player.fortyTime ? { backgroundColor: fortyHeat.bg, color: fortyHeat.color } : { color: 'rgb(100,100,110)' }}
+                                  >
+                                    {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
+                                  </div>
+                                </div>
+
+                                {/* Height — heat cell */}
+                                <div className="flex items-center justify-center py-2 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-xs font-mono tabular-nums"
+                                    style={player.height ? { backgroundColor: heightHeat.bg, color: heightHeat.color } : { color: 'rgb(100,100,110)' }}
+                                  >
+                                    {formatHeight(player.height)}
+                                  </div>
+                                </div>
+
+                                {/* Weight — heat cell */}
+                                <div className="flex items-center justify-center py-2 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-xs font-mono tabular-nums"
+                                    style={player.weight > 0 ? { backgroundColor: weightHeat.bg, color: weightHeat.color } : { color: 'rgb(100,100,110)' }}
+                                  >
+                                    {player.weight > 0 ? `${player.weight}` : '—'}
+                                  </div>
+                                </div>
+
+                                {/* Remove */}
+                                <div className="flex items-center justify-center">
+                                  <button
+                                    onClick={() => onRemoveFromDraftBoard(prospect.id)}
+                                    data-no-row-click="true"
+                                    className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary text-sm"
+                                    aria-label={`Remove ${player.name}`}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-
-                            {/* Position */}
-                            <span className="text-center text-xs font-mono font-bold text-primary">
-                              {player.position}
-                            </span>
-
-                            {/* School */}
-                            <span className="hidden sm:block pl-1 text-xs text-muted-foreground truncate">
-                              {player.school}
-                            </span>
-
-                            {/* Grade */}
-                            <span className="text-right text-sm font-mono font-bold text-foreground tabular-nums">
-                              {player.grade.toFixed(1)}
-                            </span>
-
-                            {/* Tier badge */}
-                            <span className={cn(
-                              'hidden lg:block text-center text-[9px] font-bold uppercase px-1 py-0.5 rounded border whitespace-nowrap',
-                              tierColor.bg, tierColor.text, tierColor.border
-                            )}>
-                              {player.tier === 'Blue Chip' ? 'B.Chip' : player.tier}
-                            </span>
-
-                            {/* Physical */}
-                            <span className="hidden lg:block text-right text-xs font-mono tabular-nums text-muted-foreground">
-                              {player.physical > 0 ? player.physical : '—'}
-                            </span>
-
-                            {/* Production */}
-                            <span className="hidden lg:block text-right text-xs font-mono tabular-nums text-muted-foreground">
-                              {player.production > 0 ? player.production : '—'}
-                            </span>
-
-                            {/* 40 time */}
-                            <span className="hidden lg:block text-right text-xs font-mono tabular-nums text-muted-foreground">
-                              {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
-                            </span>
-
-                            {/* Δ Consensus */}
-                            <div className="hidden lg:flex items-center justify-end pr-1">
-                              {rankDiff === 0 ? (
-                                <Minus className="w-3 h-3 text-muted-foreground/50" />
-                              ) : (
-                                <span className={cn(
-                                  'flex items-center gap-0.5 text-xs font-mono tabular-nums',
-                                  rankDiff > 0 ? 'text-emerald-400' : 'text-rose-400'
-                                )}>
-                                  {rankDiff > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                  {Math.abs(rankDiff)}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Remove */}
-                            <button
-                              onClick={() => onRemoveFromDraftBoard(prospect.id)}
-                              data-no-row-click="true"
-                              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary text-sm"
-                              aria-label={`Remove ${player.name}`}
-                            >
-                              ×
-                            </button>
-                          </div>
+                            )
+                          })()}
                         </ReorderAny.Item>
                       )
                     })}

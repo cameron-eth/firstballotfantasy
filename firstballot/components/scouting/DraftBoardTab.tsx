@@ -6,7 +6,6 @@ import { AnimatePresence, motion, Reorder } from 'framer-motion'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import {
-  Brain,
   ChevronDown,
   ChevronUp,
   ClipboardList,
@@ -157,28 +156,6 @@ function getPlayerImageUrl(player: BoardPlayer): string {
   return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
 }
 
-function getArchetype(player: BoardPlayer): { name: string; icon: typeof Zap; color: string } {
-  const { physical, production, fortyTime, weight } = player
-  if (physical >= 90 && fortyTime && fortyTime < 4.45) {
-    return { name: 'Freak Athlete', icon: Zap, color: 'text-amber-400' }
-  }
-  if (production >= 90 && physical >= 85) {
-    return { name: 'Complete Player', icon: Target, color: 'text-emerald-400' }
-  }
-  if (production >= 90) {
-    return { name: 'Producer', icon: TrendingUp, color: 'text-blue-400' }
-  }
-  if (physical >= 90) {
-    return { name: 'Physical Specimen', icon: Scale, color: 'text-purple-400' }
-  }
-  if (weight > 230 && player.position === 'RB') {
-    return { name: 'Power Back', icon: Scale, color: 'text-red-400' }
-  }
-  if (fortyTime && fortyTime < 4.4) {
-    return { name: 'Speedster', icon: Zap, color: 'text-cyan-400' }
-  }
-  return { name: 'Balanced', icon: Brain, color: 'text-slate-400' }
-}
 
 function calculateContrarianScore(userRanks: BoardPlayer[], consensusRanks: BoardPlayer[]): number {
   if (userRanks.length === 0) return 0
@@ -591,79 +568,64 @@ export function DraftBoardTab({
 
   return (
     <main className="min-h-[70vh] bg-background">
-      <div className="w-full px-4 sm:px-5 lg:px-6 pt-4 pb-2">
-        <div className="rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-[0_16px_40px_-28px_rgba(0,0,0,0.9)]">
-          <div className="w-full px-5 sm:px-6 lg:px-7 py-5 space-y-3">
-            {/* Row 1 — Title + Contrarian + Save */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <h1 className="text-3xl sm:text-4xl font-mono font-bold text-foreground leading-none tracking-tight">
-                  Big Board
-                </h1>
-                <div className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Contrarian</span>
-                  <span className="text-lg leading-none font-mono font-bold text-primary">
-                    {contrarianScore}
-                  </span>
-                  <span className={cn('text-[10px] font-semibold', contrarianLabel.color)}>
-                    {contrarianLabel.label}
-                  </span>
-                </div>
-              </div>
-
-              {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
-                <DraftBoardControls
-                  hasSavedBoard={hasSavedBoard}
-                  saving={savingBoard}
-                  hasChanges={hasUnsavedChanges}
-                  onSave={onSaveBoard}
-                />
-              )}
-            </div>
-
-            {/* Contrarian badge — mobile only */}
-            <div className="flex sm:hidden items-center gap-2 rounded-full border border-border bg-background/60 px-3 py-1.5 w-fit">
+      <div className="w-full px-4 sm:px-5 lg:px-6 pt-6 pb-3 space-y-3">
+        {/* Row 1 — Title + Contrarian + Save */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl sm:text-4xl font-mono font-bold text-foreground leading-none tracking-tight">
+              Big Board
+            </h1>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary/60 border border-border/60">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Contrarian</span>
-              <span className="text-lg leading-none font-mono font-bold text-primary">{contrarianScore}</span>
+              <span className="text-sm leading-none font-mono font-bold text-primary">{contrarianScore}</span>
               <span className={cn('text-[10px] font-semibold', contrarianLabel.color)}>{contrarianLabel.label}</span>
             </div>
+          </div>
 
-            {/* Row 2 — Stats + Position Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
-                <span className="text-foreground font-semibold">{currentDraftYear}</span>
-                <span className="w-px h-3.5 bg-border" />
-                <span><span className="text-foreground font-semibold">{draftBoard.length}</span> on board</span>
-                <span className="w-px h-3.5 bg-border" />
-                <span><span className="text-foreground font-semibold">{offBoardProspects.length}</span> available</span>
-                <span className="w-px h-3.5 bg-border" />
-                <span>avg <span className="text-foreground font-semibold">{boardStats.avgGrade.toFixed(1)}</span></span>
-              </div>
+          {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
+            <DraftBoardControls
+              hasSavedBoard={hasSavedBoard}
+              saving={savingBoard}
+              hasChanges={hasUnsavedChanges}
+              onSave={onSaveBoard}
+            />
+          )}
+        </div>
 
-              <div className="flex items-center gap-1.5">
-                {positionTabs.map((pos) => (
-                  <button
-                    key={pos}
-                    onClick={() => setPosition(pos)}
-                    className={cn(
-                      'h-8 px-3 text-xs font-semibold rounded-md transition-colors',
-                      position === pos
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
-                    )}
-                  >
-                    {pos}
-                  </button>
-                ))}
-                <span className="w-px h-5 bg-border mx-1" />
-                <button
-                  onClick={addTopAvailable}
-                  className="h-8 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors"
-                >
-                  Add Next
-                </button>
-              </div>
-            </div>
+        {/* Row 2 — Stats + Position Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
+            <span className="text-foreground font-semibold">{currentDraftYear}</span>
+            <span className="w-px h-3.5 bg-border" />
+            <span><span className="text-foreground font-semibold">{draftBoard.length}</span> on board</span>
+            <span className="w-px h-3.5 bg-border" />
+            <span><span className="text-foreground font-semibold">{offBoardProspects.length}</span> available</span>
+            <span className="w-px h-3.5 bg-border" />
+            <span>avg <span className="text-foreground font-semibold">{boardStats.avgGrade.toFixed(1)}</span></span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {positionTabs.map((pos) => (
+              <button
+                key={pos}
+                onClick={() => setPosition(pos)}
+                className={cn(
+                  'h-8 px-3 text-xs font-semibold rounded-md transition-colors',
+                  position === pos
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                {pos}
+              </button>
+            ))}
+            <span className="w-px h-5 bg-border mx-1" />
+            <button
+              onClick={addTopAvailable}
+              className="h-8 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors"
+            >
+              Add Next
+            </button>
           </div>
         </div>
       </div>
@@ -672,35 +634,41 @@ export function DraftBoardTab({
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
           <div>
             <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="p-3 border-b border-border flex items-center justify-between">
-                <h2 className="font-mono font-bold text-foreground">Your Rankings</h2>
-                <span className="text-xs text-muted-foreground">{userBoard.length} players</span>
-                </div>
+              {/* Column header */}
+              <div className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
+                style={{ gridTemplateColumns: '16px 36px 28px 1fr 36px 1fr 52px 44px 52px 28px' }}>
+                <span />
+                <span className="text-center">#</span>
+                <span />
+                <span className="pl-1">Player</span>
+                <span className="text-center">Pos</span>
+                <span className="hidden sm:block pl-1">School</span>
+                <span className="text-right pr-1">Grade</span>
+                <span className="hidden lg:block text-center">Tier</span>
+                <span className="hidden lg:block text-right pr-1">Δ Cons.</span>
+                <span />
+              </div>
 
               {boardSections.map((section) => (
-                  <div
-                    key={`year-${section.year}`}
-                    className="border-b border-border/60 last:border-0"
+                <div key={`year-${section.year}`} className="border-b border-border/60 last:border-0">
+                  <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-secondary/20 border-b border-border/40">
+                    {section.year || 'Unknown'} Class
+                  </div>
+                  <ReorderAny.Group
+                    axis="y"
+                    values={section.prospects}
+                    onReorder={(next: Prospect[]) => handleSectionReorder(section.year, next)}
+                    layoutScroll
+                    className="relative"
                   >
-                    <div className="px-3 py-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground bg-secondary/25">
-                      {section.year || 'Unknown'} Class
-                    </div>
-                    <ReorderAny.Group
-                      axis="y"
-                      values={section.prospects}
-                      onReorder={(next: Prospect[]) => handleSectionReorder(section.year, next)}
-                      layoutScroll
-                      className="relative divide-y divide-border/60"
-                    >
-                      {section.prospects.map((prospect, index) => {
+                    {section.prospects.map((prospect, index) => {
                       const player = boardPlayerMap.get(prospect.id) || toBoardPlayer(prospect)
                       const classRankMap = consensusRankByClassId.get(section.year)
                       const consensusRank = classRankMap?.get(player.id) ?? index + 1
                       const rankDiff = consensusRank - (index + 1)
                       const tierColor = tierColors[player.tier] || tierColors.Depth
-                      const archetype = getArchetype(player)
-                      const ArchetypeIcon = archetype.icon
                       const comparisonNames = comparisonNamesMap.get(prospect.id) || []
+                      const isEven = index % 2 === 1
 
                       return (
                         <ReorderAny.Item
@@ -714,7 +682,6 @@ export function DraftBoardTab({
                           dragElastic={0.08}
                           onDragStart={() => setDraggingProspectId(prospect.id)}
                           onDragEnd={() => {
-                            // Commit any pending reorder to parent (single state update)
                             const pending = pendingReorderRef.current
                             if (pending) {
                               commitSectionReorder(pending.year, pending.prospects)
@@ -722,76 +689,52 @@ export function DraftBoardTab({
                             }
                             setDraggingProspectId(null)
                           }}
-                          whileDrag={{
-                            scale: 1.02,
-                            zIndex: 40,
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                            cursor: 'grabbing',
-                          }}
+                          whileDrag={{ scale: 1.01, zIndex: 40, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', cursor: 'grabbing' }}
                           className={cn(
-                            'relative bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing focus:outline-none focus:ring-1 focus:ring-primary/40',
-                            draggingProspectId === prospect.id && 'ring-2 ring-primary/50 bg-secondary/40',
-                            'data-[drag=true]:z-20 data-[drag=true]:ring-2 data-[drag=true]:ring-primary/50 data-[drag=true]:shadow-xl'
+                            'relative border-b border-border/40 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
+                            isEven ? 'bg-secondary/10 hover:bg-secondary/25' : 'bg-card hover:bg-secondary/20',
+                            draggingProspectId === prospect.id && 'ring-1 ring-inset ring-primary/40 bg-primary/5',
                           )}
                         >
-                          <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
-                            <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                            <div className="w-7 sm:w-8 text-center">
-                              <span className="text-xl sm:text-2xl font-mono font-bold text-primary">
-                                {index + 1}
-                              </span>
-                            </div>
+                          <div
+                            className="grid items-center px-2 py-2"
+                            style={{ gridTemplateColumns: '16px 36px 28px 1fr 36px 1fr 52px 44px 52px 28px' }}
+                          >
+                            {/* Drag handle */}
+                            <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
 
-                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                            {/* Rank */}
+                            <span className="text-center text-sm font-mono font-bold text-primary tabular-nums">
+                              {index + 1}
+                            </span>
+
+                            {/* Headshot */}
+                            <div className="w-6 h-6 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                               {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                 <Image
                                   src={getPlayerImageUrl(player)}
                                   alt={player.name}
-                                  width={48}
-                                  height={48}
+                                  width={24}
+                                  height={24}
                                   className="w-full h-full object-cover"
-                                  onError={() =>
-                                    setImageErrors((prev) => new Set(prev).add(player.name))
-                                  }
+                                  onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                                  {player.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')}
+                                <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                                  {player.name.split(' ').map((n) => n[0]).join('')}
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <span className="text-base sm:text-lg font-semibold text-foreground truncate">
+                            {/* Name */}
+                            <div className="pl-1.5 min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-sm font-medium text-foreground truncate leading-none">
                                   {player.name}
                                 </span>
-                                <span
-                                  className={cn(
-                                    'px-1.5 py-0.5 text-[9px] font-bold uppercase rounded border',
-                                    tierColor.bg,
-                                    tierColor.text,
-                                    tierColor.border
-                                  )}
-                                >
-                                  {player.tier}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
-                                <span className="font-mono text-primary">{player.position}</span>
-                                <span className="truncate max-w-[110px] sm:max-w-none">{player.school}</span>
-                                <span className={cn('hidden sm:inline-flex items-center gap-0.5', archetype.color)}>
-                                  <ArchetypeIcon className="w-3 h-3" />
-                                  {archetype.name}
-                                </span>
-                              </div>
-                              {comparisonNames.length > 0 && (
-                                <div className="mt-1.5 flex items-center gap-2">
-                                  <div className="flex -space-x-2">
-                                    {comparisonNames.map((compName) => {
+                                {comparisonNames.length > 0 && (
+                                  <div className="hidden sm:flex -space-x-1.5 flex-shrink-0">
+                                    {comparisonNames.slice(0, 3).map((compName) => {
                                       const compMeta = compHeadshotMap.get(normalizeName(compName))
                                       return (
                                         <PlayerHeadshot
@@ -799,60 +742,60 @@ export function DraftBoardTab({
                                           playerName={compName}
                                           headshotUrl={compMeta?.headshotUrl}
                                           espnId={compMeta?.espnId}
-                                          size={32}
-                                          className="border-2 border-border/80 bg-secondary shadow-sm"
+                                          size={18}
+                                          className="border border-border/60 bg-secondary"
                                         />
                                       )
                                     })}
                                   </div>
-                                  <span className="hidden sm:inline text-[10px] text-muted-foreground uppercase tracking-wide">
-                                    Historical comps
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="text-right hidden md:block">
-                              <div className="text-xl lg:text-2xl font-mono font-bold text-foreground">
-                                {player.grade.toFixed(1)}
+                                )}
                               </div>
-                              <div className="text-[10px] text-muted-foreground">GRADE</div>
                             </div>
 
-                            <div className="w-14 text-right hidden lg:block">
-                              {rankDiff !== 0 && (
-                                <div
-                                  className={cn(
-                                    'flex items-center justify-end gap-1 text-sm font-mono',
-                                    rankDiff > 0 ? 'text-emerald-400' : 'text-rose-400'
-                                  )}
-                                >
-                                  {rankDiff > 0 ? (
-                                    <TrendingUp className="w-3 h-3" />
-                                  ) : (
-                                    <TrendingDown className="w-3 h-3" />
-                                  )}
+                            {/* Position */}
+                            <span className="text-center text-xs font-mono font-semibold text-primary">
+                              {player.position}
+                            </span>
+
+                            {/* School */}
+                            <span className="hidden sm:block pl-1 text-xs text-muted-foreground truncate">
+                              {player.school}
+                            </span>
+
+                            {/* Grade */}
+                            <span className="text-right pr-1 text-sm font-mono font-bold text-foreground tabular-nums">
+                              {player.grade.toFixed(1)}
+                            </span>
+
+                            {/* Tier badge */}
+                            <span className={cn(
+                              'hidden lg:block text-center text-[9px] font-bold uppercase px-1 py-0.5 rounded border mx-1',
+                              tierColor.bg, tierColor.text, tierColor.border
+                            )}>
+                              {player.tier === 'Blue Chip' ? 'B.Chip' : player.tier}
+                            </span>
+
+                            {/* Δ Consensus */}
+                            <div className="hidden lg:flex items-center justify-end pr-1">
+                              {rankDiff === 0 ? (
+                                <Minus className="w-3 h-3 text-muted-foreground/50" />
+                              ) : (
+                                <span className={cn(
+                                  'flex items-center gap-0.5 text-xs font-mono tabular-nums',
+                                  rankDiff > 0 ? 'text-emerald-400' : 'text-rose-400'
+                                )}>
+                                  {rankDiff > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                                   {Math.abs(rankDiff)}
-                                </div>
+                                </span>
                               )}
-                              {rankDiff === 0 && (
-                                <Minus className="w-4 h-4 text-muted-foreground ml-auto" />
-                              )}
-                              <div className="text-[9px] text-muted-foreground">vs consensus</div>
                             </div>
 
-                            <button
-                              onClick={() => onShowComps?.(prospect)}
-                              data-no-row-click="true"
-                              className="h-8 px-2 rounded border border-border text-[10px] font-medium text-muted-foreground hover:text-foreground hover:border-primary/40"
-                            >
-                              Comps
-                            </button>
-
+                            {/* Remove */}
                             <button
                               onClick={() => onRemoveFromDraftBoard(prospect.id)}
                               data-no-row-click="true"
-                              className="h-8 w-8 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary transition-colors text-sm"
+                              aria-label={`Remove ${player.name}`}
                             >
                               ×
                             </button>
@@ -860,9 +803,9 @@ export function DraftBoardTab({
                         </ReorderAny.Item>
                       )
                     })}
-                    </ReorderAny.Group>
-                  </div>
-                ))}
+                  </ReorderAny.Group>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -185,8 +185,18 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   // Draftboard persistence
   const { savedBoard, saving: savingBoard, saveBoard } = useDraftboard()
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [initialBoardLoaded, setInitialBoardLoaded] = useState(false)
+
+  // Derived — no useEffect needed; recomputes whenever draftBoard or savedBoard changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialBoardLoaded) return false
+    const currentIds = draftBoard.map((p) => p.id)
+    const savedIds = savedBoard?.prospect_ids ?? []
+    return (
+      currentIds.length !== savedIds.length ||
+      currentIds.some((id, idx) => id !== savedIds[idx])
+    )
+  }, [draftBoard, savedBoard, initialBoardLoaded])
 
   // Memoized expensive computations
   const positionNeeds = useMemo(() => {
@@ -658,16 +668,12 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   const handleClearDraftBoard = useCallback(() => {
     setDraftBoard([])
-    setHasUnsavedChanges(true)
   }, [])
 
   // Save draft board to database
   const handleSaveBoard = useCallback(async () => {
     const prospectIds = draftBoard.map((p) => p.id)
-    const result = await saveBoard(prospectIds)
-    if (result) {
-      setHasUnsavedChanges(false)
-    }
+    await saveBoard(prospectIds)
   }, [draftBoard, saveBoard])
 
   // Load saved board when prospects are available
@@ -688,17 +694,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       setInitialBoardLoaded(true)
     }
   }, [savedBoard, prospects, initialBoardLoaded])
-
-  // Track unsaved changes when draftBoard changes (after initial load)
-  useEffect(() => {
-    if (initialBoardLoaded) {
-      const currentIds = draftBoard.map((p) => p.id)
-      const savedIds = savedBoard?.prospect_ids || []
-      const hasChanges =
-        currentIds.length !== savedIds.length || currentIds.some((id, idx) => id !== savedIds[idx])
-      setHasUnsavedChanges(hasChanges)
-    }
-  }, [draftBoard, savedBoard, initialBoardLoaded])
 
 
   // Fetch prospects data from Supabase

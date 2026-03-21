@@ -700,7 +700,6 @@ function TradeMarketContent() {
                     const next = input.value.trim()
                     setLeagueId(next)
                     leagueCache.setLeagueId(next)
-                      setNoLeagueId(false)
                     }
                   }
                 }}
@@ -714,7 +713,6 @@ function TradeMarketContent() {
                   const next = input.value.trim()
                   setLeagueId(next)
                   leagueCache.setLeagueId(next)
-                    setNoLeagueId(false)
                   }
                 }}
               >

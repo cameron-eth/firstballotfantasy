@@ -30,7 +30,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   const [mounted, setMounted] = useState(false)
   const { data: historicalProspects = [], isLoading: loading } = useSWR<HistoricalProspect[]>(
     `/api/prospects?draft_year=${selectedYear}`,
-    (url) => fetch(url).then((r) => r.json())
+    (url: string) => fetch(url).then((r) => r.json())
   )
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'charts' | 'athletes'>('athletes')

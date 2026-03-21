@@ -89,7 +89,7 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
     error,
   } = useSWR<DraftAnalysisData | null>(
     draftId ? `/api/draft-analysis?draftId=${draftId}` : null,
-    (url) =>
+    (url: string) =>
       fetch(url).then((r) => {
         if (!r.ok) throw new Error('Failed to fetch draft analysis')
         return r.json()

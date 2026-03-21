@@ -19,7 +19,7 @@ export function AllTimeRankingsTab() {
   const PAGE_SIZE = 30
   const { data: prospects = [], isLoading: loading } = useSWR<Prospect[]>(
     '/api/prospects/all-time?limit=250',
-    (url) => fetch(url).then((r) => r.json())
+    (url: string) => fetch(url).then((r) => r.json())
   )
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')

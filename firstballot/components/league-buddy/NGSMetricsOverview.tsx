@@ -142,7 +142,7 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Completion % Over Expected</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topCPOE.map((player) => {
+              {topCPOE.map((player, idx) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
@@ -201,7 +201,7 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Rush Efficiency Score</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topRushEfficiency.map((player) => {
+              {topRushEfficiency.map((player, idx) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
@@ -257,7 +257,7 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Rush Yards Over Expected</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topRYOE.map((player) => {
+              {topRYOE.map((player, idx) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
@@ -316,7 +316,7 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Average Separation (yards)</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topSeparation.map((player) => {
+              {topSeparation.map((player, idx) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
@@ -372,7 +372,7 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Catch Percentage</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topCatchPercentage.map((player) => {
+              {topCatchPercentage.map((player, idx) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div
@@ -428,7 +428,7 @@ export function NGSMetricsOverview({ selectedTeam }: NGSMetricsOverviewProps) {
               <p className="text-xs text-slate-400 font-medium">Yards After Catch Above Expected</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
-              {topYAC.map((player) => {
+              {topYAC.map((player, idx) => {
                 const playerInfo = getPlayerInfo(player.player_name)
                 return (
                   <div

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import useSWR from 'swr'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PlayerCard } from '@/components/player-card'
@@ -34,75 +35,39 @@ interface BreakoutBustPlayer {
 
 type StatType = 'passing' | 'rushing' | 'receiving'
 
+const jsonFetcher = (url: string) => fetch(url).then((r) => r.json())
+
 export function RecordSection() {
   const [activeTab, setActiveTab] = useState<'breakouts' | 'busts' | 'stats'>('breakouts')
-  const [breakoutCandidates, setBreakoutCandidates] = useState<BreakoutBustPlayer[]>([])
-  const [bustCandidates, setBustCandidates] = useState<BreakoutBustPlayer[]>([])
   const [statType, setStatType] = useState<StatType>('passing')
   const [season, setSeason] = useState('2025')
-  const [statsData, setStatsData] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [statsLoading, setStatsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (activeTab === 'breakouts' || activeTab === 'busts') {
-      fetchBreakoutBustData()
-    } else {
-      fetchStats()
-    }
-  }, [activeTab, statType, season])
+  const isBreakoutBustTab = activeTab === 'breakouts' || activeTab === 'busts'
 
-  const fetchBreakoutBustData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  const { data: breakoutResult, error: breakoutError, isLoading: breakoutLoading, mutate: retryBreakout } = useSWR<{
+    data: BreakoutBustPlayer[]
+  }>(isBreakoutBustTab ? '/api/breakout-bust?type=breakout&limit=50' : null, jsonFetcher)
 
-      const breakoutResponse = await fetch('/api/breakout-bust?type=breakout&limit=50')
-      if (!breakoutResponse.ok) {
-        throw new Error('Failed to fetch breakout data')
-      }
-      const breakoutResult = await breakoutResponse.json()
-      const breakoutData = breakoutResult.data || []
+  const { data: bustResult, error: bustError, isLoading: bustLoading, mutate: retryBust } = useSWR<{
+    data: BreakoutBustPlayer[]
+  }>(isBreakoutBustTab ? '/api/breakout-bust?type=bust&limit=50' : null, jsonFetcher)
 
-      const bustResponse = await fetch('/api/breakout-bust?type=bust&limit=50')
-      if (!bustResponse.ok) {
-        throw new Error('Failed to fetch bust data')
-      }
-      const bustResult = await bustResponse.json()
-      const bustData = bustResult.data || []
+  const { data: statsResult, error: statsError, isLoading: statsLoading, mutate: retryStats } = useSWR<{
+    data: any[]
+  }>(
+    activeTab === 'stats'
+      ? `/api/ngs-stats?type=${statType}&season=${season}&limit=100&sort=fantasy_points&order=desc`
+      : null,
+    jsonFetcher
+  )
 
-      setBreakoutCandidates(breakoutData)
-      setBustCandidates(bustData)
-    } catch (err) {
-      console.error('Error fetching breakout/bust data:', err)
-      setError('Failed to load breakout and bust data')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = breakoutLoading || bustLoading
+  const error = breakoutError?.message ?? bustError?.message ?? statsError?.message ?? null
+  const breakoutCandidates: BreakoutBustPlayer[] = breakoutResult?.data ?? []
+  const bustCandidates: BreakoutBustPlayer[] = bustResult?.data ?? []
+  const statsData: any[] = statsResult?.data ?? []
 
-  const fetchStats = async () => {
-    setStatsLoading(true)
-    setError(null)
-    try {
-      const response = await fetch(
-        `/api/ngs-stats?type=${statType}&season=${season}&limit=100&sort=fantasy_points&order=desc`
-      )
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      setStatsData(result.data || [])
-    } catch (error: any) {
-      console.error('Failed to fetch stats:', error)
-      setError(error.message)
-    } finally {
-      setStatsLoading(false)
-    }
-  }
+  const retryBreakoutBust = () => { retryBreakout(); retryBust() }
 
   const transformPlayerForCard = (player: BreakoutBustPlayer, isBreakout: boolean = true) => ({
     name: player.player_name,
@@ -166,7 +131,7 @@ export function RecordSection() {
               <CardContent className="p-12 text-center">
                 <p className="text-red-400 font-mono mb-4">ERROR: {error}</p>
                 <button
-                  onClick={fetchBreakoutBustData}
+                  onClick={retryBreakoutBust}
                   className="bg-green-400 text-slate-900 px-4 py-2 rounded-lg font-mono"
                 >
                   RETRY
@@ -271,7 +236,7 @@ export function RecordSection() {
               <CardContent className="p-12 text-center">
                 <p className="text-red-400 font-mono mb-4">ERROR: {error}</p>
                 <button
-                  onClick={fetchBreakoutBustData}
+                  onClick={retryBreakoutBust}
                   className="bg-red-400 text-slate-900 px-4 py-2 rounded-lg font-mono"
                 >
                   RETRY
@@ -415,7 +380,7 @@ export function RecordSection() {
               <CardContent className="p-12 text-center">
                 <p className="text-red-400 font-mono mb-4">ERROR: {error}</p>
                 <button
-                  onClick={fetchStats}
+                  onClick={() => retryStats()}
                   className="bg-yellow-400 text-slate-900 px-4 py-2 rounded-lg font-mono"
                 >
                   RETRY

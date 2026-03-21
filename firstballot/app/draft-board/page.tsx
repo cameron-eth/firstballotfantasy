@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
+import type React from 'react'
+
+// Framer Motion Reorder types are incompatible with React 19 JSX — cast to any
+const ReorderAny = Reorder as unknown as {
+  Group: React.ComponentType<Record<string, unknown>>
+  Item: React.ComponentType<Record<string, unknown>>
+}
 import Image from 'next/image'
 import useSWR from 'swr'
 import { cn } from '@/lib/utils'
@@ -289,7 +296,7 @@ export default function DraftBoardPage() {
                 <span className="text-xs text-muted-foreground">{userBoard.length} players</span>
               </div>
 
-              <Reorder.Group
+              <ReorderAny.Group
                 axis="y"
                 values={userBoard}
                 onReorder={setUserBoard}
@@ -305,7 +312,7 @@ export default function DraftBoardPage() {
                     const ArchetypeIcon = archetype.icon
 
                     return (
-                      <Reorder.Item
+                      <ReorderAny.Item
                         key={player.name}
                         value={player}
                         className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing"
@@ -395,11 +402,11 @@ export default function DraftBoardPage() {
                             <div className="text-[9px] text-muted-foreground">vs consensus</div>
                           </div>
                         </div>
-                      </Reorder.Item>
+                      </ReorderAny.Item>
                     )
                   })}
                 </AnimatePresence>
-              </Reorder.Group>
+              </ReorderAny.Group>
             </div>
           </div>
 

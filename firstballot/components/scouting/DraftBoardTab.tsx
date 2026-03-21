@@ -328,22 +328,24 @@ export function DraftBoardTab({
 
   /** Per-position per-year stat arrays for heat-map percentile coloring. */
   const positionalHeatStats = useMemo(() => {
-    type StatSet = { grade: number[]; rank: number[]; height: number[]; weight: number[]; forty: number[] }
+    type StatSet = { grade: number[]; rank: number[]; height: number[]; weight: number[]; forty: number[]; physical: number[] }
     const map = new Map<string, StatSet>()
     for (const p of allEligibleProspects) {
       const key = `${p.position}_${p.draft_year ?? 0}`
-      if (!map.has(key)) map.set(key, { grade: [], rank: [], height: [], weight: [], forty: [] })
+      if (!map.has(key)) map.set(key, { grade: [], rank: [], height: [], weight: [], forty: [], physical: [] })
       const set = map.get(key)!
       const grade = Number(p.overall_grade || 0)
       const rank = Number(p.rank || 0)
       const height = p.height ? Number(p.height) : 0
       const weight = Number(p.weight || 0)
       const forty = parseForty(p.college_stats || null)
+      const physical = Math.round(Number(p.physical_measurables_score || 0))
       if (grade > 0) set.grade.push(grade)
       if (rank > 0 && rank < 9999) set.rank.push(rank)
       if (height > 0) set.height.push(height)
       if (weight > 0) set.weight.push(weight)
       if (forty !== null) set.forty.push(forty)
+      if (physical > 0) set.physical.push(physical)
     }
     return map
   }, [allEligibleProspects])
@@ -657,7 +659,7 @@ export function DraftBoardTab({
               {/* Column header */}
               <div
                 className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
-                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 24px' }}
+                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
               >
                 <span />
                 <span className="pl-1.5">Player</span>
@@ -668,6 +670,7 @@ export function DraftBoardTab({
                 <span className="text-center">40</span>
                 <span className="text-center">Ht</span>
                 <span className="text-center">Wt</span>
+                <span className="text-center">Phy</span>
                 <span />
               </div>
 
@@ -731,6 +734,7 @@ export function DraftBoardTab({
                             const fortyPct = (stats && player.fortyTime) ? rankPercentile(player.fortyTime, stats.forty, true) : 0.5
                             const heightPct = (stats && player.height) ? rankPercentile(player.height, stats.height) : 0.5
                             const weightPct = (stats && player.weight) ? rankPercentile(player.weight, stats.weight) : 0.5
+                            const physicalPct = (stats && player.physical > 0) ? rankPercentile(player.physical, stats.physical) : 0.5
 
                             const gradeHeat = heatCell(gradePct)
                             const rankHeat = heatCell(rankPct)
@@ -738,11 +742,12 @@ export function DraftBoardTab({
                             const fortyHeat = heatCell(fortyPct)
                             const heightHeat = heatCell(heightPct)
                             const weightHeat = heatCell(weightPct)
+                            const physicalHeat = heatCell(physicalPct)
 
                             return (
                               <div
                                 className="grid items-stretch h-20 pl-2 pr-2"
-                                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 24px' }}
+                                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
                               >
                                 {/* Drag handle */}
                                 <div className="flex items-center">
@@ -753,14 +758,14 @@ export function DraftBoardTab({
                                 {/* Player: full-height cutout image + name */}
                                 <div className="flex items-center gap-3 min-w-0">
                                   {/* Cutout image — no circle, like ProspectCard */}
-                                  <div className="relative w-12 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
+                                  <div className="relative w-20 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
                                     <div className="absolute inset-0 bg-gradient-to-t from-card/60 via-transparent to-transparent z-[1]" />
                                     {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                       <Image
                                         src={getPlayerImageUrl(player)}
                                         alt={player.name}
-                                        width={96}
-                                        height={96}
+                                        width={120}
+                                        height={120}
                                         className="w-full h-full object-contain object-bottom scale-110"
                                         onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                       />
@@ -842,6 +847,16 @@ export function DraftBoardTab({
                                     style={player.weight > 0 ? { backgroundColor: weightHeat.bg, color: weightHeat.color } : { color: 'rgb(100,100,110)' }}
                                   >
                                     {player.weight > 0 ? `${player.weight}` : '—'}
+                                  </div>
+                                </div>
+
+                                {/* Physical score — heat cell */}
+                                <div className="flex items-center justify-center py-3.5 px-0.5">
+                                  <div
+                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
+                                    style={player.physical > 0 ? { backgroundColor: physicalHeat.bg, color: physicalHeat.color } : { color: 'rgb(100,100,110)' }}
+                                  >
+                                    {player.physical > 0 ? player.physical : '—'}
                                   </div>
                                 </div>
 

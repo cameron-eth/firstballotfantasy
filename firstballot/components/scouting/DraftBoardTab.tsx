@@ -767,7 +767,7 @@ export function DraftBoardTab({
 
                             return (
                               <div
-                                className="grid items-stretch h-12 px-2"
+                                className="grid items-stretch h-16 px-2"
                                 style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 24px' }}
                               >
                                 {/* Drag handle */}
@@ -776,14 +776,14 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* Player: headshot + name + school */}
-                                <div className="flex items-center gap-2 min-w-0 py-1">
-                                  <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                                <div className="flex items-center gap-2 min-w-0 py-2">
+                                  <div className="w-9 h-9 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                                     {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                       <Image
                                         src={getPlayerImageUrl(player)}
                                         alt={player.name}
-                                        width={32}
-                                        height={32}
+                                        width={36}
+                                        height={36}
                                         className="w-full h-full object-cover"
                                         onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                       />
@@ -809,7 +809,7 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* Consensus Rank — heat cell */}
-                                <div className="flex items-center justify-center py-2 px-0.5">
+                                <div className="flex items-center justify-center py-3 px-0.5">
                                   <div
                                     className="w-full h-full flex items-center justify-center rounded text-xs font-mono font-bold tabular-nums"
                                     style={{ backgroundColor: rankHeat.bg, color: rankHeat.color }}
@@ -819,7 +819,7 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* Grade — heat cell */}
-                                <div className="flex items-center justify-center py-2 px-0.5">
+                                <div className="flex items-center justify-center py-3 px-0.5">
                                   <div
                                     className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums"
                                     style={{ backgroundColor: gradeHeat.bg, color: gradeHeat.color }}
@@ -829,7 +829,7 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* My Rank — heat cell (green = bullish vs consensus) */}
-                                <div className="flex items-center justify-center py-2 px-0.5">
+                                <div className="flex items-center justify-center py-3 px-0.5">
                                   <div
                                     className="w-full h-full flex items-center justify-center rounded text-xs font-mono font-bold tabular-nums"
                                     style={{ backgroundColor: myRankHeat.bg, color: myRankHeat.color }}
@@ -839,7 +839,7 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* 40 time — heat cell */}
-                                <div className="flex items-center justify-center py-2 px-0.5">
+                                <div className="flex items-center justify-center py-3 px-0.5">
                                   <div
                                     className="w-full h-full flex items-center justify-center rounded text-xs font-mono tabular-nums"
                                     style={player.fortyTime ? { backgroundColor: fortyHeat.bg, color: fortyHeat.color } : { color: 'rgb(100,100,110)' }}
@@ -849,7 +849,7 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* Height — heat cell */}
-                                <div className="flex items-center justify-center py-2 px-0.5">
+                                <div className="flex items-center justify-center py-3 px-0.5">
                                   <div
                                     className="w-full h-full flex items-center justify-center rounded text-xs font-mono tabular-nums"
                                     style={player.height ? { backgroundColor: heightHeat.bg, color: heightHeat.color } : { color: 'rgb(100,100,110)' }}
@@ -859,7 +859,7 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* Weight — heat cell */}
-                                <div className="flex items-center justify-center py-2 px-0.5">
+                                <div className="flex items-center justify-center py-3 px-0.5">
                                   <div
                                     className="w-full h-full flex items-center justify-center rounded text-xs font-mono tabular-nums"
                                     style={player.weight > 0 ? { backgroundColor: weightHeat.bg, color: weightHeat.color } : { color: 'rgb(100,100,110)' }}

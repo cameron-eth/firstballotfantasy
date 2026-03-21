@@ -614,69 +614,43 @@ export function DraftBoardTab({
 
   return (
     <main className="min-h-[70vh] bg-background">
-      <div className="w-full px-4 sm:px-5 lg:px-6 pt-6 pb-3 space-y-3">
-        {/* Row 1 — Title + Contrarian + Save */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl sm:text-4xl font-mono font-bold text-foreground leading-none tracking-tight">
-              Big Board
-            </h1>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary/60 border border-border/60">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Contrarian</span>
-              <span className="text-sm leading-none font-mono font-bold text-primary">{contrarianScore}</span>
-              <span className={cn('text-[10px] font-semibold', contrarianLabel.color)}>{contrarianLabel.label}</span>
-            </div>
-          </div>
-
-          {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
-            <DraftBoardControls
-              hasSavedBoard={hasSavedBoard}
-              saving={savingBoard}
-              hasChanges={hasUnsavedChanges}
-              onSave={onSaveBoard}
-            />
-          )}
-        </div>
-
-        {/* Row 2 — Stats + Position Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3 text-xs font-mono text-muted-foreground">
-            <span className="text-foreground font-semibold">{currentDraftYear}</span>
-            <span className="w-px h-3.5 bg-border" />
-            <span><span className="text-foreground font-semibold">{draftBoard.length}</span> on board</span>
-            <span className="w-px h-3.5 bg-border" />
-            <span><span className="text-foreground font-semibold">{offBoardProspects.length}</span> available</span>
-            <span className="w-px h-3.5 bg-border" />
-            <span>avg <span className="text-foreground font-semibold">{boardStats.avgGrade.toFixed(1)}</span></span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            {positionTabs.map((pos) => (
-              <button
-                key={pos}
-                onClick={() => setPosition(pos)}
-                className={cn(
-                  'h-8 px-3 text-xs font-semibold rounded-md transition-colors',
-                  position === pos
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
-                )}
-              >
-                {pos}
-              </button>
-            ))}
-            <span className="w-px h-5 bg-border mx-1" />
+      {/* Compact toolbar — position tabs + actions */}
+      <div className="w-full px-3 sm:px-4 pt-3 pb-2 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          {positionTabs.map((pos) => (
             <button
-              onClick={addTopAvailable}
-              className="h-8 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors"
+              key={pos}
+              onClick={() => setPosition(pos)}
+              className={cn(
+                'h-7 px-3 text-xs font-semibold rounded-md transition-colors',
+                position === pos
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+              )}
             >
-              Add Next
+              {pos}
             </button>
-          </div>
+          ))}
+          <span className="w-px h-5 bg-border mx-1" />
+          <button
+            onClick={addTopAvailable}
+            className="h-7 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors"
+          >
+            Add Next
+          </button>
         </div>
+
+        {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
+          <DraftBoardControls
+            hasSavedBoard={hasSavedBoard}
+            saving={savingBoard}
+            hasChanges={hasUnsavedChanges}
+            onSave={onSaveBoard}
+          />
+        )}
       </div>
 
-      <div className="w-full px-4 sm:px-5 lg:px-6 py-5">
+      <div className="w-full px-2 sm:px-3 pb-5">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
           <div>
             <div className="bg-card border border-border rounded-lg overflow-hidden">

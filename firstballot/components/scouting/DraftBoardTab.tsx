@@ -636,18 +636,18 @@ export function DraftBoardTab({
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               {/* Column header */}
               <div className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
-                style={{ gridTemplateColumns: '16px 40px 40px 1fr 40px 1fr 56px 50px 46px 46px 46px 50px 28px' }}>
+                style={{ gridTemplateColumns: '16px 36px 36px 1fr 36px minmax(0,1fr) 52px 48px 36px 36px 38px 44px 24px' }}>
                 <span />
                 <span className="text-center">#</span>
                 <span />
                 <span className="pl-1.5">Player</span>
                 <span className="text-center">Pos</span>
                 <span className="hidden sm:block pl-1">School</span>
-                <span className="text-right pr-1">Grade</span>
+                <span className="text-right">Grade</span>
                 <span className="hidden lg:block text-center">Tier</span>
-                <span className="hidden lg:block text-right pr-1">Phys</span>
-                <span className="hidden lg:block text-right pr-1">Prod</span>
-                <span className="hidden lg:block text-right pr-1">40</span>
+                <span className="hidden lg:block text-right">Phys</span>
+                <span className="hidden lg:block text-right">Prod</span>
+                <span className="hidden lg:block text-right">40</span>
                 <span className="hidden lg:block text-right pr-1">Δ Cons.</span>
                 <span />
               </div>
@@ -701,7 +701,7 @@ export function DraftBoardTab({
                         >
                           <div
                             className="grid items-center px-2 py-3"
-                            style={{ gridTemplateColumns: '16px 40px 40px 1fr 40px 1fr 56px 50px 46px 46px 46px 50px 28px' }}
+                            style={{ gridTemplateColumns: '16px 36px 36px 1fr 36px minmax(0,1fr) 52px 48px 36px 36px 38px 44px 24px' }}
                           >
                             {/* Drag handle */}
                             <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
@@ -766,30 +766,30 @@ export function DraftBoardTab({
                             </span>
 
                             {/* Grade */}
-                            <span className="text-right pr-1 text-sm font-mono font-bold text-foreground tabular-nums">
+                            <span className="text-right text-sm font-mono font-bold text-foreground tabular-nums">
                               {player.grade.toFixed(1)}
                             </span>
 
                             {/* Tier badge */}
                             <span className={cn(
-                              'hidden lg:block text-center text-[9px] font-bold uppercase px-1 py-0.5 rounded border mx-1 whitespace-nowrap',
+                              'hidden lg:block text-center text-[9px] font-bold uppercase px-1 py-0.5 rounded border whitespace-nowrap',
                               tierColor.bg, tierColor.text, tierColor.border
                             )}>
                               {player.tier === 'Blue Chip' ? 'B.Chip' : player.tier}
                             </span>
 
                             {/* Physical */}
-                            <span className="hidden lg:block text-right pr-1 text-xs font-mono tabular-nums text-muted-foreground">
+                            <span className="hidden lg:block text-right text-xs font-mono tabular-nums text-muted-foreground">
                               {player.physical > 0 ? player.physical : '—'}
                             </span>
 
                             {/* Production */}
-                            <span className="hidden lg:block text-right pr-1 text-xs font-mono tabular-nums text-muted-foreground">
+                            <span className="hidden lg:block text-right text-xs font-mono tabular-nums text-muted-foreground">
                               {player.production > 0 ? player.production : '—'}
                             </span>
 
                             {/* 40 time */}
-                            <span className="hidden lg:block text-right pr-1 text-xs font-mono tabular-nums text-muted-foreground">
+                            <span className="hidden lg:block text-right text-xs font-mono tabular-nums text-muted-foreground">
                               {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
                             </span>
 

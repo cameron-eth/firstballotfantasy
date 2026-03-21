@@ -750,28 +750,28 @@ export function DraftBoardTab({
                                 </div>
 
                                 {/* Player: headshot + name + school */}
-                                <div className="flex items-center gap-2.5 min-w-0 py-2">
-                                  <div className="w-11 h-11 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                                <div className="flex items-center gap-3 min-w-0 py-2">
+                                  <div className="w-14 h-14 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                                     {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                       <Image
                                         src={getPlayerImageUrl(player)}
                                         alt={player.name}
-                                        width={44}
-                                        height={44}
+                                        width={56}
+                                        height={56}
                                         className="w-full h-full object-cover"
                                         onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                       />
                                     ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
                                         {player.name.split(' ').map((n) => n[0]).join('')}
                                       </div>
                                     )}
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="text-sm font-semibold text-foreground truncate leading-tight">
+                                    <div className="text-base font-bold text-foreground truncate leading-tight">
                                       {player.name}
                                     </div>
-                                    <div className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">
+                                    <div className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
                                       {player.school}
                                     </div>
                                   </div>

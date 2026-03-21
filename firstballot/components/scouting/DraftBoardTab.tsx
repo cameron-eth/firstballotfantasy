@@ -636,15 +636,18 @@ export function DraftBoardTab({
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               {/* Column header */}
               <div className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
-                style={{ gridTemplateColumns: '16px 36px 28px 1fr 36px 1fr 52px 44px 52px 28px' }}>
+                style={{ gridTemplateColumns: '16px 40px 40px 1fr 40px 1fr 56px 50px 46px 46px 46px 50px 28px' }}>
                 <span />
                 <span className="text-center">#</span>
                 <span />
-                <span className="pl-1">Player</span>
+                <span className="pl-1.5">Player</span>
                 <span className="text-center">Pos</span>
                 <span className="hidden sm:block pl-1">School</span>
                 <span className="text-right pr-1">Grade</span>
                 <span className="hidden lg:block text-center">Tier</span>
+                <span className="hidden lg:block text-right pr-1">Phys</span>
+                <span className="hidden lg:block text-right pr-1">Prod</span>
+                <span className="hidden lg:block text-right pr-1">40</span>
                 <span className="hidden lg:block text-right pr-1">Δ Cons.</span>
                 <span />
               </div>
@@ -697,39 +700,39 @@ export function DraftBoardTab({
                           )}
                         >
                           <div
-                            className="grid items-center px-2 py-2"
-                            style={{ gridTemplateColumns: '16px 36px 28px 1fr 36px 1fr 52px 44px 52px 28px' }}
+                            className="grid items-center px-2 py-3"
+                            style={{ gridTemplateColumns: '16px 40px 40px 1fr 40px 1fr 56px 50px 46px 46px 46px 50px 28px' }}
                           >
                             {/* Drag handle */}
                             <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
 
                             {/* Rank */}
-                            <span className="text-center text-sm font-mono font-bold text-primary tabular-nums">
+                            <span className="text-center text-base font-mono font-bold text-primary tabular-nums">
                               {index + 1}
                             </span>
 
                             {/* Headshot */}
-                            <div className="w-6 h-6 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                               {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                 <Image
                                   src={getPlayerImageUrl(player)}
                                   alt={player.name}
-                                  width={24}
-                                  height={24}
+                                  width={32}
+                                  height={32}
                                   className="w-full h-full object-cover"
                                   onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                                <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground">
                                   {player.name.split(' ').map((n) => n[0]).join('')}
                                 </div>
                               )}
                             </div>
 
-                            {/* Name */}
+                            {/* Name + comps */}
                             <div className="pl-1.5 min-w-0">
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-sm font-medium text-foreground truncate leading-none">
+                                <span className="text-sm font-semibold text-foreground truncate leading-none">
                                   {player.name}
                                 </span>
                                 {comparisonNames.length > 0 && (
@@ -742,7 +745,7 @@ export function DraftBoardTab({
                                           playerName={compName}
                                           headshotUrl={compMeta?.headshotUrl}
                                           espnId={compMeta?.espnId}
-                                          size={18}
+                                          size={20}
                                           className="border border-border/60 bg-secondary"
                                         />
                                       )
@@ -753,7 +756,7 @@ export function DraftBoardTab({
                             </div>
 
                             {/* Position */}
-                            <span className="text-center text-xs font-mono font-semibold text-primary">
+                            <span className="text-center text-xs font-mono font-bold text-primary">
                               {player.position}
                             </span>
 
@@ -769,10 +772,25 @@ export function DraftBoardTab({
 
                             {/* Tier badge */}
                             <span className={cn(
-                              'hidden lg:block text-center text-[9px] font-bold uppercase px-1 py-0.5 rounded border mx-1',
+                              'hidden lg:block text-center text-[9px] font-bold uppercase px-1 py-0.5 rounded border mx-1 whitespace-nowrap',
                               tierColor.bg, tierColor.text, tierColor.border
                             )}>
                               {player.tier === 'Blue Chip' ? 'B.Chip' : player.tier}
+                            </span>
+
+                            {/* Physical */}
+                            <span className="hidden lg:block text-right pr-1 text-xs font-mono tabular-nums text-muted-foreground">
+                              {player.physical > 0 ? player.physical : '—'}
+                            </span>
+
+                            {/* Production */}
+                            <span className="hidden lg:block text-right pr-1 text-xs font-mono tabular-nums text-muted-foreground">
+                              {player.production > 0 ? player.production : '—'}
+                            </span>
+
+                            {/* 40 time */}
+                            <span className="hidden lg:block text-right pr-1 text-xs font-mono tabular-nums text-muted-foreground">
+                              {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
                             </span>
 
                             {/* Δ Consensus */}
@@ -794,7 +812,7 @@ export function DraftBoardTab({
                             <button
                               onClick={() => onRemoveFromDraftBoard(prospect.id)}
                               data-no-row-click="true"
-                              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary transition-colors text-sm"
+                              className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary text-sm"
                               aria-label={`Remove ${player.name}`}
                             >
                               ×

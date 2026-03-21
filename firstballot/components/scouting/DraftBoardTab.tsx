@@ -746,7 +746,7 @@ export function DraftBoardTab({
 
                             return (
                               <div
-                                className="grid items-stretch h-20 pl-2 pr-2"
+                                className="grid items-stretch h-24 pl-2 pr-2"
                                 style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
                               >
                                 {/* Drag handle */}
@@ -758,14 +758,14 @@ export function DraftBoardTab({
                                 {/* Player: full-height cutout image + name */}
                                 <div className="flex items-center gap-3 min-w-0">
                                   {/* Cutout image — no circle, like ProspectCard */}
-                                  <div className="relative w-20 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
+                                  <div className="relative w-28 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
                                     <div className="absolute inset-0 bg-gradient-to-t from-card/60 via-transparent to-transparent z-[1]" />
                                     {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                       <Image
                                         src={getPlayerImageUrl(player)}
                                         alt={player.name}
-                                        width={120}
-                                        height={120}
+                                        width={160}
+                                        height={160}
                                         className="w-full h-full object-contain object-bottom scale-110"
                                         onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                       />
@@ -1111,7 +1111,7 @@ export function DraftBoardTab({
                     .sort((a, b) => b.diff - a.diff)
                     .slice(0, 3)
                     .map(({ player, diff }) => (
-                      <div key={player.name} className="flex items-center justify-between text-sm">
+                      <div key={player.id} className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground truncate">{player.name}</span>
                         <span className="text-emerald-400 font-mono">+{diff}</span>
                       </div>
@@ -1129,7 +1129,7 @@ export function DraftBoardTab({
                     .sort((a, b) => a.diff - b.diff)
                     .slice(0, 3)
                     .map(({ player, diff }) => (
-                      <div key={player.name} className="flex items-center justify-between text-sm">
+                      <div key={player.id} className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground truncate">{player.name}</span>
                         <span className="text-rose-400 font-mono">{diff}</span>
                       </div>

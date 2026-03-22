@@ -326,12 +326,12 @@ export function DraftBoardTab({
   }, [draftBoard, currentDraftYear, currentYearProspects, onAddToDraftBoard, onClearDraftBoard])
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
 
-  /** Per-position per-year stat arrays for heat-map percentile coloring. */
+  /** Per-position stat arrays for heat-map percentile coloring across all classes. */
   const positionalHeatStats = useMemo(() => {
     type StatSet = { grade: number[]; rank: number[]; height: number[]; weight: number[]; forty: number[]; physical: number[] }
     const map = new Map<string, StatSet>()
     for (const p of allEligibleProspects) {
-      const key = `${p.position}_${p.draft_year ?? 0}`
+      const key = p.position
       if (!map.has(key)) map.set(key, { grade: [], rank: [], height: [], weight: [], forty: [], physical: [] })
       const set = map.get(key)!
       const grade = Number(p.overall_grade || 0)
@@ -615,9 +615,9 @@ export function DraftBoardTab({
   }
 
   return (
-    <main className="min-h-[70vh] bg-background">
+    <main className="min-h-[70vh] bg-background xl:h-full xl:min-h-0 xl:flex xl:flex-col xl:overflow-hidden">
       {/* Compact toolbar — position tabs + actions */}
-      <div className="w-full px-3 sm:px-4 pt-3 pb-2 flex items-center justify-between gap-3 flex-wrap">
+      <div className="w-full px-2 sm:px-3 pt-1 pb-2 flex items-center justify-between gap-3 flex-wrap shrink-0">
         <div className="flex items-center gap-1.5">
           {positionTabs.map((pos) => (
             <button
@@ -652,10 +652,10 @@ export function DraftBoardTab({
         )}
       </div>
 
-      <div className="w-full px-2 sm:px-3 pb-5">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
-          <div>
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="w-full px-1 sm:px-2 pb-3 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5 xl:h-full xl:min-h-0">
+          <div className="xl:min-h-0">
+            <div className="bg-card border border-border rounded-lg overflow-hidden xl:h-full xl:flex xl:flex-col">
               {/* Column header */}
               <div
                 className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
@@ -674,216 +674,218 @@ export function DraftBoardTab({
                 <span />
               </div>
 
-              {boardSections.map((section) => (
-                <div key={`year-${section.year}`} className="border-b border-border/60 last:border-0">
-                  <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-secondary/20 border-b border-border/40">
-                    {section.year || 'Unknown'} Class
-                  </div>
-                  <ReorderAny.Group
-                    axis="y"
-                    values={section.prospects}
-                    onReorder={(next: Prospect[]) => handleSectionReorder(section.year, next)}
-                    layoutScroll
-                    className="relative"
-                  >
-                    {section.prospects.map((prospect, index) => {
-                      const player = boardPlayerMap.get(prospect.id) || toBoardPlayer(prospect)
-                      const classRankMap = consensusRankByClassId.get(section.year)
-                      const consensusRank = classRankMap?.get(player.id) ?? index + 1
-                      const rankDiff = consensusRank - (index + 1)
-                      const tierColor = tierColors[player.tier] || tierColors.Depth
-                      const comparisonNames = comparisonNamesMap.get(prospect.id) || []
-                      const isEven = index % 2 === 1
+              <div className="xl:flex-1 xl:min-h-0 xl:overflow-y-auto">
+                {boardSections.map((section) => (
+                  <div key={`year-${section.year}`} className="border-b border-border/60 last:border-0">
+                    <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-secondary/20 border-b border-border/40">
+                      {section.year || 'Unknown'} Class
+                    </div>
+                    <ReorderAny.Group
+                      axis="y"
+                      values={section.prospects}
+                      onReorder={(next: Prospect[]) => handleSectionReorder(section.year, next)}
+                      layoutScroll
+                      className="relative"
+                    >
+                      {section.prospects.map((prospect, index) => {
+                        const player = boardPlayerMap.get(prospect.id) || toBoardPlayer(prospect)
+                        const classRankMap = consensusRankByClassId.get(section.year)
+                        const consensusRank = classRankMap?.get(player.id) ?? index + 1
+                        const rankDiff = consensusRank - (index + 1)
+                        const tierColor = tierColors[player.tier] || tierColors.Depth
+                        const comparisonNames = comparisonNamesMap.get(prospect.id) || []
+                        const isEven = index % 2 === 1
 
-                      return (
-                        <ReorderAny.Item
-                          key={`${section.year}-${prospect.id}`}
-                          value={prospect}
-                          layout="position"
-                          transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
-                          drag="y"
-                          dragDirectionLock
-                          dragMomentum={false}
-                          dragElastic={0.08}
-                          onDragStart={() => setDraggingProspectId(prospect.id)}
-                          onDragEnd={() => {
-                            const pending = pendingReorderRef.current
-                            if (pending) {
-                              commitSectionReorder(pending.year, pending.prospects)
-                              pendingReorderRef.current = null
-                            }
-                            setDraggingProspectId(null)
-                          }}
-                          whileDrag={{ scale: 1.01, zIndex: 40, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', cursor: 'grabbing' }}
-                          className={cn(
-                            'relative border-b border-border/40 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
-                            isEven ? 'bg-secondary/10 hover:bg-secondary/20' : 'bg-card hover:bg-secondary/15',
-                            draggingProspectId === prospect.id && 'ring-1 ring-inset ring-primary/40 bg-primary/5',
-                          )}
-                        >
-                          {(() => {
-                            const myRank = index + 1
-                            const heatKey = `${player.position}_${section.year}`
-                            const stats = positionalHeatStats.get(heatKey)
-                            const gradePct = stats ? rankPercentile(player.grade, stats.grade) : 0.5
-                            const rankPct = stats ? rankPercentile(player.rank, stats.rank, true) : 0.5
-                            const classSize = section.prospects.length
-                            const myRankPct = classSize > 1
-                              ? Math.max(0, Math.min(1, 0.5 + (consensusRank - myRank) / (classSize * 2)))
-                              : 0.5
-                            const fortyPct = (stats && player.fortyTime) ? rankPercentile(player.fortyTime, stats.forty, true) : 0.5
-                            const heightPct = (stats && player.height) ? rankPercentile(player.height, stats.height) : 0.5
-                            const weightPct = (stats && player.weight) ? rankPercentile(player.weight, stats.weight) : 0.5
-                            const physicalPct = (stats && player.physical > 0) ? rankPercentile(player.physical, stats.physical) : 0.5
+                        return (
+                          <ReorderAny.Item
+                            key={`${section.year}-${prospect.id}`}
+                            value={prospect}
+                            layout="position"
+                            transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
+                            drag="y"
+                            dragDirectionLock
+                            dragMomentum={false}
+                            dragElastic={0.08}
+                            onDragStart={() => setDraggingProspectId(prospect.id)}
+                            onDragEnd={() => {
+                              const pending = pendingReorderRef.current
+                              if (pending) {
+                                commitSectionReorder(pending.year, pending.prospects)
+                                pendingReorderRef.current = null
+                              }
+                              setDraggingProspectId(null)
+                            }}
+                            whileDrag={{ scale: 1.01, zIndex: 40, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', cursor: 'grabbing' }}
+                            className={cn(
+                              'relative border-b border-border/40 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
+                              isEven ? 'bg-secondary/10 hover:bg-secondary/20' : 'bg-card hover:bg-secondary/15',
+                              draggingProspectId === prospect.id && 'ring-1 ring-inset ring-primary/40 bg-primary/5',
+                            )}
+                          >
+                            {(() => {
+                              const myRank = index + 1
+                              const heatKey = player.position
+                              const stats = positionalHeatStats.get(heatKey)
+                              const gradePct = stats ? rankPercentile(player.grade, stats.grade) : 0.5
+                              const rankPct = stats ? rankPercentile(player.rank, stats.rank, true) : 0.5
+                              const classSize = section.prospects.length
+                              const myRankPct = classSize > 1
+                                ? Math.max(0, Math.min(1, 0.5 + (consensusRank - myRank) / (classSize * 2)))
+                                : 0.5
+                              const fortyPct = (stats && player.fortyTime) ? rankPercentile(player.fortyTime, stats.forty, true) : 0.5
+                              const heightPct = (stats && player.height) ? rankPercentile(player.height, stats.height) : 0.5
+                              const weightPct = (stats && player.weight) ? rankPercentile(player.weight, stats.weight) : 0.5
+                              const physicalPct = (stats && player.physical > 0) ? rankPercentile(player.physical, stats.physical) : 0.5
 
-                            const gradeHeat = heatCell(gradePct)
-                            const rankHeat = heatCell(rankPct)
-                            const myRankHeat = heatCell(myRankPct)
-                            const fortyHeat = heatCell(fortyPct)
-                            const heightHeat = heatCell(heightPct)
-                            const weightHeat = heatCell(weightPct)
-                            const physicalHeat = heatCell(physicalPct)
+                              const gradeHeat = heatCell(gradePct)
+                              const rankHeat = heatCell(rankPct)
+                              const myRankHeat = heatCell(myRankPct)
+                              const fortyHeat = heatCell(fortyPct)
+                              const heightHeat = heatCell(heightPct)
+                              const weightHeat = heatCell(weightPct)
+                              const physicalHeat = heatCell(physicalPct)
 
-                            return (
-                              <div
-                                className="grid items-stretch h-24 pl-2 pr-2"
-                                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
-                              >
-                                {/* Drag handle */}
-                                <div className="flex items-center">
-                                  <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
-                                </div>
+                              return (
+                                <div
+                                  className="grid items-stretch h-24 pl-2 pr-2"
+                                  style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
+                                >
+                                  {/* Drag handle */}
+                                  <div className="flex items-center">
+                                    <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0" />
+                                  </div>
 
-                                {/* Player: headshot + name + school */}
-                                {/* Player: full-height cutout image + name */}
-                                <div className="flex items-center gap-3 min-w-0">
-                                  {/* Cutout image — no circle, like ProspectCard */}
-                                  <div className="relative w-28 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
-                                    <div className="absolute inset-0 bg-gradient-to-t from-card/60 via-transparent to-transparent z-[1]" />
-                                    {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
-                                      <Image
-                                        src={getPlayerImageUrl(player)}
-                                        alt={player.name}
-                                        width={160}
-                                        height={160}
-                                        className="w-full h-full object-contain object-bottom scale-110"
-                                        onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground/40">
-                                        {player.name.split(' ').map((n) => n[0]).join('')}
+                                  {/* Player: headshot + name + school */}
+                                  {/* Player: full-height cutout image + name */}
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    {/* Cutout image — no circle, like ProspectCard */}
+                                    <div className="relative w-28 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
+                                      <div className="absolute inset-0 bg-gradient-to-t from-card/60 via-transparent to-transparent z-[1]" />
+                                      {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
+                                        <Image
+                                          src={getPlayerImageUrl(player)}
+                                          alt={player.name}
+                                          width={160}
+                                          height={160}
+                                          className="w-full h-full object-contain object-bottom scale-110"
+                                          onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground/40">
+                                          {player.name.split(' ').map((n) => n[0]).join('')}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="text-base font-bold text-foreground truncate leading-tight">
+                                        {player.name}
                                       </div>
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="text-base font-bold text-foreground truncate leading-tight">
-                                      {player.name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
-                                      {player.school}
+                                      <div className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
+                                        {player.school}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
 
-                                {/* Position */}
-                                <div className="flex items-center justify-center">
-                                  <span className="text-xs font-mono font-bold text-primary">{player.position}</span>
-                                </div>
+                                  {/* Position */}
+                                  <div className="flex items-center justify-center">
+                                    <span className="text-xs font-mono font-bold text-primary">{player.position}</span>
+                                  </div>
 
-                                {/* Consensus Rank — heat cell */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums"
-                                    style={{ backgroundColor: rankHeat.bg, color: rankHeat.color }}
-                                  >
-                                    #{player.rank < 9999 ? player.rank : '—'}
+                                  {/* Consensus Rank — heat cell */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums"
+                                      style={{ backgroundColor: rankHeat.bg, color: rankHeat.color }}
+                                    >
+                                      #{player.rank < 9999 ? player.rank : '—'}
+                                    </div>
+                                  </div>
+
+                                  {/* Grade — heat cell */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-base font-mono font-bold tabular-nums"
+                                      style={{ backgroundColor: gradeHeat.bg, color: gradeHeat.color }}
+                                    >
+                                      {player.grade.toFixed(1)}
+                                    </div>
+                                  </div>
+
+                                  {/* My Rank — heat cell (green = bullish vs consensus) */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums"
+                                      style={{ backgroundColor: myRankHeat.bg, color: myRankHeat.color }}
+                                    >
+                                      #{myRank}
+                                    </div>
+                                  </div>
+
+                                  {/* 40 time — heat cell */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
+                                      style={player.fortyTime ? { backgroundColor: fortyHeat.bg, color: fortyHeat.color } : { color: 'rgb(100,100,110)' }}
+                                    >
+                                      {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
+                                    </div>
+                                  </div>
+
+                                  {/* Height — heat cell */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
+                                      style={player.height ? { backgroundColor: heightHeat.bg, color: heightHeat.color } : { color: 'rgb(100,100,110)' }}
+                                    >
+                                      {formatHeight(player.height)}
+                                    </div>
+                                  </div>
+
+                                  {/* Weight — heat cell */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
+                                      style={player.weight > 0 ? { backgroundColor: weightHeat.bg, color: weightHeat.color } : { color: 'rgb(100,100,110)' }}
+                                    >
+                                      {player.weight > 0 ? `${player.weight}` : '—'}
+                                    </div>
+                                  </div>
+
+                                  {/* Physical score — heat cell */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
+                                      style={player.physical > 0 ? { backgroundColor: physicalHeat.bg, color: physicalHeat.color } : { color: 'rgb(100,100,110)' }}
+                                    >
+                                      {player.physical > 0 ? player.physical : '—'}
+                                    </div>
+                                  </div>
+
+                                  {/* Remove */}
+                                  <div className="flex items-center justify-center">
+                                    <button
+                                      onClick={() => onRemoveFromDraftBoard(prospect.id)}
+                                      data-no-row-click="true"
+                                      className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary text-sm"
+                                      aria-label={`Remove ${player.name}`}
+                                    >
+                                      ×
+                                    </button>
                                   </div>
                                 </div>
-
-                                {/* Grade — heat cell */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-base font-mono font-bold tabular-nums"
-                                    style={{ backgroundColor: gradeHeat.bg, color: gradeHeat.color }}
-                                  >
-                                    {player.grade.toFixed(1)}
-                                  </div>
-                                </div>
-
-                                {/* My Rank — heat cell (green = bullish vs consensus) */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums"
-                                    style={{ backgroundColor: myRankHeat.bg, color: myRankHeat.color }}
-                                  >
-                                    #{myRank}
-                                  </div>
-                                </div>
-
-                                {/* 40 time — heat cell */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
-                                    style={player.fortyTime ? { backgroundColor: fortyHeat.bg, color: fortyHeat.color } : { color: 'rgb(100,100,110)' }}
-                                  >
-                                    {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
-                                  </div>
-                                </div>
-
-                                {/* Height — heat cell */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
-                                    style={player.height ? { backgroundColor: heightHeat.bg, color: heightHeat.color } : { color: 'rgb(100,100,110)' }}
-                                  >
-                                    {formatHeight(player.height)}
-                                  </div>
-                                </div>
-
-                                {/* Weight — heat cell */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
-                                    style={player.weight > 0 ? { backgroundColor: weightHeat.bg, color: weightHeat.color } : { color: 'rgb(100,100,110)' }}
-                                  >
-                                    {player.weight > 0 ? `${player.weight}` : '—'}
-                                  </div>
-                                </div>
-
-                                {/* Physical score — heat cell */}
-                                <div className="flex items-center justify-center py-3.5 px-0.5">
-                                  <div
-                                    className="w-full h-full flex items-center justify-center rounded text-sm font-mono tabular-nums"
-                                    style={player.physical > 0 ? { backgroundColor: physicalHeat.bg, color: physicalHeat.color } : { color: 'rgb(100,100,110)' }}
-                                  >
-                                    {player.physical > 0 ? player.physical : '—'}
-                                  </div>
-                                </div>
-
-                                {/* Remove */}
-                                <div className="flex items-center justify-center">
-                                  <button
-                                    onClick={() => onRemoveFromDraftBoard(prospect.id)}
-                                    data-no-row-click="true"
-                                    className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground/40 hover:text-foreground hover:bg-secondary text-sm"
-                                    aria-label={`Remove ${player.name}`}
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              </div>
-                            )
-                          })()}
-                        </ReorderAny.Item>
-                      )
-                    })}
-                  </ReorderAny.Group>
-                </div>
-              ))}
+                              )
+                            })()}
+                          </ReorderAny.Item>
+                        )
+                      })}
+                    </ReorderAny.Group>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-3 xl:sticky xl:top-24 self-start">
+          <div className="space-y-3 xl:sticky xl:top-24 self-start xl:max-h-full xl:overflow-y-auto">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <div className="p-4 border-b border-border flex items-center justify-between">
                 <h3 className="font-mono font-bold text-foreground">Prospects Not On Board</h3>

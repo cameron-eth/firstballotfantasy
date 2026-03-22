@@ -78,15 +78,17 @@ export function RankingsView() {
 
     return paginatedRankings.map((player) => {
       const normalizedGrade = 72 + ((player.total_score - minScore) / scoreRange) * 26
+      // Sub-scores are raw weighted values (e.g. recent_form max = 4700, not 100).
+      // Normalize each by its known max so the averaged result is on a 0–100 scale.
       const production =
-        ((player.recent_form_score ?? 0) +
-          (player.volume_score ?? 0) +
-          (player.versatility_score ?? 0)) /
+        (((player.recent_form_score ?? 0) / 4700) * 100 +
+          ((player.volume_score ?? 0) / 1400) * 100 +
+          ((player.versatility_score ?? 0) / 500) * 100) /
         3
       const physical =
-        ((player.draft_capital_score ?? 0) +
-          (player.epa_efficiency_score ?? 0) +
-          (player.td_efficiency_score ?? 0)) /
+        (((player.draft_capital_score ?? 0) / 1200) * 100 +
+          ((player.epa_efficiency_score ?? 0) / 500) * 100 +
+          ((player.td_efficiency_score ?? 0) / 1300) * 100) /
         3
       const position = toCardPosition(player.position)
       const playerKey = `${player.player_name}__${position}`

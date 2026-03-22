@@ -224,7 +224,7 @@ export default function DraftBoardPage() {
   }
 
   return (
-    <main className="min-h-screen fb-app-surface bg-background">
+    <main className="min-h-screen fb-app-surface bg-background lg:h-screen lg:overflow-hidden lg:flex lg:flex-col">
           <Header />
       <div className="border-b border-border bg-card/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -287,130 +287,133 @@ export default function DraftBoardPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 min-h-0 lg:overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-full lg:min-h-0">
+          <div className="lg:col-span-2 lg:min-h-0">
+            <div className="bg-card border border-border rounded-lg overflow-hidden lg:h-full lg:flex lg:flex-col">
               <div className="p-4 border-b border-border flex items-center justify-between">
                 <h2 className="font-mono font-bold text-foreground">Your Rankings</h2>
                 <span className="text-xs text-muted-foreground">{userBoard.length} players</span>
               </div>
 
-              <ReorderAny.Group
-                axis="y"
-                values={userBoard}
-                onReorder={setUserBoard}
-                className="divide-y divide-border"
-              >
-                <AnimatePresence>
-                  {userBoard.map((player, index) => {
-                    const consensusRank =
-                      consensusBoard.findIndex((p) => p.name === player.name) + 1
-                    const rankDiff = consensusRank - (index + 1)
-                    const tierColor = tierColors[player.tier] || tierColors.Depth
-                    const archetype = getArchetype(player)
-                    const ArchetypeIcon = archetype.icon
+              <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                <ReorderAny.Group
+                  axis="y"
+                  values={userBoard}
+                  onReorder={setUserBoard}
+                  layoutScroll
+                  className="divide-y divide-border"
+                >
+                  <AnimatePresence>
+                    {userBoard.map((player, index) => {
+                      const consensusRank =
+                        consensusBoard.findIndex((p) => p.name === player.name) + 1
+                      const rankDiff = consensusRank - (index + 1)
+                      const tierColor = tierColors[player.tier] || tierColors.Depth
+                      const archetype = getArchetype(player)
+                      const ArchetypeIcon = archetype.icon
 
-                    return (
-                      <ReorderAny.Item
-                        key={player.name}
-                        value={player}
-                        className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing"
-                      >
-                        <div className="flex items-center gap-3 p-3">
-                          <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          <div className="w-8 text-center">
-                            <span className="text-lg font-mono font-bold text-primary">
-                              {index + 1}
-                            </span>
-                          </div>
+                      return (
+                        <ReorderAny.Item
+                          key={player.name}
+                          value={player}
+                          className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing"
+                        >
+                          <div className="flex items-center gap-3 p-3">
+                            <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <div className="w-8 text-center">
+                              <span className="text-lg font-mono font-bold text-primary">
+                                {index + 1}
+                              </span>
+                            </div>
 
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex-shrink-0">
-                            {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
-                              <Image
-                                src={getPlayerImageUrl(player)}
-                                alt={player.name}
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-cover"
-                                onError={() =>
-                                  setImageErrors((prev) => new Set(prev).add(player.name))
-                                }
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
-                                {player.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')}
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                              {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
+                                <Image
+                                  src={getPlayerImageUrl(player)}
+                                  alt={player.name}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                  onError={() =>
+                                    setImageErrors((prev) => new Set(prev).add(player.name))
+                                  }
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
+                                  {player.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .join('')}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground truncate">
+                                  {player.name}
+                                </span>
+                                <span
+                                  className={cn(
+                                    'px-1.5 py-0.5 text-[9px] font-bold uppercase rounded border',
+                                    tierColor.bg,
+                                    tierColor.text,
+                                    tierColor.border
+                                  )}
+                                >
+                                  {player.tier}
+                                </span>
                               </div>
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground truncate">
-                                {player.name}
-                              </span>
-                              <span
-                                className={cn(
-                                  'px-1.5 py-0.5 text-[9px] font-bold uppercase rounded border',
-                                  tierColor.bg,
-                                  tierColor.text,
-                                  tierColor.border
-                                )}
-                              >
-                                {player.tier}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span className="font-mono text-primary">{player.position}</span>
-                              <span>{player.school}</span>
-                              <span className={cn('flex items-center gap-0.5', archetype.color)}>
-                                <ArchetypeIcon className="w-3 h-3" />
-                                {archetype.name}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="text-right">
-                            <div className="text-lg font-mono font-bold text-foreground">
-                              {player.grade.toFixed(1)}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">GRADE</div>
-                          </div>
-
-                          <div className="w-16 text-right">
-                            {rankDiff !== 0 && (
-                              <div
-                                className={cn(
-                                  'flex items-center justify-end gap-1 text-sm font-mono',
-                                  rankDiff > 0 ? 'text-emerald-400' : 'text-rose-400'
-                                )}
-                              >
-                                {rankDiff > 0 ? (
-                                  <TrendingUp className="w-3 h-3" />
-                                ) : (
-                                  <TrendingDown className="w-3 h-3" />
-                                )}
-                                {Math.abs(rankDiff)}
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="font-mono text-primary">{player.position}</span>
+                                <span>{player.school}</span>
+                                <span className={cn('flex items-center gap-0.5', archetype.color)}>
+                                  <ArchetypeIcon className="w-3 h-3" />
+                                  {archetype.name}
+                                </span>
                               </div>
-                            )}
-                            {rankDiff === 0 && (
-                              <Minus className="w-4 h-4 text-muted-foreground ml-auto" />
-                            )}
-                            <div className="text-[9px] text-muted-foreground">vs consensus</div>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="text-lg font-mono font-bold text-foreground">
+                                {player.grade.toFixed(1)}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">GRADE</div>
+                            </div>
+
+                            <div className="w-16 text-right">
+                              {rankDiff !== 0 && (
+                                <div
+                                  className={cn(
+                                    'flex items-center justify-end gap-1 text-sm font-mono',
+                                    rankDiff > 0 ? 'text-emerald-400' : 'text-rose-400'
+                                  )}
+                                >
+                                  {rankDiff > 0 ? (
+                                    <TrendingUp className="w-3 h-3" />
+                                  ) : (
+                                    <TrendingDown className="w-3 h-3" />
+                                  )}
+                                  {Math.abs(rankDiff)}
+                                </div>
+                              )}
+                              {rankDiff === 0 && (
+                                <Minus className="w-4 h-4 text-muted-foreground ml-auto" />
+                              )}
+                              <div className="text-[9px] text-muted-foreground">vs consensus</div>
+                            </div>
                           </div>
-                        </div>
-                      </ReorderAny.Item>
-                    )
-                  })}
-                </AnimatePresence>
-              </ReorderAny.Group>
+                        </ReorderAny.Item>
+                      )
+                    })}
+                  </AnimatePresence>
+                </ReorderAny.Group>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 lg:max-h-full lg:overflow-y-auto">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <button
                 onClick={() => setShowBreakdown(!showBreakdown)}

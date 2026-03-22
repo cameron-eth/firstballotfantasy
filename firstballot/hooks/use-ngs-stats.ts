@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import useSWR from 'swr'
 
 type StatType = 'passing' | 'rushing' | 'receiving'
 
@@ -14,57 +14,29 @@ interface NGSStatsParams {
 }
 
 export function useNGSStats(params: NGSStatsParams) {
-  const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const queryKey = JSON.stringify(params)
+  const { data, error, isLoading } = useSWR(queryKey, async () => {
+    const searchParams = new URLSearchParams({
+      type: params.type,
+      ...(params.season && { season: params.season }),
+      ...(params.week && { week: params.week.toString() }),
+      ...(params.team && { team: params.team }),
+      ...(params.player_id && { player_id: params.player_id }),
+      ...(params.limit && { limit: params.limit.toString() }),
+      ...(params.sort && { sort: params.sort }),
+      ...(params.order && { order: params.order }),
+    })
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true)
-      setError(null)
+    const response = await fetch(`/api/ngs-stats?${searchParams}`)
 
-      try {
-        const searchParams = new URLSearchParams({
-          type: params.type,
-          ...(params.season && { season: params.season }),
-          ...(params.week && { week: params.week.toString() }),
-          ...(params.team && { team: params.team }),
-          ...(params.player_id && { player_id: params.player_id }),
-          ...(params.limit && { limit: params.limit.toString() }),
-          ...(params.sort && { sort: params.sort }),
-          ...(params.order && { order: params.order }),
-        })
-
-        const response = await fetch(`/api/ngs-stats?${searchParams}`)
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-          console.error('API error response:', errorData)
-          throw new Error(`Failed to fetch NGS stats: ${errorData.error || response.statusText}`)
-        }
-
-        const result = await response.json()
-        console.log('API success response:', result)
-        setData(result.data || [])
-      } catch (err) {
-        setError(err as Error)
-        console.error('Error fetching NGS stats:', err)
-      } finally {
-        setLoading(false)
-      }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(`Failed to fetch NGS stats: ${errorData.error || response.statusText}`)
     }
 
-    fetchStats()
-  }, [
-    params.type,
-    params.season,
-    params.week,
-    params.team,
-    params.player_id,
-    params.limit,
-    params.sort,
-    params.order,
-  ])
+    const result = await response.json()
+    return result.data || []
+  })
 
-  return { data, loading, error }
+  return { data: data || [], loading: isLoading, error: error as Error | null }
 }

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import useSWR from 'swr'
 import { Player, Position, fetchAllProspects } from '@/lib/players'
 import { PlayerCard } from './player-card'
 import { SkeletonGrid } from './player-skeleton'
@@ -15,43 +16,31 @@ const positions: { key: Position; label: string }[] = [
   { key: 'TE', label: 'TE' },
 ]
 
+const EMPTY_PLAYERS: Record<Position, Player[]> = {
+  QB: [],
+  RB: [],
+  WR: [],
+  TE: [],
+}
+
 export function RankingsGrid() {
   const PAGE_SIZE = 30
-  const [allPlayers, setAllPlayers] = useState<Record<Position, Player[]>>({
-    QB: [],
-    RB: [],
-    WR: [],
-    TE: [],
-  })
   const [position, setPosition] = useState<Position>('QB')
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all')
   const [filter, setFilter] = useState<FilterTier>('all')
   const [sortBy, setSortBy] = useState<'rank' | 'grade' | 'physical' | 'production'>('rank')
   const [isPending, startTransition] = useTransition()
-  const [isLoading, setIsLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-
-  useEffect(() => {
-    fetchAllProspects()
-      .then((data) => {
-        setAllPlayers(data)
-        setIsLoading(false)
-      })
-      .catch((err) => {
-        console.error('Failed to load prospects:', err)
-        setIsLoading(false)
-      })
-  }, [])
+  const { data: allPlayers = EMPTY_PLAYERS, isLoading } = useSWR('prospect-board/all', fetchAllProspects)
 
   const handlePositionChange = (newPosition: Position) => {
-    setIsLoading(true)
     startTransition(() => {
       setPosition(newPosition)
       setSelectedYear('all')
       setFilter('all')
       setSortBy('rank')
+      setVisibleCount(PAGE_SIZE)
     })
-    setTimeout(() => setIsLoading(false), 400)
   }
 
   const players = allPlayers[position]
@@ -101,10 +90,6 @@ export function RankingsGrid() {
       .map(([tier]) => tier as FilterTier),
   ]
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [position, selectedYear, filter, sortBy])
-
   return (
     <div>
       {/* ── Sticky toolbar — flat, single container ── */}
@@ -135,7 +120,10 @@ export function RankingsGrid() {
               Class
             </span>
             <button
-              onClick={() => setSelectedYear('all')}
+                onClick={() => {
+                  setSelectedYear('all')
+                  setVisibleCount(PAGE_SIZE)
+                }}
               className={cn(
                 'h-7 px-2.5 text-[11px] font-mono rounded transition-colors',
                 selectedYear === 'all'
@@ -148,7 +136,10 @@ export function RankingsGrid() {
             {years.map((year) => (
               <button
                 key={year}
-                onClick={() => setSelectedYear(year)}
+                onClick={() => {
+                  setSelectedYear(year)
+                  setVisibleCount(PAGE_SIZE)
+                }}
                 className={cn(
                   'h-7 px-2.5 text-[11px] font-mono rounded transition-colors',
                   selectedYear === year
@@ -171,7 +162,10 @@ export function RankingsGrid() {
             {availableTiers.map((tier) => (
               <button
                 key={tier}
-                onClick={() => setFilter(tier)}
+                onClick={() => {
+                  setFilter(tier)
+                  setVisibleCount(PAGE_SIZE)
+                }}
                 className={cn(
                   'h-7 px-2.5 text-[11px] font-medium rounded transition-colors',
                   filter === tier
@@ -194,7 +188,10 @@ export function RankingsGrid() {
             {(['rank', 'grade', 'physical', 'production'] as const).map((sort) => (
               <button
                 key={sort}
-                onClick={() => setSortBy(sort)}
+                onClick={() => {
+                  setSortBy(sort)
+                  setVisibleCount(PAGE_SIZE)
+                }}
                 className={cn(
                   'h-7 px-2 text-[11px] font-mono rounded transition-colors',
                   sortBy === sort

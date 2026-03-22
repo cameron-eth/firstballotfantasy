@@ -1,6 +1,3 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/lib/auth'
-
 export interface MembershipStatus {
   isMember: boolean
   loading: boolean
@@ -8,52 +5,8 @@ export interface MembershipStatus {
 }
 
 export function useMembership(): MembershipStatus {
-  const { user } = useAuth()
-  const [isMember, setIsMember] = useState(true) // Always true - bypassing checks
-  const [loading, setLoading] = useState(false) // No loading needed
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // TEMPORARILY BYPASSING MEMBERSHIP CHECKS - ALL USERS ARE TREATED AS MEMBERS
-    setIsMember(true)
-    setLoading(false)
-    setError(null)
-
-    /* ORIGINAL CODE - COMMENTED OUT FOR BYPASS
-    if (!user) {
-      setIsMember(false);
-      setLoading(false);
-      return;
-    }
-
-    const checkMembership = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`/api/membership?email=${encodeURIComponent(user.email)}`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Failed to fetch membership status: ${response.status} ${errorText}`);
-        }
-
-        const data = await response.json();
-        setIsMember(data.isMember || false);
-      } catch (err) {
-        console.error('Error checking membership status:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setIsMember(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkMembership();
-    */
-  }, [user])
-
-  return { isMember, loading, error }
+  // Membership checks are intentionally bypassed right now.
+  return { isMember: true, loading: false, error: null }
 }
 
 export function useMembershipCheck(): {

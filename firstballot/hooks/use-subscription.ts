@@ -1,46 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
 import { SubscriptionData } from '@/lib/subscription-service'
 
 export function useSubscription() {
   const { user } = useAuth()
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (user) {
-      fetchSubscription()
-    } else {
-      setSubscription(null)
-      setLoading(false)
-    }
-  }, [user])
-
-  const fetchSubscription = async () => {
-    if (!user) return
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      const response = await fetch(`/api/billing/subscription?authId=${user.id}`)
-
+  const {
+    data: subscription = null,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<SubscriptionData | null>(
+    user ? `/api/billing/subscription?authId=${user.id}` : null,
+    async (url: string) => {
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error('Failed to fetch subscription')
       }
-
-      const data = await response.json()
-      setSubscription(data)
-    } catch (err) {
-      console.error('Error fetching subscription:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch subscription')
-    } finally {
-      setLoading(false)
+      return response.json()
     }
-  }
+  )
 
   const createCheckoutSession = async (priceId: string) => {
     if (!user) throw new Error('User not authenticated')
@@ -91,11 +71,11 @@ export function useSubscription() {
 
   return {
     subscription,
-    loading,
-    error,
+    loading: !!user && isLoading,
+    error: error instanceof Error ? error.message : null,
     isSubscribed,
     isPro,
-    refetch: fetchSubscription,
+    refetch: mutate,
     createCheckoutSession,
     openCustomerPortal,
   }

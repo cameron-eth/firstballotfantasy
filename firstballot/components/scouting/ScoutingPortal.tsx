@@ -75,6 +75,19 @@ function calculatePlayerValue(rank: number, position?: string): number {
   return Math.round(value * 100) / 100
 }
 
+function getProspectGradeValue(prospect: Prospect): string {
+  if (prospect.grade_tier) return prospect.grade_tier
+  if (prospect.overall_grade) {
+    if (prospect.overall_grade >= 90) return 'Elite'
+    if (prospect.overall_grade >= 85) return 'Blue Chip'
+    if (prospect.overall_grade >= 78) return 'Starter'
+    if (prospect.overall_grade >= 70) return 'Rotational'
+    if (prospect.overall_grade >= 60) return 'Backup'
+    return 'Depth'
+  }
+  return 'Ungraded'
+}
+
 async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('Please log in to view your roster')
@@ -134,10 +147,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const searchParams = useSearchParams()
   const urlTab = searchParams.get('tab')
 
-  const [prospects, setProspects] = useState<Prospect[]>([])
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
-  const [loading, setLoading] = useState(true)
+  const [prospectNotes, setProspectNotes] = useState<Record<number, string>>({})
 
   // Fetch roster via useSWR — avoids fetch-in-effect pattern
   const {
@@ -150,17 +162,50 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   )
   const rosterError: string | null = rosterFetchError?.message ?? null
 
-  // Sync roster state from SWR data when it first loads or leagueId changes
   const [syncedRosterKey, setSyncedRosterKey] = useState<string | null>(null)
-  if (fetchedRoster && syncedRosterKey !== leagueId) {
+  useEffect(() => {
+    if (!fetchedRoster || syncedRosterKey === leagueId) return
     setSyncedRosterKey(leagueId)
     setRoster(fetchedRoster)
     setOriginalRoster(fetchedRoster)
-  }
+  }, [fetchedRoster, leagueId, syncedRosterKey])
+
+  const {
+    data: rawProspects = [],
+    isLoading: prospectsLoading,
+    error: prospectsFetchError,
+  } = useSWR<Prospect[]>(
+    '/api/prospects?draft_year=all',
+    async (url: string) => {
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch prospects')
+      }
+      return response.json()
+    },
+    { revalidateOnFocus: true }
+  )
+  const loading = prospectsLoading || rosterLoading
+  const prospectsError: string | null = prospectsFetchError?.message ?? null
+  const dataError = prospectsError || rosterError
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [draftYear, setDraftYear] = useState('all')
   const [activeTab, setActiveTab] = useState(urlTab || initialTab || 'prospects')
+  const prospects = useMemo<Prospect[]>(
+    () =>
+      rawProspects.map((prospect) => ({
+        ...prospect,
+        grade: getProspectGradeValue(prospect),
+        notes: prospectNotes[prospect.id] ?? prospect.notes ?? '',
+      })),
+    [rawProspects, prospectNotes]
+  )
 
   // Sync tab with URL if it changes
   useEffect(() => {
@@ -313,17 +358,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   // Memoized utility functions
   const getProspectGrade = useCallback((prospect: Prospect): string => {
-    // Use the new grade_tier from database, fallback to calculating from overall_grade
-    if (prospect.grade_tier) return prospect.grade_tier
-    if (prospect.overall_grade) {
-      if (prospect.overall_grade >= 90) return 'Elite'
-      if (prospect.overall_grade >= 85) return 'Blue Chip'
-      if (prospect.overall_grade >= 78) return 'Starter'
-      if (prospect.overall_grade >= 70) return 'Rotational'
-      if (prospect.overall_grade >= 60) return 'Backup'
-      return 'Depth'
-    }
-    return 'Ungraded'
+    return getProspectGradeValue(prospect)
   }, [])
 
   const getGradeColor = useCallback((grade: string): string => {
@@ -589,7 +624,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   }, [])
 
   const handleSaveNotes = useCallback((id: number, notes: string) => {
-    setProspects((prev) => prev.map((p) => (p.id === id ? { ...p, notes } : p)))
+    setProspectNotes((prev) => ({ ...prev, [id]: notes }))
     // Update selected prospect if it's the one being edited
     setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
 
@@ -696,59 +731,17 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   }, [savedBoard, prospects, initialBoardLoaded])
 
 
-  // Fetch prospects data from Supabase
-  const fetchProspects = useCallback(async () => {
-    try {
-      setLoading(true)
-      // Add timestamp to prevent caching
-      const timestamp = Date.now()
-      // Always fetch all classes so saved draft boards can hydrate even when they span years.
-      const response = await fetch(`/api/prospects?draft_year=all&t=${timestamp}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
-      if (response.ok) {
-        const data = await response.json()
-        // Add mock grades
-        const prospectsWithGrades = data.map((prospect: Prospect) => ({
-          ...prospect,
-          grade: getProspectGrade(prospect),
-          notes: '',
-        }))
-        setProspects(prospectsWithGrades)
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [getProspectGrade])
-
-  // Fetch on mount and when tab becomes visible
-  useEffect(() => {
-    fetchProspects()
-
-    // Refresh when tab becomes visible
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchProspects()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [fetchProspects])
-
   return (
     <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden">
       <Header />
 
       <main className="w-full px-3 py-6 md:px-4 md:py-10 overflow-x-hidden">
         <div className="max-w-[1600px] mx-auto">
+          {dataError && (
+            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {dataError}
+            </div>
+          )}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="mb-6 md:mb-10">
               <TabsList className="grid grid-cols-4 md:flex md:items-center gap-1.5 md:gap-2 bg-transparent h-auto p-0 border-none md:justify-start">

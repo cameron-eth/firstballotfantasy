@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import type {
   PlayerRanking,
   SortField,
@@ -36,8 +37,6 @@ interface UseRankingsReturn {
 }
 
 export function useRankings(): UseRankingsReturn {
-  const [rankings, setRankings] = useState<PlayerRanking[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState<string>('all')
   const [tierFilter, setTierFilter] = useState<string>('all')
@@ -46,24 +45,14 @@ export function useRankings(): UseRankingsReturn {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(50)
 
-  useEffect(() => {
-    const fetchRankings = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch('/api/rankings')
-        if (response.ok) {
-          const data = await response.json()
-          setRankings(data.data || [])
-        }
-      } catch (error) {
-        console.error('Error fetching rankings:', error)
-      } finally {
-        setLoading(false)
-      }
+  const { data, isLoading } = useSWR('/api/rankings', async (url: string) => {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error('Failed to fetch rankings')
     }
-
-    fetchRankings()
-  }, [])
+    return response.json() as Promise<{ data?: PlayerRanking[] }>
+  })
+  const rankings = data?.data || []
 
   const extractTierNumber = (tier: string): number => {
     const match = tier.match(/Tier (\d+)/)
@@ -187,21 +176,25 @@ export function useRankings(): UseRankingsReturn {
     }
   }
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, positionFilter, tierFilter])
-
   return {
     rankings,
-    loading,
+    loading: isLoading,
     filters: {
       searchTerm,
       positionFilter,
       tierFilter,
-      setSearchTerm,
-      setPositionFilter,
-      setTierFilter,
+      setSearchTerm: (value: string) => {
+        setCurrentPage(1)
+        setSearchTerm(value)
+      },
+      setPositionFilter: (value: string) => {
+        setCurrentPage(1)
+        setPositionFilter(value)
+      },
+      setTierFilter: (value: string) => {
+        setCurrentPage(1)
+        setTierFilter(value)
+      },
     },
     sort: {
       field: sortField,

@@ -12,24 +12,24 @@ interface ProspectChartsProps {
 }
 
 export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChartsProps) {
-  const [mounted, setMounted] = useState(false)
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!api) {
       return
     }
 
-    setCurrent(api.selectedScrollSnap())
-
-    api.on('select', () => {
+    const handleSelect = () => {
       setCurrent(api.selectedScrollSnap())
-    })
+    }
+
+    handleSelect()
+    api.on('select', handleSelect)
+
+    return () => {
+      api.off?.('select', handleSelect)
+    }
   }, [api])
 
   // Calculate position distribution
@@ -113,7 +113,7 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
     return scarcity
   }, [prospects])
 
-  const chartCount = 5
+  const chartKeys = ['position', 'tier', 'grade-tier', 'scarcity', 'value']
 
   if (variant === 'grid') {
     return (
@@ -519,9 +519,7 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
                                   className="h-full bg-blue-400 rounded"
                                   style={{
                                     width: `${((count as number) / maxValuationCount) * 100}%`,
-                                    animation: mounted
-                                      ? `chart-fill 0.5s ease ${i * 0.05}s both`
-                                      : 'none',
+                                    animation: `chart-fill 0.5s ease ${i * 0.05}s both`,
                                   }}
                                 />
                               </div>
@@ -773,9 +771,9 @@ export function ProspectCharts({ prospects, variant = 'carousel' }: ProspectChar
 
         {/* Mobile Navigation Dots */}
         <div className="flex justify-center gap-2 mt-3">
-          {Array.from({ length: chartCount }).map((_, index) => (
+          {chartKeys.map((chartKey, index) => (
             <button
-              key={`slide-${index}`}
+              key={chartKey}
               onClick={() => api?.scrollTo(index)}
               className={`h-1.5 rounded-full transition-all ${
                 current === index ? 'w-6 bg-yellow-400' : 'w-1.5 bg-slate-600'

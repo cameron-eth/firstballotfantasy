@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { NGSStatsTable } from '@/components/ngs-stats-table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,38 +16,55 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 type StatType = 'passing' | 'rushing' | 'receiving'
 
+interface NGSStatsResponse {
+  data?: {
+    player_gsis_id: string
+    player_display_name: string
+    player_position: string
+    team_abbr: string
+    fantasy_points: number
+    fantasy_ppg: number
+    pass_yards?: number
+    pass_touchdowns?: number
+    interceptions?: number
+    passer_rating?: number
+    completion_percentage?: number
+    completion_percentage_above_expectation?: number
+    rush_yards?: number
+    rush_touchdowns?: number
+    rush_attempts?: number
+    efficiency?: number
+    targets?: number
+    receptions?: number
+    yards?: number
+    rec_touchdowns?: number
+    avg_separation?: number
+    avg_cushion?: number
+    avg_yac?: number
+  }[]
+}
+
+const fetchStats = async ([, statType, season]: [string, StatType, string]) => {
+  const response = await fetch(
+    `/api/ngs-stats?type=${statType}&season=${season}&limit=100&sort=fantasy_points&order=desc`
+  )
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch: ${response.statusText}`)
+  }
+
+  const result: NGSStatsResponse = await response.json()
+  return result.data || []
+}
+
 export default function StatsDashboardPage() {
   const [statType, setStatType] = useState<StatType>('passing')
   const [season, setSeason] = useState('2025')
-  const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchStats()
-  }, [statType, season])
-
-  const fetchStats = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await fetch(
-        `/api/ngs-stats?type=${statType}&season=${season}&limit=100&sort=fantasy_points&order=desc`
-      )
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      setData(result.data || [])
-    } catch (error: any) {
-      console.error('Failed to fetch stats:', error)
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data = [], error, isLoading } = useSWR(
+    ['ngs-stats', statType, season] as const,
+    fetchStats
+  )
+  const errorMessage = error instanceof Error ? error.message : null
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -81,7 +99,7 @@ export default function StatsDashboardPage() {
         </TabsList>
 
         <TabsContent value="passing" className="mt-6">
-          {loading ? (
+          {isLoading ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <Skeleton className="h-6 w-64" />
@@ -94,13 +112,13 @@ export default function StatsDashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : error ? (
+          ) : errorMessage ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-red-400">Error Loading Stats</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-400">{error}</p>
+                <p className="text-slate-400">{errorMessage}</p>
               </CardContent>
             </Card>
           ) : (
@@ -109,7 +127,7 @@ export default function StatsDashboardPage() {
         </TabsContent>
 
         <TabsContent value="rushing" className="mt-6">
-          {loading ? (
+          {isLoading ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <Skeleton className="h-6 w-64" />
@@ -122,13 +140,13 @@ export default function StatsDashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : error ? (
+          ) : errorMessage ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-red-400">Error Loading Stats</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-400">{error}</p>
+                <p className="text-slate-400">{errorMessage}</p>
               </CardContent>
             </Card>
           ) : (
@@ -137,7 +155,7 @@ export default function StatsDashboardPage() {
         </TabsContent>
 
         <TabsContent value="receiving" className="mt-6">
-          {loading ? (
+          {isLoading ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <Skeleton className="h-6 w-64" />
@@ -150,13 +168,13 @@ export default function StatsDashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          ) : error ? (
+          ) : errorMessage ? (
             <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
                 <CardTitle className="text-red-400">Error Loading Stats</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-400">{error}</p>
+                <p className="text-slate-400">{errorMessage}</p>
               </CardContent>
             </Card>
           ) : (

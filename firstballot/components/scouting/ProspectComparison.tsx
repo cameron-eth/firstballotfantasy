@@ -81,12 +81,14 @@ function parseHeight(height: number | null): number {
 function StatComparison({
   label,
   values,
+  itemKeys,
   unit = '',
   higherIsBetter = true,
   icon: Icon,
 }: {
   label: string
   values: (number | null)[]
+  itemKeys: string[]
   unit?: string
   higherIsBetter?: boolean
   icon?: ComponentType<{ className?: string }>
@@ -111,7 +113,7 @@ function StatComparison({
         {values.map((value, i) => {
           const isBest = best !== null && value === best && validValues.length > 1
           return (
-            <div key={`stat-${label}-${i}`} className="text-center">
+            <div key={`stat-${label}-${itemKeys[i]}`} className="text-center">
               <span
                 className={cn(
                   'text-xl font-mono font-bold',
@@ -134,11 +136,13 @@ function StatComparison({
 function BarComparison({
   label,
   values,
+  itemKeys,
   maxValue = 100,
   icon: Icon,
 }: {
   label: string
   values: (number | null)[]
+  itemKeys: string[]
   maxValue?: number
   icon?: ComponentType<{ className?: string }>
 }) {
@@ -154,7 +158,7 @@ function BarComparison({
       </div>
       <div className="space-y-2">
         {values.map((value, i) => (
-          <div key={`bar-${label}-${i}`} className="flex items-center gap-3">
+          <div key={`bar-${label}-${itemKeys[i]}`} className="flex items-center gap-3">
             <div className="flex-1 h-3 bg-secondary rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
@@ -458,6 +462,8 @@ export function ProspectComparison({
     return { gradeData, radarData, positionPie }
   }, [selectedProspects])
 
+  const comparisonKeys = selectedProspects.map((prospect) => String(prospect.id))
+
   const positions = ['ALL', 'QB', 'RB', 'WR', 'TE']
 
   return (
@@ -537,6 +543,7 @@ export function ProspectComparison({
               <StatComparison
                 label="Height"
                 values={selectedProspects.map((p) => parseHeight(p.height))}
+                itemKeys={comparisonKeys}
                 unit='"'
                 higherIsBetter
                 icon={Ruler}
@@ -544,6 +551,7 @@ export function ProspectComparison({
               <StatComparison
                 label="Weight"
                 values={selectedProspects.map((p) => p.weight || null)}
+                itemKeys={comparisonKeys}
                 unit=" lbs"
                 higherIsBetter
                 icon={Weight}
@@ -558,6 +566,7 @@ export function ProspectComparison({
                   const val = stats?.forty_time ?? stats?.['40yd']
                   return val !== undefined && val !== null ? Number(val) : null
                 })}
+                itemKeys={comparisonKeys}
                 unit="s"
                 higherIsBetter={false}
                 icon={Zap}
@@ -572,16 +581,19 @@ export function ProspectComparison({
               <BarComparison
                 label="Overall Grade"
                 values={selectedProspects.map((p) => p.overall_grade || null)}
+                itemKeys={comparisonKeys}
                 icon={Target}
               />
               <BarComparison
                 label="Production Score"
                 values={selectedProspects.map((p) => p.college_production_score || null)}
+                itemKeys={comparisonKeys}
                 icon={TrendingUp}
               />
               <BarComparison
                 label="Physical Score"
                 values={selectedProspects.map((p) => p.physical_measurables_score || null)}
+                itemKeys={comparisonKeys}
                 icon={Zap}
               />
             </div>
@@ -624,8 +636,11 @@ export function ProspectComparison({
                             ]}
                           />
                           <Bar dataKey="grade" radius={[0, 4, 4, 0]}>
-                            {comparisonData.gradeData.map((_entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            {comparisonData.gradeData.map((entry, index) => (
+                              <Cell
+                                key={`grade-cell-${entry.fullName ?? entry.name}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
                             ))}
                           </Bar>
                         </BarChart>
@@ -703,8 +718,11 @@ export function ProspectComparison({
                             ]}
                           />
                           <Bar dataKey="speed" radius={[4, 4, 0, 0]}>
-                            {comparisonData.gradeData.map((_entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            {comparisonData.gradeData.map((entry, index) => (
+                              <Cell
+                                key={`speed-cell-${entry.fullName ?? entry.name}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
                             ))}
                           </Bar>
                         </BarChart>
@@ -733,8 +751,8 @@ export function ProspectComparison({
                             dataKey="value"
                             label={({ name, value }) => `${name}: ${value}`}
                           >
-                            {comparisonData.positionPie.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            {comparisonData.positionPie.map((entry) => (
+                              <Cell key={`position-cell-${entry.name}`} fill={entry.color} />
                             ))}
                           </Pie>
                           <Tooltip

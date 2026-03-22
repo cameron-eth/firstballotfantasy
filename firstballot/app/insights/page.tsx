@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PlayerCard } from '@/components/player-card'
@@ -24,47 +25,41 @@ interface BreakoutBustPlayer {
   player_id?: string
 }
 
+interface BreakoutBustResponse {
+  data?: BreakoutBustPlayer[]
+}
+
+async function fetchBreakoutBustData() {
+  const [breakoutResponse, bustResponse] = await Promise.all([
+    fetch('/api/breakout-bust?type=breakout&limit=50'),
+    fetch('/api/breakout-bust?type=bust&limit=50'),
+  ])
+
+  if (!breakoutResponse.ok) {
+    throw new Error('Failed to fetch breakout data')
+  }
+
+  if (!bustResponse.ok) {
+    throw new Error('Failed to fetch bust data')
+  }
+
+  const [breakoutResult, bustResult]: [BreakoutBustResponse, BreakoutBustResponse] = await Promise.all([
+    breakoutResponse.json(),
+    bustResponse.json(),
+  ])
+
+  return {
+    breakoutCandidates: breakoutResult.data || [],
+    bustCandidates: bustResult.data || [],
+  }
+}
+
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState('breakouts')
-  const [breakoutCandidates, setBreakoutCandidates] = useState<BreakoutBustPlayer[]>([])
-  const [bustCandidates, setBustCandidates] = useState<BreakoutBustPlayer[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetchBreakoutBustData()
-  }, [])
-
-  const fetchBreakoutBustData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Fetch breakout players
-      const breakoutResponse = await fetch('/api/breakout-bust?type=breakout&limit=50')
-      if (!breakoutResponse.ok) {
-        throw new Error('Failed to fetch breakout data')
-      }
-      const breakoutResult = await breakoutResponse.json()
-      const breakoutData = breakoutResult.data || []
-
-      // Fetch bust players
-      const bustResponse = await fetch('/api/breakout-bust?type=bust&limit=50')
-      if (!bustResponse.ok) {
-        throw new Error('Failed to fetch bust data')
-      }
-      const bustResult = await bustResponse.json()
-      const bustData = bustResult.data || []
-
-      setBreakoutCandidates(breakoutData)
-      setBustCandidates(bustData)
-    } catch (err) {
-      console.error('Error fetching breakout/bust data:', err)
-      setError('Failed to load breakout and bust data')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data, error, isLoading, mutate } = useSWR('breakout-bust', fetchBreakoutBustData)
+  const breakoutCandidates = data?.breakoutCandidates || []
+  const bustCandidates = data?.bustCandidates || []
+  const errorMessage = error instanceof Error ? error.message : null
 
   // Transform data for PlayerCard component
   const transformPlayerForCard = (player: BreakoutBustPlayer, isBreakout: boolean = true) => ({
@@ -82,7 +77,7 @@ export default function InsightsPage() {
     statusTag: isBreakout ? 'Strong Start' : 'Average',
   })
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900">
         <Header />
@@ -98,16 +93,18 @@ export default function InsightsPage() {
     )
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="min-h-screen bg-slate-900">
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <p className="text-red-400 font-mono mb-4">ERROR: {error}</p>
+              <p className="text-red-400 font-mono mb-4">ERROR: {errorMessage}</p>
               <button
-                onClick={fetchBreakoutBustData}
+                onClick={() => {
+                  void mutate()
+                }}
                 className="bg-yellow-400 text-slate-900 px-4 py-2 rounded-lg font-mono"
               >
                 RETRY

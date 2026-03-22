@@ -1,22 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
+import useSWR from 'swr'
 import { fetchAllProspects, Position, Player } from '@/lib/players'
 
 export function Header() {
-  const [allPlayers, setAllPlayers] = useState<Record<Position, Player[]>>({
-    QB: [],
-    RB: [],
-    WR: [],
-    TE: [],
-  })
-
-  useEffect(() => {
-    fetchAllProspects()
-      .then(setAllPlayers)
-      .catch(() => {})
-  }, [])
+  const { data: allPlayers = EMPTY_PLAYERS } = useSWR('prospect-board/all', fetchAllProspects)
 
   const { totalPlayers, minYear, maxYear, yearCount } = useMemo(() => {
     const combined = [...allPlayers.QB, ...allPlayers.RB, ...allPlayers.WR, ...allPlayers.TE]
@@ -90,6 +80,13 @@ export function Header() {
       </div>
     </motion.header>
   )
+}
+
+const EMPTY_PLAYERS: Record<Position, Player[]> = {
+  QB: [],
+  RB: [],
+  WR: [],
+  TE: [],
 }
 
 function StatBadge({ label, value }: { label: string; value: string }) {

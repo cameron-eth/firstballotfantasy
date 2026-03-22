@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
 import { memo, useEffect, useMemo, useState } from 'react'
@@ -68,8 +68,13 @@ function toTierLabel(gradeTier: string | null | undefined, grade: number): strin
 }
 
 function useTypewriter(text: string, speed = 50, delay = 0) {
+  const shouldReduceMotion = useReducedMotion()
   const [displayed, setDisplayed] = useState('')
   const [started, setStarted] = useState(false)
+
+  if (shouldReduceMotion) {
+    return text
+  }
 
   useEffect(() => {
     const startTimeout = setTimeout(() => setStarted(true), delay)
@@ -91,6 +96,8 @@ function useTypewriter(text: string, speed = 50, delay = 0) {
 
 // ── Pure CSS matrix rain — zero JS per frame ────────────────────────
 const MatrixRain = memo(function MatrixRain() {
+  const shouldReduceMotion = useReducedMotion()
+  if (shouldReduceMotion) return null
   return (
     <div className="absolute inset-0 overflow-hidden opacity-[0.03] pointer-events-none">
       <style
@@ -174,13 +181,22 @@ function TickerRow({
   direction: 'left' | 'right'
   speed: number
 }) {
+  const shouldReduceMotion = useReducedMotion()
   const doubled = useMemo(() => [...players, ...players], [players])
   const trackClass = direction === 'left' ? 'ticker-row-left' : 'ticker-row-right'
 
   return (
     <div className="overflow-hidden">
-      <div className={cn(trackClass, 'flex gap-6 py-1.5 px-4')} style={{ animationDuration: `${speed}s` }}>
+      <div
+        className={cn(trackClass, 'flex gap-6 py-1.5 px-4')}
+        style={
+          shouldReduceMotion
+            ? { animation: 'none', transform: 'translateX(0)' }
+            : { animationDuration: `${speed}s` }
+        }
+      >
         {doubled.map((player, i) => {
+          const cycle = i < players.length ? 'primary' : 'secondary'
           const hasOverUnder = Number.isFinite(player.overUnderPct)
           const change = hasOverUnder ? Number(player.overUnderPct) : null
           const displayValue = hasOverUnder
@@ -189,7 +205,7 @@ function TickerRow({
           const isPositive = hasOverUnder ? change! >= 0 : player.grade >= 82
           return (
             <Link
-              key={`ticker-${direction}-${player.name}-${i}`}
+              key={`ticker-${direction}-${player.name}-${player.year}-${player.position}-${cycle}`}
               href="/prospect-board"
               className="flex items-center gap-2 flex-shrink-0 hover:bg-primary/10 rounded px-2 py-0.5 transition-colors cursor-pointer"
             >
@@ -286,6 +302,7 @@ const AllTimePlayerCard = memo(function AllTimePlayerCard({
   rank: number
   delay: number
 }) {
+  const shouldReduceMotion = useReducedMotion()
   const [imageError, setImageError] = useState(false)
   const tierColors: Record<string, { bg: string; border: string; text: string }> = {
     Elite: { bg: 'bg-amber-500/20', border: 'border-amber-500/50', text: 'text-amber-400' },
@@ -296,9 +313,9 @@ const AllTimePlayerCard = memo(function AllTimePlayerCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4 }}
+      transition={shouldReduceMotion ? { duration: 0 } : { delay, duration: 0.4 }}
       className="relative group"
     >
       <div
@@ -403,6 +420,7 @@ const features = [
 
 // ── Isolated feature rotator — only its tile highlights re-render ────
 function FeatureGrid() {
+  const shouldReduceMotion = useReducedMotion()
   const [activeFeature, setActiveFeature] = useState(0)
 
   useEffect(() => {
@@ -417,10 +435,10 @@ function FeatureGrid() {
       {features.map((feature, i) => (
         <motion.div
           key={feature.title}
-          initial={{ opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: i * 0.1 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
           onMouseEnter={() => setActiveFeature(i)}
         >
           <Link href={feature.href}>
@@ -463,9 +481,9 @@ function FeatureGrid() {
               >
                 <motion.div
                   className="h-full bg-primary"
-                  initial={{ width: 0 }}
+                  initial={shouldReduceMotion ? false : { width: 0 }}
                   animate={{ width: activeFeature === i ? '100%' : '0%' }}
-                  transition={{ duration: 3 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 3 }}
                 />
               </div>
             </div>
@@ -477,6 +495,7 @@ function FeatureGrid() {
 }
 
 export function LandingPage() {
+  const shouldReduceMotion = useReducedMotion()
   const { data } = useSWR('/api/prospects?draft_year=all', fetcher)
 
   const headline = useTypewriter('FIRST', 80, 500)
@@ -547,14 +566,15 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-8 items-start">
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.6 }}
             >
               <div className="mb-4">
                 <motion.div
-                  initial={{ opacity: 0 }}
+                  initial={shouldReduceMotion ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : undefined}
                   className="inline-flex items-center gap-2 px-3 py-1 rounded bg-primary/10 border border-primary/30 mb-4"
                 >
                   <Terminal className="w-4 h-4 text-primary" />
@@ -569,8 +589,10 @@ export function LandingPage() {
                 <br />
                 <span className="text-foreground">{headline2}</span>
                 <motion.span
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
+                  animate={shouldReduceMotion ? { opacity: 1 } : { opacity: [1, 0] }}
+                  transition={
+                    shouldReduceMotion ? { duration: 0 } : { duration: 0.5, repeat: Infinity }
+                  }
                   className="text-primary"
                 >
                   |
@@ -588,8 +610,8 @@ export function LandingPage() {
               <div className="flex flex-wrap gap-3 mb-8">
                 <Link href="/prospect-board">
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                     className="px-5 py-2.5 bg-primary text-primary-foreground font-mono text-sm font-bold rounded flex items-center gap-2"
                   >
                     <span>$</span> prospect --explore
@@ -598,8 +620,8 @@ export function LandingPage() {
                 </Link>
                 <Link href="/trade-market">
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                     className="px-5 py-2.5 bg-transparent text-foreground font-mono text-sm font-bold rounded border border-border hover:border-primary/50 transition-colors"
                   >
                     <span className="text-muted-foreground">$</span> market --view
@@ -628,9 +650,9 @@ export function LandingPage() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.6, delay: 0.2 }}
             >
               <div className="bg-black/60 border border-primary/30 rounded-lg overflow-hidden backdrop-blur">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-primary/20 bg-primary/5">
@@ -650,7 +672,7 @@ export function LandingPage() {
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {topAllTime.map((player, i) => (
                       <AllTimePlayerCard
-                        key={`${player.name}-${player.year}-${i}`}
+                        key={`${player.name}-${player.year}-${player.position}`}
                         player={player}
                         rank={i + 1}
                         delay={0.3 + i * 0.05}
@@ -673,9 +695,10 @@ export function LandingPage() {
       <section className="pt-5 pb-8 border-y border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={shouldReduceMotion ? { duration: 0 } : undefined}
             className="text-center mb-8"
           >
             <h2 className="font-mono text-xl font-bold text-foreground mb-2">

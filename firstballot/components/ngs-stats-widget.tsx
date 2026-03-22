@@ -12,6 +12,23 @@ interface NGSStatsWidgetProps {
   limit?: number
 }
 
+interface NGSWidgetPlayer {
+  player_gsis_id: string
+  player_display_name: string
+  team_abbr: string
+  player_position?: string
+  fantasy_points?: number
+  fantasy_ppg?: number
+  pass_yards?: number
+  pass_touchdowns?: number
+  rush_yards?: number
+  rush_touchdowns?: number
+  targets?: number
+  receptions?: number
+  yards?: number
+  rec_touchdowns?: number
+}
+
 export function NGSStatsWidget({ type, season = '2025', limit = 10 }: NGSStatsWidgetProps) {
   const { data, loading, error } = useNGSStats({
     type,
@@ -103,7 +120,7 @@ export function NGSStatsWidget({ type, season = '2025', limit = 10 }: NGSStatsWi
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {data.map((player, index) => (
+          {data.map((player: NGSWidgetPlayer, index: number) => (
             <div
               key={player.player_gsis_id}
               className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors"

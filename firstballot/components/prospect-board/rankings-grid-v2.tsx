@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import { fetchAllProspects, Player, Position } from '@/lib/players'
 import { PlayerCard } from './player-card'
@@ -9,28 +10,20 @@ import { SkeletonGrid } from './player-skeleton'
 
 type BoardMode = 'prospects' | 'draft-board' | 'historical' | 'all-time'
 
+const EMPTY_PLAYERS: Record<Position, Player[]> = {
+  QB: [],
+  RB: [],
+  WR: [],
+  TE: [],
+}
+
 export function RankingsGridV2() {
-  const [allPlayers, setAllPlayers] = useState<Record<Position, Player[]>>({
-    QB: [],
-    RB: [],
-    WR: [],
-    TE: [],
-  })
   const [mode, setMode] = useState<BoardMode>('prospects')
   const [query, setQuery] = useState('')
   const [selectedYear, setSelectedYear] = useState<number | 'all'>(2026)
   const [asset, setAsset] = useState<'ALL ASSETS' | Position>('ALL ASSETS')
-  const [isLoading, setIsLoading] = useState(true)
   const [isPending, startTransition] = useTransition()
-
-  useEffect(() => {
-    fetchAllProspects()
-      .then((data) => {
-        setAllPlayers(data)
-        setIsLoading(false)
-      })
-      .catch(() => setIsLoading(false))
-  }, [])
+  const { data: allPlayers = EMPTY_PLAYERS, isLoading } = useSWR('prospect-board/all', fetchAllProspects)
 
   const pool = useMemo(
     () => [...allPlayers.QB, ...allPlayers.RB, ...allPlayers.WR, ...allPlayers.TE],

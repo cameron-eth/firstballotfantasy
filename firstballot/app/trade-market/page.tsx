@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, Suspense } from 'react'
 import useSWR from 'swr'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import {
@@ -81,6 +81,7 @@ function toGrade(avgValuePerTrade: number): number {
 }
 
 function TickerRow({ player, index }: { player: MarketRow; index: number }) {
+  const shouldReduceMotion = useReducedMotion()
   const [imageError, setImageError] = useState(false)
   const pctChange = player.overUnderPct || 0
   const isPositive = pctChange >= 0
@@ -88,9 +89,9 @@ function TickerRow({ player, index }: { player: MarketRow; index: number }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03 }}
+      transition={shouldReduceMotion ? { duration: 0 } : { delay: index * 0.03 }}
       className={cn(
         'flex items-center gap-3 px-3 py-2 border-b border-border/50 hover:bg-secondary/30 transition-colors font-mono text-sm',
         isPositive ? 'hover:bg-emerald-500/5' : 'hover:bg-red-500/5'
@@ -178,6 +179,7 @@ function MarketPanel({
   color: string
   defaultExpanded?: boolean
 }) {
+  const shouldReduceMotion = useReducedMotion()
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const colorClasses =
@@ -220,7 +222,7 @@ function MarketPanel({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2 }}
             className="overflow-hidden"
           >
             <div className="border-t border-border/50 max-h-80 overflow-y-auto">
@@ -245,6 +247,7 @@ function MarketPanel({
 }
 
 function TickerStrip({ players }: { players: MarketRow[] }) {
+  const shouldReduceMotion = useReducedMotion()
   const sortedPlayers = [...players]
     .filter((p) => p.overUnderPct !== null)
     .sort((a, b) => Math.abs(b.overUnderPct || 0) - Math.abs(a.overUnderPct || 0))
@@ -253,8 +256,12 @@ function TickerStrip({ players }: { players: MarketRow[] }) {
   return (
     <div className="overflow-hidden border-y border-border bg-secondary/30">
       <motion.div
-        animate={{ x: [0, -1920] }}
-        transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+        animate={shouldReduceMotion ? { x: 0 } : { x: [0, -1920] }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { duration: 40, repeat: Infinity, ease: 'linear' }
+        }
         className="flex whitespace-nowrap py-2"
       >
         {[...sortedPlayers, ...sortedPlayers].map((player, idx) => {

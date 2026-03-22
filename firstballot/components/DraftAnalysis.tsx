@@ -779,22 +779,28 @@ export default function DraftAnalysis({ draftId }: DraftAnalysisProps) {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-slate-300">Round</TableHead>
-                      {Array.from({ length: data.draft.settings.teams }, (_, i) => (
-                        <TableHead key={i + 1} className="text-slate-300">
-                          Slot {i + 1}
-                        </TableHead>
-                      ))}
+                      {Array.from({ length: data.draft.settings.teams }, (_, i) => {
+                        const slot = i + 1
+                        return (
+                          <TableHead key={`slot-head-${slot}`} className="text-slate-300">
+                            Slot {slot}
+                          </TableHead>
+                        )
+                      })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {Object.entries(data.pickOwnership).map(([round, slots]) => (
                       <TableRow key={round}>
                         <TableCell className="font-medium text-slate-200">{round}</TableCell>
-                        {Array.from({ length: data.draft.settings.teams }, (_, i) => (
-                          <TableCell key={i + 1} className="text-slate-200">
-                            {(slots as Record<string, any>)[i + 1] || '-'}
-                          </TableCell>
-                        ))}
+                        {Array.from({ length: data.draft.settings.teams }, (_, i) => {
+                          const slot = i + 1
+                          return (
+                            <TableCell key={`slot-cell-${round}-${slot}`} className="text-slate-200">
+                              {(slots as Record<string, any>)[slot] || '-'}
+                            </TableCell>
+                          )
+                        })}
                       </TableRow>
                     ))}
                   </TableBody>

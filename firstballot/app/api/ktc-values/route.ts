@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { supabaseServer } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     // ── Single player history (sparkline data) ──────────────────────
     if (player) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabaseServer
         .from('ktc_player_values')
         .select('scraped_date, value_sf, value_1qb, rank_sf, rank_1qb')
         .eq('player_name', player)
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Get the most recent scraped_date
-      const { data: latestRow } = await supabaseAdmin
+      const { data: latestRow } = await supabaseServer
         .from('ktc_player_values')
         .select('scraped_date')
         .order('scraped_date', { ascending: false })
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
       const latestDate = latestRow?.scraped_date
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await supabaseServer
         .from('ktc_player_values')
         .select('player_name, value_sf, value_1qb, rank_sf, rank_1qb, scraped_date')
         .in('player_name', nameList)
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error
 
       // Also fetch history for each player so we can render mini sparklines
-      const { data: history, error: histErr } = await supabaseAdmin
+      const { data: history, error: histErr } = await supabaseServer
         .from('ktc_player_values')
         .select('ktc_player_id, player_name, scraped_date, value_sf, value_1qb')
         .in('player_name', nameList)
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Full latest snapshot (all 500 players) ───────────────────────
-    const { data: latestRow } = await supabaseAdmin
+    const { data: latestRow } = await supabaseServer
       .from('ktc_player_values')
       .select('scraped_date')
       .order('scraped_date', { ascending: false })
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     const latestDate = latestRow?.scraped_date
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseServer
       .from('ktc_player_values')
       .select('*')
       .eq('scraped_date', latestDate)
@@ -109,7 +109,8 @@ export async function GET(request: NextRequest) {
       { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' } }
     )
   } catch (err) {
-    console.error('[ktc-values] error:', err)
-    return NextResponse.json({ error: 'Failed to fetch KTC values' }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[ktc-values] error:', message, err)
+    return NextResponse.json({ error: 'Failed to fetch KTC values', detail: message }, { status: 500 })
   }
 }

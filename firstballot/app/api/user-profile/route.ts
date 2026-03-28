@@ -48,12 +48,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
-    if (!email || !username) {
-      return NextResponse.json(
-        { error: 'Email and username are required' },
-        { status: 400 }
-      )
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
+
+    const normalizedUsername = username?.trim() || email.split('@')[0] || 'user'
 
     const serviceClient = createAuthenticatedSupabaseClient(userJwt)
 
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest) {
       .insert({
         auth_id: authId,
         email: email,
-        username: username || 'user',
+        username: normalizedUsername,
         sleeper_username: null,
         favorite_team: null,
         sleeper_league_id: null,

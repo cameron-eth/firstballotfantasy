@@ -8,6 +8,7 @@ import { RefreshCw, Clock, Maximize2, Minimize2, Sparkles } from 'lucide-react'
 import { SleeperPick, SleeperDraft, SleeperPlayer } from '@/lib/sleeper-api'
 import { userApi } from '@/lib/user-api'
 import { cacheUtils } from '@/lib/cache-utils'
+import { useAuth } from '@/lib/auth'
 
 interface DraftBoardGridProps {
   draft: SleeperDraft
@@ -24,6 +25,7 @@ export function DraftBoardGrid({
   onRefresh,
   lastRefresh,
 }: DraftBoardGridProps) {
+  const { user } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
   const { data: rankingsResult, isLoading: rankingsLoading } = useSWR(
     '/api/rankings',
@@ -99,6 +101,10 @@ export function DraftBoardGrid({
 
   // On mount, get the current user and auto-select their team if available
   useEffect(() => {
+    if (!user) {
+      return
+    }
+
     userApi
       .getUserProfile()
       .then((profile) => {
@@ -119,7 +125,7 @@ export function DraftBoardGrid({
       .catch(() => {
         console.error('Error fetching user profile')
       })
-  }, [picks])
+  }, [picks, user])
 
 
   // Memoized event handlers

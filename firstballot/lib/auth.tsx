@@ -9,6 +9,10 @@ import { setupFetchWithAuth } from './setup-fetch-with-auth'
 import { userApi } from './user-api'
 import { cacheUtils } from './cache-utils'
 
+if (typeof window !== 'undefined') {
+  setupFetchWithAuth()
+}
+
 interface AuthContextType {
   user: User | null
   signIn: (email: string, password: string) => Promise<void>
@@ -28,11 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
-
-      // Set up fetch interceptor after auth is initialized
-      if (typeof window !== 'undefined') {
-        setupFetchWithAuth()
-      }
     })
 
     // Listen for auth changes
@@ -48,11 +47,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     cacheUtils.clear()
-    const { error } = await supabase.auth.signInWithPassword({
+    const {
+      data: { user: signedInUser },
+      error,
+    } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
     if (error) throw error
+
+    setUser(signedInUser ?? null)
+
+    if (signedInUser?.email) {
+      const username =
+        typeof signedInUser.user_metadata?.username === 'string' &&
+        signedInUser.user_metadata.username.trim().length > 0
+          ? signedInUser.user_metadata.username.trim()
+          : signedInUser.email.split('@')[0]
+
+      try {
+        const response = await userApi.addUserProfile({
+          authId: signedInUser.id,
+          email: signedInUser.email,
+          username,
+        })
+
+        if (!response.ok && response.status !== 409) {
+          console.error('Failed to ensure user profile during sign in')
+        }
+      } catch (profileError) {
+        console.error('Error ensuring user profile during sign in:', profileError)
+      }
+    }
   }
 
   const signUp = async (email: string, password: string, username: string) => {

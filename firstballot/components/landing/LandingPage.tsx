@@ -72,16 +72,14 @@ function useTypewriter(text: string, speed = 50, delay = 0) {
   const [displayed, setDisplayed] = useState('')
   const [started, setStarted] = useState(false)
 
-  if (shouldReduceMotion) {
-    return text
-  }
-
   useEffect(() => {
+    if (shouldReduceMotion) return
     const startTimeout = setTimeout(() => setStarted(true), delay)
     return () => clearTimeout(startTimeout)
-  }, [delay])
+  }, [delay, shouldReduceMotion])
 
   useEffect(() => {
+    if (shouldReduceMotion) return
     if (!started) return
     if (displayed.length < text.length) {
       const timeout = setTimeout(() => {
@@ -89,9 +87,9 @@ function useTypewriter(text: string, speed = 50, delay = 0) {
       }, speed)
       return () => clearTimeout(timeout)
     }
-  }, [displayed, text, speed, started])
+  }, [displayed, text, speed, started, shouldReduceMotion])
 
-  return displayed
+  return shouldReduceMotion ? text : displayed
 }
 
 // ── Pure CSS matrix rain — zero JS per frame ────────────────────────

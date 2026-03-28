@@ -732,17 +732,17 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
 
   return (
-    <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden xl:h-screen xl:overflow-hidden xl:flex xl:flex-col">
+    <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden">
       <Header />
 
-      <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-hidden xl:flex-1 xl:min-h-0 xl:overflow-hidden">
-        <div className="max-w-[1800px] mx-auto xl:h-full xl:min-h-0 xl:flex xl:flex-col">
+      <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-hidden">
+        <div className="max-w-[1800px] mx-auto">
           {dataError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {dataError}
             </div>
           )}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full xl:flex xl:flex-1 xl:min-h-0 xl:flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="mb-3 md:mb-4 shrink-0">
               <TabsList className="grid grid-cols-4 md:flex md:items-center gap-1.5 md:gap-2 bg-transparent h-auto p-0 border-none md:justify-start">
                 <TabsTrigger
@@ -791,7 +791,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
             {/* Prospects Tab */}
             <TabsContent
               value="prospects"
-              className="mt-3 !bg-transparent [&>*]:bg-transparent xl:flex-1 xl:min-h-0"
+              className="mt-3 !bg-transparent [&>*]:bg-transparent"
               style={{ background: 'transparent' }}
             >
               <ProspectsTab
@@ -812,7 +812,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
               />
             </TabsContent>
 
-            <TabsContent value="draftboard" className="mt-3 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+            <TabsContent value="draftboard" className="mt-3">
               <DraftBoardTab
                 loading={loading}
                 searchTerm={searchTerm}
@@ -839,11 +839,11 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
               />
             </TabsContent>
 
-            <TabsContent value="historical" className="mt-3 xl:flex-1 xl:min-h-0">
+            <TabsContent value="historical" className="mt-3">
               <HistoricalRankingsTab currentProspects={prospects} />
             </TabsContent>
 
-            <TabsContent value="alltime" className="mt-3 xl:flex-1 xl:min-h-0">
+            <TabsContent value="alltime" className="mt-3">
               <AllTimeRankingsTab />
             </TabsContent>
           </Tabs>

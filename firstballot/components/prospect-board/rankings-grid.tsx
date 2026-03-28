@@ -91,9 +91,18 @@ export function RankingsGrid() {
   ]
 
   return (
-    <div>
+    <div className="lg:h-full lg:min-h-0 lg:flex lg:flex-col">
       {/* ── Sticky toolbar — flat, single container ── */}
-      <div className="sticky top-16 z-20 -mx-2 -mt-2 px-4 pt-4 pb-3 mb-2 liquid-glass rounded-xl space-y-2.5">
+      <div className="sticky top-16 z-20 mb-4 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90 space-y-2.5 shrink-0">
+        {!isLoading && (
+          <div className="text-sm text-muted-foreground">
+            Showing {visiblePlayers.length} of {filteredPlayers.length} prospect
+            {filteredPlayers.length !== 1 ? 's' : ''}
+            {selectedYear !== 'all' && ` from ${selectedYear}`}
+            {filter !== 'all' && ` (${filter})`}
+          </div>
+        )}
+
         {/* Row 1: Position + Draft Class */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
           <div className="flex items-center gap-1.5">
@@ -206,15 +215,7 @@ export function RankingsGrid() {
         </div>
       </div>
 
-      {!isLoading && (
-        <div className="mb-4 text-sm text-muted-foreground">
-          Showing {visiblePlayers.length} of {filteredPlayers.length} prospect
-          {filteredPlayers.length !== 1 ? 's' : ''}
-          {selectedYear !== 'all' && ` from ${selectedYear}`}
-          {filter !== 'all' && ` (${filter})`}
-        </div>
-      )}
-
+      <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
       {/* Grid */}
       {isLoading || isPending ? (
         <SkeletonGrid count={20} />
@@ -242,6 +243,7 @@ export function RankingsGrid() {
           <p className="text-muted-foreground">No players match your criteria</p>
         </div>
       )}
+      </div>
     </div>
   )
 }

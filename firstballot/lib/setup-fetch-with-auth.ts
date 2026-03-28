@@ -16,21 +16,28 @@ export function setupFetchWithAuth() {
 
   // Override the global fetch function
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString()
+
+    // Only intercept our own API routes — pass everything else straight through
+    const isApiRoute =
+      url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/')
+
+    if (!isApiRoute) {
+      return originalFetch(input, init)
+    }
+
     try {
-      // Get the current session (this is more reliable than getSession())
       const {
         data: { session },
-        error,
       } = await supabase.auth.getSession()
 
       const token = session?.access_token
-      const url = typeof input === 'string' ? input : input.toString()
 
       // Create new headers object
       const headers = new Headers(init?.headers || {})
 
       // Add authorization header for API calls if we have a token
-      if (token && (url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/'))) {
+      if (token) {
         headers.set('Authorization', `Bearer ${token}`)
       }
 

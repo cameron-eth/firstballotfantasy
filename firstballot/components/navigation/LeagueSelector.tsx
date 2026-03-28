@@ -60,33 +60,25 @@ export function LeagueSelector({ compact = false, className = '' }: LeagueSelect
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/50 border border-yellow-400/20 shadow-lg shadow-yellow-400/5 hover:border-yellow-400/40 hover:bg-slate-900/80 hover:scale-[1.01] active:scale-[0.99] transition-all w-full"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/50 border border-yellow-400/20 hover:border-yellow-400/40 hover:bg-slate-900/80 hover:scale-[1.01] active:scale-[0.99] transition-all"
       >
-        <div className="w-8 h-8 rounded-lg bg-yellow-400/10 flex items-center justify-center flex-shrink-0 border border-yellow-400/20">
-          <Trophy className="w-4 h-4 text-yellow-400" />
-        </div>
+        <Trophy className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
 
-        <div className="flex-1 text-left min-w-0">
-          <div className="text-[10px] text-yellow-400/70 font-mono uppercase tracking-widest leading-none mb-1">
-            Active League
-          </div>
-          <div className="text-sm font-bold text-white truncate font-mono uppercase tracking-tight">
+        <div className="text-left min-w-0">
+          <div className="text-xs font-bold text-white truncate font-mono uppercase tracking-tight max-w-[140px]">
             {selectedLeague?.name || 'Select League'}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {selectedLeague && (
-            <Badge
-              variant="outline"
-              className="hidden sm:flex bg-slate-800/50 text-[10px] font-mono border-slate-700 h-5"
-            >
+            <span className="hidden sm:block text-[10px] text-slate-500 font-mono">
               {selectedLeague.season}
-            </Badge>
+            </span>
           )}
           <ChevronDown
             className={cn(
-              'w-4 h-4 text-slate-400 transition-transform duration-200',
+              'w-3.5 h-3.5 text-slate-400 transition-transform duration-200',
               isOpen && 'rotate-180'
             )}
           />

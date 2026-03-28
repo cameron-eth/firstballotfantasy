@@ -111,33 +111,38 @@ export const calculateTeamTrends = (players: PlayerData[]): TeamTrends => {
   }
 }
 
+/**
+ * Score the top-N players at each position using their rank.
+ * rank 1 → 100 pts, rank 200+ → ~0 pts. Normalized to 0–100 output.
+ */
 export const calculatePositionStrengths = (players: PlayerData[]): PositionStrengths => {
-  const positionCounts: PositionStrengths = {
-    QB: 0,
-    RB: 0,
-    WR: 0,
-    TE: 0,
+  // How many starters to consider per position (dynasty SF context)
+  const starterSlots: Record<string, number> = { QB: 2, RB: 4, WR: 4, TE: 2 }
+
+  function positionScore(pos: string): number {
+    const posPlayers = players
+      .filter((p) => p.position?.toUpperCase() === pos && (p.rank ?? 999) < 999)
+      .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
+      .slice(0, starterSlots[pos] ?? 3)
+
+    if (posPlayers.length === 0) return 0
+
+    // Each rank maps to a score: rank 1=100, rank 300=0 (linear decay)
+    const rankCap = 300
+    const rawScores = posPlayers.map((p) => Math.max(0, (rankCap - (p.rank ?? rankCap)) / rankCap * 100))
+    const avg = rawScores.reduce((s, v) => s + v, 0) / rawScores.length
+
+    return Math.round(avg)
+  }
+
+  return {
+    QB: positionScore('QB'),
+    RB: positionScore('RB'),
+    WR: positionScore('WR'),
+    TE: positionScore('TE'),
     FLEX: 0,
     SFLX: 0,
   }
-
-  if (players && players.length > 0) {
-    players.forEach((player) => {
-      const position = player.position?.toUpperCase()
-      if (position === 'QB') positionCounts.QB++
-      else if (position === 'RB') positionCounts.RB++
-      else if (position === 'WR') positionCounts.WR++
-      else if (position === 'TE') positionCounts.TE++
-      else if (position === 'FLEX') positionCounts.FLEX++
-      else if (position === 'SFLX' || position === 'SUPER_FLEX') positionCounts.SFLX++
-      // Handle any other positions by adding to FLEX
-      else {
-        positionCounts.FLEX++
-      }
-    })
-  }
-
-  return positionCounts
 }
 
 export const calculateRecentForm = (roster: any, matchups: any[]): string => {

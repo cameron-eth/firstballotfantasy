@@ -19,6 +19,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
+import { KtcSparkline } from './KtcSparkline'
 import type { Prospect } from './types'
 import { PlayerHeadshot } from '@/components/ui/player-headshot'
 
@@ -230,6 +231,24 @@ export function DraftBoardTab({
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [draggingProspectId, setDraggingProspectId] = useState<number | null>(null)
   const seededYearRef = useRef<number | null>(null)
+
+  // KTC value history keyed by player_name → array of {scraped_date, value_sf, value_1qb}
+  const [ktcHistoryMap, setKtcHistoryMap] = useState<
+    Record<string, { scraped_date: string; value_sf: number; value_1qb: number }[]>
+  >({})
+
+  // Bulk-fetch KTC history whenever the board changes
+  useEffect(() => {
+    const names = draftBoard.map((p) => p.name).filter(Boolean)
+    if (names.length === 0) return
+    const query = names.map(encodeURIComponent).join(',')
+    fetch(`/api/ktc-values?names=${query}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.historyMap) setKtcHistoryMap(json.historyMap)
+      })
+      .catch(() => {})
+  }, [draftBoard])
 
   const currentDraftYear = useMemo(() => {
     const source = Array.isArray(allProspects) ? allProspects : []
@@ -615,7 +634,7 @@ export function DraftBoardTab({
   }
 
   return (
-    <main className="min-h-[70vh] bg-background xl:h-full xl:min-h-0 xl:flex xl:flex-col xl:overflow-hidden">
+    <main className="min-h-[70vh] bg-background">
       {/* Compact toolbar — position tabs + actions */}
       <div className="w-full px-2 sm:px-3 pt-1 pb-2 flex items-center justify-between gap-3 flex-wrap shrink-0">
         <div className="flex items-center gap-1.5">
@@ -652,14 +671,14 @@ export function DraftBoardTab({
         )}
       </div>
 
-      <div className="w-full px-1 sm:px-2 pb-3 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5 xl:h-full xl:min-h-0">
-          <div className="xl:min-h-0">
-            <div className="bg-card border border-border rounded-lg overflow-hidden xl:h-full xl:flex xl:flex-col">
+      <div className="w-full px-1 sm:px-2 pb-3">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
+          <div>
+            <div className="bg-card border border-border rounded-lg overflow-hidden xl:max-h-[calc(100vh-220px)] xl:flex xl:flex-col">
               {/* Column header */}
               <div
                 className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
-                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
+                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 96px 24px' }}
               >
                 <span />
                 <span className="pl-1.5">Player</span>
@@ -671,6 +690,7 @@ export function DraftBoardTab({
                 <span className="text-center">Ht</span>
                 <span className="text-center">Wt</span>
                 <span className="text-center">Phy</span>
+                <span className="text-center text-emerald-500/80">KTC</span>
                 <span />
               </div>
 
@@ -748,7 +768,7 @@ export function DraftBoardTab({
                               return (
                                 <div
                                   className="grid items-stretch h-24 pl-2 pr-2"
-                                  style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 24px' }}
+                                  style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 96px 24px' }}
                                 >
                                   {/* Drag handle */}
                                   <div className="flex items-center">
@@ -861,6 +881,17 @@ export function DraftBoardTab({
                                     </div>
                                   </div>
 
+                                  {/* KTC Sparkline */}
+                                  <div className="flex items-center justify-center py-2 px-1">
+                                    <KtcSparkline
+                                      playerName={player.name}
+                                      history={ktcHistoryMap[player.name]}
+                                      useSf={true}
+                                      width={88}
+                                      height={44}
+                                    />
+                                  </div>
+
                                   {/* Remove */}
                                   <div className="flex items-center justify-center">
                                     <button
@@ -885,7 +916,7 @@ export function DraftBoardTab({
             </div>
           </div>
 
-          <div className="space-y-3 xl:sticky xl:top-24 self-start xl:max-h-full xl:overflow-y-auto">
+          <div className="space-y-3 xl:sticky xl:top-24 self-start xl:max-h-[calc(100vh-220px)] xl:overflow-y-auto">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <div className="p-4 border-b border-border flex items-center justify-between">
                 <h3 className="font-mono font-bold text-foreground">Prospects Not On Board</h3>

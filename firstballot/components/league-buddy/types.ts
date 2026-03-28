@@ -30,6 +30,18 @@ export interface OverviewActions {
   onPlayoffOddsClick?: () => void
 }
 
+export interface SleeperTransaction {
+  transaction_id: string
+  type: 'trade' | 'waiver' | 'free_agent'
+  status: 'complete' | 'failed'
+  created: number // unix ms
+  roster_ids: number[]
+  adds: Record<string, number> | null
+  drops: Record<string, number> | null
+  draft_picks: any[]
+  leg: number
+}
+
 export interface TeamData {
   rosterId: number
   teamName: string
@@ -51,6 +63,13 @@ export interface TeamData {
   waiverPosition: number
   totalMoves: number
   recentForm: string
+  transactions?: SleeperTransaction[] // all completed transactions this team was part of
+}
+
+export interface KtcHistoryPoint {
+  scraped_date: string
+  value_sf: number
+  value_1qb: number
 }
 
 export interface PlayerData {
@@ -80,6 +99,10 @@ export interface PlayerData {
     name: string
     tier: number
   }
+  ktcHistory?: KtcHistoryPoint[] // KTC value history for sparkline
+  ktcValueSf?: number // Latest KTC SF value
+  ktcValue1qb?: number // Latest KTC 1QB value
+  ktcTrendDelta?: number // Change in KTC SF value over the history window
 }
 
 export interface TeamTrends {

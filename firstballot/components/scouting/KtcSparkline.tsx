@@ -34,8 +34,8 @@ export function KtcSparkline({
   playerName,
   history: historyProp,
   useSf = true,
-  width = 80,
-  height = 36,
+  width = 88,
+  height = 44,
 }: KtcSparklineProps) {
   const { data, isLoading } = useSWR<{ history?: KtcDataPoint[] }>(
     historyProp === undefined ? `/api/ktc-values?player=${encodeURIComponent(playerName)}` : null,
@@ -51,7 +51,6 @@ export function KtcSparkline({
 
   const valueKey = useSf ? 'value_sf' : 'value_1qb'
 
-  // Need at least 2 points to draw a line
   if (loading) {
     return (
       <div
@@ -63,47 +62,59 @@ export function KtcSparkline({
     )
   }
 
-  if (history.length < 2) {
-    const val = history[0]?.[valueKey]
+  // No data at all
+  if (history.length === 0) {
     return (
       <div
-        className="flex items-center justify-center font-mono text-[11px] text-slate-400"
+        className="flex items-center justify-center font-mono text-[11px] text-muted-foreground/40"
         style={{ width, height }}
       >
-        {val ? val.toLocaleString() : '—'}
+        —
       </div>
     )
   }
 
-  const values = history.map((d) => d[valueKey] as number)
-  const first = values[0]
-  const last  = values[values.length - 1]
-  const trend = last - first
+  const latest = history[history.length - 1][valueKey] as number
+  const hasMultiple = history.length >= 2
+  const first = hasMultiple ? (history[0][valueKey] as number) : latest
+  const trend = latest - first
   const color = trend > 0 ? '#34d399' : trend < 0 ? '#f87171' : '#94a3b8'
 
   return (
-    <div style={{ width, height }} className="relative">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={history} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-          <Line
-            type="monotone"
-            dataKey={valueKey}
-            stroke={color}
-            strokeWidth={1.5}
-            dot={false}
-            isAnimationActive={false}
-          />
-          <Tooltip content={<CustomTooltip />} />
-        </LineChart>
-      </ResponsiveContainer>
+    <div style={{ width, height }} className="flex flex-col items-end justify-center gap-0.5">
+      {/* Value */}
+      <span className="text-[13px] font-mono font-bold text-foreground leading-none tabular-nums">
+        {latest.toLocaleString()}
+      </span>
 
-      {/* Trend indicator */}
-      <div
-        className="absolute bottom-0 right-0 text-[8px] font-mono font-bold leading-none"
-        style={{ color }}
-      >
-        {trend > 0 ? `+${trend}` : trend < 0 ? `${trend}` : '~'}
-      </div>
+      {/* Sparkline + delta row */}
+      {hasMultiple ? (
+        <div className="flex items-center gap-1">
+          <div style={{ width: 48, height: 16 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history} margin={{ top: 1, right: 1, left: 1, bottom: 1 }}>
+                <Line
+                  type="monotone"
+                  dataKey={valueKey}
+                  stroke={color}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Tooltip content={<CustomTooltip />} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <span
+            className="text-[10px] font-mono font-bold leading-none tabular-nums"
+            style={{ color }}
+          >
+            {trend > 0 ? `+${trend}` : trend < 0 ? `${trend}` : '~'}
+          </span>
+        </div>
+      ) : (
+        <span className="text-[10px] font-mono text-muted-foreground/50 leading-none">—</span>
+      )}
     </div>
   )
 }

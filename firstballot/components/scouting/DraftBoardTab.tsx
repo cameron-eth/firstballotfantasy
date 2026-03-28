@@ -681,7 +681,7 @@ export function DraftBoardTab({
               {/* Column header */}
               <div
                 className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
-                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 96px 24px' }}
+                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 120px 24px' }}
               >
                 <span />
                 <span className="pl-1.5">Player</span>
@@ -771,7 +771,7 @@ export function DraftBoardTab({
                               return (
                                 <div
                                   className="grid items-stretch h-24 pl-2 pr-2"
-                                  style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 96px 24px' }}
+                                  style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 120px 24px' }}
                                 >
                                   {/* Drag handle */}
                                   <div className="flex items-center">

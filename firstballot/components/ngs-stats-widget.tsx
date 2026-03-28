@@ -61,8 +61,8 @@ export function NGSStatsWidget({ type, season = '2025', limit = 10 }: NGSStatsWi
           <Skeleton className="h-4 w-64 mt-2" />
         </CardHeader>
         <CardContent className="space-y-3">
-          {[...Array(limit)].map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
+          {Array.from({ length: limit }, (_, rowIndex) => (
+            <Skeleton key={`ngs-widget-skeleton-${type}-${season}-${rowIndex}`} className="h-12 w-full" />
           ))}
         </CardContent>
       </Card>

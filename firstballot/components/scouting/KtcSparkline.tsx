@@ -39,8 +39,12 @@ export function KtcSparkline({
 }: KtcSparklineProps) {
   const { data, isLoading } = useSWR<{ history?: KtcDataPoint[] }>(
     historyProp === undefined ? `/api/ktc-values?player=${encodeURIComponent(playerName)}` : null,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false }
+    (url: string) =>
+      fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`KTC fetch failed: ${r.status}`)
+        return r.json()
+      }),
+    { revalidateOnFocus: false, errorRetryCount: 3 }
   )
   const history = historyProp ?? data?.history ?? []
   const loading = historyProp === undefined && isLoading

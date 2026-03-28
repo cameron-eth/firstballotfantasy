@@ -4,6 +4,7 @@ import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, Reorder } from 'framer-motion'
 import Image from 'next/image'
+import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import {
   ChevronDown,
@@ -232,23 +233,25 @@ export function DraftBoardTab({
   const [draggingProspectId, setDraggingProspectId] = useState<number | null>(null)
   const seededYearRef = useRef<number | null>(null)
 
-  // KTC value history keyed by player_name → array of {scraped_date, value_sf, value_1qb}
-  const [ktcHistoryMap, setKtcHistoryMap] = useState<
-    Record<string, { scraped_date: string; value_sf: number; value_1qb: number }[]>
-  >({})
-
-  // Bulk-fetch KTC history whenever the board changes
-  useEffect(() => {
+  // Bulk-fetch KTC history via SWR (automatic retry on error, revalidation)
+  const ktcNamesKey = useMemo(() => {
     const names = draftBoard.map((p) => p.name).filter(Boolean)
-    if (names.length === 0) return
-    const query = names.map(encodeURIComponent).join(',')
-    fetch(`/api/ktc-values?names=${query}`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.historyMap) setKtcHistoryMap(json.historyMap)
-      })
-      .catch(() => {})
+    if (names.length === 0) return null
+    return names.map(encodeURIComponent).join(',')
   }, [draftBoard])
+
+  const { data: ktcBulkData } = useSWR<{
+    historyMap?: Record<string, { scraped_date: string; value_sf: number; value_1qb: number }[]>
+  }>(
+    ktcNamesKey ? `/api/ktc-values?names=${ktcNamesKey}` : null,
+    (url: string) =>
+      fetch(url).then((r) => {
+        if (!r.ok) throw new Error(`KTC fetch failed: ${r.status}`)
+        return r.json()
+      }),
+    { revalidateOnFocus: false, errorRetryCount: 3 }
+  )
+  const ktcHistoryMap = ktcBulkData?.historyMap ?? {}
 
   const currentDraftYear = useMemo(() => {
     const source = Array.isArray(allProspects) ? allProspects : []

@@ -99,7 +99,20 @@ const FALLBACK_TIER = {
 }
 
 export function getTierColor(tier: string | null) {
-  return TIER_COLORS[tier || ''] || FALLBACK_TIER
+  if (!tier) return FALLBACK_TIER
+  if (TIER_COLORS[tier]) return TIER_COLORS[tier]
+
+  // Positional rank tiers (e.g. "WR5", "QB2", "RB12", "TE3")
+  if (/^QB\d+$/i.test(tier))
+    return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
+  if (/^RB\d+$/i.test(tier))
+    return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
+  if (/^WR\d+$/i.test(tier))
+    return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' }
+  if (/^TE\d+$/i.test(tier))
+    return { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' }
+
+  return FALLBACK_TIER
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +186,19 @@ export async function fetchAllProspects(): Promise<Record<Position, Player[]>> {
     const filtered = data
       .filter((p) => p.position === pos && p.overall_grade !== null)
       .sort((a, b) => (b.overall_grade || 0) - (a.overall_grade || 0))
-    result[pos] = filtered.map((raw) => normalize(raw))
+    result[pos] = filtered.map((raw, index) => {
+      const normalized = normalize(raw)
+      const positionalRank = index + 1
+      const computedTier =
+        (normalized.grade || 0) >= 90 ? 'Elite' : `${normalized.position}${positionalRank}`
+      return {
+        ...normalized,
+        // Ensure rank reflects positional order within this list
+        rank: positionalRank,
+        // Override tier based on grade/positional convention
+        tier: computedTier,
+      }
+    })
   }
 
   return result

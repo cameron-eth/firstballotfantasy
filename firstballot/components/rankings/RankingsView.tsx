@@ -11,25 +11,9 @@ import { SkeletonGrid } from '@/components/prospect-board/player-skeleton'
 import type { Player, Position } from '@/lib/players'
 import type { PlayerRanking } from '@/types/rankings'
 
-function normalizeTier(player: PlayerRanking, isDiamond: boolean): string {
-  if (isDiamond) return 'Elite'
-  const match = player.tier?.match(/Tier\s*(\d+)/i)
-  const tierNum = match ? Number(match[1]) : null
-  switch (tierNum) {
-    case 1:
-      return 'Elite'
-    case 2:
-      return 'Blue Chip'
-    case 3:
-      return 'Starter'
-    case 4:
-      return 'Rotational'
-    case 5:
-    case 6:
-      return 'Depth'
-    default:
-      return 'Longshot'
-  }
+function normalizeTier(grade: number, position: string, posRank: number): string {
+  if (grade >= 90) return 'Elite'
+  return `${position}${posRank}`
 }
 
 function toCardPosition(position: string): Position {
@@ -51,7 +35,6 @@ export function RankingsView() {
     paginatedRankings,
     filteredAndSortedRankings,
     uniqueTiers,
-    isDiamondTier,
   } = useRankings()
 
   const positionRankByPlayerKey = useMemo(() => {
@@ -94,6 +77,7 @@ export function RankingsView() {
       const playerKey = `${player.player_name}__${position}`
       const posRank = positionRankByPlayerKey.get(playerKey) ?? player.rank
       const draftClass = player.draft_year ?? player.draft_class ?? null
+      const grade = clamp(normalizedGrade, 70, 99.9)
 
       return {
         id: player.rank,
@@ -102,8 +86,8 @@ export function RankingsView() {
         position,
         school: `${player.team} • Age ${player.age}`,
         espnId: player.espn_id ? Number(player.espn_id) : null,
-        tier: normalizeTier(player, isDiamondTier(player)),
-        grade: clamp(normalizedGrade, 70, 99.9),
+        tier: normalizeTier(grade, position, posRank),
+        grade,
         height: '',
         weight: null,
         fortyTime: null,
@@ -115,7 +99,7 @@ export function RankingsView() {
         headshotUrl: player.headshot_url || null,
       }
     })
-  }, [filteredAndSortedRankings, paginatedRankings, isDiamondTier, positionRankByPlayerKey])
+  }, [filteredAndSortedRankings, paginatedRankings, positionRankByPlayerKey])
 
   return (
     <div className="min-h-screen fb-app-surface">

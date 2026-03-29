@@ -108,14 +108,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('draft_year', yearNum)
     }
 
-    if (isAllYears) {
-      query = query
-        .order('draft_year', { ascending: false })
-        .order('overall_grade', { ascending: false })
-        .order('rank', { ascending: true })
-    } else {
-      query = query.order('overall_grade', { ascending: false }).order('rank', { ascending: true })
-    }
+    // Always sort by grade first so the best players surface regardless of class year
+    query = query.order('overall_grade', { ascending: false }).order('rank', { ascending: true })
 
     const { data: dynastyData, error: dynastyError } = await query
 

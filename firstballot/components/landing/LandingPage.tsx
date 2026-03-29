@@ -57,14 +57,12 @@ function getPlayerImageUrl(espnId: string, isCollege: boolean): string {
 }
 
 function toTierLabel(gradeTier: string | null | undefined, grade: number): string {
-  // Accept both legacy (POS1/POS2) and current tier names from DB
-  if (gradeTier === 'Elite') return 'Elite'
-  if (gradeTier === 'Blue Chip' || gradeTier === 'POS1') return 'Blue Chip'
-  if (gradeTier === 'Starter' || gradeTier === 'POS2') return 'Starter'
   if (grade >= 90) return 'Elite'
+  if (gradeTier === 'Elite') return 'Elite'
+  if (gradeTier === 'Blue Chip') return 'Blue Chip'
   if (grade >= 85) return 'Blue Chip'
   if (grade >= 78) return 'Starter'
-  return 'Starter'
+  return 'Depth'
 }
 
 function useTypewriter(text: string, speed = 50, delay = 0) {

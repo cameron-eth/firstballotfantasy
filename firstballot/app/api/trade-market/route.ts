@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase-server'
+import { supabaseServer } from '@/lib/supabase-server'
 import { sleeperApi } from '@/lib/nextjs-cache'
+import { getCachedPlayers } from '@/lib/players-cache'
 
 // Extend timeout for this route (fetching many weeks of transactions)
 export const maxDuration = 60 // 60 seconds
 export const dynamic = 'force-dynamic'
+
+function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,16 +35,33 @@ export async function GET(request: NextRequest) {
       currentWeek,
     })
 
-    // Fetch critical data in parallel - Users data without cache to get fresh team names
-    const [rosters, users, allPlayers, rankingsResult] = (await Promise.all([
-      sleeperApi.getLeagueRosters(leagueId),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
-        (r) => r.json()
-      ),
-      sleeperApi.getAllPlayers(),
+    // Build league history chain (current -> previous seasons) so trade tape can span years.
+    const leagueHistory: { leagueId: string; season: string }[] = []
+    const seenLeagueIds = new Set<string>()
+    let cursorLeagueId: string | null = leagueId
+    let depth = 0
+    while (cursorLeagueId && depth < 8 && !seenLeagueIds.has(cursorLeagueId)) {
+      seenLeagueIds.add(cursorLeagueId)
+      const leagueInfo = (await sleeperApi
+        .getLeagueInfo(cursorLeagueId)
+        .catch(() => null)) as Record<string, any> | null
+      leagueHistory.push({
+        leagueId: cursorLeagueId,
+        season: String(leagueInfo?.season || ''),
+      })
+      cursorLeagueId =
+        leagueInfo?.previous_league_id && leagueInfo.previous_league_id !== cursorLeagueId
+          ? String(leagueInfo.previous_league_id)
+          : null
+      depth += 1
+    }
+
+    // Fetch critical data in parallel - include all players (6h TTL cache) + rankings once
+    const [allPlayers, rankingsResult, ktcResult] = (await Promise.all([
+      getCachedPlayers(),
       (async () => {
         try {
-          const result = await supabaseAdmin
+          const result = await supabaseServer
             .from('dynasty_player_tiers')
             .select('*')
             .order('total_score', { ascending: false })
@@ -58,29 +80,87 @@ export async function GET(request: NextRequest) {
           return { data: [], error: err }
         }
       })(),
-    ])) as [any[], any[], Record<string, any>, any]
+      (async () => {
+        try {
+          const { data: latestRow, error: latestError } = await supabaseServer
+            .from('ktc_player_values')
+            .select('scraped_date')
+            .order('scraped_date', { ascending: false })
+            .limit(1)
+            .single()
 
-    // Process teams data efficiently
-    const teamsData = rosters.map((roster: any) => {
-      const owner = roster.owner_id ? users.find((u: any) => u?.user_id === roster.owner_id) : null
-      const teamName =
-        owner?.metadata?.team_name ||
-        owner?.display_name ||
-        owner?.first_name ||
-        `Team ${roster.roster_id}`
+          if (latestError || !latestRow?.scraped_date) {
+            return { data: [], error: latestError || new Error('No KTC snapshot found') }
+          }
 
-      return {
-        rosterId: roster.roster_id,
-        teamName,
-        ownerName: owner?.display_name || 'Unknown',
-        ownerAvatar: owner?.avatar || undefined,
-        ownerUsername: owner?.display_name || 'Unknown',
-        ownerId: roster.owner_id,
+          const { data, error } = await supabaseServer
+            .from('ktc_player_values')
+            .select('player_name, value_sf, rank_sf')
+            .eq('scraped_date', latestRow.scraped_date)
+
+          return { data: data || [], error }
+        } catch (err) {
+          console.error('❌ KTC fetch error:', err)
+          return { data: [], error: err }
+        }
+      })(),
+    ])) as [Record<string, any>, any, any]
+
+    // Build team metadata for ALL leagues in parallel (was sequential).
+    const teamsByLeague: Record<string, any[]> = {}
+    const teamMetaResults = await Promise.all(
+      leagueHistory.map(async (league) => {
+        const [rosters, users] = await Promise.all([
+          sleeperApi.getLeagueRosters(league.leagueId).catch(() => []),
+          fetch(`https://api.sleeper.app/v1/league/${league.leagueId}/users`, { cache: 'no-store' })
+            .then((r) => r.json())
+            .catch(() => []),
+        ])
+
+        const teams = (rosters as any[]).map((roster: any) => {
+          const owner = roster.owner_id ? (users as any[]).find((u: any) => u?.user_id === roster.owner_id) : null
+          const teamName =
+            owner?.metadata?.team_name ||
+            owner?.display_name ||
+            owner?.first_name ||
+            `Team ${roster.roster_id}`
+
+          return {
+            rosterId: roster.roster_id,
+            teamName,
+            ownerName: owner?.display_name || 'Unknown',
+            ownerAvatar: owner?.avatar || undefined,
+            ownerUsername: owner?.display_name || 'Unknown',
+            ownerId: roster.owner_id,
+            leagueId: league.leagueId,
+            season: league.season,
+          }
+        })
+        return { leagueId: league.leagueId, teams }
+      })
+    )
+    for (const result of teamMetaResults) {
+      teamsByLeague[result.leagueId] = result.teams
+    }
+    const teamsData = teamsByLeague[leagueId] || []
+
+    // Process KTC values into a normalized lookup map
+    const ktcMap: Record<string, { value_sf: number; rank_sf: number | null }> = {}
+    if (Array.isArray(ktcResult?.data) && ktcResult.data.length > 0) {
+      for (const row of ktcResult.data) {
+        const playerName = row.player_name
+        if (!playerName) continue
+        const normalized = normalizeName(playerName)
+        ktcMap[playerName] = {
+          value_sf: Number(row.value_sf) || 0,
+          rank_sf: row.rank_sf ? Number(row.rank_sf) : null,
+        }
+        ktcMap[normalized] = ktcMap[playerName]
       }
-    })
+    }
 
-    // Process dynasty rankings efficiently (handle errors gracefully)
-    let rankingsMap = {}
+    // Process dynasty rankings efficiently (handle errors gracefully), enriched with KTC
+    let rankingsMap: Record<string, any> = {}
     if (
       rankingsResult?.data &&
       Array.isArray(rankingsResult.data) &&
@@ -104,18 +184,26 @@ export async function GET(request: NextRequest) {
             else if (player.tier.includes('Solid Starter')) tierNum = 4
           }
 
-          acc[playerName] = {
+          const playerRecord = {
             rank,
             position: player.position,
             team: player.team,
             name: playerName,
+            headshot_url: player.headshot_url || null,
+            espn_id: player.espn_id || null,
             total_score:
               typeof player.total_score === 'string'
                 ? parseFloat(player.total_score)
                 : player.total_score,
             tier: tierNum,
             tier_name: player.tier,
+            ktc_value_sf:
+              ktcMap[playerName]?.value_sf ?? ktcMap[normalizeName(playerName)]?.value_sf ?? null,
+            ktc_rank_sf:
+              ktcMap[playerName]?.rank_sf ?? ktcMap[normalizeName(playerName)]?.rank_sf ?? null,
           }
+          acc[playerName] = playerRecord
+          acc[normalizeName(playerName)] = playerRecord
         }
         return acc
       }, {})
@@ -124,37 +212,73 @@ export async function GET(request: NextRequest) {
       // Continue without rankings - use default player values
     }
 
-    // Fetch ALL transactions from offseason (week 0) through current week + buffer
+    // Backfill with KTC-only entries for players missing from dynasty rankings
+    for (const [playerKey, ktc] of Object.entries(ktcMap)) {
+      if (playerKey !== normalizeName(playerKey)) continue // Skip normalized aliases
+      if (!rankingsMap[playerKey]) {
+        rankingsMap[playerKey] = {
+          rank: ktc.rank_sf || 999,
+          position: '',
+          team: '',
+          name: playerKey,
+          headshot_url: null,
+          espn_id: null,
+          total_score: null,
+          tier: 5,
+          tier_name: 'KTC',
+          ktc_value_sf: ktc.value_sf,
+          ktc_rank_sf: ktc.rank_sf,
+        }
+      }
+    }
+
+    // Fetch all transactions + traded picks across ALL leagues in parallel (was sequential).
     const currentYear = new Date().getFullYear()
-    const weeksToFetch = []
+    const weeksToFetch: number[] = []
+    const maxWeek = 20
+    for (let week = 0; week <= maxWeek; week++) weeksToFetch.push(week)
 
-    // Add a 2-week buffer to ensure we catch all trades even if NFL state is slightly behind
-    // NFL regular season is 18 weeks, so we cap at 20 to be safe
-    const maxWeek = Math.min(currentWeek + 2, 20)
+    console.log(`📊 Fetching multi-year transactions for leagues: ${leagueHistory.map((l) => l.leagueId).join(', ')}`)
 
-    // Include ALL weeks from 0 (offseason) to current week + buffer to track full trade history
-    for (let week = 0; week <= maxWeek; week++) {
-      weeksToFetch.push(week)
-    }
-
-    console.log(`📊 Fetching transactions for weeks 0-${maxWeek} (current week: ${currentWeek})`)
-
-    // Fetch transactions in larger parallel batches for speed (no delay needed)
     const batchSize = 5
-    const allTransactions = []
 
-    for (let i = 0; i < weeksToFetch.length; i += batchSize) {
-      const batch = weeksToFetch.slice(i, i + batchSize)
-      const batchPromises = batch.map((week) =>
-        sleeperApi.getTransactions(leagueId, week).catch(() => [])
-      )
+    // Each league fetches its own transactions + picks concurrently
+    const perLeagueResults = await Promise.all(
+      leagueHistory.map(async (league) => {
+        const txns: any[] = []
+        for (let i = 0; i < weeksToFetch.length; i += batchSize) {
+          const batch = weeksToFetch.slice(i, i + batchSize)
+          const batchResults = await Promise.all(
+            batch.map((week) =>
+              sleeperApi.getTransactions(league.leagueId, week).catch(() => [])
+            )
+          )
+          for (const result of batchResults.flat() as any[]) {
+            txns.push({
+              ...(result as Record<string, any>),
+              _leagueId: league.leagueId,
+              _leagueSeason: league.season,
+            })
+          }
+        }
 
-      const batchResults = await Promise.all(batchPromises)
-      allTransactions.push(...batchResults.flat())
+        const picks = (await sleeperApi.getTradedPicks(league.leagueId).catch(() => [])) as any[]
+        const taggedPicks = picks.map((pick) => ({
+          ...pick,
+          _leagueId: league.leagueId,
+          _leagueSeason: league.season,
+        }))
+
+        return { txns, picks: taggedPicks }
+      })
+    )
+
+    const allTransactions: any[] = []
+    const tradedPicks: any[] = []
+    for (const result of perLeagueResults) {
+      allTransactions.push(...result.txns)
+      tradedPicks.push(...result.picks)
     }
-
-    // Fetch traded picks with Next.js caching
-    const tradedPicks = (await sleeperApi.getTradedPicks(leagueId).catch(() => [])) as any[]
 
     // Filter transactions to only include trades
     const trades = allTransactions.filter((tx: any) => tx.type === 'trade')
@@ -180,6 +304,8 @@ export async function GET(request: NextRequest) {
         leagueId,
         userId,
         teams: teamsData,
+        teamsByLeague,
+        leagueHistory,
         allPlayers,
         transactions: trades,
         tradedPicks,
@@ -194,7 +320,7 @@ export async function GET(request: NextRequest) {
         totalTransactionsAnalyzed: allTransactions.length,
         yearAnalyzed: currentYear,
         includesPreseason: true,
-        fetchStrategy: 'preseason + recent weeks',
+        fetchStrategy: 'full season weeks 0-20',
         batchSize: batchSize,
       },
     }

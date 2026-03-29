@@ -73,6 +73,7 @@ export interface PlayerValuationData {
   tier?: string
   player_name?: string
   position?: string
+  ktc_value_sf?: number | null
 }
 
 /**
@@ -107,6 +108,15 @@ const convertTotalScoreToValue = (totalScore: number): number => {
   }
 }
 
+const convertKtcToValue = (ktcValue: number): number => {
+  // KTC SF values are typically in ~1,000-10,000 range.
+  // Convert to 0-100 style trade value while preserving spread.
+  return Math.max(1, Math.min(100, ktcValue / 100))
+}
+
+const normalizeName = (name: string): string =>
+  name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+
 /**
  * Get player value from FirstBallotModel scoring system
  * @param valuationData - Player valuation data from dynasty_player_tiers table
@@ -125,7 +135,10 @@ export const getPlayerValue = (
   ppgMultiplier?: number
 } => {
   // If no valuation data, return unranked
-  if (!valuationData || !valuationData.total_score) {
+  if (
+    !valuationData ||
+    (!valuationData.total_score && !(valuationData.ktc_value_sf && valuationData.ktc_value_sf > 0))
+  ) {
     return {
       value: 1,
       tier: 'Unranked',
@@ -134,12 +147,16 @@ export const getPlayerValue = (
   }
 
   // Ensure total_score is a number (handle string conversion from database)
-  const totalScore =
+  const totalScoreRaw =
     typeof valuationData.total_score === 'string'
       ? parseFloat(valuationData.total_score)
       : valuationData.total_score
+  const totalScore = Number.isFinite(totalScoreRaw as number) ? Number(totalScoreRaw) : 0
+  const ktcRaw = Number(valuationData.ktc_value_sf || 0)
+  const hasTotalScore = totalScore > 0
+  const hasKtc = Number.isFinite(ktcRaw) && ktcRaw > 0
 
-  if (!totalScore || totalScore <= 0 || isNaN(totalScore)) {
+  if (!hasTotalScore && !hasKtc) {
     return {
       value: 1,
       tier: 'Unranked',
@@ -147,7 +164,13 @@ export const getPlayerValue = (
     }
   }
 
-  const baseValue = convertTotalScoreToValue(totalScore)
+  // KTC-first valuation: prefer KTC when available, blend with model score when both exist.
+  const modelValue = hasTotalScore ? convertTotalScoreToValue(totalScore) : null
+  const ktcValue = hasKtc ? convertKtcToValue(ktcRaw) : null
+  const baseValue =
+    ktcValue !== null && modelValue !== null
+      ? ktcValue * 0.7 + modelValue * 0.3
+      : (ktcValue ?? modelValue ?? 1)
   const tier = valuationData.tier || 'Unranked'
 
   // PPG-based value adjustment (optional, for fine-tuning)
@@ -308,7 +331,7 @@ export const GRADE_COLORS = {
 export const matchPlayerToRankings = (
   playerName: string,
   dynastyRankings: Record<string, any>
-): { rank: number; tier: string; isRanked: boolean; total_score?: number } => {
+): { rank: number; tier: string; isRanked: boolean; total_score?: number; ktc_value_sf?: number } => {
   // Direct match
   if (dynastyRankings[playerName]) {
     const ranking = dynastyRankings[playerName]
@@ -321,6 +344,7 @@ export const matchPlayerToRankings = (
       tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
       isRanked: true,
       total_score: totalScore,
+      ktc_value_sf: ranking.ktc_value_sf ? Number(ranking.ktc_value_sf) : undefined,
     }
   }
 
@@ -334,8 +358,9 @@ export const matchPlayerToRankings = (
   ]
 
   for (const variation of nameVariations) {
-    if (dynastyRankings[variation]) {
-      const ranking = dynastyRankings[variation]
+    const normalizedVariation = normalizeName(variation)
+    if (dynastyRankings[variation] || dynastyRankings[normalizedVariation]) {
+      const ranking = dynastyRankings[variation] || dynastyRankings[normalizedVariation]
       const totalScore =
         typeof ranking.total_score === 'string'
           ? parseFloat(ranking.total_score)
@@ -345,6 +370,7 @@ export const matchPlayerToRankings = (
         tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
         isRanked: true,
         total_score: totalScore,
+        ktc_value_sf: ranking.ktc_value_sf ? Number(ranking.ktc_value_sf) : undefined,
       }
     }
   }
@@ -392,8 +418,16 @@ export const processPlayerForTrade = (
         tier: ranking.tier, // tier is now the full tier name string (e.g., "Elite (Tier 1)")
         player_name: playerName,
         position: player.position,
+        ktc_value_sf: ranking.ktc_value_sf || null,
       }
-    : undefined
+    : ranking.ktc_value_sf
+      ? {
+          tier: ranking.tier,
+          player_name: playerName,
+          position: player.position,
+          ktc_value_sf: ranking.ktc_value_sf,
+        }
+      : undefined
 
   const valueData = valuationData
     ? getPlayerValue(valuationData, fantasyPpg, gamesPlayed)

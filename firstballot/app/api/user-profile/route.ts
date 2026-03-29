@@ -6,6 +6,89 @@ interface CreateProfileRequestBody {
   username?: string
 }
 
+interface UserProfileRecord {
+  id: string
+  auth_id: string
+  username: string
+  email: string
+  sleeper_username: string | null
+  sleeper_id: string | null
+  membership_status: boolean
+  created_at: string
+  updated_at: string
+}
+
+function deriveUsername(email: string, preferred?: string): string {
+  const trimmedPreferred = preferred?.trim()
+  if (trimmedPreferred) {
+    return trimmedPreferred
+  }
+
+  const fallback = email.split('@')[0]?.trim()
+  return fallback || 'user'
+}
+
+async function ensureUserProfile(
+  userJwt: string,
+  authId: string,
+  email: string,
+  username: string
+): Promise<UserProfileRecord> {
+  const userSupabase = createAuthenticatedSupabaseClient(userJwt)
+
+  const { data: existingProfile, error: existingProfileError } = await userSupabase
+    .from('user_profiles')
+    .select(
+      'id, auth_id, username, email, sleeper_username, sleeper_id, membership_status, created_at, updated_at'
+    )
+    .eq('auth_id', authId)
+    .single()
+
+  if (existingProfile && !existingProfileError) {
+    return existingProfile
+  }
+
+  if (existingProfileError && existingProfileError.code !== 'PGRST116') {
+    throw new Error(existingProfileError.message)
+  }
+
+  const { data: insertedProfile, error: insertError } = await userSupabase
+    .from('user_profiles')
+    .insert({
+      auth_id: authId,
+      email,
+      username,
+      sleeper_username: null,
+      favorite_team: null,
+      sleeper_league_id: null,
+      membership_status: false,
+      feature_access: false,
+    })
+    .select(
+      'id, auth_id, username, email, sleeper_username, sleeper_id, membership_status, created_at, updated_at'
+    )
+    .single()
+
+  if (insertError) {
+    // Race-safe fallback: if another request inserted first, fetch and return it.
+    const { data: fetchedAfterInsert } = await userSupabase
+      .from('user_profiles')
+      .select(
+        'id, auth_id, username, email, sleeper_username, sleeper_id, membership_status, created_at, updated_at'
+      )
+      .eq('auth_id', authId)
+      .single()
+
+    if (fetchedAfterInsert) {
+      return fetchedAfterInsert
+    }
+
+    throw new Error(insertError.message)
+  }
+
+  return insertedProfile
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Get the userId and JWT token from headers (set by middleware after auth verification)
@@ -28,11 +111,30 @@ export async function GET(request: NextRequest) {
       .eq('auth_id', userId)
       .single()
 
-    if (error) {
+    if (!error && data) {
+      return NextResponse.json(data)
+    }
+
+    if (error && error.code !== 'PGRST116') {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Self-heal missing profile for authenticated users.
+    const {
+      data: { user },
+      error: userError,
+    } = await userSupabase.auth.getUser()
+
+    if (userError || !user?.email) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    return NextResponse.json(data)
+    const username = deriveUsername(
+      user.email,
+      typeof user.user_metadata?.username === 'string' ? user.user_metadata.username : undefined
+    )
+    const profile = await ensureUserProfile(userJwt, userId, user.email, username)
+    return NextResponse.json(profile)
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -48,45 +150,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
-    if (!email) {
+    const userSupabase = createAuthenticatedSupabaseClient(userJwt)
+    const {
+      data: { user },
+      error: userError,
+    } = await userSupabase.auth.getUser()
+
+    const resolvedEmail = user?.email ?? email
+    if (!resolvedEmail) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
 
-    const normalizedUsername = username?.trim() || email.split('@')[0] || 'user'
+    const metadataUsername =
+      typeof user?.user_metadata?.username === 'string' ? user.user_metadata.username : undefined
+    const resolvedUsername = deriveUsername(resolvedEmail, metadataUsername ?? username)
 
-    const serviceClient = createAuthenticatedSupabaseClient(userJwt)
+    const profile = await ensureUserProfile(userJwt, authId, resolvedEmail, resolvedUsername)
 
-    // Check if profile already exists
-    const { data: existingProfile } = await serviceClient
-      .from('user_profiles')
-      .select('id')
-      .eq('auth_id', authId)
-      .single()
-
-    if (existingProfile) {
-      return NextResponse.json({ error: 'Profile already exists' }, { status: 409 })
+    if (userError) {
+      // Profile can still be created/returned even if metadata lookup fails.
+      return NextResponse.json(profile)
     }
 
-    // Create new profile with proper schema
-    const { data, error } = await serviceClient
-      .from('user_profiles')
-      .insert({
-        auth_id: authId,
-        email: email,
-        username: normalizedUsername,
-        sleeper_username: null,
-        favorite_team: null,
-        sleeper_league_id: null,
-        membership_status: false,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
+    return NextResponse.json(profile)
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

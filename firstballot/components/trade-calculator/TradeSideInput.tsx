@@ -217,7 +217,7 @@ export function TradeSideInput({ side, onChange, placeholder, sideLabel }: Trade
         {showSuggestions && suggestions.length > 0 && (
           <div
             ref={suggestionsRef}
-            className="absolute z-[60] w-full mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto backdrop-blur-xl"
+            className="absolute z-[100] w-full mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-64 max-md:max-h-[min(16rem,42vh)] overflow-y-auto backdrop-blur-xl"
           >
             {suggestions.map((player, index) => (
               <div

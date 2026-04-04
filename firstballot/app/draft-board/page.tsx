@@ -13,6 +13,11 @@ import Image from 'next/image'
 import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import {
+  SCOUTING_DISPLAY_TIER_ORDER,
+  SCOUTING_TIER_STYLES,
+  type ScoutingDisplayTier,
+} from '@/lib/scouting-grade-tier'
+import {
   GripVertical,
   TrendingUp,
   TrendingDown,
@@ -28,6 +33,7 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import { Header } from '@/components/header'
+import { useBreakdownPanelOpen } from '@/hooks/use-breakdown-panel-open'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -70,13 +76,8 @@ function getPlayerImageUrl(player: Player): string {
   return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
 }
 
-const tierColors: Record<string, { bg: string; text: string; border: string }> = {
-  Elite: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/50' },
-  'Blue Chip': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
-  Starter: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/50' },
-  Rotational: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/50' },
-  Depth: { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/50' },
-  Longshot: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/50' },
+function tierStyleFor(tier: string) {
+  return SCOUTING_TIER_STYLES[tier as ScoutingDisplayTier] ?? SCOUTING_TIER_STYLES.Depth
 }
 
 const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE']
@@ -129,7 +130,7 @@ export default function DraftBoardPage() {
   const [position, setPosition] = useState('ALL')
   const [userBoard, setUserBoard] = useState<Player[]>([])
   const [consensusBoard, setConsensusBoard] = useState<Player[]>([])
-  const [showBreakdown, setShowBreakdown] = useState(true)
+  const { open: showBreakdown, toggle: toggleBreakdown } = useBreakdownPanelOpen()
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
   useEffect(() => {
@@ -205,7 +206,7 @@ export default function DraftBoardPage() {
         : 0,
     speedsters: userBoard.filter((p) => p.fortyTime && p.fortyTime < 4.45).length,
     bigBoys: userBoard.filter((p) => p.weight > 220).length,
-    elites: userBoard.filter((p) => p.tier === 'Elite').length,
+    generational: userBoard.filter((p) => p.tier === 'Generational').length,
     blueChips: userBoard.filter((p) => p.tier === 'Blue Chip').length,
   }
 
@@ -290,8 +291,8 @@ export default function DraftBoardPage() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 min-h-0 lg:overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-full lg:min-h-0">
           <div className="lg:col-span-2 lg:min-h-0">
-            <div className="bg-card border border-border rounded-lg overflow-hidden lg:h-full lg:flex lg:flex-col">
-              <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="rounded-lg overflow-hidden border border-slate-700/80 bg-slate-900 lg:h-full lg:flex lg:flex-col">
+              <div className="p-4 border-b border-slate-700/70 flex items-center justify-between bg-slate-800/55">
                 <h2 className="font-mono font-bold text-foreground">Your Rankings</h2>
                 <span className="text-xs text-muted-foreground">{userBoard.length} players</span>
               </div>
@@ -302,14 +303,14 @@ export default function DraftBoardPage() {
                 values={userBoard}
                 onReorder={setUserBoard}
                   layoutScroll
-                className="divide-y divide-border"
+                className="divide-y divide-slate-700/55"
               >
                 <AnimatePresence>
                   {userBoard.map((player, index) => {
                     const consensusRank =
                       consensusBoard.findIndex((p) => p.name === player.name) + 1
                     const rankDiff = consensusRank - (index + 1)
-                    const tierColor = tierColors[player.tier] || tierColors.Depth
+                    const tierColor = tierStyleFor(player.tier)
                     const archetype = getArchetype(player)
                     const ArchetypeIcon = archetype.icon
 
@@ -317,7 +318,7 @@ export default function DraftBoardPage() {
                       <ReorderAny.Item
                         key={player.name}
                         value={player}
-                        className="bg-card hover:bg-secondary/50 transition-colors cursor-grab active:cursor-grabbing"
+                        className="bg-slate-900 hover:bg-slate-800/50 transition-colors cursor-grab active:cursor-grabbing"
                       >
                         <div className="flex items-center gap-3 p-3">
                           <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -327,7 +328,7 @@ export default function DraftBoardPage() {
                             </span>
                           </div>
 
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-800/50 flex-shrink-0">
                             {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                               <Image
                                 src={getPlayerImageUrl(player)}
@@ -416,14 +417,45 @@ export default function DraftBoardPage() {
           <div className="space-y-4 lg:max-h-full lg:overflow-y-auto">
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <button
-                onClick={() => setShowBreakdown(!showBreakdown)}
-                className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors"
+                type="button"
+                onClick={toggleBreakdown}
+                className="w-full p-3 lg:p-4 hover:bg-secondary/50 transition-colors text-left flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-0"
               >
-                <h3 className="font-mono font-bold text-foreground">Board Breakdown</h3>
-                {showBreakdown ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
+                <div className="flex items-center justify-between gap-2 w-full lg:w-auto lg:flex-1 lg:min-w-0">
+                  <h3 className="font-mono font-bold text-foreground">Board Breakdown</h3>
+                  {showBreakdown ? (
+                    <ChevronUp className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 shrink-0" />
+                  )}
+                </div>
+                {userBoard.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 w-full lg:hidden pointer-events-none">
+                    <span className="inline-flex items-baseline gap-1 rounded-md border border-primary/35 bg-primary/10 px-2 py-1">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-primary/80">
+                        GRD
+                      </span>
+                      <span className="text-xs font-mono font-bold text-primary tabular-nums">
+                        {boardStats.avgGrade.toFixed(1)}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-baseline gap-1 rounded-md border border-border bg-secondary/70 px-2 py-1">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-muted-foreground">
+                        PHYS
+                      </span>
+                      <span className="text-xs font-mono font-bold text-foreground tabular-nums">
+                        {boardStats.avgPhysical.toFixed(0)}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-baseline gap-1 rounded-md border border-border bg-secondary/70 px-2 py-1">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-muted-foreground">
+                        PROD
+                      </span>
+                      <span className="text-xs font-mono font-bold text-foreground tabular-nums">
+                        {boardStats.avgProduction.toFixed(0)}
+                      </span>
+                    </span>
+                  </div>
                 )}
               </button>
 
@@ -437,7 +469,7 @@ export default function DraftBoardPage() {
                     className="overflow-hidden"
                   >
                     <div className="p-4 pt-0 space-y-4">
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="hidden lg:grid grid-cols-3 gap-3">
                         <div className="text-center p-3 bg-secondary/50 rounded">
                           <div className="text-xl font-mono font-bold text-primary">
                             {boardStats.avgGrade.toFixed(1)}
@@ -463,12 +495,15 @@ export default function DraftBoardPage() {
                           TIER DISTRIBUTION
                         </h4>
                         <div className="space-y-2">
-                          {Object.entries(tierColors).map(([tier, colors]) => {
+                          {SCOUTING_DISPLAY_TIER_ORDER.map((tier) => {
+                            const colors = SCOUTING_TIER_STYLES[tier]
                             const count = userBoard.filter((p) => p.tier === tier).length
                             const pct = userBoard.length > 0 ? (count / userBoard.length) * 100 : 0
                             return (
                               <div key={tier} className="flex items-center gap-2">
-                                <span className={cn('text-xs w-20', colors.text)}>{tier}</span>
+                                <span className={cn('text-xs w-24 shrink-0 truncate', colors.text)}>
+                                  {tier}
+                                </span>
                                 <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                                   <motion.div
                                     initial={{ width: 0 }}
@@ -516,8 +551,10 @@ export default function DraftBoardPage() {
                           <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
                             <Target className="w-4 h-4 text-amber-400" />
                             <div>
-                              <div className="text-sm font-mono font-bold">{boardStats.elites}</div>
-                              <div className="text-[9px] text-muted-foreground">Elite Tier</div>
+                              <div className="text-sm font-mono font-bold">
+                                {boardStats.generational}
+                              </div>
+                              <div className="text-[9px] text-muted-foreground">Generational</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">

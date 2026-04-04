@@ -38,7 +38,7 @@ export interface SleeperTransaction {
   roster_ids: number[]
   adds: Record<string, number> | null
   drops: Record<string, number> | null
-  draft_picks: any[]
+  draft_picks: unknown[]
   leg: number
 }
 

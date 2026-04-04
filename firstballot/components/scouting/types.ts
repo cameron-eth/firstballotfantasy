@@ -45,12 +45,12 @@ export interface ProspectCardProps {
 }
 
 export type GradeTier =
+  | 'Generational'
   | 'Elite'
   | 'Blue Chip'
-  | 'Starter'
-  | 'Rotational'
-  | 'Backup'
+  | 'Contributer'
   | 'Depth'
+  | 'Walk-On'
   | 'Ungraded'
 
 export type ProspectTier = 'Tier 1' | 'Tier 2' | 'Tier 3' | 'Tier 4' | 'Tier 5'

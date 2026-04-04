@@ -48,7 +48,7 @@ export function DraftBoardControls({
                 ? 'Save changes'
                 : 'Save board'
         }
-        className={`h-7 px-2.5 text-[11px] transition-all ${
+        className={`h-10 w-10 min-h-10 min-w-10 p-0 sm:h-7 sm:w-auto sm:min-h-0 sm:min-w-0 sm:px-2.5 text-[11px] transition-all ${
           saveSuccess
             ? 'bg-green-600 hover:bg-green-700'
             : hasChanges
@@ -57,11 +57,11 @@ export function DraftBoardControls({
         }`}
       >
         {saving ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <Loader2 className="h-4 w-4 sm:h-3 sm:w-3 animate-spin" />
         ) : saveSuccess ? (
-          <Check className="h-3 w-3" />
+          <Check className="h-4 w-4 sm:h-3 sm:w-3" />
         ) : (
-          <Save className="h-3 w-3" />
+          <Save className="h-4 w-4 sm:h-3 sm:w-3" />
         )}
         <span className="sr-only">
           {saving

@@ -4,6 +4,11 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  normalizeScoutingGradeTier,
+  SCOUTING_TIER_STYLES,
+  type ScoutingDisplayTier,
+} from '@/lib/scouting-grade-tier'
 import type { Prospect } from './types'
 
 interface ProspectCardProps {
@@ -50,14 +55,10 @@ function parseFortyTime(stats?: Record<string, number | string> | null): number 
 }
 
 function normalizeTier(prospect: Prospect): string {
-  if (prospect.grade_tier) return prospect.grade_tier
-  const grade = prospect.overall_grade || 0
-  if (grade >= 90) return 'Elite'
-  if (grade >= 85) return 'Blue Chip'
-  if (grade >= 78) return 'Starter'
-  if (grade >= 70) return 'Rotational'
-  if (grade >= 60) return 'Depth'
-  return 'Longshot'
+  return normalizeScoutingGradeTier(
+    prospect.grade_tier,
+    prospect.overall_grade ?? 0
+  )
 }
 
 function clampScore(value: number | null | undefined): number {
@@ -105,22 +106,13 @@ function getInitials(name: string): string {
 }
 
 function getTierColor(tier: string): { bg: string; text: string; border: string } {
-  switch (tier) {
-    case 'Elite':
-      return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' }
-    case 'Blue Chip':
-      return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' }
-    case 'Starter':
-      return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
-    case 'Rotational':
-      return { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30' }
-    case 'Depth':
-      return { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/30' }
-    case 'Longshot':
-      return { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30' }
-    default:
-      return { bg: 'bg-secondary', text: 'text-foreground', border: 'border-border' }
-  }
+  return (
+    SCOUTING_TIER_STYLES[tier as ScoutingDisplayTier] ?? {
+      bg: 'bg-secondary',
+      text: 'text-foreground',
+      border: 'border-border',
+    }
+  )
 }
 
 function StatBar({ label, value }: { label: string; value: number; delay?: number }) {

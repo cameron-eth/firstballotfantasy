@@ -65,10 +65,10 @@ export function ProspectsTab({
 
   return (
     <div className="relative">
-      <div className="sticky top-20 z-20 mb-6 -mx-2 px-2 py-3 liquid-glass rounded-xl">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 px-2">
+      <div className="sticky top-16 md:top-20 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 liquid-glass rounded-xl">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 md:gap-6 px-2">
           <div>
-            <h2 className="text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-2">
+            <h2 className="text-xl md:text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-1 md:mb-2">
               College <span className="text-blue-400">Prospects</span>
             </h2>
             <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
@@ -130,8 +130,8 @@ export function ProspectsTab({
           </p>
         </div>
       ) : (
-        <div className="max-h-[1200px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-10">
+        <div className="max-md:overflow-visible md:max-h-[1200px] md:overflow-y-auto pr-0 md:pr-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4 pb-24 md:pb-10">
             {visibleProspects.map((prospect) => (
               <ProspectCard
                 key={prospect.id}

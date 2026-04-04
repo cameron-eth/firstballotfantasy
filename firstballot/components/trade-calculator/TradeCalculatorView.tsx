@@ -21,43 +21,8 @@ export function TradeCalculatorView() {
     <div className="min-h-screen bg-slate-900">
       <Header />
 
-      <main className="w-full px-3 py-4 md:px-4 md:py-8">
+      <main className="w-full px-3 py-4 md:px-4 md:py-8 max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-7xl mx-auto">
-
-          {/* ── Mobile result section with tab toggle ── */}
-          {result && (
-            <div className="md:hidden mb-4">
-              {/* Tab toggle */}
-              <div className="flex gap-1 mb-3 bg-slate-950/60 rounded-lg p-1 border border-white/5">
-                <button
-                  onClick={() => setMobileResultTab('overview')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
-                    mobileResultTab === 'overview'
-                      ? 'bg-yellow-400 text-slate-900'
-                      : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  <BarChart3 className="h-3 w-3" />
-                  Overview
-                </button>
-                <button
-                  onClick={() => setMobileResultTab('breakdown')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
-                    mobileResultTab === 'breakdown'
-                      ? 'bg-yellow-400 text-slate-900'
-                      : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  <List className="h-3 w-3" />
-                  Breakdown
-                </button>
-              </div>
-
-              {/* Slides */}
-              {mobileResultTab === 'overview' && <TradeScores result={result} />}
-              {mobileResultTab === 'breakdown' && <TradeResultCard result={result} />}
-            </div>
-          )}
 
           {/* ── Desktop: show both inline ── */}
           {result && (
@@ -107,6 +72,40 @@ export function TradeCalculatorView() {
               </Button>
             )}
           </div>
+
+          {/* ── Mobile: results after inputs (natural scroll: build trade first) ── */}
+          {result && (
+            <div className="md:hidden mt-2 mb-4">
+              <div className="flex gap-1 mb-3 bg-slate-950/60 rounded-lg p-1 border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setMobileResultTab('overview')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                    mobileResultTab === 'overview'
+                      ? 'bg-yellow-400 text-slate-900'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <BarChart3 className="h-3 w-3" />
+                  Overview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileResultTab('breakdown')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
+                    mobileResultTab === 'breakdown'
+                      ? 'bg-yellow-400 text-slate-900'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <List className="h-3 w-3" />
+                  Breakdown
+                </button>
+              </div>
+              {mobileResultTab === 'overview' && <TradeScores result={result} />}
+              {mobileResultTab === 'breakdown' && <TradeResultCard result={result} />}
+            </div>
+          )}
 
           {/* ── Desktop: card layout with centered evaluate button ── */}
           <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 relative">

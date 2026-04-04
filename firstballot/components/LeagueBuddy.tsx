@@ -523,6 +523,7 @@ export default function LeagueBuddy({
                 currentMatchups={currentMatchups}
                 currentWeek={currentWeek}
                 teams={teams}
+                actions={overviewActions}
               />
 
               {/* Trade Intelligence — Sell High / Hold / Buy Low */}

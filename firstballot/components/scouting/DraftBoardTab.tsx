@@ -7,6 +7,12 @@ import Image from 'next/image'
 import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import {
+  normalizeScoutingGradeTier,
+  SCOUTING_DISPLAY_TIER_ORDER,
+  SCOUTING_TIER_STYLES,
+  type ScoutingDisplayTier,
+} from '@/lib/scouting-grade-tier'
+import {
   ChevronDown,
   ChevronUp,
   ClipboardList,
@@ -17,12 +23,14 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
+  X,
   Zap,
 } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
 import { KtcSparkline } from './KtcSparkline'
 import type { Prospect } from './types'
 import { PlayerHeadshot } from '@/components/ui/player-headshot'
+import { useBreakdownPanelOpen } from '@/hooks/use-breakdown-panel-open'
 
 interface DraftBoardTabProps {
   loading: boolean
@@ -72,15 +80,6 @@ interface CompAvatarMeta {
   espnId?: number | string | null
 }
 
-const tierColors: Record<string, { bg: string; text: string; border: string }> = {
-  Elite: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/50' },
-  'Blue Chip': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
-  Starter: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/50' },
-  Rotational: { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/50' },
-  Depth: { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/50' },
-  Longshot: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/50' },
-}
-
 const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
 const ReorderAny = Reorder as unknown as {
   Group: React.ComponentType<Record<string, unknown>>
@@ -88,13 +87,13 @@ const ReorderAny = Reorder as unknown as {
 }
 
 function getTierLabel(gradeTier: string | null, grade: number): string {
-  if (gradeTier) return gradeTier
-  if (grade >= 90) return 'Elite'
-  if (grade >= 85) return 'Blue Chip'
-  if (grade >= 78) return 'Starter'
-  if (grade >= 70) return 'Rotational'
-  if (grade >= 60) return 'Depth'
-  return 'Longshot'
+  return normalizeScoutingGradeTier(gradeTier, grade)
+}
+
+function tierStyleFor(
+  tier: string
+): (typeof SCOUTING_TIER_STYLES)[ScoutingDisplayTier] {
+  return SCOUTING_TIER_STYLES[tier as ScoutingDisplayTier] ?? SCOUTING_TIER_STYLES.Depth
 }
 
 function parseForty(stats?: Record<string, number> | null): number | null {
@@ -227,7 +226,7 @@ export function DraftBoardTab({
   isLoggedIn = false,
 }: DraftBoardTabProps) {
   const [position, setPosition] = useState<(typeof positionTabs)[number]>('ALL')
-  const [showBreakdown, setShowBreakdown] = useState(true)
+  const { open: showBreakdown, toggle: toggleBreakdown } = useBreakdownPanelOpen()
   const [offBoardSearch, setOffBoardSearch] = useState('')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [draggingProspectId, setDraggingProspectId] = useState<number | null>(null)
@@ -451,7 +450,7 @@ export function DraftBoardTab({
           : 0,
       speedsters: userBoard.filter((p) => p.fortyTime && p.fortyTime < 4.45).length,
       bigBoys: userBoard.filter((p) => p.weight > 220).length,
-      elites: userBoard.filter((p) => p.tier === 'Elite').length,
+      generational: userBoard.filter((p) => p.tier === 'Generational').length,
       blueChips: userBoard.filter((p) => p.tier === 'Blue Chip').length,
     }),
     [userBoard]
@@ -639,14 +638,15 @@ export function DraftBoardTab({
   return (
     <main className="min-h-[70vh] bg-background">
       {/* Compact toolbar — position tabs + actions */}
-      <div className="w-full px-2 sm:px-3 pt-1 pb-2 flex items-center justify-between gap-3 flex-wrap shrink-0">
-        <div className="flex items-center gap-1.5">
+      <div className="w-full px-2 sm:px-3 pt-1 pb-2 flex items-center justify-between gap-2 sm:gap-3 flex-wrap shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
           {positionTabs.map((pos) => (
             <button
               key={pos}
+              type="button"
               onClick={() => setPosition(pos)}
               className={cn(
-                'h-7 px-3 text-xs font-semibold rounded-md transition-colors',
+                'min-h-10 min-w-[2.5rem] px-3 sm:min-h-7 sm:min-w-0 text-xs font-semibold rounded-md transition-colors active:scale-[0.98]',
                 position === pos
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -655,10 +655,11 @@ export function DraftBoardTab({
               {pos}
             </button>
           ))}
-          <span className="w-px h-5 bg-border mx-1" />
+          <span className="hidden sm:block w-px h-5 bg-border mx-1" />
           <button
+            type="button"
             onClick={addTopAvailable}
-            className="h-7 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors"
+            className="min-h-10 px-3.5 sm:min-h-7 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors active:scale-[0.98]"
           >
             Add Next
           </button>
@@ -674,13 +675,13 @@ export function DraftBoardTab({
         )}
       </div>
 
-      <div className="w-full px-1 sm:px-2 pb-3">
+      <div className="w-full px-1 sm:px-2 pb-24 lg:pb-3">
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
           <div>
-            <div className="bg-card border border-border rounded-lg overflow-hidden xl:max-h-[calc(100vh-220px)] xl:flex xl:flex-col">
-              {/* Column header */}
+            <div className="rounded-lg overflow-hidden border border-slate-700/80 bg-slate-900 xl:max-h-[calc(100vh-220px)] xl:flex xl:flex-col">
+              {/* Column header — slate navy to match app chrome */}
               <div
-                className="grid items-center border-b border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground select-none"
+                className="hidden lg:grid items-center border-b border-slate-700/70 bg-slate-800/85 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 select-none"
                 style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 120px 24px' }}
               >
                 <span />
@@ -700,7 +701,7 @@ export function DraftBoardTab({
               <div className="xl:flex-1 xl:min-h-0 xl:overflow-y-auto">
                 {boardSections.map((section) => (
                   <div key={`year-${section.year}`} className="border-b border-border/60 last:border-0">
-                    <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground bg-secondary/20 border-b border-border/40">
+                    <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 bg-slate-800/55 border-b border-slate-700/55">
                       {section.year || 'Unknown'} Class
                     </div>
                     <ReorderAny.Group
@@ -715,7 +716,7 @@ export function DraftBoardTab({
                         const classRankMap = consensusRankByClassId.get(section.year)
                         const consensusRank = classRankMap?.get(player.id) ?? index + 1
                         const rankDiff = consensusRank - (index + 1)
-                        const tierColor = tierColors[player.tier] || tierColors.Depth
+                        const tierColor = tierStyleFor(player.tier)
                         const comparisonNames = comparisonNamesMap.get(prospect.id) || []
                         const isEven = index % 2 === 1
 
@@ -740,11 +741,14 @@ export function DraftBoardTab({
                             }}
                             whileDrag={{ scale: 1.01, zIndex: 40, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', cursor: 'grabbing' }}
                             className={cn(
-                              'relative border-b border-border/40 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
-                              isEven ? 'bg-secondary/10 hover:bg-secondary/20' : 'bg-card hover:bg-secondary/15',
+                              'relative border-b border-slate-700/45 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
+                              isEven
+                                ? 'bg-slate-800/35 hover:bg-slate-800/55'
+                                : 'bg-slate-900 hover:bg-slate-800/45',
                               draggingProspectId === prospect.id && 'ring-1 ring-inset ring-primary/40 bg-primary/5',
                             )}
                           >
+                            <div className="w-full">
                             {(() => {
                               const myRank = index + 1
                               const heatKey = player.position
@@ -769,8 +773,178 @@ export function DraftBoardTab({
                               const physicalHeat = heatCell(physicalPct)
 
                               return (
+                                <>
+                                <div className="lg:hidden px-2 py-1.5 touch-manipulation">
+                                  <div className="flex gap-1.5 items-stretch">
+                                    <div
+                                      className="flex items-center justify-center w-11 shrink-0 rounded-lg bg-slate-800/50 active:bg-slate-700/55"
+                                      aria-hidden
+                                    >
+                                      <GripVertical className="w-5 h-5 text-muted-foreground/70" />
+                                    </div>
+                                    <div className="relative w-11 h-[3.25rem] shrink-0 rounded-md overflow-hidden bg-slate-800/40">
+                                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent z-[1]" />
+                                      {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
+                                        <Image
+                                          src={getPlayerImageUrl(player)}
+                                          alt={player.name}
+                                          width={88}
+                                          height={88}
+                                          className="w-full h-full object-contain object-bottom scale-110"
+                                          onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground/40">
+                                          {player.name
+                                            .split(' ')
+                                            .map((n) => n[0])
+                                            .join('')}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                      <div className="flex items-start gap-1">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+                                            <span className="text-[13px] font-bold text-foreground leading-snug">
+                                              {player.name}
+                                            </span>
+                                            <span
+                                              className={cn(
+                                                'text-[8px] font-bold uppercase px-1 py-px rounded border shrink-0 leading-none',
+                                                tierColor.bg,
+                                                tierColor.text,
+                                                tierColor.border
+                                              )}
+                                            >
+                                              {player.tier}
+                                            </span>
+                                          </div>
+                                          <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
+                                            <span className="font-mono font-semibold text-primary">
+                                              {player.position}
+                                            </span>
+                                            <span className="opacity-50"> · </span>
+                                            {player.school}
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => onRemoveFromDraftBoard(prospect.id)}
+                                          data-no-row-click="true"
+                                          className="min-h-11 min-w-11 shrink-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/80 active:bg-secondary"
+                                          aria-label={`Remove ${player.name}`}
+                                        >
+                                          <X className="h-5 w-5" strokeWidth={2.25} />
+                                        </button>
+                                      </div>
+                                      <div className="flex gap-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x pb-0.5">
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 text-left min-w-[3.25rem]"
+                                          style={{ backgroundColor: rankHeat.bg }}
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
+                                            Rnk
+                                          </div>
+                                          <div
+                                            className="text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                            style={{ color: rankHeat.color }}
+                                          >
+                                            #{player.rank < 9999 ? player.rank : '—'}
+                                          </div>
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
+                                          style={{ backgroundColor: gradeHeat.bg }}
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
+                                            Grd
+                                          </div>
+                                          <div
+                                            className="text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                            style={{ color: gradeHeat.color }}
+                                          >
+                                            {player.grade.toFixed(1)}
+                                          </div>
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
+                                          style={{ backgroundColor: myRankHeat.bg }}
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
+                                            Mine
+                                          </div>
+                                          <div
+                                            className="text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                            style={{ color: myRankHeat.color }}
+                                          >
+                                            #{myRank}
+                                          </div>
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                          style={
+                                            player.fortyTime
+                                              ? { backgroundColor: fortyHeat.bg, color: fortyHeat.color }
+                                              : { color: 'rgb(100,100,110)' }
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
+                                            40
+                                          </div>
+                                          {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                          style={
+                                            player.height
+                                              ? { backgroundColor: heightHeat.bg, color: heightHeat.color }
+                                              : { color: 'rgb(100,100,110)' }
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
+                                            Ht
+                                          </div>
+                                          {formatHeight(player.height)}
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                          style={
+                                            player.weight > 0
+                                              ? { backgroundColor: weightHeat.bg, color: weightHeat.color }
+                                              : { color: 'rgb(100,100,110)' }
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
+                                            Wt
+                                          </div>
+                                          {player.weight > 0 ? player.weight : '—'}
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                          style={
+                                            player.physical > 0
+                                              ? { backgroundColor: physicalHeat.bg, color: physicalHeat.color }
+                                              : { color: 'rgb(100,100,110)' }
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
+                                            Phys
+                                          </div>
+                                          {player.physical > 0 ? player.physical : '—'}
+                                        </div>
+                                      </div>
+                                      <KtcSparkline
+                                        playerName={player.name}
+                                        history={ktcHistoryMap[player.name]}
+                                        useSf={true}
+                                        layout="bar"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
                                 <div
-                                  className="grid items-stretch h-24 pl-2 pr-2"
+                                  className="hidden lg:grid items-stretch h-24 pl-2 pr-2"
                                   style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 120px 24px' }}
                                 >
                                   {/* Drag handle */}
@@ -782,8 +956,8 @@ export function DraftBoardTab({
                                   {/* Player: full-height cutout image + name */}
                                   <div className="flex items-center gap-3 min-w-0">
                                     {/* Cutout image — no circle, like ProspectCard */}
-                                    <div className="relative w-28 h-full flex-shrink-0 bg-secondary/30 overflow-hidden rounded-sm">
-                                      <div className="absolute inset-0 bg-gradient-to-t from-card/60 via-transparent to-transparent z-[1]" />
+                                    <div className="relative w-28 h-full flex-shrink-0 bg-slate-800/40 overflow-hidden rounded-sm">
+                                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent z-[1]" />
                                       {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                         <Image
                                           src={getPlayerImageUrl(player)}
@@ -907,8 +1081,10 @@ export function DraftBoardTab({
                                     </button>
                                   </div>
                                 </div>
+                                </>
                               )
                             })()}
+                            </div>
                           </ReorderAny.Item>
                         )
                       })}
@@ -948,11 +1124,13 @@ export function DraftBoardTab({
                   filteredOffBoardProspects.slice(0, 40).map((prospect) => {
                     const p = toBoardPlayer(prospect)
                     return (
-                      <div
+                      <button
                         key={`offboard-${p.id}`}
-                        className="px-3 py-2.5 border-b border-border/60 last:border-0 flex items-center gap-2"
+                        type="button"
+                        onClick={() => onAddToDraftBoard(prospect)}
+                        className="w-full px-3 py-2.5 border-b border-border/60 last:border-0 flex items-center gap-2 text-left hover:bg-secondary/50 active:bg-secondary/70 transition-colors"
                       >
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0 pointer-events-none">
                           {!imageErrors.has(p.name) && getPlayerImageUrl(p) ? (
                             <Image
                               src={getPlayerImageUrl(p)}
@@ -972,7 +1150,7 @@ export function DraftBoardTab({
                           )}
                         </div>
 
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 pointer-events-none">
                           <div className="text-sm font-medium text-foreground truncate">
                             {p.name}
                           </div>
@@ -981,14 +1159,11 @@ export function DraftBoardTab({
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => onAddToDraftBoard(prospect)}
-                          className="h-7 w-7 rounded border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 flex items-center justify-center"
-                          aria-label={`Add ${p.name}`}
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                        <Plus
+                          className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none"
+                          aria-hidden
+                        />
+                      </button>
                       )
                     })
                   )}
@@ -1014,14 +1189,45 @@ export function DraftBoardTab({
             </div>
             <div className="bg-card border border-border rounded-lg overflow-hidden">
               <button
-                onClick={() => setShowBreakdown(!showBreakdown)}
-                className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors"
+                type="button"
+                onClick={toggleBreakdown}
+                className="w-full p-3 lg:p-4 hover:bg-secondary/50 transition-colors text-left flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-0"
               >
-                <h3 className="font-mono font-bold text-foreground">Board Breakdown</h3>
-                {showBreakdown ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
+                <div className="flex items-center justify-between gap-2 w-full lg:w-auto lg:flex-1 lg:min-w-0">
+                  <h3 className="font-mono font-bold text-foreground">Board Breakdown</h3>
+                  {showBreakdown ? (
+                    <ChevronUp className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 shrink-0" />
+                  )}
+                </div>
+                {userBoard.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 w-full lg:hidden pointer-events-none">
+                    <span className="inline-flex items-baseline gap-1 rounded-md border border-primary/35 bg-primary/10 px-2 py-1">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-primary/80">
+                        GRD
+                      </span>
+                      <span className="text-xs font-mono font-bold text-primary tabular-nums">
+                        {boardStats.avgGrade.toFixed(1)}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-baseline gap-1 rounded-md border border-border bg-secondary/70 px-2 py-1">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-muted-foreground">
+                        PHYS
+                      </span>
+                      <span className="text-xs font-mono font-bold text-foreground tabular-nums">
+                        {boardStats.avgPhysical.toFixed(0)}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-baseline gap-1 rounded-md border border-border bg-secondary/70 px-2 py-1">
+                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-muted-foreground">
+                        PROD
+                      </span>
+                      <span className="text-xs font-mono font-bold text-foreground tabular-nums">
+                        {boardStats.avgProduction.toFixed(0)}
+                      </span>
+                    </span>
+                  </div>
                 )}
               </button>
 
@@ -1035,7 +1241,7 @@ export function DraftBoardTab({
                     className="overflow-hidden"
                   >
                     <div className="p-4 pt-0 space-y-4">
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="hidden lg:grid grid-cols-3 gap-3">
                         <div className="text-center p-3 bg-secondary/50 rounded">
                           <div className="text-xl font-mono font-bold text-primary">
                             {boardStats.avgGrade.toFixed(1)}
@@ -1061,12 +1267,15 @@ export function DraftBoardTab({
                           TIER DISTRIBUTION
                         </h4>
                         <div className="space-y-2">
-                          {Object.entries(tierColors).map(([tier, colors]) => {
+                          {SCOUTING_DISPLAY_TIER_ORDER.map((tier) => {
+                            const colors = SCOUTING_TIER_STYLES[tier]
                             const count = userBoard.filter((p) => p.tier === tier).length
                             const pct = userBoard.length > 0 ? (count / userBoard.length) * 100 : 0
                             return (
                               <div key={tier} className="flex items-center gap-2">
-                                <span className={cn('text-xs w-20', colors.text)}>{tier}</span>
+                                <span className={cn('text-xs w-24 shrink-0 truncate', colors.text)}>
+                                  {tier}
+                                </span>
                                 <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                                   <motion.div
                                     initial={{ width: 0 }}
@@ -1114,8 +1323,10 @@ export function DraftBoardTab({
                           <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
                             <Target className="w-4 h-4 text-amber-400" />
                             <div>
-                              <div className="text-sm font-mono font-bold">{boardStats.elites}</div>
-                              <div className="text-[9px] text-muted-foreground">Elite Tier</div>
+                              <div className="text-sm font-mono font-bold">
+                                {boardStats.generational}
+                              </div>
+                              <div className="text-[9px] text-muted-foreground">Generational</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">

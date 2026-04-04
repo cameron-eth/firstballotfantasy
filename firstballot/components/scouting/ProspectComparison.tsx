@@ -58,12 +58,12 @@ function getPlayerImageUrl(prospect: Prospect): string {
 
 function getTierColor(tier: string | null): string {
   const colors: Record<string, string> = {
-    Elite: 'text-amber-400',
+    Generational: 'text-amber-300',
+    Elite: 'text-yellow-400',
     'Blue Chip': 'text-blue-400',
-    Starter: 'text-emerald-400',
-    Rotational: 'text-purple-400',
+    Contributer: 'text-emerald-400',
     Depth: 'text-slate-400',
-    Longshot: 'text-rose-400',
+    'Walk-On': 'text-rose-300',
     'Tier 1': 'text-amber-400',
     'Tier 2': 'text-blue-400',
     'Tier 3': 'text-emerald-400',

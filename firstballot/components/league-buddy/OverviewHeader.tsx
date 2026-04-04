@@ -16,7 +16,12 @@ import {
   Activity,
   ArrowUpDown,
 } from 'lucide-react'
-import type { MatchupData, PlayerRankingsMap, TeamData } from './types'
+import type {
+  MatchupData,
+  OverviewActions,
+  PlayerRankingsMap,
+  TeamData,
+} from './types'
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 
 const GRADE_COLORS = {
@@ -80,6 +85,7 @@ interface OverviewHeaderProps {
   currentMatchups: MatchupData[]
   currentWeek: number
   teams: TeamData[]
+  actions: OverviewActions
 }
 
 export function OverviewHeader({
@@ -89,6 +95,7 @@ export function OverviewHeader({
   currentMatchups,
   currentWeek,
   teams,
+  actions,
 }: OverviewHeaderProps) {
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
@@ -186,6 +193,39 @@ export function OverviewHeader({
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={actions.onTradeMarketClick}
+            className="flex-1 min-w-[5.5rem] rounded-md border border-slate-600 bg-slate-900/80 px-2 py-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-200 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
+          >
+            Trade
+          </button>
+          <button
+            type="button"
+            onClick={actions.onScoutingPortalClick}
+            className="flex-1 min-w-[5.5rem] rounded-md border border-slate-600 bg-slate-900/80 px-2 py-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-200 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
+          >
+            Scout
+          </button>
+          <button
+            type="button"
+            onClick={actions.onDraftBuddyClick}
+            className="flex-1 min-w-[5.5rem] rounded-md border border-slate-600 bg-slate-900/80 px-2 py-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-200 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
+          >
+            Draft
+          </button>
+          {actions.onPlayoffOddsClick ? (
+            <button
+              type="button"
+              onClick={actions.onPlayoffOddsClick}
+              className="flex-1 min-w-[5.5rem] rounded-md border border-slate-600 bg-slate-900/80 px-2 py-2 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-200 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
+            >
+              Playoffs
+            </button>
+          ) : null}
         </div>
 
         {/* ── INTEL ROW: 4 stat cards ── */}

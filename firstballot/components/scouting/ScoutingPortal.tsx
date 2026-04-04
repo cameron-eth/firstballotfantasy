@@ -20,6 +20,7 @@ import {
 import type { Prospect } from '@/components/scouting/types'
 import { useDraftboard } from '@/hooks/use-draftboard'
 import { useAuth } from '@/lib/auth'
+import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 
 interface RosterPlayer {
   id: string
@@ -76,16 +77,16 @@ function calculatePlayerValue(rank: number, position?: string): number {
 }
 
 function getProspectGradeValue(prospect: Prospect): string {
-  if (prospect.grade_tier) return prospect.grade_tier
-  if (prospect.overall_grade) {
-    if (prospect.overall_grade >= 90) return 'Elite'
-    if (prospect.overall_grade >= 85) return 'Blue Chip'
-    if (prospect.overall_grade >= 78) return 'Starter'
-    if (prospect.overall_grade >= 70) return 'Rotational'
-    if (prospect.overall_grade >= 60) return 'Backup'
-    return 'Depth'
+  if (
+    !prospect.grade_tier &&
+    (prospect.overall_grade == null || prospect.overall_grade <= 0)
+  ) {
+    return 'Ungraded'
   }
-  return 'Ungraded'
+  return normalizeScoutingGradeTier(
+    prospect.grade_tier,
+    prospect.overall_grade ?? 0
+  )
 }
 
 async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
@@ -364,13 +365,12 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const getGradeColor = useCallback((grade: string): string => {
     // Support both new grade_tier names and old letter grades
     const gradeColors: Record<string, string> = {
-      // New grade tiers
-      Elite: 'text-amber-400',
-      'Blue Chip': 'text-green-400',
-      Starter: 'text-blue-400',
-      Rotational: 'text-cyan-400',
-      Backup: 'text-yellow-400',
-      Depth: 'text-orange-400',
+      Generational: 'text-amber-300',
+      Elite: 'text-yellow-400',
+      'Blue Chip': 'text-blue-400',
+      Contributer: 'text-emerald-400',
+      Depth: 'text-slate-400',
+      'Walk-On': 'text-rose-300',
       Ungraded: 'text-gray-400',
       // Legacy letter grades
       'A+': 'text-green-400',
@@ -735,7 +735,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden">
       <Header />
 
-      <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-hidden">
+      <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-hidden max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
           {dataError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">

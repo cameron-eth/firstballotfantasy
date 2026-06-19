@@ -73,72 +73,6 @@ function formatGap(days: number): string {
   return `${Math.round(days / 30)}mo`
 }
 
-/* ─── TransitivePlayerCard ─────────────────────────────────────────────── */
-
-function TransitivePlayerCard({
-  playerId,
-  playerName,
-  allPlayers,
-  dynastyRankings,
-  cachedValuation,
-}: {
-  playerId?: string | null
-  playerName: string
-  allPlayers: Record<string, any>
-  dynastyRankings: Record<string, any>
-  cachedValuation?: PlayerValue | null
-}) {
-  const [imageError, setImageError] = useState(false)
-  const rawPlayer = playerId ? allPlayers[playerId] : null
-  const rankingEntry =
-    dynastyRankings[playerName] || dynastyRankings[normalizeName(playerName)]
-  const valuation = cachedValuation ?? null
-  const headshot = resolveHeadshot(playerName, playerId, allPlayers, dynastyRankings)
-  const initials = playerName
-    .split(' ')
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
-  return (
-    <div className="rounded-lg border border-border bg-card/90 overflow-hidden">
-      <div className="relative h-28 bg-secondary/20">
-        {!imageError && headshot ? (
-          <Image
-            src={headshot}
-            alt={playerName}
-            fill
-            className="object-contain object-bottom"
-            onError={() => setImageError(true)}
-            unoptimized
-          />
-        ) : (
-          <div className="h-full w-full flex items-center justify-center text-2xl font-bold text-muted-foreground/30">
-            {initials}
-          </div>
-        )}
-      </div>
-      <div className="p-2 space-y-1">
-        <div className="text-sm font-semibold leading-tight truncate">
-          {playerName}
-        </div>
-        <div className="text-[11px] text-muted-foreground font-mono">
-          {(rawPlayer?.position ||
-            rankingEntry?.position ||
-            valuation?.position ||
-            'FLEX') +
-            ' · ' +
-            (rawPlayer?.team || rankingEntry?.team || 'NFL')}
-      </div>
-        <div className="text-[11px] font-mono text-blue-400">
-          Value{' '}
-          {valuation?.value != null ? valuation.value.toFixed(1) : '--'}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /* ─── Prospect-style card for buy-low / sell-high ────────────────────── */
 
@@ -1319,392 +1253,10 @@ function MarketTrendsTab({
   )
 }
 
-/* ─── TransitivePathsTab ────────────────────────────────────────────── */
-
-const CHAINS_PER_PAGE = 20
-
-function TransitivePathsTab({
-  transitiveChains,
-  transitiveSeed,
-  setTransitiveSeed,
-  transitiveSeedOptions,
-  allPlayers,
-  dynastyRankings,
-  valuationCache,
-}: {
-  transitiveChains: any[]
-  transitiveSeed: string
-  setTransitiveSeed: (v: string) => void
-  transitiveSeedOptions: string[]
-  allPlayers: Record<string, any>
-  dynastyRankings: Record<string, any>
-  valuationCache: Map<string, PlayerValue>
-}) {
-  const [page, setPage] = useState(0)
-
-  // Reset page when seed changes
-  const handleSeedChange = useCallback(
-    (v: string) => {
-      setTransitiveSeed(v)
-      setPage(0)
-    },
-    [setTransitiveSeed]
-  )
-
-  const totalPages = Math.max(1, Math.ceil(transitiveChains.length / CHAINS_PER_PAGE))
-  const pageChains = useMemo(
-    () =>
-      transitiveChains.slice(
-        page * CHAINS_PER_PAGE,
-        (page + 1) * CHAINS_PER_PAGE
-      ),
-    [transitiveChains, page]
-  )
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-card/60 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs text-muted-foreground font-mono">
-            Trace how assets moved and transformed over time across linked
-            leagues.
-        </div>
-          <select
-            value={transitiveSeed}
-            onChange={(e) => handleSeedChange(e.target.value)}
-            className="h-9 px-2 bg-secondary/40 border border-border rounded text-xs font-mono min-w-[240px]"
-          >
-            <option value="all">All recent paths</option>
-            {transitiveSeedOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-3">
-        {pageChains.map((chain) => (
-          <div
-            key={chain.id}
-            className="rounded-lg border border-border bg-card p-3 space-y-3"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="px-2 py-0.5 rounded bg-secondary/50 border border-border">
-                  Root: {chain.root}
-                </span>
-                <span className="text-muted-foreground/90">
-                  {chain.lastDateLabel}
-                </span>
-        </div>
-              <span className="text-blue-400">{chain.hops.length} hop(s)</span>
-      </div>
-
-            <div className="overflow-x-auto">
-              <div className="flex items-center gap-2 min-w-max">
-                {chain.nodes.map((nodeName: string, idx: number) => (
-                  <div key={`${chain.id}-${nodeName}-${idx}`} className="contents">
-                    <div className="w-44">
-                      <TransitivePlayerCard
-                        playerId={chain.nodeIds[idx]}
-                        playerName={nodeName}
-                        allPlayers={allPlayers}
-                        dynastyRankings={dynastyRankings}
-                        cachedValuation={chain.nodeIds[idx] ? valuationCache.get(chain.nodeIds[idx]) ?? null : null}
-                      />
-        </div>
-                    {idx < chain.nodes.length - 1 && (
-                      <div className="px-1 flex flex-col items-center justify-center">
-                        <span className="text-blue-400 font-mono text-[10px]">
-                          →
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-        </div>
-      </div>
-
-            <div className="text-[11px] text-muted-foreground">
-              Owners: {chain.owners.join(', ')} | Counterparties:{' '}
-              {chain.counterparties.join(' • ')}
-        </div>
-        </div>
-        ))}
-        {pageChains.length === 0 && (
-          <div className="rounded-lg border border-border bg-card/50 p-4 text-sm text-muted-foreground md:col-span-2">
-            No transitive links found for this seed under current filters.
-      </div>
-        )}
-    </div>
-
-      {/* Pagination */}
-      {transitiveChains.length > CHAINS_PER_PAGE && (
-        <div className="flex items-center justify-center gap-3 pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page === 0}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs font-mono text-muted-foreground">
-            Page {page + 1} of {totalPages} ({transitiveChains.length} paths)
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ─── useTransitiveChains hook ──────────────────────────────────────── */
-
-interface TransitiveEdge {
-  id: string
-  transactionId: string
-  season: string
-  leagueId?: string
-  from: string
-  fromId?: string
-  to: string
-  toId?: string
-  timestamp: number
-  week: number
-  dateLabel: string
-  rosterId: number
-  ownerName: string
-  counterparty: string
-}
-
-interface TransitiveChain {
-  id: string
-  root: string
-  nodes: string[]
-  nodeIds: (string | undefined)[]
-  hops: TransitiveEdge[]
-  lastTimestamp: number
-  lastDateLabel: string
-  owners: string[]
-  counterparties: string[]
-}
-
-function useTransitiveChains(
-  filteredTransactions: any[],
-  allPlayers: Record<string, any>,
-  getTeamMeta: (leagueId: string | undefined, rosterId: number) => any,
-  transitiveSeed: string
-) {
-  const edges = useMemo(() => {
-    const result: TransitiveEdge[] = []
-    const sortedTrades = [...filteredTransactions].sort(
-      (a, b) =>
-        Number(a.created || a.status_updated || 0) -
-        Number(b.created || b.status_updated || 0)
-    )
-
-    for (const trade of sortedTrades) {
-      const tradeLeagueId = trade._leagueId as string | undefined
-      const ts = Number(trade.created || trade.status_updated || Date.now())
-      const dateLabel = new Date(ts).toLocaleString()
-      const season = new Date(ts).getFullYear().toString()
-      const rosterIds: number[] = Array.isArray(trade.roster_ids)
-        ? trade.roster_ids
-        : []
-      const adds = trade.adds || {}
-      const drops = trade.drops || {}
-
-      for (const rosterId of rosterIds) {
-        const ownerName =
-          getTeamMeta(tradeLeagueId, rosterId)?.ownerName ||
-          `Roster ${rosterId}`
-        const counterparty =
-          rosterIds
-            .filter((id) => id !== rosterId)
-            .map(
-              (id) =>
-                getTeamMeta(tradeLeagueId, id)?.ownerName || `Roster ${id}`
-            )
-            .join(', ') || '—'
-
-        const sentPlayers: { id: string; name: string }[] = []
-        const receivedPlayers: { id: string; name: string }[] = []
-        for (const playerId of Object.keys(drops)) {
-          if (drops[playerId] === rosterId) {
-            const p = allPlayers[playerId]
-            sentPlayers.push({
-              id: playerId,
-              name: (
-                p ? `${p.first_name} ${p.last_name}` : `Player ${playerId}`
-              ).trim(),
-            })
-          }
-        }
-        for (const playerId of Object.keys(adds)) {
-          if (adds[playerId] === rosterId) {
-            const p = allPlayers[playerId]
-            receivedPlayers.push({
-              id: playerId,
-              name: (
-                p ? `${p.first_name} ${p.last_name}` : `Player ${playerId}`
-              ).trim(),
-            })
-          }
-        }
-
-        for (const from of sentPlayers) {
-          for (const to of receivedPlayers) {
-            result.push({
-              id: `${trade.transaction_id}-${rosterId}-${from.id}-${to.id}`,
-              transactionId: String(trade.transaction_id || ''),
-              season,
-              leagueId: tradeLeagueId,
-              from: from.name,
-              fromId: from.id,
-              to: to.name,
-              toId: to.id,
-              timestamp: ts,
-              week: Number(trade.leg || 0),
-              dateLabel,
-              rosterId,
-              ownerName,
-              counterparty,
-            })
-          }
-        }
-      }
-    }
-    return result
-  }, [filteredTransactions, allPlayers, getTeamMeta])
-
-  const seedOptions = useMemo(() => {
-    const set = new Set<string>()
-    edges.forEach((edge) => {
-      set.add(edge.from)
-      set.add(edge.to)
-    })
-    return Array.from(set).sort((a, b) => a.localeCompare(b))
-  }, [edges])
-
-  const chains = useMemo(() => {
-    const ordered = [...edges].sort((a, b) => a.timestamp - b.timestamp)
-    const adjacency = new Map<string, TransitiveEdge[]>()
-    const incoming = new Set<string>()
-
-    for (const edge of ordered) {
-      incoming.add(edge.to)
-      if (!adjacency.has(edge.from)) adjacency.set(edge.from, [])
-      adjacency.get(edge.from)!.push(edge)
-    }
-
-    const discovered: TransitiveChain[] = []
-    const roots =
-      transitiveSeed === 'all'
-        ? Array.from(new Set(ordered.map((e) => e.from))).filter(
-            (name) => !incoming.has(name)
-          )
-        : [transitiveSeed]
-    const rootSet = roots.length
-      ? roots
-      : Array.from(new Set(ordered.map((e) => e.from)))
-    const maxDepth = 5
-
-    const dfs = (
-      currentName: string,
-      _currentId: string | undefined,
-      nodes: string[],
-      nodeIds: (string | undefined)[],
-      hops: TransitiveEdge[],
-      visitedEdgeIds: Set<string>,
-      depth: number
-    ) => {
-      const nextEdges = (adjacency.get(currentName) || []).filter(
-        (edge) => !visitedEdgeIds.has(edge.id)
-      )
-      if (!nextEdges.length || depth >= maxDepth) {
-        if (nodes.length > 1 && hops.length > 0) {
-          const lastHop = hops[hops.length - 1]
-          discovered.push({
-            id: `${nodes.join('>')}__${hops.map((h) => h.id).join('|')}`,
-            root: nodes[0],
-            nodes,
-            nodeIds,
-            hops,
-            lastTimestamp: lastHop.timestamp,
-            lastDateLabel: lastHop.dateLabel,
-            owners: Array.from(new Set(hops.map((h) => h.ownerName))),
-            counterparties: Array.from(
-              new Set(hops.map((h) => h.counterparty))
-            ),
-          })
-        }
-        return
-      }
-
-      for (const edge of nextEdges) {
-        const nextVisited = new Set(visitedEdgeIds)
-        nextVisited.add(edge.id)
-        dfs(
-          edge.to,
-          edge.toId,
-          [...nodes, edge.to],
-          [...nodeIds, edge.toId],
-          [...hops, edge],
-          nextVisited,
-          depth + 1
-        )
-      }
-    }
-
-    for (const root of rootSet) {
-      const firstEdges = adjacency.get(root) || []
-      if (!firstEdges.length) continue
-      for (const edge of firstEdges) {
-        dfs(
-          edge.to,
-          edge.toId,
-          [root, edge.to],
-          [edge.fromId, edge.toId],
-          [edge],
-          new Set([edge.id]),
-          1
-        )
-      }
-    }
-
-    if (transitiveSeed === 'all') {
-      const byRoot = new Map<string, TransitiveChain>()
-      const ranked = [...discovered].sort((a, b) => {
-        if (b.nodes.length !== a.nodes.length)
-          return b.nodes.length - a.nodes.length
-        return b.lastTimestamp - a.lastTimestamp
-      })
-      for (const chain of ranked) {
-        if (!byRoot.has(chain.root)) byRoot.set(chain.root, chain)
-      }
-      return Array.from(byRoot.values()).sort(
-        (a, b) => b.lastTimestamp - a.lastTimestamp
-      )
-    }
-    return discovered.sort((a, b) => b.lastTimestamp - a.lastTimestamp)
-  }, [edges, transitiveSeed])
-
-  return { chains, seedOptions }
-}
 
 /* ─── TradeMarketContent (main) ──────────────────────────────────────── */
 
-type Tab = 'overview' | 'trends' | 'transitive'
+type Tab = 'overview' | 'trends'
 
 function TradeMarketContent() {
   const router = useRouter()
@@ -1748,7 +1300,6 @@ function TradeMarketContent() {
   const [assetFilter, setAssetFilter] = useState<
     'all' | 'players' | 'picks' | 'faab'
   >('all')
-  const [transitiveSeed, setTransitiveSeed] = useState<string>('all')
 
   const getTeamMeta = useCallback(
     (leagueIdFromTrade: string | undefined, rosterId: number) => {
@@ -1864,11 +1415,6 @@ function TradeMarketContent() {
         ),
       [filteredTransactions, allPlayers, dynastyRankings, getTeamMeta, playerValuationCache]
     )
-
-  /* ── transitive chains (extracted hook) ─────────────────────────── */
-
-  const { chains: transitiveChains, seedOptions: transitiveSeedOptions } =
-    useTransitiveChains(filteredTransactions, allPlayers, getTeamMeta, transitiveSeed)
 
   /* ── early returns (loading, no league, error) ──────────────────── */
 
@@ -2047,7 +1593,6 @@ function TradeMarketContent() {
             {([
               { key: 'overview' as Tab, label: 'Market Overview' },
               { key: 'trends' as Tab, label: 'Market Trends' },
-              { key: 'transitive' as Tab, label: 'Transitive Paths' },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -2089,17 +1634,6 @@ function TradeMarketContent() {
             dynastyRankings={dynastyRankings}
           />
         )}
-        {activeTab === 'transitive' && (
-          <TransitivePathsTab
-            transitiveChains={transitiveChains}
-            transitiveSeed={transitiveSeed}
-            setTransitiveSeed={setTransitiveSeed}
-            transitiveSeedOptions={transitiveSeedOptions}
-            allPlayers={allPlayers}
-            dynastyRankings={dynastyRankings}
-            valuationCache={playerValuationCache}
-          />
-        )}
 
         {/* Footer stats */}
         <div className="mt-8 pt-6 border-t border-border">
@@ -2108,8 +1642,6 @@ function TradeMarketContent() {
               <span>{filteredTransactions.length} trades analyzed</span>
               <span>|</span>
               <span>{rosterKPIs.length} active traders</span>
-              <span>|</span>
-              <span>{transitiveSeedOptions.length} tracked assets</span>
                               </div>
             <div className="text-blue-400">
               {leagueHistory.length} linked league seasons

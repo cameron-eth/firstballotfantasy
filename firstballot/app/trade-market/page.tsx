@@ -56,6 +56,23 @@ function gradeColor(grade: string) {
   return GRADE_COLORS[grade as keyof typeof GRADE_COLORS] ?? 'bg-secondary text-muted-foreground border-border'
 }
 
+/** Map a 0–100 velocity score to a tempo label + color. */
+function tradeTempo(score: number): { label: string; color: string; bar: string } {
+  if (score >= 80) return { label: 'Wheeler-Dealer', color: 'text-fuchsia-400', bar: 'bg-fuchsia-400' }
+  if (score >= 55) return { label: 'Active', color: 'text-emerald-400', bar: 'bg-emerald-400' }
+  if (score >= 30) return { label: 'Steady', color: 'text-blue-400', bar: 'bg-blue-400' }
+  if (score >= 12) return { label: 'Occasional', color: 'text-yellow-400', bar: 'bg-yellow-400' }
+  return { label: 'Dormant', color: 'text-muted-foreground', bar: 'bg-muted-foreground/50' }
+}
+
+function formatGap(days: number): string {
+  if (!days || !isFinite(days)) return '—'
+  if (days < 1) return `${Math.round(days * 24)}h`
+  if (days < 14) return `${days.toFixed(1)}d`
+  if (days < 60) return `${Math.round(days / 7)}w`
+  return `${Math.round(days / 30)}mo`
+}
+
 /* ─── TransitivePlayerCard ─────────────────────────────────────────────── */
 
 function TransitivePlayerCard({
@@ -267,8 +284,28 @@ interface RosterKPI {
   netKtc: number
   winRate: number
   grade: string
+  velocityScore: number
+  tradesPerWeek: number
+  tempo: string
   bestBuyLow: { name: string; playerId?: string; delta: number } | null
   bestSellHigh: { name: string; playerId?: string; delta: number } | null
+}
+
+interface MostTradedPlayer {
+  playerId?: string
+  name: string
+  count: number
+}
+
+interface LeagueVelocity {
+  totalTrades: number
+  spanDays: number
+  perDay: number
+  perWeek: number
+  perMonth: number
+  avgGapDays: number
+  busiestCount: number
+  busiestLabel: string
 }
 
 interface CounterpartyPair {
@@ -276,6 +313,25 @@ interface CounterpartyPair {
   count: number
   rosterIds: [number, number]
 }
+
+interface PnlPoint {
+  ts: number
+  value: number
+}
+
+interface PnlSeries {
+  rosterId: number
+  ownerName: string
+  color: string
+  final: number
+  points: PnlPoint[]
+}
+
+// Distinct line colors for the trade P&L "stock" chart
+const PNL_COLORS = [
+  '#60a5fa', '#34d399', '#fbbf24', '#f87171', '#c084fc', '#22d3ee',
+  '#fb923c', '#a3e635', '#f472b6', '#38bdf8', '#facc15', '#4ade80',
+]
 
 /* ─── computeTradeAnalytics (pure function) ─────────────────────────── */
 
@@ -297,6 +353,7 @@ function computeTradeAnalytics(
       wins: number
       buyLows: { name: string; playerId?: string; delta: number }[]
       sellHighs: { name: string; playerId?: string; delta: number }[]
+      events: { ts: number; net: number }[]
     }
   > = {}
   const counterpartyCount: Record<string, { pair: [string, string]; count: number; rosterIds: [number, number] }> = {}
@@ -304,10 +361,25 @@ function computeTradeAnalytics(
   const allBuyLows: { name: string; playerId?: string; delta: number; ownerName: string }[] = []
   const allSellHighs: { name: string; playerId?: string; delta: number; ownerName: string }[] = []
 
+  // Velocity + most-traded accumulators
+  const allTimestamps: number[] = []
+  const playerTradeCount: Record<string, MostTradedPlayer> = {}
+
   // Helper: get or compute valuation from cache
   const getValuation = (pid: string): PlayerValue | null => {
     if (valuationCache.has(pid)) return valuationCache.get(pid)!
     return null
+  }
+
+  // Helper: resolve a display name for a player id (valuation → Sleeper → id)
+  const resolveName = (pid: string): string => {
+    const pv = getValuation(pid)
+    if (pv?.playerName) return pv.playerName
+    const p = allPlayers?.[pid]
+    if (p) {
+      return p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || pid
+    }
+    return pid
   }
 
   for (const trade of trades) {
@@ -320,6 +392,18 @@ function computeTradeAnalytics(
     const draftPicks: any[] = Array.isArray(trade.draft_picks)
       ? trade.draft_picks
       : []
+
+    // Trade timestamp (Sleeper stores unix ms) for velocity
+    const ts = Number(trade.created || trade.status_updated || 0)
+    if (ts > 0) allTimestamps.push(ts)
+
+    // Most-traded players: each entry in `adds` is a player changing hands once
+    for (const pid of Object.keys(adds)) {
+      if (!playerTradeCount[pid]) {
+        playerTradeCount[pid] = { playerId: pid, name: resolveName(pid), count: 0 }
+      }
+      playerTradeCount[pid].count++
+    }
 
     // Count counterparty pairs
     if (rosterIds.length === 2) {
@@ -351,6 +435,7 @@ function computeTradeAnalytics(
           wins: 0,
           buyLows: [],
           sellHighs: [],
+          events: [],
         }
       }
       const rm = rosterMap[rosterId]
@@ -397,6 +482,7 @@ function computeTradeAnalytics(
       rm.ktcGained += valueIn
       rm.ktcLost += valueOut
       if (valueIn > valueOut) rm.wins++
+      if (ts > 0) rm.events.push({ ts, net: valueIn - valueOut })
 
       // Per-player buy-low / sell-high
       for (const rp of receivedPlayers) {
@@ -426,12 +512,57 @@ function computeTradeAnalytics(
     }
   }
 
+  /* ── League trade velocity ──────────────────────────────────────── */
+  const sortedTs = [...allTimestamps].sort((a, b) => a - b)
+  const firstTs = sortedTs[0] ?? 0
+  const lastTs = sortedTs[sortedTs.length - 1] ?? 0
+  const spanDays = Math.max((lastTs - firstTs) / 86_400_000, 1)
+  const totalTradeEvents = trades.length
+  const perDay = totalTradeEvents / spanDays
+  const avgGapDays = totalTradeEvents > 1 ? spanDays / (totalTradeEvents - 1) : 0
+
+  // Busiest single calendar day (most trades in one UTC day)
+  const dayBuckets: Record<string, number> = {}
+  for (const ts of sortedTs) {
+    const key = new Date(ts).toISOString().slice(0, 10)
+    dayBuckets[key] = (dayBuckets[key] || 0) + 1
+  }
+  let busiestCount = 0
+  let busiestLabel = '—'
+  for (const [day, count] of Object.entries(dayBuckets)) {
+    if (count > busiestCount) {
+      busiestCount = count
+      busiestLabel = new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+  }
+
+  const velocity: LeagueVelocity = {
+    totalTrades: totalTradeEvents,
+    spanDays,
+    perDay,
+    perWeek: perDay * 7,
+    perMonth: perDay * 30,
+    avgGapDays,
+    busiestCount,
+    busiestLabel,
+  }
+
+  // Per-owner trades/week, normalized into a 0–100 velocity score
+  const spanWeeks = Math.max(spanDays / 7, 1 / 7)
+  const rosterPerWeek: Record<number, number> = {}
+  for (const [id, rm] of Object.entries(rosterMap)) {
+    rosterPerWeek[Number(id)] = rm.totalTrades / spanWeeks
+  }
+  const maxPerWeek = Math.max(...Object.values(rosterPerWeek), 0.0001)
+
   const rosterKPIs: RosterKPI[] = Object.entries(rosterMap)
     .map(([id, rm]) => {
       const netKtc = rm.ktcGained - rm.ktcLost
       const bestBuyLow = rm.buyLows.sort((a, b) => b.delta - a.delta)[0] ?? null
       const bestSellHigh =
         rm.sellHighs.sort((a, b) => b.delta - a.delta)[0] ?? null
+      const perWeek = rosterPerWeek[Number(id)] ?? 0
+      const velocityScore = Math.round(Math.min(100, (perWeek / maxPerWeek) * 100))
       return {
         rosterId: Number(id),
         ownerName: rm.ownerName,
@@ -445,11 +576,40 @@ function computeTradeAnalytics(
             ? Math.round((rm.wins / rm.totalTrades) * 100)
             : 0,
         grade: getGradeFromValue(netKtc),
+        velocityScore,
+        tradesPerWeek: Math.round(perWeek * 10) / 10,
+        tempo: tradeTempo(velocityScore).label,
         bestBuyLow,
         bestSellHigh,
       }
     })
     .sort((a, b) => b.netKtc - a.netKtc)
+
+  const mostTradedPlayers: MostTradedPlayer[] = Object.values(playerTradeCount)
+    .filter((p) => p.count > 1)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12)
+
+  // Per-owner cumulative trade P&L over time (the "stock" lines)
+  const pnlSeries: PnlSeries[] = Object.entries(rosterMap)
+    .map(([id, rm], idx) => {
+      const sorted = [...rm.events].sort((a, b) => a.ts - b.ts)
+      const points: PnlPoint[] = []
+      if (firstTs > 0) points.push({ ts: firstTs, value: 0 })
+      let cum = 0
+      for (const e of sorted) {
+        cum += e.net
+        points.push({ ts: e.ts, value: cum })
+      }
+      return {
+        rosterId: Number(id),
+        ownerName: rm.ownerName,
+        color: PNL_COLORS[idx % PNL_COLORS.length],
+        final: Math.round(cum * 10) / 10,
+        points,
+      }
+    })
+    .sort((a, b) => b.final - a.final)
 
   const counterpartyPairs: CounterpartyPair[] = Object.values(counterpartyCount)
     .sort((a, b) => b.count - a.count)
@@ -460,58 +620,345 @@ function computeTradeAnalytics(
     .sort((a, b) => b.delta - a.delta)
     .slice(0, 8)
 
-  return { rosterKPIs, counterpartyPairs, topBuyLows, topSellHighs }
+  return { rosterKPIs, counterpartyPairs, topBuyLows, topSellHighs, velocity, mostTradedPlayers, pnlSeries }
+}
+
+/* ─── MostTradedCard ─────────────────────────────────────────────────── */
+
+function MostTradedCard({
+  player,
+  rank,
+  allPlayers,
+  dynastyRankings,
+}: {
+  player: MostTradedPlayer
+  rank: number
+  allPlayers: Record<string, any>
+  dynastyRankings: Record<string, any>
+}) {
+  const [imageError, setImageError] = useState(false)
+  const headshot = resolveHeadshot(player.name, player.playerId, allPlayers, dynastyRankings)
+  const ranking =
+    dynastyRankings[player.name] || dynastyRankings[normalizeName(player.name)]
+  const raw = player.playerId ? allPlayers[player.playerId] : null
+  const position = ranking?.position || raw?.position || ''
+  const team = ranking?.team || raw?.team || ''
+  const initials = player.name
+    .split(' ')
+    .map((s) => s[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-secondary/40 via-card to-card transition-colors hover:border-blue-500/40">
+      <span className="absolute top-2 right-2.5 z-10 text-[10px] font-mono text-muted-foreground">
+        #{rank}
+      </span>
+      <div className="flex items-stretch gap-3 h-24">
+        {/* Headshot */}
+        <div className="relative w-24 flex-shrink-0 bg-gradient-to-b from-secondary/30 to-transparent">
+          {!imageError && headshot ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={headshot}
+              alt={player.name}
+              className="absolute inset-0 h-full w-full object-cover object-top"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-base font-mono text-muted-foreground">
+              {initials}
+            </div>
+          )}
+        </div>
+        {/* Info */}
+        <div className="flex min-w-0 flex-col justify-center py-2 pr-3">
+          <div className="truncate text-sm font-bold leading-tight text-foreground">
+            {player.name}
+          </div>
+          {(position || team) && (
+            <div className="mb-1.5 truncate text-[10px] font-mono uppercase text-muted-foreground">
+              {position}
+              {position && team ? ' · ' : ''}
+              {team}
+            </div>
+          )}
+          <div className="flex items-baseline gap-1">
+            <span className="font-mono text-2xl font-black leading-none text-blue-400">
+              {player.count}×
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground">traded</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── TradePnLChart (stock-market view) ──────────────────────────────── */
+
+function TradePnLChart({ series }: { series: PnlSeries[] }) {
+  const [hidden, setHidden] = useState<Set<number>>(new Set())
+  const [hover, setHover] = useState<number | null>(null)
+
+  const W = 760
+  const H = 340
+  const padL = 62
+  const padR = 18
+  const padT = 16
+  const padB = 30
+  const plotW = W - padL - padR
+  const plotH = H - padT - padB
+
+  const visible = series.filter((s) => !hidden.has(s.rosterId))
+
+  const { minTs, maxTs, minVal, maxVal } = useMemo(() => {
+    let minTs = Infinity
+    let maxTs = -Infinity
+    let minVal = 0
+    let maxVal = 0
+    const src = visible.length ? visible : series
+    for (const s of src) {
+      for (const p of s.points) {
+        if (p.ts < minTs) minTs = p.ts
+        if (p.ts > maxTs) maxTs = p.ts
+        if (p.value < minVal) minVal = p.value
+        if (p.value > maxVal) maxVal = p.value
+      }
+    }
+    if (!isFinite(minTs)) {
+      minTs = 0
+      maxTs = 1
+    }
+    if (maxVal === minVal) maxVal = minVal + 1
+    return { minTs, maxTs, minVal, maxVal }
+  }, [visible, series])
+
+  const fx = (ts: number) => padL + ((ts - minTs) / Math.max(maxTs - minTs, 1)) * plotW
+  const fy = (v: number) => padT + (1 - (v - minVal) / Math.max(maxVal - minVal, 1)) * plotH
+
+  const yTicks = useMemo(() => {
+    const steps = 4
+    return Array.from({ length: steps + 1 }, (_, i) => minVal + ((maxVal - minVal) * i) / steps)
+  }, [minVal, maxVal])
+
+  const xTicks = useMemo(() => {
+    const steps = 4
+    return Array.from({ length: steps + 1 }, (_, i) => minTs + ((maxTs - minTs) * i) / steps)
+  }, [minTs, maxTs])
+
+  const toggle = (id: number) =>
+    setHidden((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  if (series.length === 0) {
+    return (
+      <div className="p-8 text-sm text-muted-foreground text-center rounded-lg border border-border bg-card/60">
+        No trade activity to chart in this window
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-card/60 p-4">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Trade P&L over time">
+        {/* gridlines + y labels */}
+        {yTicks.map((t, i) => {
+          const isZero = Math.abs(t) < 1e-6
+          return (
+            <g key={`y-${i}`}>
+              <line
+                x1={padL}
+                y1={fy(t)}
+                x2={W - padR}
+                y2={fy(t)}
+                stroke={isZero ? '#475569' : '#1e293b'}
+                strokeWidth={1}
+                strokeDasharray={isZero ? '' : '2 3'}
+              />
+              <text x={padL - 8} y={fy(t) + 3} textAnchor="end" fontSize={9} className="font-mono" fill="#64748b">
+                {Math.round(t).toLocaleString()}
+              </text>
+            </g>
+          )
+        })}
+        {/* x labels */}
+        {xTicks.map((t, i) => (
+          <text
+            key={`x-${i}`}
+            x={fx(t)}
+            y={H - padB + 16}
+            textAnchor="middle"
+            fontSize={9}
+            className="font-mono"
+            fill="#64748b"
+          >
+            {new Date(t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+          </text>
+        ))}
+        {/* P&L lines */}
+        {visible.map((s) => {
+          const dim = hover !== null && hover !== s.rosterId
+          const pts = s.points.map((p) => `${fx(p.ts)},${fy(p.value)}`).join(' ')
+          return (
+            <polyline
+              key={s.rosterId}
+              points={pts}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={hover === s.rosterId ? 2.5 : 1.5}
+              opacity={dim ? 0.18 : 1}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )
+        })}
+        {/* endpoints */}
+        {visible.map((s) => {
+          const last = s.points[s.points.length - 1]
+          if (!last) return null
+          const dim = hover !== null && hover !== s.rosterId
+          return (
+            <circle
+              key={`end-${s.rosterId}`}
+              cx={fx(last.ts)}
+              cy={fy(last.value)}
+              r={hover === s.rosterId ? 4 : 2.5}
+              fill={s.color}
+              opacity={dim ? 0.18 : 1}
+            />
+          )
+        })}
+      </svg>
+
+      {/* Legend — click to toggle, hover to highlight */}
+      <div className="flex flex-wrap gap-1.5 mt-3">
+        {series.map((s) => {
+          const off = hidden.has(s.rosterId)
+          return (
+            <button
+              key={s.rosterId}
+              type="button"
+              onClick={() => toggle(s.rosterId)}
+              onMouseEnter={() => setHover(s.rosterId)}
+              onMouseLeave={() => setHover(null)}
+              className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-mono transition-colors hover:border-foreground/40 ${
+                off ? 'border-border/40 opacity-40' : 'border-border'
+              }`}
+            >
+              <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+              <span className="text-foreground">{s.ownerName}</span>
+              <span className={s.final >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                {formatValue(s.final)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 /* ─── MarketOverviewTab ──────────────────────────────────────────────── */
 
 function MarketOverviewTab({
   rosterKPIs,
-  counterpartyPairs,
   topBuyLows,
   topSellHighs,
   allPlayers,
   dynastyRankings,
-  totalTrades,
   valuationCache,
+  velocity,
 }: {
   rosterKPIs: RosterKPI[]
-  counterpartyPairs: CounterpartyPair[]
   topBuyLows: { name: string; playerId?: string; delta: number; ownerName: string }[]
   topSellHighs: { name: string; playerId?: string; delta: number; ownerName: string }[]
   allPlayers: Record<string, any>
   dynastyRankings: Record<string, any>
-  totalTrades: number
   valuationCache: Map<string, PlayerValue>
+  velocity: LeagueVelocity
 }) {
-  const mostActiveTraders = useMemo(
-    () =>
-      [...rosterKPIs]
-        .sort((a, b) => b.totalTrades - a.totalTrades)
-        .slice(0, 8),
-    [rosterKPIs]
-  )
+  const velocityCards: { label: string; value: string; sub: string; accent: string }[] = [
+    {
+      label: 'Trades / Week',
+      value: velocity.perWeek >= 10 ? velocity.perWeek.toFixed(0) : velocity.perWeek.toFixed(1),
+      sub: 'league pace',
+      accent: 'text-blue-400',
+    },
+    {
+      label: 'Trades / Month',
+      value: velocity.perMonth >= 10 ? velocity.perMonth.toFixed(0) : velocity.perMonth.toFixed(1),
+      sub: `${velocity.perDay.toFixed(2)}/day`,
+      accent: 'text-foreground',
+    },
+    {
+      label: 'Avg Gap',
+      value: formatGap(velocity.avgGapDays),
+      sub: 'between trades',
+      accent: 'text-foreground',
+    },
+    {
+      label: 'Busiest Day',
+      value: velocity.busiestCount > 0 ? `${velocity.busiestCount}` : '—',
+      sub: velocity.busiestLabel,
+      accent: 'text-fuchsia-400',
+    },
+    {
+      label: 'Active Span',
+      value: velocity.spanDays >= 365 ? `${(velocity.spanDays / 365).toFixed(1)}y` : `${Math.round(velocity.spanDays)}d`,
+      sub: `${velocity.totalTrades} trades`,
+      accent: 'text-foreground',
+    },
+  ]
 
   return (
     <div className="space-y-6">
+      {/* League Trade Velocity */}
+      <section>
+        <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
+          League Trade Velocity
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {velocityCards.map((c) => (
+            <div
+              key={c.label}
+              className="rounded-lg border border-border bg-card/60 px-3 py-2.5"
+            >
+              <div className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground mb-1">
+                {c.label}
+              </div>
+              <div className={`text-2xl font-black font-mono leading-none ${c.accent}`}>
+                {c.value}
+              </div>
+              <div className="text-[10px] font-mono text-muted-foreground mt-1">{c.sub}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Roster KPI Table */}
       <section>
         <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
           Roster Trade Performance
         </h2>
         <div className="rounded-lg border border-border overflow-x-auto">
-          <table className="w-full text-xs font-mono">
+          <table className="w-full text-sm font-mono">
             <thead>
               <tr className="border-b border-border bg-secondary/30">
-                <th className="text-left px-3 py-2">Manager</th>
-                <th className="text-right px-3 py-2">Trades</th>
-                <th className="text-right px-3 py-2">KTC Gained</th>
-                <th className="text-right px-3 py-2">KTC Lost</th>
-                <th className="text-right px-3 py-2">Net</th>
-                <th className="text-right px-3 py-2">Win %</th>
-                <th className="text-center px-3 py-2">Grade</th>
-                <th className="text-left px-3 py-2">Best Buy Low</th>
-                <th className="text-left px-3 py-2">Best Sell High</th>
+                <th className="text-left px-4 py-3">Manager</th>
+                <th className="text-right px-4 py-3">Trades</th>
+                <th className="text-right px-4 py-3">KTC Gained</th>
+                <th className="text-right px-4 py-3">KTC Lost</th>
+                <th className="text-right px-4 py-3">Net</th>
+                <th className="text-right px-4 py-3">Win %</th>
+                <th className="text-center px-4 py-3">Grade</th>
+                <th className="text-left px-4 py-3">Best Buy Low</th>
+                <th className="text-left px-4 py-3">Best Sell High</th>
               </tr>
             </thead>
             <tbody>
@@ -520,30 +967,30 @@ function MarketOverviewTab({
                   key={r.rosterId}
                   className="border-b border-border/50 hover:bg-secondary/10"
                 >
-                  <td className="px-3 py-2 font-semibold text-foreground">
+                  <td className="px-4 py-3 font-semibold text-foreground">
                     {r.ownerName}
                   </td>
-                  <td className="text-right px-3 py-2">{r.totalTrades}</td>
-                  <td className="text-right px-3 py-2 text-emerald-400">
+                  <td className="text-right px-4 py-3">{r.totalTrades}</td>
+                  <td className="text-right px-4 py-3 text-emerald-400">
                     +{r.ktcGained}
                   </td>
-                  <td className="text-right px-3 py-2 text-red-400">
+                  <td className="text-right px-4 py-3 text-red-400">
                     -{r.ktcLost}
                   </td>
                   <td
-                    className={`text-right px-3 py-2 font-bold ${r.netKtc >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                    className={`text-right px-4 py-3 font-bold ${r.netKtc >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
                   >
                     {formatValue(r.netKtc)}
                   </td>
-                  <td className="text-right px-3 py-2">{r.winRate}%</td>
-                  <td className="text-center px-3 py-2">
+                  <td className="text-right px-4 py-3">{r.winRate}%</td>
+                  <td className="text-center px-4 py-3">
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${gradeColor(r.grade)}`}
+                      className={`px-2 py-1 rounded text-xs font-bold border ${gradeColor(r.grade)}`}
                     >
                       {r.grade}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {r.bestBuyLow ? (
                       <span>
                         {r.bestBuyLow.name}{' '}
@@ -555,7 +1002,7 @@ function MarketOverviewTab({
                       '—'
                     )}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {r.bestSellHigh ? (
                       <span>
                         {r.bestSellHigh.name}{' '}
@@ -637,72 +1084,175 @@ function MarketOverviewTab({
           </div>
         )}
       </section>
+    </div>
+  )
+}
 
-      {/* Counterparty Network + Most Active */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <section>
-          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
-            Trading Partners (Most Frequent)
-          </h2>
-          <div className="rounded-lg border border-border bg-card/60 divide-y divide-border">
-            {counterpartyPairs.map((cp, i) => (
-              <div
-                key={`${cp.rosterIds[0]}-${cp.rosterIds[1]}`}
-                className="p-2.5 flex items-center justify-between"
-              >
-                <div className="text-xs">
-                  <span className="font-semibold text-foreground">
-                    {cp.pair[0]}
-              </span>
-                  <span className="text-muted-foreground mx-1.5">⇄</span>
-                  <span className="font-semibold text-foreground">
-                    {cp.pair[1]}
-              </span>
-                </div>
-                <span className="text-xs font-mono font-bold text-blue-400">
-                  {cp.count} trade{cp.count !== 1 ? 's' : ''}
-                </span>
-              </div>
+/* ─── MarketTrendsTab (stock-market view + toggle) ───────────────────── */
+
+function MarketTrendsTab({
+  mostTradedPlayers,
+  pnlSeries,
+  counterpartyPairs,
+  rosterKPIs,
+  totalTrades,
+  allPlayers,
+  dynastyRankings,
+}: {
+  mostTradedPlayers: MostTradedPlayer[]
+  pnlSeries: PnlSeries[]
+  counterpartyPairs: CounterpartyPair[]
+  rosterKPIs: RosterKPI[]
+  totalTrades: number
+  allPlayers: Record<string, any>
+  dynastyRankings: Record<string, any>
+}) {
+  const [view, setView] = useState<'value' | 'activity'>('value')
+
+  const velocityLeaders = useMemo(
+    () =>
+      [...rosterKPIs]
+        .filter((r) => r.totalTrades > 0)
+        .sort((a, b) => b.velocityScore - a.velocityScore)
+        .slice(0, 8),
+    [rosterKPIs]
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Most Traded Players — pinned at top */}
+      <section>
+        <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
+          Most Traded Players
+        </h2>
+        {mostTradedPlayers.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {mostTradedPlayers.map((p, idx) => (
+              <MostTradedCard
+                key={`${p.playerId || p.name}-${idx}`}
+                player={p}
+                rank={idx + 1}
+                allPlayers={allPlayers}
+                dynastyRankings={dynastyRankings}
+              />
             ))}
-            {counterpartyPairs.length === 0 && (
-              <div className="p-4 text-sm text-muted-foreground text-center">
-                No counterparty data
-              </div>
-            )}
           </div>
-        </section>
+        ) : (
+          <div className="p-4 text-sm text-muted-foreground text-center rounded-lg border border-border bg-card/60">
+            No repeat-traded players in this window
+          </div>
+        )}
+      </section>
+
+      {/* Segmented toggle */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+          {view === 'value' ? 'Trade Value Trends' : 'League Activity'}
+        </h2>
+        <div className="inline-flex rounded-lg border border-border bg-card/60 p-0.5">
+          {(
+            [
+              { key: 'value' as const, label: 'Value Trends' },
+              { key: 'activity' as const, label: 'Activity' },
+            ]
+          ).map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setView(opt.key)}
+              className={`px-3 py-1.5 text-[11px] font-mono uppercase tracking-wide rounded-md transition-colors ${
+                view === opt.key
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === 'value' ? (
         <section>
-          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
-            Most Active Traders
-          </h2>
-          <div className="rounded-lg border border-border bg-card/60 divide-y divide-border">
-            {mostActiveTraders.map((r) => {
-              const pct =
-                totalTrades > 0
-                  ? Math.round((r.totalTrades / totalTrades) * 100)
-                  : 0
-              return (
+          <p className="text-[11px] text-muted-foreground font-mono mb-3">
+            Cumulative net KTC gained or lost through trades — each owner is a &ldquo;stock&rdquo;. Click a name to toggle, hover to highlight.
+          </p>
+          <TradePnLChart series={pnlSeries} />
+        </section>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          <section>
+            <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
+              Trading Partners (Most Frequent)
+            </h3>
+            <div className="rounded-lg border border-border bg-card/60 divide-y divide-border">
+              {counterpartyPairs.map((cp) => (
                 <div
-                  key={r.rosterId}
-                  className="p-2.5 flex items-center justify-between"
+                  key={`${cp.rosterIds[0]}-${cp.rosterIds[1]}`}
+                  className="p-3 flex items-center justify-between"
                 >
-                  <div>
-                    <div className="text-xs font-semibold text-foreground">
-                      {r.ownerName}
+                  <div className="text-sm">
+                    <span className="font-semibold text-foreground">{cp.pair[0]}</span>
+                    <span className="text-muted-foreground mx-1.5">⇄</span>
+                    <span className="font-semibold text-foreground">{cp.pair[1]}</span>
+                  </div>
+                  <span className="text-sm font-mono font-bold text-blue-400">
+                    {cp.count} trade{cp.count !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              ))}
+              {counterpartyPairs.length === 0 && (
+                <div className="p-4 text-sm text-muted-foreground text-center">
+                  No counterparty data
+                </div>
+              )}
+            </div>
+          </section>
+          <section>
+            <h3 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
+              Trade Velocity Leaderboard
+            </h3>
+            <div className="rounded-lg border border-border bg-card/60 divide-y divide-border">
+              {velocityLeaders.map((r) => {
+                const tempo = tradeTempo(r.velocityScore)
+                const pct =
+                  totalTrades > 0 ? Math.round((r.totalTrades / totalTrades) * 100) : 0
+                return (
+                  <div key={r.rosterId} className="p-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">
+                          {r.ownerName}
+                        </div>
+                        <div className={`text-[11px] font-mono ${tempo.color}`}>{tempo.label}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <span className="text-base font-mono font-black text-foreground">
+                          {r.velocityScore}
+                        </span>
+                        <div className="text-[10px] text-muted-foreground font-mono">
+                          {r.tradesPerWeek}/wk · {pct}%
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground font-mono">
-                      {pct}% of league trades
+                    <div className="h-2 bg-secondary/40 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${tempo.bar}`}
+                        style={{ width: `${Math.max(r.velocityScore, 3)}%` }}
+                      />
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-bold text-foreground">
-                    {r.totalTrades}
-                  </span>
+                )
+              })}
+              {velocityLeaders.length === 0 && (
+                <div className="p-4 text-sm text-muted-foreground text-center">
+                  No trade activity
+                </div>
+              )}
             </div>
-          )
-        })}
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
@@ -1092,7 +1642,7 @@ function useTransitiveChains(
 
 /* ─── TradeMarketContent (main) ──────────────────────────────────────── */
 
-type Tab = 'overview' | 'transitive'
+type Tab = 'overview' | 'trends' | 'transitive'
 
 function TradeMarketContent() {
   const router = useRouter()
@@ -1240,7 +1790,7 @@ function TradeMarketContent() {
 
   /* ── market analytics (overview tab) ────────────────────────────── */
 
-  const { rosterKPIs, counterpartyPairs, topBuyLows, topSellHighs } =
+  const { rosterKPIs, counterpartyPairs, topBuyLows, topSellHighs, velocity, mostTradedPlayers, pnlSeries } =
     useMemo(
       () =>
         computeTradeAnalytics(
@@ -1434,6 +1984,7 @@ function TradeMarketContent() {
           <div className="flex gap-0">
             {([
               { key: 'overview' as Tab, label: 'Market Overview' },
+              { key: 'trends' as Tab, label: 'Market Trends' },
               { key: 'transitive' as Tab, label: 'Transitive Paths' },
             ] as const).map((tab) => (
               <button
@@ -1457,13 +2008,23 @@ function TradeMarketContent() {
         {activeTab === 'overview' && (
           <MarketOverviewTab
             rosterKPIs={rosterKPIs}
-            counterpartyPairs={counterpartyPairs}
             topBuyLows={topBuyLows}
             topSellHighs={topSellHighs}
             allPlayers={allPlayers}
             dynastyRankings={dynastyRankings}
-            totalTrades={filteredTransactions.length}
             valuationCache={playerValuationCache}
+            velocity={velocity}
+          />
+        )}
+        {activeTab === 'trends' && (
+          <MarketTrendsTab
+            mostTradedPlayers={mostTradedPlayers}
+            pnlSeries={pnlSeries}
+            counterpartyPairs={counterpartyPairs}
+            rosterKPIs={rosterKPIs}
+            totalTrades={filteredTransactions.length}
+            allPlayers={allPlayers}
+            dynastyRankings={dynastyRankings}
           />
         )}
         {activeTab === 'transitive' && (

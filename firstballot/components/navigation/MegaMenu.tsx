@@ -13,7 +13,6 @@ import {
   Search,
   History,
   Calculator,
-  LineChart,
 } from 'lucide-react'
 import { NavGroup } from './NavGroup'
 
@@ -100,12 +99,6 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
           href: '/trade-market',
           description: 'Real league trade activity',
           icon: ShoppingCart,
-        },
-        {
-          name: 'Team Value',
-          href: '/trade-market?tab=trends',
-          description: 'Track your team value growth',
-          icon: LineChart,
         },
       ],
     },

@@ -322,6 +322,7 @@ interface PnlPoint {
 interface PnlSeries {
   rosterId: number
   ownerName: string
+  ownerAvatar?: string
   color: string
   final: number
   points: PnlPoint[]
@@ -346,6 +347,7 @@ function computeTradeAnalytics(
     number,
     {
       ownerName: string
+      ownerAvatar?: string
       teamName: string
       totalTrades: number
       ktcGained: number
@@ -428,6 +430,7 @@ function computeTradeAnalytics(
       if (!rosterMap[rosterId]) {
         rosterMap[rosterId] = {
           ownerName: meta?.ownerName || `Roster ${rosterId}`,
+          ownerAvatar: meta?.ownerAvatar,
           teamName: meta?.teamName || `Team ${rosterId}`,
           totalTrades: 0,
           ktcGained: 0,
@@ -604,6 +607,7 @@ function computeTradeAnalytics(
       return {
         rosterId: Number(id),
         ownerName: rm.ownerName,
+        ownerAvatar: rm.ownerAvatar,
         color: PNL_COLORS[idx % PNL_COLORS.length],
         final: Math.round(cum * 10) / 10,
         points,
@@ -815,22 +819,80 @@ function TradePnLChart({ series }: { series: PnlSeries[] }) {
               opacity={dim ? 0.18 : 1}
               strokeLinejoin="round"
               strokeLinecap="round"
+              style={{ pointerEvents: 'none' }}
             />
           )
         })}
-        {/* endpoints */}
+        {/* Transparent hit areas — let the user hover the line itself */}
+        {visible.map((s) => {
+          const pts = s.points.map((p) => `${fx(p.ts)},${fy(p.value)}`).join(' ')
+          return (
+            <polyline
+              key={`hit-${s.rosterId}`}
+              points={pts}
+              fill="none"
+              stroke="transparent"
+              strokeWidth={12}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+              onMouseEnter={() => setHover(s.rosterId)}
+              onMouseLeave={() => setHover(null)}
+            />
+          )
+        })}
+        {/* endpoints — avatar bubble on hover, dot otherwise */}
         {visible.map((s) => {
           const last = s.points[s.points.length - 1]
           if (!last) return null
-          const dim = hover !== null && hover !== s.rosterId
+          const isHover = hover === s.rosterId
+          const dim = hover !== null && !isHover
+          const cx = fx(last.ts)
+          const cy = fy(last.value)
+
+          if (isHover && s.ownerAvatar) {
+            const R = 15
+            const clipId = `pnl-clip-${s.rosterId}`
+            return (
+              <g key={`end-${s.rosterId}`} style={{ pointerEvents: 'none' }}>
+                <clipPath id={clipId}>
+                  <circle cx={cx} cy={cy} r={R} />
+                </clipPath>
+                <circle cx={cx} cy={cy} r={R + 2} fill="#0f172a" stroke={s.color} strokeWidth={2} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <image
+                  href={`https://sleepercdn.com/avatars/${s.ownerAvatar}`}
+                  x={cx - R}
+                  y={cy - R}
+                  width={R * 2}
+                  height={R * 2}
+                  clipPath={`url(#${clipId})`}
+                  preserveAspectRatio="xMidYMid slice"
+                />
+                <text
+                  x={cx - R - 6}
+                  y={cy + 3}
+                  textAnchor="end"
+                  fontSize={11}
+                  fontWeight={700}
+                  className="font-mono"
+                  fill={s.color}
+                >
+                  {s.ownerName}
+                </text>
+              </g>
+            )
+          }
+
           return (
             <circle
               key={`end-${s.rosterId}`}
-              cx={fx(last.ts)}
-              cy={fy(last.value)}
-              r={hover === s.rosterId ? 4 : 2.5}
+              cx={cx}
+              cy={cy}
+              r={isHover ? 4 : 2.5}
               fill={s.color}
               opacity={dim ? 0.18 : 1}
+              style={{ pointerEvents: 'none' }}
             />
           )
         })}

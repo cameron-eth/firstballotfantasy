@@ -79,15 +79,13 @@ import {
   calculateTeamTrends,
   calculatePositionStrengths,
   calculateRecentForm,
-  getContenderTier,
-  getTierColor,
   getRankColor,
   getOpponentInfo,
   calculateProjection,
-  buildLineup,
   calculateLeaguePositionRankings,
-  isPlayerAvailable,
+  countRosterPositions,
 } from './league-buddy/utils'
+import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { LeagueOverviewSection } from './league-buddy/LeagueOverviewSection'
 import { RosterSection } from './league-buddy/RosterSection'
 import { MatchupView } from './league-buddy/MatchupView'
@@ -97,6 +95,10 @@ import { useLeagueData } from './league-buddy/useLeagueData'
 import { LeagueBuddySidebar } from './league-buddy/LeagueBuddySidebar'
 import { OverviewHeader } from './league-buddy/OverviewHeader'
 import { TradeIntelligencePanel } from './league-buddy/TradeIntelligencePanel'
+import { AuditSection } from './league-buddy/AuditSection'
+import { StatusStrip } from './league-buddy/StatusStrip'
+import { LeagueActivityFeed } from './league-buddy/LeagueActivityFeed'
+import { TrendingPlayersWidget } from './league-buddy/TrendingPlayersWidget'
 
 // Constants for better maintainability
 const GRADE_COLORS = {
@@ -119,9 +121,6 @@ export default function LeagueBuddy({
 }: LeagueBuddyProps) {
   const router = useRouter()
   const [activeSection, setActiveSection] = useState<LeagueSection>('overview')
-  const [lineupMode, setLineupMode] = useState<'current' | 'optimized'>('current')
-  const [whatIfLineup, setWhatIfLineup] = useState<string[]>([])
-  const [selectedStarterToSwap, setSelectedStarterToSwap] = useState<string | null>(null)
 
   const {
     teams,
@@ -136,6 +135,8 @@ export default function LeagueBuddy({
     nflGames,
     allPlayers,
     playerRankings,
+    rosterPositionsRaw,
+    leagueTransactions,
     refetch: fetchLeagueData,
   } = useLeagueData(leagueId, user)
 
@@ -157,6 +158,30 @@ export default function LeagueBuddy({
       return {}
     }
   }, [sortedTeams])
+
+  // Memoized competitive-state placements (Now × Future), computed once per render tree
+  const leaguePlacements = useMemo(() => {
+    try {
+      return calculateLeaguePlacements(teams, !isOffSeason())
+    } catch (error) {
+      console.error('Error calculating league placements:', error)
+      return { placements: {}, nowMedian: 50, futureMedian: 50 }
+    }
+  }, [teams])
+
+  // Roster slot counts (QB/RB/WR/TE/FLEX/SUPER_FLEX), tallied from Sleeper's raw slot array
+  const rosterPositions = useMemo(
+    () => ({
+      QB: 1,
+      RB: 2,
+      WR: 2,
+      TE: 1,
+      FLEX: 1,
+      SUPER_FLEX: 1,
+      ...countRosterPositions(rosterPositionsRaw),
+    }),
+    [rosterPositionsRaw]
+  )
 
   // Memoized event handlers to prevent unnecessary re-renders
   const handleTeamSelect = useCallback((team: TeamData) => {
@@ -510,12 +535,29 @@ export default function LeagueBuddy({
               >
                 League
               </button>
+              <button
+                onClick={() => setActiveSection('audit')}
+                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
+                  activeSection === 'audit'
+                    ? 'bg-yellow-400 text-slate-900'
+                    : 'text-slate-300 hover:text-yellow-400'
+                }`}
+              >
+                Audit
+              </button>
             </div>
           </div>
 
           {/* OVERVIEW SECTION */}
           {activeSection === 'overview' && selectedTeam && leagueOverview && (
             <>
+              <StatusStrip
+                team={selectedTeam}
+                rosterPositions={rosterPositions}
+                currentWeek={currentWeek}
+                onGoToAudit={() => setActiveSection('audit')}
+              />
+
               <OverviewHeader
                 selectedTeam={selectedTeam}
                 sortedTeams={sortedTeams}
@@ -524,6 +566,8 @@ export default function LeagueBuddy({
                 currentWeek={currentWeek}
                 teams={teams}
                 actions={overviewActions}
+                placements={leaguePlacements}
+                leaguePositionRankings={leaguePositionRankings}
               />
 
               {/* Trade Intelligence — Sell High / Hold / Buy Low */}
@@ -534,7 +578,20 @@ export default function LeagueBuddy({
                     Trade Intelligence
                   </h3>
                 </div>
-                <TradeIntelligencePanel players={selectedTeam.players} />
+                <TradeIntelligencePanel
+                  players={selectedTeam.players}
+                  leaguePlayerPool={teams.flatMap((t) => t.players)}
+                />
+              </div>
+
+              {/* League Hub — what's happening across the league */}
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <LeagueActivityFeed
+                  transactions={leagueTransactions}
+                  teams={teams}
+                  allPlayers={allPlayers}
+                />
+                <TrendingPlayersWidget trendingPlayers={leagueOverview.trendingPlayers} />
               </div>
 
             </>
@@ -556,12 +613,14 @@ export default function LeagueBuddy({
                       teams={teams}
                       selectedTeam={selectedTeam}
                       leaguePositionRankings={leaguePositionRankings}
+                      placements={leaguePlacements}
                       onTeamSelect={handleTeamSelect}
                     />
                     <PositionRankings
                       teams={teams}
                       selectedTeam={selectedTeam}
                       leaguePositionRankings={leaguePositionRankings}
+                      placements={leaguePlacements}
                       onTeamSelect={handleTeamSelect}
                     />
                   </>
@@ -615,12 +674,14 @@ export default function LeagueBuddy({
                           teams={teams}
                           selectedTeam={selectedTeam}
                           leaguePositionRankings={leaguePositionRankings}
+                          placements={leaguePlacements}
                           onTeamSelect={handleTeamSelect}
                         />
                         <PositionRankings
                           teams={teams}
                           selectedTeam={selectedTeam}
                           leaguePositionRankings={leaguePositionRankings}
+                          placements={leaguePlacements}
                           onTeamSelect={handleTeamSelect}
                         />
                       </>
@@ -629,6 +690,18 @@ export default function LeagueBuddy({
                 )}
               </div>
             </>
+          )}
+
+          {/* AUDIT SECTION */}
+          {activeSection === 'audit' && selectedTeam && (
+            <AuditSection
+              selectedTeam={selectedTeam}
+              teams={teams}
+              rosterPositions={rosterPositions}
+              currentWeek={currentWeek}
+              placement={leaguePlacements.placements[selectedTeam.rosterId]}
+              placements={leaguePlacements}
+            />
           )}
         </div>
       </SidebarInset>

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Trophy, Zap, Calendar, Target, Eye, ChevronDown } from 'lucide-react'
+import { Users, Trophy, Zap, Calendar, Target, Eye, ChevronDown, ClipboardList } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Sidebar,
@@ -255,6 +255,38 @@ export function LeagueBuddySidebar({
                           >
                             <Trophy className="h-4 w-4" />
                             <span className="font-medium">League</span>
+                          </SidebarMenuButton>
+                        </motion.div>
+                      </SidebarMenuItem>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.18 }}
+                    >
+                      <SidebarMenuItem>
+                        <motion.div
+                          whileHover={{ scale: 1.015, x: 2 }}
+                          whileTap={{ scale: 0.985 }}
+                          transition={{
+                            type: 'spring',
+                            stiffness: 500,
+                            damping: 25,
+                            mass: 0.5,
+                          }}
+                        >
+                          <SidebarMenuButton
+                            onClick={() => setActiveSection('audit')}
+                            isActive={activeSection === 'audit'}
+                            className={`font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm ${
+                              activeSection === 'audit'
+                                ? '!bg-yellow-400/15 !text-yellow-400 !border !border-yellow-400/40 !shadow-sm'
+                                : '!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50'
+                            }`}
+                          >
+                            <ClipboardList className="h-4 w-4" />
+                            <span className="font-medium">Audit</span>
                           </SidebarMenuButton>
                         </motion.div>
                       </SidebarMenuItem>

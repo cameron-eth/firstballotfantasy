@@ -8,9 +8,16 @@ import { Badge } from '@/components/ui/badge'
 import { KtcSparkline } from '@/components/scouting/KtcSparkline'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { PlayerData } from './types'
+import {
+  calculatePositionalMedians,
+  calculatePERatio,
+  type PositionalMedians,
+} from './utils'
 
 interface TradeIntelligencePanelProps {
   players: PlayerData[]
+  /** All rostered players league-wide, used to compute positional P/E medians. Falls back to `players` (within-team only) if omitted. */
+  leaguePlayerPool?: PlayerData[]
 }
 
 const POSITION_COLORS: Record<string, string> = {
@@ -44,6 +51,7 @@ interface ClassifiedPlayer {
   signal: 'sell' | 'hold' | 'buy'
   reason: string
   dailyDelta: number // today vs yesterday
+  peRatio: number | null
 }
 
 /** Daily delta: last scraped value minus the one before it */
@@ -53,11 +61,41 @@ function getDailyDelta(player: PlayerData): number {
   return hist[hist.length - 1].value_sf - hist[hist.length - 2].value_sf
 }
 
-function classifyPlayer(player: PlayerData): ClassifiedPlayer {
+const PE_UNDERVALUED = 0.7
+const PE_OVERVALUED = 1.5
+
+function classifyPlayer(
+  player: PlayerData,
+  medians: Record<string, PositionalMedians>
+): ClassifiedPlayer {
   const dailyDelta = getDailyDelta(player)
   const age = player.age ?? 0
   const position = player.position ?? 'WR'
   const { label: dynastyWindow } = getDynastyWindow(age, position)
+  const peRatio = calculatePERatio(player, medians)
+
+  // Primary signal: production vs price, when there's an actual production sample.
+  if (peRatio !== null) {
+    if (peRatio > PE_OVERVALUED) {
+      return {
+        player,
+        signal: 'sell',
+        reason: `P/E ${peRatio.toFixed(2)} · overvalued · ${dynastyWindow}`,
+        dailyDelta,
+        peRatio,
+      }
+    }
+    if (peRatio < PE_UNDERVALUED) {
+      return {
+        player,
+        signal: 'buy',
+        reason: `P/E ${peRatio.toFixed(2)} · undervalued · ${dynastyWindow}`,
+        dailyDelta,
+        peRatio,
+      }
+    }
+    // Fair value on production — fall through to momentum as a tiebreaker.
+  }
 
   // Sell High: biggest daily gainers (value jumped today)
   if (dailyDelta > 50) {
@@ -66,10 +104,12 @@ function classifyPlayer(player: PlayerData): ClassifiedPlayer {
       signal: 'sell',
       reason: `+${dailyDelta.toLocaleString()} today · ${dynastyWindow}`,
       dailyDelta,
+      peRatio,
     }
   }
 
-  // Buy Low: dropped today but young/prime window — buy the dip
+  // Buy Low: dropped today but young/prime window — buy the dip. Also the primary path
+  // for speculative players (rookies etc.) with no production sample yet.
   const isValueDropping = dailyDelta < -50
   const isYoungAndPrime = dynastyWindow === 'Rising' || dynastyWindow === 'Prime'
 
@@ -79,6 +119,7 @@ function classifyPlayer(player: PlayerData): ClassifiedPlayer {
       signal: 'buy',
       reason: `${dailyDelta.toLocaleString()} today · ${dynastyWindow}`,
       dailyDelta,
+      peRatio,
     }
   }
 
@@ -86,8 +127,9 @@ function classifyPlayer(player: PlayerData): ClassifiedPlayer {
   return {
     player,
     signal: 'hold',
-    reason: dynastyWindow,
+    reason: peRatio !== null ? `P/E ${peRatio.toFixed(2)} · fair value` : dynastyWindow,
     dailyDelta,
+    peRatio,
   }
 }
 
@@ -203,14 +245,19 @@ function PlayerRow({ classified, index }: PlayerRowProps) {
   )
 }
 
-export function TradeIntelligencePanel({ players }: TradeIntelligencePanelProps) {
+export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntelligencePanelProps) {
+  const medians = useMemo(
+    () => calculatePositionalMedians(leaguePlayerPool ?? players),
+    [leaguePlayerPool, players]
+  )
+
   const classified = useMemo<ClassifiedPlayer[]>(() => {
     // Only include skill positions
     const skillPlayers = players.filter((p) =>
       ['QB', 'RB', 'WR', 'TE'].includes(p.position)
     )
-    return skillPlayers.map(classifyPlayer)
-  }, [players])
+    return skillPlayers.map((p) => classifyPlayer(p, medians))
+  }, [players, medians])
 
   const sellPlayers = useMemo(
     () =>

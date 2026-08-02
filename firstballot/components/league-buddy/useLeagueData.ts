@@ -20,6 +20,7 @@ import {
   calculatePositionStrengths,
   calculateRecentForm,
   getOpponentInfo,
+  countRosterPositions,
 } from './utils'
 
 interface UseLeagueDataReturn {
@@ -35,6 +36,8 @@ interface UseLeagueDataReturn {
   nflGames: Record<string, { opponent: string; isHome: boolean }>
   allPlayers: Record<string, any>
   playerRankings: Record<string, any>
+  rosterPositionsRaw: string[]
+  leagueTransactions: SleeperTransaction[]
   refetch: () => Promise<void>
 }
 
@@ -87,6 +90,8 @@ interface LeagueDataBundle {
   allPlayers: Record<string, any>
   playerRankings: Record<string, any>
   defaultSelectedRosterId: number | null
+  rosterPositionsRaw: string[]
+  leagueTransactions: SleeperTransaction[]
 }
 
 function getUserId(user: unknown): string | undefined {
@@ -515,6 +520,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     // Non-fatal
       }
 
+      let leagueTransactions: SleeperTransaction[] = []
       try {
     const weekNums = Array.from({ length: week }, (_, i) => i + 1)
         const txResults = await Promise.all(
@@ -533,6 +539,8 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     teamsData.forEach((team) => {
       team.transactions = allTx.filter((tx) => tx.roster_ids.includes(team.rosterId))
         })
+
+        leagueTransactions = [...allTx].sort((a, b) => b.created - a.created)
       } catch {
     // Non-fatal
   }
@@ -580,13 +588,14 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
         lowestOwner?.first_name ||
         `Team ${lowestScoring?.roster_id || 'Unknown'}`,
       trendingPlayers,
-      rosterPositions: league?.roster_positions || {
+      rosterPositions: {
         QB: 1,
         RB: 2,
         WR: 2,
         TE: 1,
         FLEX: 1,
         SUPER_FLEX: 1,
+        ...countRosterPositions(league?.roster_positions),
       },
     },
     currentMatchups: matchupData,
@@ -596,6 +605,8 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     allPlayers: enhancedPlayers,
     playerRankings: rankingsMap,
     defaultSelectedRosterId: userRoster?.roster_id || teamsData[0]?.rosterId || null,
+    rosterPositionsRaw: Array.isArray(league?.roster_positions) ? league.roster_positions : [],
+    leagueTransactions,
   }
 }
 
@@ -616,6 +627,8 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
   const nflGames = data?.nflGames ?? {}
   const allPlayers = data?.allPlayers ?? {}
   const playerRankings = data?.playerRankings ?? {}
+  const rosterPositionsRaw = data?.rosterPositionsRaw ?? []
+  const leagueTransactions = data?.leagueTransactions ?? []
 
   const selectedTeam = useMemo(() => {
     if (teams.length === 0) return null
@@ -647,6 +660,8 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
     nflGames,
     allPlayers,
     playerRankings,
+    rosterPositionsRaw,
+    leagueTransactions,
     refetch,
   }
 }

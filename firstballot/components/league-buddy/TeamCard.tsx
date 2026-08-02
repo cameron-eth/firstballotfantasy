@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
 import type { TeamData } from './types'
 import { GRADE_COLORS } from './types'
+import { COMPETITIVE_STATES, type TeamPlacement } from './competitiveState'
 
 interface TeamCardProps {
   team: TeamData
@@ -12,8 +13,7 @@ interface TeamCardProps {
   isSelected: boolean
   onSelect: (team: TeamData) => void
   positionRankings?: Record<string, number>
-  getContenderTier: (grade: string, rank: number) => string
-  getTierColor: (tier: string) => string
+  placement?: TeamPlacement
   getRankColor: (rank: number) => string
   variant?: 'mobile' | 'desktop' | 'compact'
 }
@@ -24,12 +24,14 @@ export function TeamCard({
   isSelected,
   onSelect,
   positionRankings = {},
-  getContenderTier,
-  getTierColor,
+  placement,
   getRankColor,
   variant = 'mobile',
 }: TeamCardProps) {
-  const contenderTier = getContenderTier(team.grade || 'F', rank)
+  const stateMeta = placement ? COMPETITIVE_STATES[placement.state] : null
+  const stateBadgeClass = stateMeta
+    ? `${stateMeta.bg} ${stateMeta.text} ${stateMeta.border}`
+    : 'bg-slate-500/10 text-slate-400 border-slate-500/40'
   const qbRank = positionRankings['QB'] || 12
   const rbRank = positionRankings['RB'] || 12
   const wrRank = positionRankings['WR'] || 12
@@ -118,9 +120,9 @@ export function TeamCard({
         <td className="p-3 text-center">
           <Badge
             variant="outline"
-            className={`${getTierColor(contenderTier)} font-mono text-xs px-3 py-1 border`}
+            className={`${stateBadgeClass} font-mono text-xs px-3 py-1 border`}
           >
-            {contenderTier}
+            {stateMeta?.label ?? '—'}
           </Badge>
         </td>
         <td className="p-3 text-center">
@@ -213,9 +215,9 @@ export function TeamCard({
           </div>
           <Badge
             variant="outline"
-            className={`${getTierColor(contenderTier)} font-mono text-xs px-1.5 py-0.5 border flex-shrink-0`}
+            className={`${stateBadgeClass} font-mono text-xs px-1.5 py-0.5 border flex-shrink-0`}
           >
-            {contenderTier}
+            {stateMeta?.label ?? '—'}
           </Badge>
         </div>
 

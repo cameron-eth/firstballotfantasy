@@ -20,7 +20,7 @@ import type {
   TeamData,
 } from './types'
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
-import { calculateLeaguePlacements, COMPETITIVE_STATES } from './competitiveState'
+import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
 import { CompetitiveStateMap } from './CompetitiveStateMap'
 
 const GRADE_COLORS = {
@@ -44,6 +44,13 @@ const POSITION_STRENGTH_COLOR = (score: number) => {
   if (score >= 60) return 'bg-yellow-400'
   if (score >= 40) return 'bg-orange-400'
   return 'bg-red-500'
+}
+
+function rankTextColor(rank: number, leagueSize: number): string {
+  if (rank <= 0) return 'text-slate-500'
+  if (rank <= Math.ceil(leagueSize / 4)) return 'text-emerald-400'
+  if (rank <= Math.ceil(leagueSize / 2)) return 'text-yellow-400'
+  return 'text-orange-400'
 }
 
 function getRecentFormIcon(form: string) {
@@ -85,6 +92,8 @@ interface OverviewHeaderProps {
   currentWeek: number
   teams: TeamData[]
   actions: OverviewActions
+  placements: LeaguePlacements
+  leaguePositionRankings?: Record<number, Record<string, number>>
 }
 
 export function OverviewHeader({
@@ -95,6 +104,8 @@ export function OverviewHeader({
   currentWeek,
   teams,
   actions,
+  placements,
+  leaguePositionRankings = {},
 }: OverviewHeaderProps) {
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
@@ -123,14 +134,20 @@ export function OverviewHeader({
   // Rank among sorted teams
   const leagueRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
-  // Competitive-state placements (Now × Future), relative to the league
-  const placements = calculateLeaguePlacements(teams, !isOffSeason())
+  // Competitive-state placement (Now × Future), relative to the league
   const selectedPlacement = placements.placements[selectedTeam.rosterId]
   const stateMeta = selectedPlacement ? COMPETITIVE_STATES[selectedPlacement.state] : null
 
   // Win %
   const totalGames = selectedTeam.wins + selectedTeam.losses
   const winPct = totalGames > 0 ? ((selectedTeam.wins / totalGames) * 100).toFixed(0) : '—'
+
+  // League averages, for "you vs the league" comparisons
+  const avgPointsFor = teams.reduce((sum, t) => sum + t.pointsFor, 0) / (leagueSize || 1)
+  const avgPointsAgainst = teams.reduce((sum, t) => sum + t.pointsAgainst, 0) / (leagueSize || 1)
+  const avgMoves = teams.reduce((sum, t) => sum + t.totalMoves, 0) / (leagueSize || 1)
+
+  const myPositionRanks = leaguePositionRankings[selectedTeam.rosterId] ?? {}
 
   return (
     <Card className="bg-slate-800 border-slate-700 overflow-hidden">
@@ -279,6 +296,35 @@ export function OverviewHeader({
           </div>
         </div>
 
+        {/* You vs. League Average */}
+        <div className="grid grid-cols-3 gap-px bg-slate-700/30 rounded-lg overflow-hidden mb-4">
+          {[
+            { label: 'Points For', value: selectedTeam.pointsFor, avg: avgPointsFor, higherIsBetter: true },
+            { label: 'Points Against', value: selectedTeam.pointsAgainst, avg: avgPointsAgainst, higherIsBetter: false },
+            { label: 'Moves', value: selectedTeam.totalMoves, avg: avgMoves, higherIsBetter: true },
+          ].map(({ label, value, avg, higherIsBetter }) => {
+            const delta = value - avg
+            const isGood = higherIsBetter ? delta >= 0 : delta <= 0
+            return (
+              <div key={label} className="bg-slate-800/80 px-3 py-2">
+                <div className="text-slate-500 text-[9px] font-mono uppercase mb-0.5">{label}</div>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-slate-200 text-base font-black font-mono">
+                    {value.toFixed(label === 'Moves' ? 0 : 1)}
+                  </span>
+                  <span className={`text-[9px] font-mono ${isGood ? 'text-emerald-400' : 'text-orange-400'}`}>
+                    {delta >= 0 ? '+' : ''}
+                    {delta.toFixed(1)} vs avg
+                  </span>
+                </div>
+                <div className="text-slate-600 text-[9px] font-mono mt-0.5">
+                  league avg {avg.toFixed(1)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
         {/* Position strength — compact inline */}
         <div className="bg-slate-900/30 rounded-lg px-4 py-2.5 mb-4 border border-slate-700/30">
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
@@ -288,6 +334,7 @@ export function OverviewHeader({
             <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5">
               {(['QB', 'RB', 'WR', 'TE'] as const).map((pos) => {
                 const score = posStrengths?.[pos] ?? 0
+                const rank = myPositionRanks[pos]
                 return (
                   <div key={pos} className="flex items-center gap-2">
                     <span className="text-slate-500 text-[10px] font-mono w-5 flex-shrink-0">{pos}</span>
@@ -298,6 +345,13 @@ export function OverviewHeader({
                       />
                     </div>
                     <span className="text-slate-400 text-[10px] font-mono font-bold w-5 text-right flex-shrink-0">{score}</span>
+                    {rank ? (
+                      <span className={`text-[9px] font-mono font-bold w-7 text-right flex-shrink-0 ${rankTextColor(rank, leagueSize)}`}>
+                        #{rank}
+                      </span>
+                    ) : (
+                      <span className="w-7 flex-shrink-0" />
+                    )}
                   </div>
                 )
               })}

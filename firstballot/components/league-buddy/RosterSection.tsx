@@ -228,11 +228,14 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
               variant="outline"
               className="text-[10px] text-muted-foreground border-border ml-auto"
             >
-              Signals based on age/rank — accumulate daily KTC data for trend signals
+              Signals based on production value (P/E) and age — accumulate daily KTC data for trend signals too
             </Badge>
           )}
         </div>
-        <TradeIntelligencePanel players={selectedTeam.players} />
+        <TradeIntelligencePanel
+          players={selectedTeam.players}
+          leaguePlayerPool={teams.flatMap((t) => t.players)}
+        />
       </div>
 
       {/* Roster Scorecard */}

@@ -36,6 +36,7 @@ export interface CompetitiveStateMeta {
   text: string // tailwind text color
   border: string // tailwind border color
   bg: string // tailwind background tint
+  plan: string[] // recommended actions for a team in this state
 }
 
 export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMeta> = {
@@ -48,6 +49,12 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     text: 'text-yellow-400',
     border: 'border-yellow-400/40',
     bg: 'bg-yellow-400/10',
+    plan: [
+      'Press the advantage — target other contenders\' aging vets while your window is wide open',
+      'Avoid trading future picks away; you don\'t need to mortgage the future to win now',
+      'Use your depth as trade capital to plug the one or two weakest starting spots',
+      'Don\'t get complacent on the waiver wire — marginal upgrades compound over a long window',
+    ],
   },
   contender: {
     key: 'contender',
@@ -58,36 +65,60 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     text: 'text-blue-400',
     border: 'border-blue-400/40',
     bg: 'bg-blue-400/10',
+    plan: [
+      'Sell future picks for proven win-now production — your aging core has a shrinking shelf life',
+      'Target rebuilding teams\' aging starters at a discount before their value cliff hits',
+      'Prioritize depth at your thinnest starting position over speculative youth',
+      'Don\'t hoard rookie picks you won\'t be competitive enough to use',
+    ],
   },
   'house-money': {
     key: 'house-money',
-    label: 'House Money',
+    label: 'Pretender',
     tagline: 'Punching above your roster',
     description: 'Your record is outrunning your roster value. Everything from here is a bonus — sell high or ride it.',
     accent: '#c084fc',
     text: 'text-purple-400',
     border: 'border-purple-400/40',
     bg: 'bg-purple-400/10',
+    plan: [
+      'Sell high on any player whose value has spiked past what their long-term outlook supports',
+      'Be honest about roster construction — a good record can mask real depth problems',
+      'Target future picks in trades rather than more short-term rentals',
+      'Don\'t buy into your own hype — bolster the roster like a team that expects to regress',
+    ],
   },
   rebuild: {
     key: 'rebuild',
-    label: 'Rebuild',
+    label: 'Rebuilder',
     tagline: 'Young and ascending',
     description: 'Light on win-now value but rich in youth. Stockpile picks, develop, and time the leap.',
     accent: '#22d3ee',
     text: 'text-cyan-400',
     border: 'border-cyan-400/40',
     bg: 'bg-cyan-400/10',
+    plan: [
+      'Trade aging win-now vets to contenders while their value is still high',
+      'Stockpile future draft picks — they\'re your cheapest path to more young assets',
+      'Be patient with your young core; don\'t panic-trade after a slow start',
+      'Avoid overpaying for short-term rentals that don\'t extend your competitive window',
+    ],
   },
   purgatory: {
     key: 'purgatory',
-    label: 'Purgatory',
+    label: 'Fringe Team',
     tagline: 'Stuck in the middle',
     description: 'Not strong enough to contend, not young enough to rebuild. Pick a direction and commit.',
     accent: '#f87171',
     text: 'text-red-400',
     border: 'border-red-400/40',
     bg: 'bg-red-400/10',
+    plan: [
+      'Pick a direction — half-measures keep you stuck here longest',
+      'Audit your core\'s remaining window; if it\'s under 2 years, lean toward rebuilding',
+      'Sell aging assets before they decline further, even at a discount',
+      'Avoid speculative "sidegrade" trades that don\'t clearly push you toward contending or rebuilding',
+    ],
   },
 }
 

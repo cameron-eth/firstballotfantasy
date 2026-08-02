@@ -3,12 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { TeamData } from './types'
 import { TeamCard } from './TeamCard'
-import { getContenderTier, getTierColor, getRankColor } from './utils'
+import { getRankColor } from './utils'
+import type { LeaguePlacements } from './competitiveState'
 
 interface LeagueStandingsSectionProps {
   teams: TeamData[]
   selectedTeam: TeamData
   leaguePositionRankings: Record<number, Record<string, number>>
+  placements: LeaguePlacements
   onTeamSelect: (team: TeamData) => void
 }
 
@@ -16,6 +18,7 @@ export function LeagueStandingsSection({
   teams,
   selectedTeam,
   leaguePositionRankings,
+  placements,
   onTeamSelect,
 }: LeagueStandingsSectionProps) {
   const sortedTeams = [...teams].sort((a, b) => {
@@ -74,8 +77,7 @@ export function LeagueStandingsSection({
                   isSelected={team.rosterId === selectedTeam.rosterId}
                   onSelect={onTeamSelect}
                   positionRankings={teamRankings}
-                  getContenderTier={getContenderTier}
-                  getTierColor={getTierColor}
+                  placement={placements.placements[team.rosterId]}
                   getRankColor={getRankColor}
                   variant="compact"
                 />

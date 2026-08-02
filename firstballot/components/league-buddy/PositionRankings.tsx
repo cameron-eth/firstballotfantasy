@@ -6,12 +6,14 @@ import { UserAvatar } from '@/components/user-avatar'
 import { Trophy } from 'lucide-react'
 import { TeamCard } from './TeamCard'
 import type { TeamData } from './types'
-import { getContenderTier, getTierColor, getRankColor } from './utils'
+import { getRankColor } from './utils'
+import type { LeaguePlacements } from './competitiveState'
 
 interface PositionRankingsProps {
   teams: TeamData[]
   selectedTeam: TeamData | null
   leaguePositionRankings: Record<number, Record<string, number>>
+  placements: LeaguePlacements
   onTeamSelect: (team: TeamData) => void
 }
 
@@ -19,6 +21,7 @@ export function PositionRankings({
   teams,
   selectedTeam,
   leaguePositionRankings,
+  placements,
   onTeamSelect,
 }: PositionRankingsProps) {
   const sortedTeams = [...teams].sort((a, b) => {
@@ -52,7 +55,7 @@ export function PositionRankings({
                       Team
                     </th>
                     <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[120px]">
-                      Contender Tier
+                      State
                     </th>
                     <th className="text-center p-3 text-slate-200 font-mono text-sm min-w-[100px]">
                       Starter Rank
@@ -97,8 +100,7 @@ export function PositionRankings({
                           isSelected={selectedTeam?.rosterId === team.rosterId}
                           onSelect={onTeamSelect}
                           positionRankings={teamRankings}
-                          getContenderTier={getContenderTier}
-                          getTierColor={getTierColor}
+                          placement={placements.placements[team.rosterId]}
                           getRankColor={getRankColor}
                           variant="desktop"
                         />
@@ -124,8 +126,7 @@ export function PositionRankings({
                   isSelected={selectedTeam?.rosterId === team.rosterId}
                   onSelect={onTeamSelect}
                   positionRankings={teamRankings}
-                  getContenderTier={getContenderTier}
-                  getTierColor={getTierColor}
+                  placement={placements.placements[team.rosterId]}
                   getRankColor={getRankColor}
                   variant="mobile"
                 />

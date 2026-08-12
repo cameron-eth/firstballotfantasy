@@ -16,7 +16,6 @@ import {
   getTierFromRank,
   calculateRawScore,
   calculateGradeFromPercentile,
-  calculateTeamTrends,
   calculatePositionStrengths,
   calculateRecentForm,
   getOpponentInfo,
@@ -32,7 +31,6 @@ interface UseLeagueDataReturn {
   leagueOverview: LeagueOverview | null
   currentMatchups: MatchupData[]
   currentWeek: number
-  nflSchedule: any[]
   nflGames: Record<string, { opponent: string; isHome: boolean }>
   allPlayers: Record<string, any>
   playerRankings: Record<string, any>
@@ -85,7 +83,6 @@ interface LeagueDataBundle {
   leagueOverview: LeagueOverview | null
   currentMatchups: MatchupData[]
   currentWeek: number
-  nflSchedule: any[]
   nflGames: Record<string, { opponent: string; isHome: boolean }>
   allPlayers: Record<string, any>
   playerRankings: Record<string, any>
@@ -98,46 +95,6 @@ function getUserId(user: unknown): string | undefined {
   if (!user || typeof user !== 'object') return undefined
   const maybeUserId = (user as { user_id?: unknown }).user_id
   return typeof maybeUserId === 'string' ? maybeUserId : undefined
-}
-
-function getFallbackNflSchedule(week: number) {
-  const nflSchedule2024: Record<number, Record<string, { opponent: string; isHome: boolean }>> = {
-    1: {
-      BAL: { opponent: 'KC', isHome: true },
-      BUF: { opponent: 'ARI', isHome: true },
-      CIN: { opponent: 'NE', isHome: true },
-      CLE: { opponent: 'DAL', isHome: true },
-      DEN: { opponent: 'SEA', isHome: true },
-      HOU: { opponent: 'IND', isHome: true },
-      IND: { opponent: 'HOU', isHome: false },
-      JAX: { opponent: 'MIA', isHome: true },
-      KC: { opponent: 'BAL', isHome: false },
-      LV: { opponent: 'LAC', isHome: true },
-      LAC: { opponent: 'LV', isHome: false },
-      MIA: { opponent: 'JAX', isHome: false },
-      NE: { opponent: 'CIN', isHome: false },
-      NYJ: { opponent: 'SF', isHome: true },
-      PIT: { opponent: 'ATL', isHome: true },
-      TEN: { opponent: 'CHI', isHome: true },
-      ARI: { opponent: 'BUF', isHome: false },
-      ATL: { opponent: 'PIT', isHome: false },
-      CAR: { opponent: 'NO', isHome: true },
-      CHI: { opponent: 'TEN', isHome: false },
-      DAL: { opponent: 'CLE', isHome: false },
-      DET: { opponent: 'LAR', isHome: true },
-      GB: { opponent: 'MIN', isHome: true },
-      LAR: { opponent: 'DET', isHome: false },
-      MIN: { opponent: 'GB', isHome: false },
-      NO: { opponent: 'CAR', isHome: false },
-      NYG: { opponent: 'WAS', isHome: true },
-      PHI: { opponent: 'TB', isHome: true },
-      SF: { opponent: 'NYJ', isHome: false },
-      SEA: { opponent: 'DEN', isHome: false },
-      TB: { opponent: 'PHI', isHome: false },
-      WAS: { opponent: 'NYG', isHome: false },
-    },
-  }
-  return nflSchedule2024[week] || {}
 }
 
 async function fetchWeekSchedule(week: number): Promise<any[]> {
@@ -356,9 +313,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     })
   }
 
-  const nflGamesMap: Record<string, { opponent: string; isHome: boolean }> = {
-    ...getFallbackNflSchedule(week),
-  }
+  const nflGamesMap: Record<string, { opponent: string; isHome: boolean }> = {}
   if (Array.isArray(nflScheduleData) && nflScheduleData.length > 0) {
         nflScheduleData.forEach((game: any) => {
           if (game.home_team && game.away_team) {
@@ -425,7 +380,6 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
           .filter(Boolean) as PlayerData[]
 
         const rawScore = calculateRawScore(players)
-      const currentMatchup = matchups?.find((m) => m.roster_id === roster.roster_id)
 
         return {
           rosterId: roster.roster_id,
@@ -442,9 +396,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
           gradeScore: rawScore,
           players,
           starters: roster.starters || [],
-        trends: calculateTeamTrends(players),
         positionStrengths: calculatePositionStrengths(players),
-        currentWeekProjection: currentMatchup?.points || 0,
           waiverPosition: roster.settings?.waiver_position || 0,
           totalMoves: roster.settings?.total_moves || 0,
         recentForm: calculateRecentForm(roster, matchups),
@@ -600,7 +552,6 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     },
     currentMatchups: matchupData,
     currentWeek: week,
-    nflSchedule: nflScheduleData,
     nflGames: nflGamesMap,
     allPlayers: enhancedPlayers,
     playerRankings: rankingsMap,
@@ -623,7 +574,6 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
   const leagueOverview = data?.leagueOverview ?? null
   const currentMatchups = data?.currentMatchups ?? []
   const currentWeek = data?.currentWeek ?? 1
-  const nflSchedule = data?.nflSchedule ?? []
   const nflGames = data?.nflGames ?? {}
   const allPlayers = data?.allPlayers ?? {}
   const playerRankings = data?.playerRankings ?? {}
@@ -656,7 +606,6 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
     leagueOverview,
     currentMatchups,
     currentWeek,
-    nflSchedule,
     nflGames,
     allPlayers,
     playerRankings,

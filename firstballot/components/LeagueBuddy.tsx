@@ -30,10 +30,9 @@ import { PositionRankings } from './league-buddy/PositionRankings'
 import { LeagueStandingsSection } from './league-buddy/LeagueStandingsSection'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { LeagueBuddySidebar } from './league-buddy/LeagueBuddySidebar'
-import { OverviewHeader } from './league-buddy/OverviewHeader'
+import { OverviewHeader, type OverviewRankings } from './league-buddy/OverviewHeader'
 import { TradeIntelligencePanel } from './league-buddy/TradeIntelligencePanel'
 import { AuditSection } from './league-buddy/AuditSection'
-import { StatusStrip } from './league-buddy/StatusStrip'
 import { LeagueActivityFeed } from './league-buddy/LeagueActivityFeed'
 import { TrendingPlayersWidget } from './league-buddy/TrendingPlayersWidget'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
@@ -132,6 +131,15 @@ export default function LeagueBuddy({
   const handlePlayoffOddsClick = useCallback(() => {
     router.push(`/playoff-odds?leagueId=${leagueId}`)
   }, [router, leagueId])
+
+  const overviewRankings = useMemo<OverviewRankings>(
+    () => ({
+      playerRankings,
+      placements: leaguePlacements,
+      positionRankings: leaguePositionRankings,
+    }),
+    [playerRankings, leaguePlacements, leaguePositionRankings]
+  )
 
   const overviewActions = useMemo<OverviewActions>(
     () => ({
@@ -445,24 +453,24 @@ export default function LeagueBuddy({
           {/* OVERVIEW SECTION */}
           {activeSection === 'overview' && selectedTeam && leagueOverview && (
             <>
-              <StatusStrip
-                team={selectedTeam}
-                rosterPositions={rosterPositions}
-                currentWeek={currentWeek}
-                onGoToAudit={() => setActiveSection('audit')}
-              />
-
               <OverviewHeader
                 selectedTeam={selectedTeam}
                 sortedTeams={sortedTeams}
-                playerRankings={playerRankings}
                 currentMatchups={currentMatchups}
                 currentWeek={currentWeek}
                 teams={teams}
                 actions={overviewActions}
-                placements={leaguePlacements}
-                leaguePositionRankings={leaguePositionRankings}
+                rankings={overviewRankings}
               />
+
+              <div className="mt-6">
+                <PowerRankingsView
+                  teams={teams}
+                  selectedTeam={selectedTeam}
+                  rosterPositionsRaw={rosterPositionsRaw}
+                  onTeamSelect={handleTeamSelect}
+                />
+              </div>
 
               {/* Trade Intelligence — Sell High / Hold / Buy Low */}
               <div className="mt-6">
@@ -489,16 +497,6 @@ export default function LeagueBuddy({
               </div>
 
             </>
-          )}
-
-          {/* POWER RANKINGS SECTION */}
-          {activeSection === 'power' && (
-            <PowerRankingsView
-              teams={teams}
-              selectedTeam={selectedTeam}
-              rosterPositionsRaw={rosterPositionsRaw}
-              onTeamSelect={handleTeamSelect}
-            />
           )}
 
           {/* ROSTER SECTION */}

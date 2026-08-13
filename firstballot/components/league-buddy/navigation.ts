@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardList, Eye, Target, Trophy, Users, type LucideIcon } from 'lucide-react'
+import { ClipboardList, Eye, Target, Trophy, Users, type LucideIcon } from 'lucide-react'
 import type { LeagueSection } from './types'
 
 export interface LeagueSectionNavItem {
@@ -13,7 +13,6 @@ export interface LeagueSectionNavItem {
 export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: Target },
   { id: 'roster', label: 'My Team', shortLabel: 'Team', icon: Users },
-  { id: 'power', label: 'Power Rankings', shortLabel: 'Power', icon: BarChart3 },
   { id: 'league', label: 'League', shortLabel: 'League', icon: Trophy },
   { id: 'audit', label: 'Audit', shortLabel: 'Audit', icon: ClipboardList },
 ]

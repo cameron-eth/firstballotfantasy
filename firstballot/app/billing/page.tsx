@@ -292,8 +292,8 @@ function BillingSimpleContent() {
 
                   <CardContent className="space-y-4">
                     <ul className="space-y-3">
-                      {plan.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-center space-x-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-center space-x-3">
                           <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
                           <span className="text-gray-300 text-sm">{feature}</span>
                         </li>

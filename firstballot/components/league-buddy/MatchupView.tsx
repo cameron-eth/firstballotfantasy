@@ -51,7 +51,7 @@ export function MatchupView({
     if (toughDefenses.includes(opponentTeam)) return 'Tough'
     if (eliteMatchups.includes(opponentTeam)) return 'Elite'
     if (goodMatchups.includes(opponentTeam)) return 'Good'
-    return Math.random() > 0.5 ? 'Great' : 'Average'
+    return 'Average'
   }
 
   const getRatingColor = (rating: string) => {

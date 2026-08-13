@@ -84,28 +84,31 @@ function RecentFormPips({ form }: { form: string }) {
   )
 }
 
+/** The three league-wide ranking inputs the header reads, grouped into one prop. */
+export interface OverviewRankings {
+  playerRankings: PlayerRankingsMap
+  placements: LeaguePlacements
+  positionRankings?: Record<number, Record<string, number>>
+}
+
 interface OverviewHeaderProps {
   selectedTeam: TeamData
   sortedTeams: TeamData[]
-  playerRankings: PlayerRankingsMap
   currentMatchups: MatchupData[]
   currentWeek: number
   teams: TeamData[]
   actions: OverviewActions
-  placements: LeaguePlacements
-  leaguePositionRankings?: Record<number, Record<string, number>>
+  rankings: OverviewRankings
 }
 
 export function OverviewHeader({
   selectedTeam,
   sortedTeams,
-  playerRankings,
   currentMatchups,
   currentWeek,
   teams,
   actions,
-  placements,
-  leaguePositionRankings = {},
+  rankings,
 }: OverviewHeaderProps) {
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
@@ -135,6 +138,7 @@ export function OverviewHeader({
   const leagueRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
   // Competitive-state placement (Now × Future), relative to the league
+  const { playerRankings, placements, positionRankings = {} } = rankings
   const selectedPlacement = placements.placements[selectedTeam.rosterId]
   const stateMeta = selectedPlacement ? COMPETITIVE_STATES[selectedPlacement.state] : null
 
@@ -147,7 +151,7 @@ export function OverviewHeader({
   const avgPointsAgainst = teams.reduce((sum, t) => sum + t.pointsAgainst, 0) / (leagueSize || 1)
   const avgMoves = teams.reduce((sum, t) => sum + t.totalMoves, 0) / (leagueSize || 1)
 
-  const myPositionRanks = leaguePositionRankings[selectedTeam.rosterId] ?? {}
+  const myPositionRanks = positionRankings[selectedTeam.rosterId] ?? {}
 
   return (
     <Card className="bg-slate-800 border-slate-700 overflow-hidden">
@@ -233,18 +237,7 @@ export function OverviewHeader({
           )}
         </div>
 
-        {/* ════ TIER 2 · PRIMARY SIGNAL: franchise outlook ════ */}
-        {selectedPlacement && (
-          <div className="mb-4">
-            <CompetitiveStateMap
-              placements={placements}
-              teams={teams}
-              selectedRosterId={selectedTeam.rosterId}
-            />
-          </div>
-        )}
-
-        {/* ════ TIER 3 · SUPPORTING EVIDENCE ════ */}
+        {/* ════ TIER 2 · TEAM VITALS ════ */}
         <div className="grid grid-cols-3 gap-px bg-slate-700/30 rounded-lg overflow-hidden mb-2">
           {/* Dynasty Rank */}
           <div className="bg-slate-800/80 px-3 py-2">
@@ -358,6 +351,17 @@ export function OverviewHeader({
             </div>
           </div>
         </div>
+
+        {/* ════ TIER 3 · LEAGUE CONTEXT: franchise outlook ════ */}
+        {selectedPlacement && (
+          <div className="mb-4">
+            <CompetitiveStateMap
+              placements={placements}
+              teams={teams}
+              selectedRosterId={selectedTeam.rosterId}
+            />
+          </div>
+        )}
 
         {/* ════ TIER 4 · ACTIONS ════ */}
         <div className="flex flex-wrap gap-2 mb-4">

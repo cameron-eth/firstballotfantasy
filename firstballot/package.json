@@ -10,7 +10,9 @@
     "start": "next start",
     "test": "node --test tests/frontend-guard.test.mjs",
     "type-check": "tsc --noEmit",
-    "type-check:emit": "tsc"
+    "type-check:emit": "tsc",
+    "react-doctor": "node scripts/react-doctor.mjs",
+    "ci": "npm run type-check && npm run react-doctor && npm test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

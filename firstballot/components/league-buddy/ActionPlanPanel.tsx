@@ -33,8 +33,8 @@ export function ActionPlanPanel({ placement }: ActionPlanPanelProps) {
       <div className="p-4 space-y-3">
         <p className="text-sm text-muted-foreground">{stateMeta.description}</p>
         <ul className="space-y-2">
-          {stateMeta.plan.map((item, idx) => (
-            <li key={idx} className="flex items-start gap-2 text-sm text-foreground">
+          {stateMeta.plan.map((item) => (
+            <li key={item} className="flex items-start gap-2 text-sm text-foreground">
               <span className={`mt-1.5 h-1.5 w-1.5 rounded-full ${stateMeta.bg} border ${stateMeta.border} flex-shrink-0`} />
               {item}
             </li>

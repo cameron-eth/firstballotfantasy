@@ -10,7 +10,7 @@ export interface LeagueBuddyProps {
   onLeagueChange?: (leagueId: string) => void
 }
 
-export type LeagueSection = 'overview' | 'roster' | 'league' | 'audit'
+export type LeagueSection = 'overview' | 'roster' | 'power' | 'league' | 'audit'
 
 export interface PlayerRankingSummary {
   rank: number
@@ -57,9 +57,7 @@ export interface TeamData {
   gradeScore: number
   players: PlayerData[]
   starters: string[] // Sleeper player IDs of starters from roster
-  trends: TeamTrends
   positionStrengths: PositionStrengths
-  currentWeekProjection?: number
   waiverPosition: number
   totalMoves: number
   recentForm: string
@@ -103,15 +101,6 @@ export interface PlayerData {
   ktcValueSf?: number // Latest KTC SF value
   ktcValue1qb?: number // Latest KTC 1QB value
   ktcTrendDelta?: number // Change in KTC SF value over the history window
-}
-
-export interface TeamTrends {
-  recentForm: string
-  winStreak: number
-  avgPointsLast4: number
-  bestPlayer: PlayerData
-  breakoutCandidate: PlayerData
-  sleeperPick: PlayerData
 }
 
 export interface PositionStrengths {

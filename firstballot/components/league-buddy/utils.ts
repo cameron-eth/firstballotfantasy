@@ -1,24 +1,16 @@
 // Utility functions for LeagueBuddy component
-import type { PlayerData, TeamTrends, PositionStrengths, TeamData, SleeperTransaction } from './types'
+import type { PlayerData, PositionStrengths, TeamData, SleeperTransaction } from './types'
 import type { LeaguePlacements } from './competitiveState'
+import { CORE_POSITIONS, playerValue, type ValuationContext } from '@/lib/sleeper-sdk'
 
-// Utility functions for data validation and processing
-export const validateApiResponse = (response: Response, endpoint: string): boolean => {
-  if (!response.ok) {
-    console.error(`API Error for ${endpoint}:`, response.status, response.statusText)
-    return false
-  }
-  return true
-}
+/** This app is dynasty-superflex first, so QB scarcity is priced into every valuation. */
+const VALUATION_CTX: ValuationContext = { superflex: true }
 
-export const safeJsonParse = async (response: Response): Promise<any> => {
-  try {
-    return await response.json()
-  } catch (error) {
-    console.error('JSON parsing error:', error)
-    return null
-  }
-}
+/** Top N assets that define a roster's value profile. */
+const CORE_DEPTH = 12
+
+/** Top of the value scale a single position group is measured against. */
+const POSITION_VALUE_CEILING = 9999
 
 export const getTierFromRank = (rank: number): string => {
   if (!rank || rank <= 0) return 'Tier 4'
@@ -28,23 +20,22 @@ export const getTierFromRank = (rank: number): string => {
   return 'Tier 4'
 }
 
+/** Core assets that define a roster's value, best first. */
+const coreAssets = (players: PlayerData[], depth = CORE_DEPTH): PlayerData[] =>
+  players
+    .filter((p) => (CORE_POSITIONS as readonly string[]).includes(p.position?.toUpperCase() ?? ''))
+    .sort((a, b) => playerValue(b, VALUATION_CTX) - playerValue(a, VALUATION_CTX))
+    .slice(0, depth)
+
+/**
+ * A roster's raw strength on the SDK's dynasty value scale: the summed value of its top
+ * core assets, divided by 100 so the number reads like a score rather than a KTC total.
+ * Feeds the percentile grade, so only the relative ordering matters.
+ */
 export const calculateRawScore = (players: PlayerData[]): number => {
   if (!players || players.length === 0) return 0
-
-  const tier1Count = players.filter((p) => p.tier === 'Tier 1').length
-  const tier2Count = players.filter((p) => p.tier === 'Tier 2').length
-  const avgRank = players.reduce((sum, p) => sum + (p.rank || 999) / players.length, 0)
-  const youngPlayers = players.filter((p) => p.age && p.age <= 25).length
-  const experiencedPlayers = players.filter((p) => p.experience && p.experience >= 3).length
-
-  let score = 0
-  score += tier1Count * 15
-  score += tier2Count * 10
-  score += Math.max(0, 100 - avgRank)
-  score += youngPlayers * 2
-  score += experiencedPlayers * 1
-
-  return Math.max(0, score) // Ensure non-negative score
+  const total = coreAssets(players).reduce((sum, p) => sum + playerValue(p, VALUATION_CTX), 0)
+  return Math.round(total / 100)
 }
 
 export const calculateGradeFromPercentile = (
@@ -73,67 +64,26 @@ export const calculateGradeFromPercentile = (
   return { letter, score: Math.round(percentile) }
 }
 
-export const calculateTeamTrends = (players: PlayerData[]): TeamTrends => {
-  if (!players || players.length === 0) {
-    const emptyPlayer: PlayerData = {
-      playerId: '',
-      playerName: 'No Players',
-      position: 'N/A',
-      team: 'N/A',
-      rank: 999,
-      tier: 'Tier 4',
-      age: 0,
-      experience: 0,
-      status: 'Inactive',
-    }
-    return {
-      recentForm: 'N/A',
-      winStreak: 0,
-      avgPointsLast4: 0,
-      bestPlayer: emptyPlayer,
-      breakoutCandidate: emptyPlayer,
-      sleeperPick: emptyPlayer,
-    }
-  }
-
-  const sortedByRank = [...players].sort((a, b) => (a.rank || 999) - (b.rank || 999))
-  const youngPlayers = players.filter((p) => p.age && p.age <= 23)
-  const breakoutCandidates = youngPlayers
-    .filter((p) => (p.rank || 999) <= 10)
-    .sort((a, b) => (a.rank || 999) - (b.rank || 999))
-
-  return {
-    recentForm: 'Hot', // Placeholder
-    winStreak: 3, // Placeholder
-    avgPointsLast4: 125.5, // Placeholder
-    bestPlayer: sortedByRank[0] || players[0],
-    breakoutCandidate: breakoutCandidates[0] || players[0],
-    sleeperPick: players.find((p) => (p.rank || 999) > 10 && p.age <= 25) || players[0],
-  }
-}
-
 /**
- * Score the top-N players at each position using their rank.
- * rank 1 → 100 pts, rank 200+ → ~0 pts. Normalized to 0–100 output.
+ * 0–100 strength per position: the average dynasty value of the players who would
+ * actually start there, measured against an elite asset. A team whose top two RBs are
+ * both consensus RB1s scores near 100; a team starting waiver bodies scores near 0.
  */
 export const calculatePositionStrengths = (players: PlayerData[]): PositionStrengths => {
-  // How many starters to consider per position (dynasty SF context)
+  // How many players carry the position in a dynasty superflex lineup.
   const starterSlots: Record<string, number> = { QB: 2, RB: 4, WR: 4, TE: 2 }
 
   function positionScore(pos: string): number {
     const posPlayers = players
-      .filter((p) => p.position?.toUpperCase() === pos && (p.rank ?? 999) < 999)
-      .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999))
+      .filter((p) => p.position?.toUpperCase() === pos)
+      .map((p) => playerValue(p, VALUATION_CTX))
+      .sort((a, b) => b - a)
       .slice(0, starterSlots[pos] ?? 3)
 
     if (posPlayers.length === 0) return 0
 
-    // Each rank maps to a score: rank 1=100, rank 300=0 (linear decay)
-    const rankCap = 300
-    const rawScores = posPlayers.map((p) => Math.max(0, (rankCap - (p.rank ?? rankCap)) / rankCap * 100))
-    const avg = rawScores.reduce((s, v) => s + v, 0) / rawScores.length
-
-    return Math.round(avg)
+    const avg = posPlayers.reduce((sum, value) => sum + value, 0) / posPlayers.length
+    return Math.min(100, Math.round((avg / POSITION_VALUE_CEILING) * 100))
   }
 
   return {
@@ -189,168 +139,88 @@ export const getRankColor = (rank: number): string => {
   return 'bg-red-900/70 text-red-100 border-red-700/40'
 }
 
-// League position ranking calculations
+/** Players a position group is judged on: one QB, two of every skill position. */
+const POSITION_GROUP_DEPTH: Record<string, number> = { QB: 1, RB: 2, WR: 2, TE: 2 }
+
+/** Values at a position, best first. */
+function positionValues(team: TeamData, position: string): number[] {
+  return (team.players ?? [])
+    .filter((p) => p?.position?.toUpperCase() === position)
+    .map((p) => playerValue(p, VALUATION_CTX))
+    .sort((a, b) => b - a)
+}
+
+/**
+ * Ranks every team 1..N at each position group and at FLEX, by summed dynasty value —
+ * so a team's QB rank reflects what its starter is actually worth, not where a consensus
+ * list happens to place him. FLEX is the best skill player left over once each position
+ * group's starters are accounted for, which is exactly who fills the slot.
+ */
 export const calculateLeaguePositionRankings = (
   sortedTeams: TeamData[]
 ): Record<string, Record<string, number>> => {
   if (!sortedTeams || sortedTeams.length === 0) return {}
 
-  const positions = ['QB', 'RB', 'WR', 'TE']
-  const teamPositionScores: Record<string, Record<string, number>> = {}
+  const positions = Object.keys(POSITION_GROUP_DEPTH)
+  const teamScores: Record<number, Record<string, number>> = {}
 
-  // Calculate position scores for each team
-  sortedTeams.forEach((team) => {
-    if (!team || !team.rosterId || !team.players) return
+  for (const team of sortedTeams) {
+    if (!team?.rosterId) continue
+    const scores: Record<string, number> = {}
 
-    teamPositionScores[team.rosterId] = {}
+    for (const position of positions) {
+      const values = positionValues(team, position)
+      scores[position] = values
+        .slice(0, POSITION_GROUP_DEPTH[position])
+        .reduce((sum, value) => sum + value, 0)
+    }
 
-    positions.forEach((position) => {
-      const positionPlayers = team.players.filter((p) => p && p.position && p.position === position)
-      if (positionPlayers.length === 0) {
-        teamPositionScores[team.rosterId][position] = 999 // Worst possible score
-      } else {
-        // Use best player rank for QB, average of top 2 for skill positions
-        const sortedRanks = positionPlayers.map((p) => p.rank || 999).sort((a, b) => a - b)
-        if (position === 'QB') {
-          teamPositionScores[team.rosterId][position] = sortedRanks[0]
-        } else {
-          // Average of top 2 players for RB/WR/TE
-          teamPositionScores[team.rosterId][position] =
-            (sortedRanks[0] + (sortedRanks[1] || sortedRanks[0])) / 2
-        }
-      }
-    })
+    scores.FLEX = Math.max(
+      0,
+      ...['RB', 'WR', 'TE'].map(
+        (position) => positionValues(team, position)[POSITION_GROUP_DEPTH[position]] ?? 0
+      )
+    )
 
-    // FLEX is based on overall team grade score
-    teamPositionScores[team.rosterId]['FLEX'] = Math.max(0, 100 - (team.gradeScore || 0))
-  })
+    teamScores[team.rosterId] = scores
+  }
 
-  // Rank teams by position (1 = best position group in league)
+  // Rank each category, highest value first (1 = best position group in the league).
   const positionRankings: Record<string, Record<string, number>> = {}
 
-  const allPositions = [...positions, 'FLEX']
-  allPositions.forEach((position) => {
-    const teamScores = sortedTeams
-      .filter((team) => team && team.rosterId && teamPositionScores[team.rosterId])
-      .map((team) => ({
-        rosterId: team.rosterId,
-        score: teamPositionScores[team.rosterId][position] || 999,
-      }))
-      .sort((a, b) => a.score - b.score) // Lower score = better rank
+  for (const category of [...positions, 'FLEX']) {
+    const ordered = Object.entries(teamScores)
+      .map(([rosterId, scores]) => ({ rosterId, score: scores[category] ?? 0 }))
+      .sort((a, b) => b.score - a.score)
 
-    teamScores.forEach((teamScore, index) => {
-      if (!positionRankings[teamScore.rosterId]) positionRankings[teamScore.rosterId] = {}
-      positionRankings[teamScore.rosterId][position] = index + 1
+    ordered.forEach((entry, index) => {
+      positionRankings[entry.rosterId] = {
+        ...(positionRankings[entry.rosterId] ?? {}),
+        [category]: index + 1,
+      }
     })
-  })
+  }
 
   return positionRankings
 }
 
-// Lineup calculation functions
 export interface OpponentInfo {
   opponentTeam: string
   isHome: boolean
-  matchupRating: string
-  gameTime: null
 }
 
+/** This week's NFL opponent for a player's team; 'BYE' when the team has no game. */
 export const getOpponentInfo = (
   player: PlayerData,
   nflGames: Record<string, { opponent: string; isHome: boolean }>
 ): OpponentInfo => {
   const gameInfo = nflGames[player.team]
 
-  if (gameInfo && gameInfo.opponent && gameInfo.opponent !== 'TBD') {
-    const { opponent, isHome } = gameInfo
-
-    const toughDefenses = ['BAL', 'SF', 'BUF', 'DAL', 'PIT', 'CLE', 'NYJ', 'PHI']
-    const eliteMatchups = ['ARI', 'CAR', 'DEN', 'LV', 'NYG', 'WAS', 'ATL', 'IND']
-    const goodMatchups = ['GB', 'KC', 'LAC', 'MIA', 'TB', 'HOU']
-
-    let matchupRating = 'Average'
-    if (toughDefenses.includes(opponent)) matchupRating = 'Tough'
-    else if (eliteMatchups.includes(opponent)) matchupRating = 'Elite'
-    else if (goodMatchups.includes(opponent)) matchupRating = 'Good'
-    else matchupRating = 'Great'
-
-    return {
-      opponentTeam: opponent,
-      isHome,
-      matchupRating,
-      gameTime: null,
-    }
+  if (gameInfo?.opponent && gameInfo.opponent !== 'TBD') {
+    return { opponentTeam: gameInfo.opponent, isHome: gameInfo.isHome }
   }
 
-  // No game info = bye week
-  return {
-    opponentTeam: 'BYE',
-    isHome: false,
-    matchupRating: 'Average',
-    gameTime: null,
-  }
-}
-
-export const calculateProjection = (player: PlayerData, matchupRating: string): number => {
-  let avgFPPG = 0
-
-  if (player.fantasy_ppg && player.fantasy_ppg > 0) {
-    avgFPPG = player.fantasy_ppg
-  } else {
-    switch (player.position) {
-      case 'QB':
-        if (player.rank <= 6) avgFPPG = 22
-        else if (player.rank <= 12) avgFPPG = 19
-        else if (player.rank <= 18) avgFPPG = 17
-        else if (player.rank <= 24) avgFPPG = 15
-        else avgFPPG = 12
-        break
-      case 'RB':
-        if (player.rank <= 12) avgFPPG = 16
-        else if (player.rank <= 24) avgFPPG = 13
-        else if (player.rank <= 36) avgFPPG = 11
-        else if (player.rank <= 48) avgFPPG = 9
-        else avgFPPG = 7
-        break
-      case 'WR':
-        if (player.rank <= 12) avgFPPG = 15
-        else if (player.rank <= 24) avgFPPG = 12
-        else if (player.rank <= 36) avgFPPG = 10
-        else if (player.rank <= 48) avgFPPG = 8
-        else avgFPPG = 6
-        break
-      case 'TE':
-        if (player.rank <= 6) avgFPPG = 12
-        else if (player.rank <= 12) avgFPPG = 9
-        else if (player.rank <= 18) avgFPPG = 7
-        else avgFPPG = 5
-        break
-      default:
-        avgFPPG = 8
-    }
-  }
-
-  let matchupModifier = 1.0
-  if (matchupRating === 'Elite') matchupModifier = 1.15
-  else if (matchupRating === 'Great') matchupModifier = 1.08
-  else if (matchupRating === 'Good') matchupModifier = 1.03
-  else if (matchupRating === 'Average') matchupModifier = 1.0
-  else if (matchupRating === 'Tough') matchupModifier = 0.88
-
-  const variance = (Math.random() * 2 - 1) * 1.2
-
-  return Math.max(0, Math.round((avgFPPG * matchupModifier + variance) * 10) / 10)
-}
-
-export interface LineupSlot {
-  position: string
-  player: PlayerData
-  slotType: 'starter' | 'flex' | 'superflex'
-}
-
-export interface BuildLineupResult {
-  lineup: LineupSlot[]
-  bench: PlayerData[]
+  return { opponentTeam: 'BYE', isHome: false }
 }
 
 export interface RosterPositions {
@@ -365,7 +235,7 @@ export interface RosterPositions {
 /**
  * Sleeper's roster_positions is a flat slot array (e.g. ['QB','RB','RB','WR','WR','TE',
  * 'FLEX','SUPER_FLEX','BN','BN',...]), not a position->count map. Tally it into counts,
- * ignoring bench/IR/taxi slots and any position buildLineup doesn't fill (K, DEF, etc).
+ * ignoring bench/IR/taxi slots and any position this model doesn't value (K, DEF, etc).
  */
 export const countRosterPositions = (positions: string[] | undefined): RosterPositions => {
   // Empty/missing input means "unknown" — return {} so callers can fall back to sane
@@ -403,121 +273,6 @@ export const isPlayerAvailable = (player: PlayerData): boolean => {
 
   // Player is available if not injured and not on bye
   return !isInjured && !isBye
-}
-
-/**
- * Prefer fantasy_ppg (points per game) when available — a more realistic proxy for
- * "who should start" than static rank. Falls back to rank when ppg data is missing,
- * and prefers a player with ppg data over one without regardless of rank.
- */
-function compareByProjection(a: PlayerData, b: PlayerData): number {
-  const aHasPpg = typeof a.fantasy_ppg === 'number' && a.fantasy_ppg > 0
-  const bHasPpg = typeof b.fantasy_ppg === 'number' && b.fantasy_ppg > 0
-  if (aHasPpg && bHasPpg) return b.fantasy_ppg! - a.fantasy_ppg!
-  if (aHasPpg !== bHasPpg) return aHasPpg ? -1 : 1
-  return (a.rank ?? 999) - (b.rank ?? 999)
-}
-
-export const buildLineup = (
-  players: PlayerData[],
-  mode: 'current' | 'optimized',
-  currentStarters: string[],
-  rosterPositions: RosterPositions,
-  whatIfStarters?: string[]
-): BuildLineupResult => {
-  const lineup: LineupSlot[] = []
-  const bench: PlayerData[] = []
-  const usedPlayers = new Set<string>()
-
-  // Filter out injured/bye players for optimized mode only
-  // This excludes: IR, Out, Doubtful players, players with injury_start_date set, and players on bye week
-  // In 'current' mode, show all players for visibility (even if injured/bye)
-  const availablePlayers = mode === 'optimized' ? players.filter(isPlayerAvailable) : players
-
-  if (mode === 'current' && whatIfStarters && whatIfStarters.length > 0) {
-    whatIfStarters.forEach((playerId) => {
-      const player = players.find((p) => p.playerId === playerId)
-      if (player) {
-        // In current mode, show all players even if injured/bye (for visibility)
-        lineup.push({ position: player.position, player, slotType: 'starter' })
-        usedPlayers.add(playerId)
-      }
-    })
-  } else if (mode === 'current' && currentStarters.length > 0) {
-    currentStarters.forEach((playerId) => {
-      const player = players.find((p) => p.playerId === playerId)
-      if (player) {
-        // In current mode, show all players even if injured/bye (for visibility)
-        lineup.push({ position: player.position, player, slotType: 'starter' })
-        usedPlayers.add(playerId)
-      }
-    })
-  } else {
-    // Optimized mode: use filtered availablePlayers, ranked by projected points (rank as fallback)
-    const qbs = availablePlayers.filter((p) => p.position === 'QB').sort(compareByProjection)
-    const rbs = availablePlayers.filter((p) => p.position === 'RB').sort(compareByProjection)
-    const wrs = availablePlayers.filter((p) => p.position === 'WR').sort(compareByProjection)
-    const tes = availablePlayers.filter((p) => p.position === 'TE').sort(compareByProjection)
-    const flexEligible = [...rbs, ...wrs, ...tes].sort(compareByProjection)
-    const superFlexEligible = [...qbs, ...rbs, ...wrs, ...tes].sort(compareByProjection)
-
-    for (let i = 0; i < (rosterPositions.QB || 0); i++) {
-      if (qbs[i]) {
-        lineup.push({ position: 'QB', player: qbs[i], slotType: 'starter' })
-        usedPlayers.add(qbs[i].playerId)
-      }
-    }
-
-    for (let i = 0; i < (rosterPositions.RB || 0); i++) {
-      if (rbs[i]) {
-        lineup.push({ position: 'RB', player: rbs[i], slotType: 'starter' })
-        usedPlayers.add(rbs[i].playerId)
-      }
-    }
-
-    for (let i = 0; i < (rosterPositions.WR || 0); i++) {
-      if (wrs[i]) {
-        lineup.push({ position: 'WR', player: wrs[i], slotType: 'starter' })
-        usedPlayers.add(wrs[i].playerId)
-      }
-    }
-
-    for (let i = 0; i < (rosterPositions.TE || 0); i++) {
-      if (tes[i]) {
-        lineup.push({ position: 'TE', player: tes[i], slotType: 'starter' })
-        usedPlayers.add(tes[i].playerId)
-      }
-    }
-
-    const remainingFlex = flexEligible.filter((p) => !usedPlayers.has(p.playerId))
-    for (let i = 0; i < (rosterPositions.FLEX || 0); i++) {
-      if (remainingFlex[i]) {
-        lineup.push({ position: 'FLEX', player: remainingFlex[i], slotType: 'flex' })
-        usedPlayers.add(remainingFlex[i].playerId)
-      }
-    }
-
-    const remainingSuperFlex = superFlexEligible.filter((p) => !usedPlayers.has(p.playerId))
-    for (let i = 0; i < (rosterPositions.SUPER_FLEX || 0); i++) {
-      if (remainingSuperFlex[i]) {
-        lineup.push({
-          position: 'SUPER_FLEX',
-          player: remainingSuperFlex[i],
-          slotType: 'superflex',
-        })
-        usedPlayers.add(remainingSuperFlex[i].playerId)
-      }
-    }
-  }
-
-  // Add all players to bench (show all players including injured/bye for visibility)
-  players.forEach((p) => {
-    if (!usedPlayers.has(p.playerId)) {
-      bench.push(p)
-    }
-  })
-
-  return { lineup, bench }
 }
 
 // ---------------------------------------------------------------------------

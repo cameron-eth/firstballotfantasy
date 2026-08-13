@@ -1,45 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { motion, AnimatePresence } from 'framer-motion'
-
-import { TeamLogo } from '@/components/team-logo'
-import { PlayerHeadshot } from '@/components/ui/player-headshot'
-import { UserAvatar } from '@/components/user-avatar'
-import { CurrentLineup } from '@/components/league/CurrentLineup'
-import { PlayerNGSStats } from '@/components/player-ngs-stats'
-import {
-  Users,
-  Trophy,
-  Zap,
-  Calendar,
-  Loader2,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
-  Target,
-  Eye,
-  Clipboard,
-  ChevronDown,
-  Star,
-  Flame,
-  ShoppingCart,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Activity,
-} from 'lucide-react'
+import { Users, AlertCircle, TrendingUp, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import {
@@ -52,39 +16,12 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar'
 
-import { leagueCache } from '@/lib/league-cache'
-import { sleeperApi } from '@/lib/nextjs-cache'
 import { isOffSeason } from '@/lib/season-utils'
 
 // Import extracted types and components
-import type {
-  LeagueBuddyProps,
-  LeagueSection,
-  OverviewActions,
-  TeamData,
-  PlayerData,
-  TeamTrends,
-  PositionStrengths,
-  SleeperMatchup,
-  MatchupData,
-  LeagueOverview,
-  TrendingPlayer,
-} from './league-buddy/types'
-import {
-  validateApiResponse,
-  safeJsonParse,
-  getTierFromRank,
-  calculateRawScore,
-  calculateGradeFromPercentile,
-  calculateTeamTrends,
-  calculatePositionStrengths,
-  calculateRecentForm,
-  getRankColor,
-  getOpponentInfo,
-  calculateProjection,
-  calculateLeaguePositionRankings,
-  countRosterPositions,
-} from './league-buddy/utils'
+import type { LeagueBuddyProps, LeagueSection, OverviewActions, TeamData } from './league-buddy/types'
+import { calculateLeaguePositionRankings, countRosterPositions } from './league-buddy/utils'
+import { LEAGUE_SECTIONS } from './league-buddy/navigation'
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { LeagueOverviewSection } from './league-buddy/LeagueOverviewSection'
 import { RosterSection } from './league-buddy/RosterSection'
@@ -99,21 +36,7 @@ import { AuditSection } from './league-buddy/AuditSection'
 import { StatusStrip } from './league-buddy/StatusStrip'
 import { LeagueActivityFeed } from './league-buddy/LeagueActivityFeed'
 import { TrendingPlayersWidget } from './league-buddy/TrendingPlayersWidget'
-
-// Constants for better maintainability
-const GRADE_COLORS = {
-  'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  A: 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  'A-': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  'B+': 'bg-green-400/20 text-green-400 border-green-400',
-  B: 'bg-green-400/20 text-green-400 border-green-400',
-  'B-': 'bg-green-400/20 text-green-400 border-green-400',
-  'C+': 'bg-blue-400/20 text-blue-400 border-blue-400',
-  C: 'bg-blue-400/20 text-blue-400 border-blue-400',
-  'C-': 'bg-blue-400/20 text-blue-400 border-blue-400',
-  D: 'bg-red-400/20 text-red-400 border-red-400',
-  F: 'bg-red-400/20 text-red-400 border-red-400',
-} as const
+import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
 
 export default function LeagueBuddy({
   leagueId,
@@ -131,8 +54,6 @@ export default function LeagueBuddy({
     leagueOverview,
     currentMatchups,
     currentWeek,
-    nflSchedule,
-    nflGames,
     allPlayers,
     playerRankings,
     rosterPositionsRaw,
@@ -505,46 +426,19 @@ export default function LeagueBuddy({
           <div className="md:hidden mb-6 space-y-4">
             {/* Mobile Navigation Tabs */}
             <div className="flex gap-2 bg-slate-800/50 p-1 rounded-lg border border-slate-700">
-              <button
-                onClick={() => setActiveSection('overview')}
-                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
-                  activeSection === 'overview'
-                    ? 'bg-yellow-400 text-slate-900'
-                    : 'text-slate-300 hover:text-yellow-400'
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveSection('roster')}
-                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
-                  activeSection === 'roster'
-                    ? 'bg-yellow-400 text-slate-900'
-                    : 'text-slate-300 hover:text-yellow-400'
-                }`}
-              >
-                My Team
-              </button>
-              <button
-                onClick={() => setActiveSection('league')}
-                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
-                  activeSection === 'league'
-                    ? 'bg-yellow-400 text-slate-900'
-                    : 'text-slate-300 hover:text-yellow-400'
-                }`}
-              >
-                League
-              </button>
-              <button
-                onClick={() => setActiveSection('audit')}
-                className={`flex-1 px-3 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
-                  activeSection === 'audit'
-                    ? 'bg-yellow-400 text-slate-900'
-                    : 'text-slate-300 hover:text-yellow-400'
-                }`}
-              >
-                Audit
-              </button>
+              {LEAGUE_SECTIONS.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={`flex-1 px-2 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
+                    activeSection === section.id
+                      ? 'bg-yellow-400 text-slate-900'
+                      : 'text-slate-300 hover:text-yellow-400'
+                  }`}
+                >
+                  {section.shortLabel}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -595,6 +489,16 @@ export default function LeagueBuddy({
               </div>
 
             </>
+          )}
+
+          {/* POWER RANKINGS SECTION */}
+          {activeSection === 'power' && (
+            <PowerRankingsView
+              teams={teams}
+              selectedTeam={selectedTeam}
+              rosterPositionsRaw={rosterPositionsRaw}
+              onTeamSelect={handleTeamSelect}
+            />
           )}
 
           {/* ROSTER SECTION */}

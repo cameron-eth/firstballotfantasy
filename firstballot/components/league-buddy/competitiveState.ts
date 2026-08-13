@@ -15,7 +15,11 @@
 //   PURGATORY        │          CONTENDER
 //   weak + old       │          strong + aging
 //
+import { playerValue, type ValuationContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from './types'
+
+/** Dynasty superflex pricing — QB scarcity is part of the value signal. */
+const VALUATION_CTX: ValuationContext = { superflex: true }
 
 const CORE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 const CORE_DEPTH = 12 // top N assets that define a roster's value & age profile
@@ -137,23 +141,16 @@ export interface LeaguePlacements {
   futureMedian: number
 }
 
-/** Top-N core assets by KTC SF value (rank as fallback when KTC is missing). */
+/** Top-N core assets by dynasty value (SDK handles the KTC-or-rank fallback). */
 function coreAssets(team: TeamData): PlayerData[] {
   return [...team.players]
     .filter((p) => CORE_POSITIONS.includes(p.position))
-    .sort((a, b) => {
-      const av = a.ktcValueSf ?? Math.max(0, 300 - (a.rank || 999))
-      const bv = b.ktcValueSf ?? Math.max(0, 300 - (b.rank || 999))
-      return bv - av
-    })
+    .sort((a, b) => playerValue(b, VALUATION_CTX) - playerValue(a, VALUATION_CTX))
     .slice(0, CORE_DEPTH)
 }
 
 function rosterValue(team: TeamData): number {
-  return coreAssets(team).reduce(
-    (sum, p) => sum + (p.ktcValueSf ?? Math.max(0, 300 - (p.rank || 999)) * 10),
-    0
-  )
+  return coreAssets(team).reduce((sum, p) => sum + playerValue(p, VALUATION_CTX), 0)
 }
 
 function coreAvgAge(team: TeamData): number {

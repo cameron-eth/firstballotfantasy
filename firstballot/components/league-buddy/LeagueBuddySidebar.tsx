@@ -1,7 +1,8 @@
 'use client'
 
+import type React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Trophy, Zap, Calendar, Target, Eye, ChevronDown, ClipboardList } from 'lucide-react'
+import { Calendar, ChevronDown, Target, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Sidebar,
@@ -14,16 +15,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { UserAvatar } from '@/components/user-avatar'
 import { useRouter } from 'next/navigation'
 import { leagueCache } from '@/lib/league-cache'
+import { LEAGUE_QUICK_LINKS, LEAGUE_SECTIONS } from './navigation'
 import type { LeagueOverview, LeagueSection, TeamData } from './types'
 
-const GRADE_COLORS = {
+const GRADE_COLORS: Record<string, string> = {
   S: 'text-purple-400 border-purple-400',
   'A+': 'text-green-400 border-green-400',
   A: 'text-green-400 border-green-400',
@@ -38,6 +39,49 @@ const GRADE_COLORS = {
   D: 'text-orange-400 border-orange-400',
   'D-': 'text-red-400 border-red-400',
   F: 'text-red-500 border-red-500',
+}
+
+const MENU_BUTTON_BASE =
+  'font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm !border'
+const MENU_BUTTON_ACTIVE = '!bg-yellow-400/15 !text-yellow-400 !border-yellow-400/40 !shadow-sm'
+const MENU_BUTTON_IDLE =
+  '!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border-transparent hover:!border-slate-600/50'
+const QUICK_ACTION_CLASS =
+  '!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium'
+
+const HOVER_MOTION = {
+  whileHover: { scale: 1.015, x: 2 },
+  whileTap: { scale: 0.985 },
+  transition: { type: 'spring' as const, stiffness: 500, damping: 25, mass: 0.5 },
+}
+
+interface SidebarSectionProps {
+  title: string
+  icon: typeof Target
+  children: React.ReactNode
+}
+
+function SidebarSection({ title, icon: Icon, children }: SidebarSectionProps) {
+  return (
+    <Collapsible defaultOpen className="group/collapsible">
+      <SidebarGroup className="!bg-transparent px-3 py-2">
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel className="!text-yellow-400 font-mono text-[10px] uppercase tracking-widest hover:!bg-slate-700/30 cursor-pointer flex items-center justify-between w-full transition-all duration-200 !px-3 !py-2.5 rounded-lg font-bold">
+            <div className="flex items-center gap-2">
+              <Icon className="h-3.5 w-3.5" />
+              {title}
+            </div>
+            <ChevronDown className="h-3.5 w-3.5 group-data-[state=closed]/collapsible:-rotate-90 transition-transform duration-200 ease-out" />
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+          <SidebarGroupContent>
+            <SidebarMenu>{children}</SidebarMenu>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  )
 }
 
 interface LeagueBuddySidebarProps {
@@ -59,17 +103,11 @@ export function LeagueBuddySidebar({
 }: LeagueBuddySidebarProps) {
   const router = useRouter()
 
-  const handleTradeMarketClick = () => {
-    // Preserve league context when navigating to trade market
-    const currentLeagueId = leagueCache.getLeagueId()
-    if (currentLeagueId) {
-      router.push(`/trade-market?leagueId=${currentLeagueId}`)
-    } else {
-      router.push('/trade-market')
-    }
+  const goTo = (href: string) => {
+    // Preserve league context across tools that accept a leagueId.
+    const leagueId = leagueCache.getLeagueId()
+    router.push(leagueId ? `${href}?leagueId=${leagueId}` : href)
   }
-  const handleScoutingPortalClick = () => router.push('/scouting-portal')
-  const handleDraftBuddyClick = () => router.push('/draft-buddy')
 
   return (
     <Sidebar
@@ -88,18 +126,13 @@ export function LeagueBuddySidebar({
               className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/30"
             >
               <div className="flex items-start space-x-3 mb-3">
-                <motion.div
-                  whileHover={{ scale: 1.05, rotate: 2 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <UserAvatar
-                    avatarId={selectedTeam.ownerAvatar}
-                    displayName={selectedTeam.ownerName}
-                    username={selectedTeam.ownerUsername}
-                    size={48}
-                    className="ring-2 ring-yellow-400/40 shadow-lg"
-                  />
-                </motion.div>
+                <UserAvatar
+                  avatarId={selectedTeam.ownerAvatar}
+                  displayName={selectedTeam.ownerName}
+                  username={selectedTeam.ownerUsername}
+                  size={48}
+                  className="ring-2 ring-yellow-400/40 shadow-lg"
+                />
                 <div className="flex-1 min-w-0">
                   <h2 className="text-base font-bold text-yellow-400 font-mono truncate mb-1.5 leading-tight">
                     {selectedTeam.teamName}
@@ -113,7 +146,7 @@ export function LeagueBuddySidebar({
                     </Badge>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-mono font-bold px-2 py-0.5 ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 ${GRADE_COLORS[selectedTeam.grade] ?? 'text-slate-300 border-slate-500'}`}
                     >
                       GRADE {selectedTeam.grade}
                     </Badge>
@@ -133,382 +166,71 @@ export function LeagueBuddySidebar({
         </AnimatePresence>
       </SidebarHeader>
 
-      {/* Navigation Items */}
       <SidebarContent className="!bg-transparent">
-        {/* Main Navigation Group */}
-        <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup className="!bg-transparent px-3 py-2">
-            <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="!text-yellow-400 font-mono text-[10px] uppercase tracking-widest hover:!bg-slate-700/30 cursor-pointer flex items-center justify-between w-full transition-all duration-200 !px-3 !py-2.5 rounded-lg font-bold">
-                <div className="flex items-center gap-2">
-                  <Target className="h-3.5 w-3.5" />
-                  Navigation
-                </div>
-                <motion.div
-                  animate={{ rotate: 0 }}
-                  className="group-data-[state=closed]/collapsible:-rotate-90 transition-transform duration-200 ease-out"
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
+        <SidebarSection title="Navigation" icon={Target}>
+          {LEAGUE_SECTIONS.map((section) => {
+            const Icon = section.icon
+            const isActive = activeSection === section.id
+            return (
+              <SidebarMenuItem key={section.id}>
+                <motion.div {...HOVER_MOTION}>
+                  <SidebarMenuButton
+                    onClick={() => setActiveSection(section.id)}
+                    isActive={isActive}
+                    className={`${MENU_BUTTON_BASE} ${isActive ? MENU_BUTTON_ACTIVE : MENU_BUTTON_IDLE}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="font-medium">{section.label}</span>
+                  </SidebarMenuButton>
                 </motion.div>
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="overflow-hidden transition-all duration-200 ease-in-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  duration: 0.15,
-                  ease: 'easeOut',
-                }}
-              >
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.05 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={() => setActiveSection('overview')}
-                            isActive={activeSection === 'overview'}
-                            className={`font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm ${
-                              activeSection === 'overview'
-                                ? '!bg-yellow-400/15 !text-yellow-400 !border !border-yellow-400/40 !shadow-sm'
-                                : '!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50'
-                            }`}
-                          >
-                            <Target className="h-4 w-4" />
-                            <span className="font-medium">Overview</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={() => setActiveSection('roster')}
-                            isActive={activeSection === 'roster'}
-                            className={`font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm ${
-                              activeSection === 'roster'
-                                ? '!bg-yellow-400/15 !text-yellow-400 !border !border-yellow-400/40 !shadow-sm'
-                                : '!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50'
-                            }`}
-                          >
-                            <Users className="h-4 w-4" />
-                            <span className="font-medium">My Team</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.15 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={() => setActiveSection('league')}
-                            isActive={activeSection === 'league'}
-                            className={`font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm ${
-                              activeSection === 'league'
-                                ? '!bg-yellow-400/15 !text-yellow-400 !border !border-yellow-400/40 !shadow-sm'
-                                : '!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50'
-                            }`}
-                          >
-                            <Trophy className="h-4 w-4" />
-                            <span className="font-medium">League</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.18 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={() => setActiveSection('audit')}
-                            isActive={activeSection === 'audit'}
-                            className={`font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm ${
-                              activeSection === 'audit'
-                                ? '!bg-yellow-400/15 !text-yellow-400 !border !border-yellow-400/40 !shadow-sm'
-                                : '!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50'
-                            }`}
-                          >
-                            <ClipboardList className="h-4 w-4" />
-                            <span className="font-medium">Audit</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={handleScoutingPortalClick}
-                            className="!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50 font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm"
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span className="font-medium">Scouting</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.25 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={handleTradeMarketClick}
-                            className="!text-slate-300 !bg-slate-700/20 !hover:bg-slate-700/40 hover:!text-yellow-400 !border !border-transparent hover:!border-slate-600/50 font-mono !px-4 !py-3 !rounded-lg transition-all duration-150 !text-sm"
-                          >
-                            <Trophy className="h-4 w-4" />
-                            <span className="font-medium">Trading</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </motion.div>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarSection>
 
         <SidebarSeparator className="!bg-slate-700/30 !mx-3" />
 
-        {/* Quick Actions Group */}
-        <Collapsible defaultOpen className="group/collapsible">
-          <SidebarGroup className="!bg-transparent px-3 py-2">
-            <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="!text-yellow-400 font-mono text-[10px] uppercase tracking-widest hover:!bg-slate-700/30 cursor-pointer flex items-center justify-between w-full transition-all duration-200 !px-3 !py-2.5 rounded-lg font-bold">
-                <div className="flex items-center gap-2">
-                  <Zap className="h-3.5 w-3.5" />
-                  Quick Actions
-                </div>
-                <motion.div
-                  animate={{ rotate: 0 }}
-                  className="group-data-[state=closed]/collapsible:-rotate-90 transition-transform duration-200 ease-out"
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
+        <SidebarSection title="Quick Actions" icon={Zap}>
+          {LEAGUE_QUICK_LINKS.map((link) => {
+            const Icon = link.icon
+            return (
+              <SidebarMenuItem key={link.key}>
+                <motion.div {...HOVER_MOTION}>
+                  <SidebarMenuButton onClick={() => goTo(link.href)} className={QUICK_ACTION_CLASS}>
+                    <Icon className="h-4 w-4" />
+                    <span>{link.label}</span>
+                  </SidebarMenuButton>
                 </motion.div>
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="overflow-hidden transition-all duration-200 ease-in-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{
-                  duration: 0.15,
-                  ease: 'easeOut',
-                }}
-              >
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.05 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={handleTradeMarketClick}
-                            className="!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium"
-                          >
-                            <Trophy className="h-4 w-4" />
-                            <span>Trade Market</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={handleScoutingPortalClick}
-                            className="!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium"
-                          >
-                            <Eye className="h-4 w-4" />
-                            <span>Scouting Portal</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.15 }}
-                    >
-                      <SidebarMenuItem>
-                        <motion.div
-                          whileHover={{ scale: 1.015, x: 2 }}
-                          whileTap={{ scale: 0.985 }}
-                          transition={{
-                            type: 'spring',
-                            stiffness: 500,
-                            damping: 25,
-                            mass: 0.5,
-                          }}
-                        >
-                          <SidebarMenuButton
-                            onClick={handleDraftBuddyClick}
-                            className="!bg-gradient-to-r !from-slate-700 !to-slate-700/80 hover:!from-slate-600 hover:!to-slate-600/80 !text-yellow-400 font-mono !text-sm !border !border-slate-600/50 hover:!border-yellow-400/50 transition-all duration-200 !shadow-sm hover:!shadow-md !rounded-lg !px-4 !py-3 !font-medium"
-                          >
-                            <Users className="h-4 w-4" />
-                            <span>Draft Buddy</span>
-                          </SidebarMenuButton>
-                        </motion.div>
-                      </SidebarMenuItem>
-                    </motion.div>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </motion.div>
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarSection>
       </SidebarContent>
 
       {/* Footer - League Info */}
       <SidebarFooter className="p-4 border-t border-slate-700/50 !bg-slate-800/50 backdrop-blur-sm">
-        <AnimatePresence mode="wait">
-          {leagueOverview && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.3 }}
-              className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/30"
-            >
-              <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-600/30">
-                <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                <span className="text-[10px] text-slate-400 font-mono uppercase tracking-widest font-semibold">
-                  League Stats
+        {leagueOverview && (
+          <div className="bg-slate-700/30 rounded-lg p-3 border border-slate-600/30">
+            <div className="flex items-center gap-2 mb-2.5 pb-2 border-b border-slate-600/30">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-widest font-semibold">
+                League Stats
+              </span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-mono">Week:</span>
+                <span className="text-yellow-400 font-mono font-bold text-sm">{currentWeek}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-400 font-mono">Teams:</span>
+                <span className="text-yellow-400 font-mono font-bold text-sm">
+                  {sortedTeams.length}
                 </span>
               </div>
-              <div className="space-y-2">
-                <motion.div
-                  className="flex items-center justify-between"
-                  whileHover={{ x: 2 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <span className="text-xs text-slate-400 font-mono">Week:</span>
-                  <span className="text-yellow-400 font-mono font-bold text-sm">{currentWeek}</span>
-                </motion.div>
-                <motion.div
-                  className="flex items-center justify-between"
-                  whileHover={{ x: 2 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <span className="text-xs text-slate-400 font-mono">Teams:</span>
-                  <span className="text-yellow-400 font-mono font-bold text-sm">
-                    {sortedTeams.length}
-                  </span>
-                </motion.div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   )

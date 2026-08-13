@@ -6,40 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import LeagueBuddy from '@/components/LeagueBuddy'
-import { AlertCircle, Loader2, Crown } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useMembershipCheck } from '@/hooks/use-membership'
 import { LeagueCard } from '@/components/league-access-control'
-import { LoadingSpinner } from '@/components/loading-spinner'
-import { cacheUtils } from '@/lib/cache-utils'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import { userApi } from '@/lib/user-api'
-import type { SleeperUser, SleeperLeague } from '@/lib/sleeper-api'
+import type { SleeperUser } from '@/lib/sleeper-api'
 
 import { useLeagueContext } from '@/lib/league-context'
 
 export function LeagueBuddyView() {
   const { user: authUser } = useAuth()
-  const { isMember, loading: membershipLoading } = useMembershipCheck()
+  const { isMember } = useMembershipCheck()
   const {
     selectedLeagueId,
     selectLeague,
     leagues,
     isLoading: leaguesLoading,
-    selectedLeague,
   } = useLeagueContext()
 
   const [username, setUsername] = useState('')
   const [sleeperUser, setSleeperUser] = useState<SleeperUser | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [profileChecked, setProfileChecked] = useState(false)
-  const [noSleeperUsername, setNoSleeperUsername] = useState(false)
-
-  // ... (rest of state logic)
-
-  // Use shared cache utility
-  const { keys } = cacheUtils
 
   // On mount, fetch the user settings for Sleeper username
   useEffect(() => {
@@ -50,20 +40,14 @@ export function LeagueBuddyView() {
         const data = await userApi.getUserSettings()
         if (data?.sleeper_username) {
           setUsername(data.sleeper_username)
-          setNoSleeperUsername(false)
 
           const userData = await sleeperApi.getUser(data.sleeper_username)
           if (userData) {
             setSleeperUser(userData as SleeperUser)
           }
-        } else {
-          setNoSleeperUsername(true)
         }
-        setProfileChecked(true)
       } catch (err) {
         console.error('Failed to load settings:', err)
-        setProfileChecked(true)
-        setNoSleeperUsername(true)
       }
     }
 

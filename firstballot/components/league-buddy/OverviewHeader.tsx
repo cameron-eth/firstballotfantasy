@@ -89,6 +89,8 @@ export interface OverviewRankings {
   playerRankings: PlayerRankingsMap
   placements: LeaguePlacements
   positionRankings?: Record<number, Record<string, number>>
+  /** rosterId → 0–100 power score; the outlook board ranks on it. */
+  powerScores: Record<number, number>
 }
 
 interface OverviewHeaderProps {
@@ -138,7 +140,7 @@ export function OverviewHeader({
   const leagueRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
   // Competitive-state placement (Now × Future), relative to the league
-  const { playerRankings, placements, positionRankings = {} } = rankings
+  const { playerRankings, placements, positionRankings = {}, powerScores } = rankings
   const selectedPlacement = placements.placements[selectedTeam.rosterId]
   const stateMeta = selectedPlacement ? COMPETITIVE_STATES[selectedPlacement.state] : null
 
@@ -359,6 +361,7 @@ export function OverviewHeader({
               placements={placements}
               teams={teams}
               selectedRosterId={selectedTeam.rosterId}
+              powerScores={powerScores}
             />
           </div>
         )}

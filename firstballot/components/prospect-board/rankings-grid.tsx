@@ -9,6 +9,27 @@ import { cn } from '@/lib/utils'
 
 type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot'
 
+/** Class filter: every undrafted class, one specific class, or the whole archive. */
+type YearFilter = number | 'all' | 'upcoming'
+
+/** Classes at or after this year have not been drafted yet. */
+const FIRST_UPCOMING_CLASS = 2027
+
+const TIER_ORDER: Exclude<FilterTier, 'all'>[] = [
+  'Elite',
+  'Blue Chip',
+  'Starter',
+  'Rotational',
+  'Depth',
+  'Longshot',
+]
+
+function matchesYear(year: number | null, filter: YearFilter): boolean {
+  if (filter === 'all') return true
+  if (filter === 'upcoming') return (year ?? 0) >= FIRST_UPCOMING_CLASS
+  return year === filter
+}
+
 const positions: { key: Position; label: string }[] = [
   { key: 'QB', label: 'QB' },
   { key: 'RB', label: 'RB' },
@@ -26,7 +47,10 @@ const EMPTY_PLAYERS: Record<Position, Player[]> = {
 export function RankingsGrid() {
   const PAGE_SIZE = 30
   const [position, setPosition] = useState<Position>('QB')
-  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all')
+  // Default to the undrafted classes. Sorting is by grade across every class,
+  // so on 'all' the 2027/2028 prospects sit ~50-80 deep behind a decade of
+  // drafted players and are effectively invisible.
+  const [selectedYear, setSelectedYear] = useState<YearFilter>('upcoming')
   const [filter, setFilter] = useState<FilterTier>('all')
   const [sortBy, setSortBy] = useState<'rank' | 'grade' | 'physical' | 'production'>('rank')
   const [isPending, startTransition] = useTransition()
@@ -35,10 +59,9 @@ export function RankingsGrid() {
 
   const handlePositionChange = (newPosition: Position) => {
     startTransition(() => {
+      // Class and tier selections carry across positions — resetting them threw
+      // away the filter the user had just set.
       setPosition(newPosition)
-      setSelectedYear('all')
-      setFilter('all')
-      setSortBy('rank')
       setVisibleCount(PAGE_SIZE)
     })
   }
@@ -47,9 +70,10 @@ export function RankingsGrid() {
   const years = Array.from(
     new Set(players.map((p) => p.year).filter((year): year is number => year !== null))
   ).sort((a, b) => b - a)
+  const hasUpcoming = years.some((year) => year >= FIRST_UPCOMING_CLASS)
 
   const filteredPlayers = players
-    .filter((p) => selectedYear === 'all' || p.year === selectedYear)
+    .filter((p) => matchesYear(p.year, selectedYear))
     .filter((p) => filter === 'all' || p.tier === filter)
     .sort((a, b) => {
       if (sortBy === 'rank') {
@@ -69,25 +93,26 @@ export function RankingsGrid() {
       rank: player.rank,
     }))
 
-  const yearFilteredPlayers = players.filter(
-    (p) => selectedYear === 'all' || p.year === selectedYear
-  )
+  const yearFilteredPlayers = players.filter((p) => matchesYear(p.year, selectedYear))
   const visiblePlayers = filteredPlayers.slice(0, visibleCount)
 
-  const tierCounts = {
+  const tierCounts: Record<FilterTier, number> = {
     all: yearFilteredPlayers.length,
-    Elite: yearFilteredPlayers.filter((p) => p.tier === 'Elite').length,
-    'Blue Chip': yearFilteredPlayers.filter((p) => p.tier === 'Blue Chip').length,
-    Starter: yearFilteredPlayers.filter((p) => p.tier === 'Starter').length,
-    Rotational: yearFilteredPlayers.filter((p) => p.tier === 'Rotational').length,
-    Depth: yearFilteredPlayers.filter((p) => p.tier === 'Depth').length,
-    Longshot: yearFilteredPlayers.filter((p) => p.tier === 'Longshot').length,
+    Elite: 0,
+    'Blue Chip': 0,
+    Starter: 0,
+    Rotational: 0,
+    Depth: 0,
+    Longshot: 0,
+  }
+  for (const player of yearFilteredPlayers) {
+    if (player.tier in tierCounts && player.tier !== 'all') {
+      tierCounts[player.tier as FilterTier] += 1
+    }
   }
   const availableTiers: FilterTier[] = [
     'all',
-    ...Object.entries(tierCounts)
-      .filter(([tier, count]) => tier !== 'all' && count > 0)
-      .map(([tier]) => tier as FilterTier),
+    ...TIER_ORDER.filter((tier) => tierCounts[tier] > 0),
   ]
 
   return (
@@ -99,7 +124,9 @@ export function RankingsGrid() {
           <div className="text-sm text-muted-foreground">
             Showing {visiblePlayers.length} of {filteredPlayers.length} prospect
             {filteredPlayers.length !== 1 ? 's' : ''}
-            {selectedYear !== 'all' && ` from ${selectedYear}`}
+            {selectedYear === 'upcoming'
+              ? ` from ${FIRST_UPCOMING_CLASS}+`
+              : selectedYear !== 'all' && ` from ${selectedYear}`}
             {filter !== 'all' && ` (${filter})`}
           </div>
         )}
@@ -129,11 +156,27 @@ export function RankingsGrid() {
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mr-0.5">
               Class
             </span>
-            <button
+            {hasUpcoming && (
+              <button
                 onClick={() => {
-                  setSelectedYear('all')
+                  setSelectedYear('upcoming')
                   setVisibleCount(PAGE_SIZE)
                 }}
+                className={cn(
+                  'h-7 px-2.5 text-[11px] font-mono rounded transition-colors',
+                  selectedYear === 'upcoming'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                )}
+              >
+                UPCOMING
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setSelectedYear('all')
+                setVisibleCount(PAGE_SIZE)
+              }}
               className={cn(
                 'h-7 px-2.5 text-[11px] font-mono rounded transition-colors',
                 selectedYear === 'all'

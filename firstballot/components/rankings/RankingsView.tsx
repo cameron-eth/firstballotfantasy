@@ -11,9 +11,17 @@ import { SkeletonGrid } from '@/components/prospect-board/player-skeleton'
 import type { Player, Position } from '@/lib/players'
 import type { PlayerRanking } from '@/types/rankings'
 
-function normalizeTier(grade: number, position: string, posRank: number): string {
+/**
+ * These rankings come from `dynasty_player_tiers`, which has no `grade_tier`
+ * column, so derive one using the same vocabulary `dynasty_prospects` stores.
+ */
+function normalizeTier(grade: number): string {
   if (grade >= 90) return 'Elite'
-  return `${position}${posRank}`
+  if (grade >= 85) return 'Blue Chip'
+  if (grade >= 80) return 'Starter'
+  if (grade >= 75) return 'Rotational'
+  if (grade >= 70) return 'Depth'
+  return 'Longshot'
 }
 
 function toCardPosition(position: string): Position {
@@ -86,7 +94,8 @@ export function RankingsView() {
         position,
         school: `${player.team} • Age ${player.age}`,
         espnId: player.espn_id ? Number(player.espn_id) : null,
-        tier: normalizeTier(grade, position, posRank),
+        tier: normalizeTier(grade),
+        positionRank: `${position}${posRank}`,
         grade,
         height: '',
         weight: null,

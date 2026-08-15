@@ -24,8 +24,11 @@ export function PlayerCard({ player, index }: PlayerCardProps) {
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors duration-300"
     >
-      {/* Tier Badge */}
-      <div className="absolute top-3 right-3 z-10">
+      {/* Positional rank + grade tier */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+        <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border bg-secondary text-muted-foreground border-border">
+          {player.positionRank}
+        </span>
         <span
           className={cn(
             'px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded border',

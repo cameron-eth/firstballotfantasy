@@ -314,7 +314,8 @@ export function DraftBoardTab({
       grouped.get(year)!.push(p)
     }
     return Array.from(grouped.entries())
-      .sort((a, b) => b[0] - a[0])
+      // Nearest class first — 2027 drafts before 2028, so it leads the board.
+      .sort((a, b) => a[0] - b[0])
       .map(([year, prospects]) => ({
         year,
         // Keep user-defined drag order within each class section.

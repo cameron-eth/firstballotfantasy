@@ -42,7 +42,10 @@ export interface Player {
   position: Position
   school: string
   espnId: number | null
+  /** Scouting grade tier from the database — the facet the tier filter uses. */
   tier: string
+  /** Positional-rank badge shown on the card, e.g. "WR3". */
+  positionRank: string
   grade: number
   height: string
   weight: number | null
@@ -156,6 +159,7 @@ function normalize(raw: RawProspect): Player {
     school: raw.school || 'TBD',
     espnId: raw.espn_id,
     tier: raw.grade_tier || 'Depth',
+    positionRank: `${raw.position}${raw.rank}`,
     grade: raw.overall_grade || 0,
     height: formatHeight(raw.height),
     weight: raw.weight ? Math.round(raw.weight) : null,
@@ -186,15 +190,12 @@ export async function fetchAllProspects(): Promise<Record<Position, Player[]>> {
       .sort((a, b) => (b.overall_grade || 0) - (a.overall_grade || 0))
     result[pos] = filtered.map((raw, index) => {
       const normalized = normalize(raw)
+      // Rank reflects position within this grade-sorted list, across all classes.
       const positionalRank = index + 1
-      const computedTier =
-        (normalized.grade || 0) >= 90 ? 'Elite' : `${normalized.position}${positionalRank}`
       return {
         ...normalized,
-        // Ensure rank reflects positional order within this list
         rank: positionalRank,
-        // Override tier based on grade/positional convention
-        tier: computedTier,
+        positionRank: `${pos}${positionalRank}`,
       }
     })
   }

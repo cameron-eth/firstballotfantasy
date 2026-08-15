@@ -92,8 +92,9 @@ export function RankingsGrid() {
 
   return (
     <div className="lg:h-full lg:min-h-0 lg:flex lg:flex-col">
-      {/* ── Sticky toolbar — flat, single container ── */}
-      <div className="sticky top-16 z-20 mb-4 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90 space-y-2.5 shrink-0">
+      {/* Toolbar. On lg+ it is a flex sibling of the scroll area below, so it is
+          already pinned; `sticky` only applies while the whole page scrolls. */}
+      <div className="lg:static sticky top-16 z-20 mb-4 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90 space-y-2.5 shrink-0">
         {!isLoading && (
           <div className="text-sm text-muted-foreground">
             Showing {visiblePlayers.length} of {filteredPlayers.length} prospect

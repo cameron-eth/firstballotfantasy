@@ -56,26 +56,20 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
         {
           name: 'Scouting Portal',
           href: '/scouting-portal',
-          description: 'Deep dive into 2026 prospects',
+          description: 'Deep dive into incoming prospects',
           icon: Search,
         },
         {
           name: 'Draft Board',
           href: '/scouting-portal?tab=draftboard',
-          description: 'Build your personal big board',
+          description: 'Build your 2027 & 2028 big board',
           icon: Users,
         },
         {
           name: 'Prospect Board',
           href: '/prospect-board',
-          description: 'All-time prospect rankings & grades',
+          description: 'Every graded class, side by side',
           icon: Eye,
-        },
-        {
-          name: 'Data Lab',
-          href: '/analysis',
-          description: 'Advanced market visualizations',
-          icon: BarChart3,
         },
         {
           name: 'Historical Data',

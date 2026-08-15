@@ -1,6 +1,9 @@
 export interface Prospect {
   id: number
+  /** Positional rank inside the draft class (the "WR3" shown on cards). */
   rank: number
+  /** Rank inside the draft class across all positions. */
+  overall_rank?: number
   name: string
   first_name?: string | null
   last_name?: string | null

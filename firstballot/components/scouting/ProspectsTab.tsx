@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { ProspectCard } from './ProspectCard'
 import {
@@ -48,6 +48,19 @@ export function ProspectsTab({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const visibleProspects = filteredProspects.slice(0, visibleCount)
 
+  // Derived from the data so a newly imported class shows up without an edit.
+  const draftYears = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allProspects
+            .map((p) => p.draft_year)
+            .filter((year): year is number => typeof year === 'number')
+        )
+      ).sort((a, b) => b - a),
+    [allProspects]
+  )
+
   const handleSearchChange = (term: string) => {
     setVisibleCount(PAGE_SIZE)
     setSearchTerm(term)
@@ -65,15 +78,19 @@ export function ProspectsTab({
 
   return (
     <div className="relative">
-      <div className="sticky top-16 md:top-20 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 liquid-glass rounded-xl">
+      {/* Offset matches the 64px app header so the bar parks directly under it.
+          Needs a near-opaque background, not `liquid-glass` — cards scroll
+          underneath and read straight through a 50–74% translucent panel. */}
+      <div className="sticky top-16 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 md:gap-6 px-2">
           <div>
             <h2 className="text-xl md:text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-1 md:mb-2">
               College <span className="text-blue-400">Prospects</span>
             </h2>
             <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
-              Comprehensive {draftYear === 'all' ? 'All-Time' : draftYear} rookie database and
-              rankings.
+              {filteredProspects.length} {draftYear === 'all' ? '' : `${draftYear} `}prospect
+              {filteredProspects.length === 1 ? '' : 's'}
+              {positionFilter === 'all' ? '' : ` · ${positionFilter}`}
             </p>
           </div>
 
@@ -94,15 +111,11 @@ export function ProspectsTab({
               </SelectTrigger>
               <SelectContent className="bg-card border-border text-foreground font-mono text-[10px]">
                 <SelectItem value="all">ALL YEARS</SelectItem>
-                <SelectItem value="2027">2027 CLASS</SelectItem>
-                <SelectItem value="2026">2026 CLASS</SelectItem>
-                <SelectItem value="2025">2025 CLASS</SelectItem>
-                <SelectItem value="2024">2024 CLASS</SelectItem>
-                <SelectItem value="2023">2023 CLASS</SelectItem>
-                <SelectItem value="2022">2022 CLASS</SelectItem>
-                <SelectItem value="2021">2021 CLASS</SelectItem>
-                <SelectItem value="2020">2020 CLASS</SelectItem>
-                <SelectItem value="2019">2019 CLASS</SelectItem>
+                {draftYears.map((year) => (
+                  <SelectItem key={year} value={String(year)}>
+                    {year} CLASS
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -130,8 +143,10 @@ export function ProspectsTab({
           </p>
         </div>
       ) : (
-        <div className="max-md:overflow-visible md:max-h-[1200px] md:overflow-y-auto pr-0 md:pr-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4 pb-24 md:pb-10">
+        // The grid scrolls with the page — a fixed-height inner scroller here
+        // traps the wheel and clips rows behind the sticky filter bar.
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4 pb-24 md:pb-10">
             {visibleProspects.map((prospect) => (
               <ProspectCard
                 key={prospect.id}

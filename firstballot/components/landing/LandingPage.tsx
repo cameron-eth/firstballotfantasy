@@ -402,7 +402,6 @@ const AllTimePlayerCard = memo(function AllTimePlayerCard({
 
 const features = [
   { icon: LayoutGrid, title: 'Rankings', href: '/prospect-board', cmd: 'prospect --list' },
-  { icon: BarChart3, title: 'Analytics', href: '/analysis', cmd: 'stats --hitrate' },
   { icon: Activity, title: 'Market', href: '/trade-market', cmd: 'market --live' },
   { icon: Briefcase, title: 'Portfolio', href: '/league-buddy', cmd: 'portfolio --sync' },
   {
@@ -411,7 +410,13 @@ const features = [
     href: '/scouting-portal?tab=draftboard',
     cmd: 'draft --rank',
   },
-  { icon: GitCompare, title: 'Compare', href: '/analysis', cmd: 'compare --players' },
+  {
+    icon: BarChart3,
+    title: 'History',
+    href: '/scouting-portal?tab=historical',
+    cmd: 'stats --hitrate',
+  },
+  { icon: GitCompare, title: 'Trade', href: '/trade-calculator', cmd: 'trade --value' },
 ]
 
 // ── Isolated feature rotator — only its tile highlights re-render ────

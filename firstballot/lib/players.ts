@@ -174,9 +174,7 @@ function normalize(raw: RawProspect): Player {
 // ---------------------------------------------------------------------------
 
 export async function fetchAllProspects(): Promise<Record<Position, Player[]>> {
-  const res = await fetch(`/api/prospects?draft_year=all&t=${Date.now()}`, {
-    cache: 'no-store',
-  })
+  const res = await fetch('/api/prospects?draft_year=all')
   if (!res.ok) throw new Error('Failed to fetch prospects')
   const data: RawProspect[] = await res.json()
 

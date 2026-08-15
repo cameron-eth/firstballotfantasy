@@ -98,9 +98,6 @@ test('file size guard: only approved legacy files may exceed the default budget'
   const defaultBudget = 650
   const legacyBudgets = new Map([
     ['app/draft-board/page.tsx', 720],
-    // Grew past its 1550 budget before this guard ran in CI. Re-baselined to hold the
-    // line at its current size; the page still wants splitting into sections.
-    ['app/trade-market/page.tsx', 1680],
     ['components/DraftAnalysis.tsx', 980],
     ['components/LeagueBuddy.tsx', 1480],
     ['components/TeamValueGraph.tsx', 1140],

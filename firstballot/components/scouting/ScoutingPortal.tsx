@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, TrendingUp, BarChart3, Trophy } from 'lucide-react'
+import { Eye, TrendingUp, BarChart3 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'next/navigation'
 import {
@@ -15,7 +15,6 @@ import {
   ProspectDetailModal,
   ComparisonsModal,
   HistoricalRankingsTab,
-  AllTimeRankingsTab,
 } from '@/components/scouting'
 import type { Prospect } from '@/components/scouting/types'
 import { useDraftboard } from '@/hooks/use-draftboard'
@@ -43,6 +42,14 @@ interface RosterPlayer {
 interface ScoutingPortalProps {
   leagueId: string
   initialTab?: string
+}
+
+const PORTAL_TABS = ['prospects', 'draftboard', 'historical'] as const
+type PortalTab = (typeof PORTAL_TABS)[number]
+
+/** Guards against stale deep links (e.g. the retired `?tab=alltime`). */
+function resolveTab(tab: string | null | undefined): PortalTab {
+  return PORTAL_TABS.includes(tab as PortalTab) ? (tab as PortalTab) : 'prospects'
 }
 
 // Module-level pure function — no component state needed
@@ -178,18 +185,12 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   } = useSWR<Prospect[]>(
     '/api/prospects?draft_year=all',
     async (url: string) => {
-      const response = await fetch(url, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      })
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error('Failed to fetch prospects')
       }
       return response.json()
-    },
-    { revalidateOnFocus: true }
+    }
   )
   const loading = prospectsLoading || rosterLoading
   const prospectsError: string | null = prospectsFetchError?.message ?? null
@@ -197,7 +198,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [draftYear, setDraftYear] = useState('all')
-  const [activeTab, setActiveTab] = useState(urlTab || initialTab || 'prospects')
+  const [activeTab, setActiveTab] = useState(() =>
+    resolveTab(urlTab || initialTab)
+  )
   const prospects = useMemo<Prospect[]>(
     () =>
       rawProspects.map((prospect) => ({
@@ -210,9 +213,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   // Sync tab with URL if it changes
   useEffect(() => {
-    if (urlTab && urlTab !== activeTab) {
-      setActiveTab(urlTab)
-    }
+    if (!urlTab) return
+    const next = resolveTab(urlTab)
+    setActiveTab((current) => (current === next ? current : next))
   }, [urlTab])
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [draggedProspect, setDraggedProspect] = useState<Prospect | null>(null)
@@ -731,20 +734,27 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   }, [savedBoard, prospects, initialBoardLoaded])
 
 
+  // `overflow-x-clip` rather than `-hidden` below: hidden turns these wrappers
+  // into scroll containers, which makes the app header and the in-page filter
+  // bars stick to the wrapper instead of the viewport — i.e. not stick at all.
   return (
-    <div className="min-h-screen fb-app-surface text-foreground overflow-x-hidden">
+    <div className="min-h-screen fb-app-surface text-foreground overflow-x-clip">
       <Header />
 
-      <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-hidden max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+      <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
           {dataError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {dataError}
             </div>
           )}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(resolveTab(value))}
+            className="w-full"
+          >
             <div className="mb-3 md:mb-4 shrink-0">
-              <TabsList className="grid grid-cols-4 md:flex md:items-center gap-1.5 md:gap-2 bg-transparent h-auto p-0 border-none md:justify-start">
+              <TabsList className="grid grid-cols-3 md:flex md:items-center gap-1.5 md:gap-2 bg-transparent h-auto p-0 border-none md:justify-start">
                 <TabsTrigger
                   value="prospects"
                   className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
@@ -773,16 +783,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                   <div className="relative flex items-center gap-1 md:gap-2 justify-center">
                     <BarChart3 className="h-3 w-3 md:h-3.5 md:w-3.5" />
                     <span className="truncate">History</span>
-                  </div>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="alltime"
-                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
-                    <Trophy className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                    <span className="truncate">All-Time</span>
                   </div>
                 </TabsTrigger>
               </TabsList>
@@ -819,7 +819,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 setSearchTerm={setSearchTerm}
                 positionFilter={positionFilter}
                 setPositionFilter={setPositionFilter}
-                filteredProspects={filteredProspects}
                 allProspects={prospects}
                 draftBoard={draftBoard}
                 onAddToDraftBoard={handleAddToDraftBoard}
@@ -841,10 +840,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
             <TabsContent value="historical" className="mt-3">
               <HistoricalRankingsTab currentProspects={prospects} />
-            </TabsContent>
-
-            <TabsContent value="alltime" className="mt-3">
-              <AllTimeRankingsTab />
             </TabsContent>
           </Tabs>
 

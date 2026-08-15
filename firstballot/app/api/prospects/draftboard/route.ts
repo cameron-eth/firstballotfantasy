@@ -3,7 +3,9 @@ import { supabaseServer } from '@/lib/supabase-server'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+
+/** Draft boards only cover classes that have not been drafted yet. */
+const MIN_DRAFT_YEAR = 2027
 
 interface RawProspect {
   rank: number | null
@@ -102,10 +104,12 @@ export async function GET() {
       `
       )
       .in('position', ['QB', 'RB', 'WR', 'TE'])
+      .gte('draft_year', MIN_DRAFT_YEAR)
       .not('overall_grade', 'is', null)
       .order('overall_grade', { ascending: false })
 
     if (error) {
+      console.error('Database error fetching draftboard prospects:', error)
       return NextResponse.json({ error: 'Failed to fetch draftboard prospects' }, { status: 500 })
     }
 
@@ -127,8 +131,16 @@ export async function GET() {
         : 0,
     }
 
+    const years = Array.from(
+      new Set(
+        (data || [])
+          .map((row) => Number((row as RawProspect).draft_year))
+          .filter((year) => Number.isFinite(year))
+      )
+    ).sort()
+
     return NextResponse.json({
-      year: 'All Classes',
+      year: years.length ? years.join(' / ') : `${MIN_DRAFT_YEAR}+`,
       totalProspects: players.length,
       allProspects: players,
       byPosition,

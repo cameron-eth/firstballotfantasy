@@ -33,9 +33,9 @@ import { LeagueBuddySidebar } from './league-buddy/LeagueBuddySidebar'
 import { OverviewHeader, type OverviewRankings } from './league-buddy/OverviewHeader'
 import { TradeIntelligencePanel } from './league-buddy/TradeIntelligencePanel'
 import { AuditSection } from './league-buddy/AuditSection'
-import { LeagueActivityFeed } from './league-buddy/LeagueActivityFeed'
-import { TrendingPlayersWidget } from './league-buddy/TrendingPlayersWidget'
+import { LeagueActivityBanner } from './league-buddy/LeagueActivityBanner'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
+import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings'
 
 export default function LeagueBuddy({
   leagueId,
@@ -132,13 +132,19 @@ export default function LeagueBuddy({
     router.push(`/playoff-odds?leagueId=${leagueId}`)
   }, [router, leagueId])
 
+  const { rankings: powerRankings, scores: powerScores } = usePowerRankings(
+    teams,
+    rosterPositionsRaw
+  )
+
   const overviewRankings = useMemo<OverviewRankings>(
     () => ({
       playerRankings,
       placements: leaguePlacements,
       positionRankings: leaguePositionRankings,
+      powerScores,
     }),
-    [playerRankings, leaguePlacements, leaguePositionRankings]
+    [playerRankings, leaguePlacements, leaguePositionRankings, powerScores]
   )
 
   const overviewActions = useMemo<OverviewActions>(
@@ -453,6 +459,14 @@ export default function LeagueBuddy({
           {/* OVERVIEW SECTION */}
           {activeSection === 'overview' && selectedTeam && leagueOverview && (
             <>
+              <div className="mb-4">
+                <LeagueActivityBanner
+                  transactions={leagueTransactions}
+                  teams={teams}
+                  allPlayers={allPlayers}
+                />
+              </div>
+
               <OverviewHeader
                 selectedTeam={selectedTeam}
                 sortedTeams={sortedTeams}
@@ -465,10 +479,9 @@ export default function LeagueBuddy({
 
               <div className="mt-6">
                 <PowerRankingsView
-                  teams={teams}
+                  rankings={powerRankings}
                   selectedTeam={selectedTeam}
-                  rosterPositionsRaw={rosterPositionsRaw}
-                  onTeamSelect={handleTeamSelect}
+                  leagueSize={teams.length}
                 />
               </div>
 
@@ -484,16 +497,6 @@ export default function LeagueBuddy({
                   players={selectedTeam.players}
                   leaguePlayerPool={teams.flatMap((t) => t.players)}
                 />
-              </div>
-
-              {/* League Hub — what's happening across the league */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <LeagueActivityFeed
-                  transactions={leagueTransactions}
-                  teams={teams}
-                  allPlayers={allPlayers}
-                />
-                <TrendingPlayersWidget trendingPlayers={leagueOverview.trendingPlayers} />
               </div>
 
             </>

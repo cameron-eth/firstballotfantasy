@@ -413,9 +413,9 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
           </Card>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8 md:space-y-10">
           {/* Search bar for historical class */}
-          <div className="sticky top-20 z-20 -mx-2 px-4 py-3 liquid-glass rounded-xl flex items-center justify-between gap-4">
+          <div className="sticky top-16 z-20 -mx-2 px-4 py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90 flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md group">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
               <Input

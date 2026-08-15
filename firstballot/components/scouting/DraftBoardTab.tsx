@@ -38,7 +38,6 @@ interface DraftBoardTabProps {
   setSearchTerm: (term: string) => void
   positionFilter: string
   setPositionFilter: (filter: string) => void
-  filteredProspects: Prospect[]
   allProspects?: Prospect[]
   draftBoard: Prospect[]
   onAddToDraftBoard: (prospect: Prospect) => void
@@ -81,6 +80,11 @@ interface CompAvatarMeta {
 }
 
 const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
+const BOARD_POSITIONS = ['QB', 'RB', 'WR', 'TE']
+/** Earliest class the draft board will show — classes before this are history. */
+const DRAFT_BOARD_MIN_YEAR = 2027
+/** Rows rendered in the "not on board" list before the user has to search. */
+const OFF_BOARD_VISIBLE_LIMIT = 40
 const ReorderAny = Reorder as unknown as {
   Group: React.ComponentType<Record<string, unknown>>
   Item: React.ComponentType<Record<string, unknown>>
@@ -128,10 +132,15 @@ function getComparisonNames(comparisons: string | null | undefined, max = 6): st
   return Array.from(new Set(names)).slice(0, max)
 }
 
+/** Board rows are ordered and labelled by class-overall rank, not position rank. */
+function overallRankOf(p: Prospect): number {
+  return Number(p.overall_rank || p.rank || 9999)
+}
+
 function toBoardPlayer(p: Prospect): BoardPlayer {
   return {
     id: p.id,
-    rank: Number(p.rank || 9999),
+    rank: overallRankOf(p),
     name: p.name,
     school: p.school || 'TBD',
     position: p.position,
@@ -208,7 +217,6 @@ export function DraftBoardTab({
   setSearchTerm: _setSearchTerm,
   positionFilter: _positionFilter,
   setPositionFilter: _setPositionFilter,
-  filteredProspects,
   allProspects = [],
   draftBoard,
   onAddToDraftBoard,
@@ -252,39 +260,35 @@ export function DraftBoardTab({
   )
   const ktcHistoryMap = ktcBulkData?.historyMap ?? {}
 
-  const currentDraftYear = useMemo(() => {
-    const source = Array.isArray(allProspects) ? allProspects : []
-    const years = source
-      .map((p) => p.draft_year)
-      .filter((y): y is number => typeof y === 'number' && Number.isFinite(y))
-    if (!years.length) return 2026
-
-    // Product decision: current active class is 2026.
-    if (years.includes(2026)) return 2026
-
-    // Safety fallback if 2026 rows are unavailable in a given environment.
-    return Math.max(...years)
-  }, [allProspects])
-
   const sortByRankThenGrade = (a: Prospect, b: Prospect) => {
-    const rankA = Number(a.rank || 9999)
-    const rankB = Number(b.rank || 9999)
+    const rankA = overallRankOf(a)
+    const rankB = overallRankOf(b)
     if (rankA !== rankB) return rankA - rankB
     return Number(b.overall_grade || 0) - Number(a.overall_grade || 0)
   }
 
-  const currentYearProspects = useMemo(() => {
-    return allProspects
-      .filter((p) => p.draft_year === currentDraftYear)
-      .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-      .sort(sortByRankThenGrade)
-  }, [allProspects, currentDraftYear])
-
+  // The board is a forward-looking tool: only classes that have not been
+  // drafted yet belong on it. Everything downstream (consensus, heat map,
+  // class averages, the off-board pool) is scoped to this set.
   const allEligibleProspects = useMemo(() => {
     return allProspects
-      .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+      .filter((p) => (p.draft_year ?? 0) >= DRAFT_BOARD_MIN_YEAR)
+      .filter((p) => BOARD_POSITIONS.includes(p.position))
       .sort(sortByRankThenGrade)
   }, [allProspects])
+
+  // Seed with the nearest upcoming class; later classes stay available to add.
+  const currentDraftYear = useMemo(() => {
+    const years = allEligibleProspects
+      .map((p) => p.draft_year)
+      .filter((y): y is number => typeof y === 'number' && Number.isFinite(y))
+    return years.length ? Math.min(...years) : DRAFT_BOARD_MIN_YEAR
+  }, [allEligibleProspects])
+
+  const currentYearProspects = useMemo(
+    () => allEligibleProspects.filter((p) => p.draft_year === currentDraftYear),
+    [allEligibleProspects, currentDraftYear]
+  )
 
   const consensusBoard = useMemo(() => {
     const pool =
@@ -295,7 +299,10 @@ export function DraftBoardTab({
   }, [allEligibleProspects, position])
 
   const boardProspects = useMemo(() => {
-    const scoped = draftBoard.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+    // Drop anything a saved board carries over from an already-drafted class.
+    const scoped = draftBoard.filter(
+      (p) => BOARD_POSITIONS.includes(p.position) && (p.draft_year ?? 0) >= DRAFT_BOARD_MIN_YEAR
+    )
     return position === 'ALL' ? scoped : scoped.filter((p) => p.position === position)
   }, [draftBoard, position])
 
@@ -331,11 +338,14 @@ export function DraftBoardTab({
     return map
   }, [boardProspects])
 
-  // If existing board entries belong to an older class, seed once with the current class.
+  // If the board holds nothing from an upcoming class, seed it once with the
+  // nearest one. A saved board full of already-drafted players gets replaced.
   useEffect(() => {
-    const currentYearOnBoard = draftBoard.filter((p) => p.draft_year === currentDraftYear).length
+    const eligibleOnBoard = draftBoard.filter(
+      (p) => (p.draft_year ?? 0) >= DRAFT_BOARD_MIN_YEAR
+    ).length
     if (seededYearRef.current === currentDraftYear) return
-    if (currentYearOnBoard > 0) {
+    if (eligibleOnBoard > 0) {
       seededYearRef.current = currentDraftYear
       return
     }
@@ -347,7 +357,7 @@ export function DraftBoardTab({
   }, [draftBoard, currentDraftYear, currentYearProspects, onAddToDraftBoard, onClearDraftBoard])
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
 
-  /** Per-position stat arrays for heat-map percentile coloring across all classes. */
+  /** Per-position stat arrays for heat-map percentile coloring across upcoming classes. */
   const positionalHeatStats = useMemo(() => {
     type StatSet = { grade: number[]; rank: number[]; height: number[]; weight: number[]; forty: number[]; physical: number[] }
     const map = new Map<string, StatSet>()
@@ -356,7 +366,7 @@ export function DraftBoardTab({
       if (!map.has(key)) map.set(key, { grade: [], rank: [], height: [], weight: [], forty: [], physical: [] })
       const set = map.get(key)!
       const grade = Number(p.overall_grade || 0)
-      const rank = Number(p.rank || 0)
+      const rank = overallRankOf(p)
       const height = p.height ? Number(p.height) : 0
       const weight = Number(p.weight || 0)
       const forty = parseForty(p.college_stats || null)
@@ -536,11 +546,7 @@ export function DraftBoardTab({
 
   const addTopAvailable = () => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
-    const pool =
-      position === 'ALL'
-        ? currentYearProspects
-        : currentYearProspects.filter((p) => p.position === position)
-    const firstMissing = pool.find((p) => !onBoardIds.has(p.id))
+    const firstMissing = availableProspects.find((p) => !onBoardIds.has(p.id))
     if (firstMissing) onAddToDraftBoard(firstMissing)
   }
 
@@ -583,14 +589,19 @@ export function DraftBoardTab({
     commitSectionReorder(year, reorderedSection)
   }
 
+  /** Every upcoming-class prospect for the active position tab. */
+  const availableProspects = useMemo(
+    () =>
+      position === 'ALL'
+        ? allEligibleProspects
+        : allEligibleProspects.filter((p) => p.position === position),
+    [allEligibleProspects, position]
+  )
+
   const offBoardProspects = useMemo(() => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
-    const pool =
-      position === 'ALL'
-        ? currentYearProspects
-        : currentYearProspects.filter((p) => p.position === position)
-    return pool.filter((p) => !onBoardIds.has(p.id))
-  }, [draftBoard, currentYearProspects, position])
+    return availableProspects.filter((p) => !onBoardIds.has(p.id))
+  }, [draftBoard, availableProspects])
 
   const filteredOffBoardProspects = useMemo(() => {
     const q = offBoardSearch.trim().toLowerCase()
@@ -1121,7 +1132,7 @@ export function DraftBoardTab({
                       : 'All available prospects are on your board.'}
                   </div>
                 ) : (
-                  filteredOffBoardProspects.slice(0, 40).map((prospect) => {
+                  filteredOffBoardProspects.slice(0, OFF_BOARD_VISIBLE_LIMIT).map((prospect) => {
                     const p = toBoardPlayer(prospect)
                     return (
                       <button
@@ -1154,7 +1165,8 @@ export function DraftBoardTab({
                           <div className="text-sm font-medium text-foreground truncate">
                             {p.name}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {p.draftYear ? `${p.draftYear} • ` : ''}
                             {p.position} • {p.school} • {p.grade.toFixed(1)}
                           </div>
                         </div>
@@ -1167,6 +1179,12 @@ export function DraftBoardTab({
                       )
                     })
                   )}
+                {filteredOffBoardProspects.length > OFF_BOARD_VISIBLE_LIMIT && (
+                  <div className="px-3 py-2 text-[10px] text-muted-foreground">
+                    Showing first {OFF_BOARD_VISIBLE_LIMIT} of{' '}
+                    {filteredOffBoardProspects.length} — search to narrow.
+                  </div>
+                )}
                 </div>
             </div>
 

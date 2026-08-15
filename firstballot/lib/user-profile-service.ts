@@ -1,5 +1,6 @@
 import { supabaseServer } from './supabase-server'
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from './supabase-config'
 import { v4 as uuidv4 } from 'uuid'
 
 export interface UserProfile {
@@ -17,11 +18,11 @@ export interface UserProfile {
   updated_at: string
 }
 
-// Create service role client for webhook operations (bypasses RLS)
-const supabaseServiceRole = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Create service role client for webhook operations (bypasses RLS).
+// Goes through the shared resolvers so it accepts NEXT_PUBLIC_SUPABASE_URL too —
+// reading only SUPABASE_URL here made `next build` fail collecting page data
+// for /api/webhooks/stripe, which imports this module.
+const supabaseServiceRole = createClient(getSupabaseUrl(), getSupabaseServiceRoleKey())
 
 export class UserProfileService {
   /**

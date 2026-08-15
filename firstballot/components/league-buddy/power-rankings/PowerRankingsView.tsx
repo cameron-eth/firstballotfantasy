@@ -3,19 +3,16 @@
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart3 } from 'lucide-react'
-import { CORE_POSITIONS, buildPowerRankings, ordinal, type CorePosition } from '@/lib/sleeper-sdk'
+import { CORE_POSITIONS, ordinal, type CorePosition, type PowerRankings } from '@/lib/sleeper-sdk'
 import type { TeamData } from '../types'
-import { TeamRankingsTable } from './TeamRankingsTable'
 import { RankBarList, type RankBarRow } from './RankBarList'
 import { PositionStrengthRadar, type RadarPoint } from './PositionStrengthRadar'
 import { StartingLineupChart } from './StartingLineupChart'
 
 interface PowerRankingsViewProps {
-  teams: TeamData[]
+  rankings: PowerRankings
   selectedTeam: TeamData | null
-  /** Sleeper's raw `roster_positions` slot array for this league. */
-  rosterPositionsRaw: string[]
-  onTeamSelect: (team: TeamData) => void
+  leagueSize: number
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -36,22 +33,10 @@ const CATEGORY_LABELS: Record<string, string> = {
  * roster data already in memory (see lib/sleeper-sdk/values.ts).
  */
 export function PowerRankingsView({
-  teams,
+  rankings,
   selectedTeam,
-  rosterPositionsRaw,
-  onTeamSelect,
+  leagueSize,
 }: PowerRankingsViewProps) {
-  const rankings = useMemo(
-    () =>
-      buildPowerRankings(
-        teams.map((team) => ({ rosterId: team.rosterId, players: team.players })),
-        rosterPositionsRaw
-      ),
-    [teams, rosterPositionsRaw]
-  )
-
-  const teamsById = useMemo(() => new Map(teams.map((team) => [team.rosterId, team])), [teams])
-
   const selectedEntry = useMemo(
     () => rankings.teams.find((entry) => entry.rosterId === selectedTeam?.rosterId) ?? null,
     [rankings, selectedTeam?.rosterId]
@@ -82,9 +67,9 @@ export function PowerRankingsView({
       label: slot.label,
       sublabel: slot.player?.playerName,
       share: ranks[slot.id]?.share ?? 0,
-      rank: ranks[slot.id]?.rank ?? teams.length,
+      rank: ranks[slot.id]?.rank ?? leagueSize,
     }))
-  }, [rankings, selectedEntry, teams.length])
+  }, [rankings, selectedEntry, leagueSize])
 
   const radarData = useMemo<RadarPoint[]>(() => {
     if (!selectedEntry) return []
@@ -108,7 +93,7 @@ export function PowerRankingsView({
     })
   }, [rankings, selectedEntry])
 
-  if (teams.length === 0) {
+  if (leagueSize === 0) {
     return (
       <Card className="bg-slate-800 border-slate-700">
         <CardContent className="py-12 text-center text-slate-400">
@@ -117,8 +102,6 @@ export function PowerRankingsView({
       </Card>
     )
   }
-
-  const leagueSize = teams.length
 
   return (
     <div className="space-y-4">
@@ -139,23 +122,7 @@ export function PowerRankingsView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="bg-slate-800 border-slate-700">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
-              Team Rankings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TeamRankingsTable
-              rankings={rankings.teams}
-              teamsById={teamsById}
-              selectedRosterId={selectedTeam?.rosterId ?? null}
-              onTeamSelect={onTeamSelect}
-            />
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">

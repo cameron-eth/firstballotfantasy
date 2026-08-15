@@ -9,7 +9,7 @@ import {
 } from './competitiveState'
 import type { TeamData } from './types'
 
-type SortKey = 'now' | 'future'
+type SortKey = 'power' | 'now' | 'future'
 
 // Plot geometry (SVG user units).
 const X0 = 34
@@ -50,24 +50,30 @@ interface CompetitiveStateMapProps {
   placements: LeaguePlacements
   teams: TeamData[]
   selectedRosterId: number
+  /** Power-ranking score per roster (0–100, league best = 100). Drives the default sort. */
+  powerScores: Record<number, number>
 }
 
 export function CompetitiveStateMap({
   placements,
   teams,
   selectedRosterId,
+  powerScores,
 }: CompetitiveStateMapProps) {
   const [view, setView] = useState<'map' | 'list'>('list')
-  const [sortKey, setSortKey] = useState<SortKey>('now')
+  const [sortKey, setSortKey] = useState<SortKey>('power')
 
   const teamName = (rosterId: number) =>
     teams.find((t) => t.rosterId === rosterId)?.teamName ?? ''
 
   const ranked = useMemo(() => {
-    return Object.values(placements.placements).sort((a, b) =>
-      sortKey === 'now' ? b.nowScore - a.nowScore : b.futureScore - a.futureScore
-    )
-  }, [placements.placements, sortKey])
+    const score = (rosterId: number) => powerScores[rosterId] ?? 0
+    return Object.values(placements.placements).sort((a, b) => {
+      if (sortKey === 'now') return b.nowScore - a.nowScore
+      if (sortKey === 'future') return b.futureScore - a.futureScore
+      return score(b.rosterId) - score(a.rosterId)
+    })
+  }, [placements.placements, powerScores, sortKey])
 
   const selected = placements.placements[selectedRosterId]
   if (!selected) return null
@@ -118,9 +124,16 @@ export function CompetitiveStateMap({
 
       {view === 'list' ? (
         <div className="space-y-2">
-          <div className="grid grid-cols-[24px_1fr_auto_auto_auto] gap-2 px-2 text-[9px] font-mono uppercase text-slate-500">
+          <div className="grid grid-cols-[24px_1fr_auto_auto_auto_auto] gap-2 px-2 text-[9px] font-mono uppercase text-slate-500">
             <span>#</span>
             <span>Team</span>
+            <button
+              type="button"
+              onClick={() => setSortKey('power')}
+              className={`text-right hover:text-slate-300 ${sortKey === 'power' ? 'text-slate-300' : ''}`}
+            >
+              Power {sortKey === 'power' ? '▾' : ''}
+            </button>
             <button
               type="button"
               onClick={() => setSortKey('now')}
@@ -144,7 +157,7 @@ export function CompetitiveStateMap({
               return (
                 <div
                   key={p.rosterId}
-                  className={`grid grid-cols-[24px_1fr_auto_auto_auto] items-center gap-2 rounded px-2 py-1.5 ${
+                  className={`grid grid-cols-[24px_1fr_auto_auto_auto_auto] items-center gap-2 rounded px-2 py-1.5 ${
                     isSelected ? 'bg-slate-800/80 ring-1 ring-inset' : ''
                   }`}
                   style={isSelected ? { boxShadow: `inset 0 0 0 1px ${rowMeta.accent}66` } : undefined}
@@ -167,6 +180,13 @@ export function CompetitiveStateMap({
                       {rowMeta.label}
                     </span>
                   </div>
+                  <span
+                    className={`text-xs font-mono tabular-nums text-right font-bold ${
+                      isSelected ? 'text-yellow-400' : 'text-slate-200'
+                    }`}
+                  >
+                    {powerScores[p.rosterId] ?? '—'}
+                  </span>
                   <span className="text-slate-300 text-xs font-mono tabular-nums text-right">
                     {p.nowScore}
                   </span>

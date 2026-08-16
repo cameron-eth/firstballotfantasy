@@ -7,7 +7,7 @@ export const USER_GRADE_MAX = 100
  * single grade they have entered so far.
  *
  * Mirrors the `my_grade` generated column in
- * firstballotetl/sql/add_user_prospect_grades.sql. The database owns the stored
+ * sql/add_user_prospect_grades.sql. The database owns the stored
  * value; this exists so the board can render the new number immediately instead
  * of waiting for the round trip. Change both together.
  */

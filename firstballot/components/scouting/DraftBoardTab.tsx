@@ -2,35 +2,37 @@
 
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion, Reorder } from 'framer-motion'
+import { Reorder } from 'framer-motion'
 import Image from 'next/image'
 import useSWR from 'swr'
 import { cn } from '@/lib/utils'
-import {
-  normalizeScoutingGradeTier,
-  SCOUTING_DISPLAY_TIER_ORDER,
-  SCOUTING_TIER_STYLES,
-  type ScoutingDisplayTier,
-} from '@/lib/scouting-grade-tier'
-import {
-  ChevronDown,
-  ChevronUp,
-  ClipboardList,
-  GripVertical,
-  Minus,
-  Plus,
-  Scale,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  X,
-  Zap,
-} from 'lucide-react'
+import { ChevronDown, ClipboardList, GripVertical, X } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
 import { KtcSparkline } from './KtcSparkline'
+import { BoardBreakdownPanel } from './BoardBreakdownPanel'
+import { OffBoardPanel } from './OffBoardPanel'
 import type { Prospect } from './types'
-import { PlayerHeadshot } from '@/components/ui/player-headshot'
-import { useBreakdownPanelOpen } from '@/hooks/use-breakdown-panel-open'
+import {
+  BOARD_POSITIONS,
+  DRAFT_BOARD_MIN_YEAR,
+  formatHeight,
+  getComparisonNames,
+  getPlayerImageUrl,
+  heatCell,
+  myGradeOf,
+  normalizeName,
+  overallRankOf,
+  parseForty,
+  rankPercentile,
+  tierStyleFor,
+  toBoardPlayer,
+  userGradeOf,
+  type BoardPlayer,
+  type GradeField,
+} from './board-player'
+import { computeMyGrade, parseUserGrade } from '@/lib/user-grade'
+import type { ProspectGradePatch } from '@/hooks/use-prospect-grades'
+import type { UserProspectGrade } from '@/types/prospect-grades'
 
 interface DraftBoardTabProps {
   loading: boolean
@@ -53,25 +55,17 @@ interface DraftBoardTabProps {
   hasUnsavedChanges?: boolean
   onSaveBoard?: () => Promise<void>
   isLoggedIn?: boolean
+  /** The signed-in user's own film/talent grades, keyed by prospect id. */
+  gradesByProspectId?: Map<number, UserProspectGrade>
+  onSetGrade?: (prospectId: number, patch: ProspectGradePatch) => Promise<void>
+  /** Set when a grade save failed and was rolled back on screen. */
+  gradeSaveError?: string | null
+  onDismissGradeError?: () => void
 }
 
-interface BoardPlayer {
-  id: number
-  rank: number
-  name: string
-  school: string
-  position: string
-  draftYear: number | null
-  grade: number
-  tier: string
-  height: number | null
-  weight: number
-  fortyTime: number | null
-  production: number
-  physical: number
-  espnId: string
-  isCollege: boolean
-  headshotUrl: string | null
+interface EditingCell {
+  prospectId: number
+  field: GradeField
 }
 
 interface CompAvatarMeta {
@@ -80,135 +74,64 @@ interface CompAvatarMeta {
 }
 
 const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
-const BOARD_POSITIONS = ['QB', 'RB', 'WR', 'TE']
-/** Earliest class the draft board will show — classes before this are history. */
-const DRAFT_BOARD_MIN_YEAR = 2027
-/** Rows rendered in the "not on board" list before the user has to search. */
-const OFF_BOARD_VISIBLE_LIMIT = 40
+/**
+ * Column widths for the desktop board. The header and every row share this, so
+ * it lives in one place — two copies of the string drift the moment one changes.
+ * Order: drag · player · pos · rank · grade · film · talent · my grade · my # ·
+ *        40 · ht · wt · phy · ktc · remove
+ */
+const BOARD_GRID_TEMPLATE =
+  '20px minmax(180px,1fr) 40px 50px 56px 46px 46px 54px 50px 48px 44px 48px 46px 96px 24px'
 const ReorderAny = Reorder as unknown as {
   Group: React.ComponentType<Record<string, unknown>>
   Item: React.ComponentType<Record<string, unknown>>
 }
 
-function getTierLabel(gradeTier: string | null, grade: number): string {
-  return normalizeScoutingGradeTier(gradeTier, grade)
+
+interface GradeCellInputProps {
+  value: string
+  label: string
+  className: string
+  onChange: (value: string) => void
+  onCommit: () => void
+  onCancel: () => void
 }
 
-function tierStyleFor(
-  tier: string
-): (typeof SCOUTING_TIER_STYLES)[ScoutingDisplayTier] {
-  return SCOUTING_TIER_STYLES[tier as ScoutingDisplayTier] ?? SCOUTING_TIER_STYLES.Depth
-}
-
-function parseForty(stats?: Record<string, number> | null): number | null {
-  if (!stats) return null
-  const raw = (stats as Record<string, number | string>).forty_time
-  if (raw === undefined || raw === null || raw === '') return null
-  const val = Number(raw)
-  return Number.isFinite(val) ? val : null
-}
-
-function normalizeName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function splitComparisons(raw: string): string[] {
-  if (raw.includes('), ')) {
-    const parts = raw.split('), ')
-    return parts.map((part, idx) => (idx < parts.length - 1 ? `${part})` : part))
-  }
-  return raw.split(', ')
-}
-
-function parseComparisonName(comp: string): string {
-  const match = comp.match(/^(.+?)\s*\(/)
-  if (match) return match[1].trim()
-  return comp.trim()
-}
-
-function getComparisonNames(comparisons: string | null | undefined, max = 6): string[] {
-  if (!comparisons) return []
-  const names = splitComparisons(comparisons).map(parseComparisonName).filter(Boolean)
-  return Array.from(new Set(names)).slice(0, max)
-}
-
-/** Board rows are ordered and labelled by class-overall rank, not position rank. */
-function overallRankOf(p: Prospect): number {
-  return Number(p.overall_rank || p.rank || 9999)
-}
-
-function toBoardPlayer(p: Prospect): BoardPlayer {
-  return {
-    id: p.id,
-    rank: overallRankOf(p),
-    name: p.name,
-    school: p.school || 'TBD',
-    position: p.position,
-    draftYear: p.draft_year ?? null,
-    grade: Number(p.overall_grade || 0),
-    tier: getTierLabel(p.grade_tier, Number(p.overall_grade || 0)),
-    height: p.height ? Number(p.height) : null,
-    weight: Number(p.weight || 0),
-    fortyTime: parseForty(p.college_stats || null),
-    production: Math.round(Number(p.college_production_score || 0)),
-    physical: Math.round(Number(p.physical_measurables_score || 0)),
-    espnId: p.espn_id ? String(p.espn_id) : '',
-    isCollege: (p.draft_year || 0) >= 2025,
-    headshotUrl: p.headshot_url || null,
-  }
-}
-
-function getPlayerImageUrl(player: BoardPlayer): string {
-  if (player.headshotUrl) return player.headshotUrl
-  if (!player.espnId) return ''
-  const espnId = player.espnId.includes('.') ? player.espnId.split('.')[0] : player.espnId
-  if (player.isCollege) {
-    return `https://a.espncdn.com/i/headshots/college-football/players/full/${espnId}.png`
-  }
-  return `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
-}
-
-
-function calculateContrarianScore(userRanks: BoardPlayer[], consensusRanks: BoardPlayer[]): number {
-  if (userRanks.length === 0) return 0
-  let totalDiff = 0
-  const consensusMap = new Map(consensusRanks.map((p, i) => [p.name, i + 1]))
-  userRanks.forEach((player, userRank) => {
-    const consensusRank = consensusMap.get(player.name) || userRank + 1
-    totalDiff += Math.abs(userRank + 1 - consensusRank)
-  })
-  const maxPossibleDiff = (userRanks.length * userRanks.length) / 2
-  return Math.min(100, Math.round((totalDiff / maxPossibleDiff) * 100))
-}
-
-function getContrarianLabel(score: number): { label: string; color: string } {
-  if (score < 15) return { label: 'Consensus Builder', color: 'text-slate-400' }
-  if (score < 30) return { label: 'Mild Contrarian', color: 'text-blue-400' }
-  if (score < 50) return { label: 'Independent Thinker', color: 'text-emerald-400' }
-  if (score < 70) return { label: 'Bold Ranker', color: 'text-amber-400' }
-  return { label: 'Against the Grain', color: 'text-rose-400' }
-}
-
-function formatHeight(inches: number | null): string {
-  if (!inches || inches <= 0) return '—'
-  const ft = Math.floor(inches / 12)
-  const inch = inches % 12
-  return `${ft}'${inch}"`
-}
-
-/** Returns percentile 0–1 for value within a list. 1 = best. */
-function rankPercentile(value: number, values: number[], lowerIsBetter = false): number {
-  if (values.length < 2) return 0.5
-  const better = values.filter((v) => (lowerIsBetter ? v > value : v < value)).length
-  return better / (values.length - 1)
-}
-
-/** Maps a 0–1 percentile to background + text color for heat cells. */
-function heatCell(pct: number): { bg: string; color: string } {
-  if (pct >= 0.75) return { bg: 'rgba(16,185,129,0.18)', color: 'rgb(52,211,153)' }
-  if (pct >= 0.50) return { bg: 'rgba(59,130,246,0.16)', color: 'rgb(96,165,250)' }
-  if (pct >= 0.25) return { bg: 'rgba(245,158,11,0.16)', color: 'rgb(251,191,36)' }
-  return { bg: 'rgba(239,68,68,0.16)', color: 'rgb(248,113,113)' }
+/**
+ * The text field a film/talent cell turns into while being edited. Module scope
+ * so the desktop grid and the mobile card share one copy and neither remounts
+ * it mid-edit.
+ */
+function GradeCellInput({
+  value,
+  label,
+  className,
+  onChange,
+  onCommit,
+  onCancel,
+}: GradeCellInputProps) {
+  return (
+    <input
+      autoFocus
+      type="text"
+      inputMode="decimal"
+      value={value}
+      aria-label={label}
+      // Board rows are drag targets. Without this the pointer-down starts a
+      // drag instead of focusing the field — and it has to be the capture
+      // phase, because framer-motion listens natively on the row itself and
+      // would otherwise fire before a bubble-phase handler could stop it.
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={(e) => e.target.select()}
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onCommit()
+        else if (e.key === 'Escape') onCancel()
+      }}
+      className={className}
+    />
+  )
 }
 
 export function DraftBoardTab({
@@ -232,13 +155,22 @@ export function DraftBoardTab({
   hasUnsavedChanges = false,
   onSaveBoard,
   isLoggedIn = false,
+  gradesByProspectId,
+  onSetGrade,
+  gradeSaveError = null,
+  onDismissGradeError,
 }: DraftBoardTabProps) {
   const [position, setPosition] = useState<(typeof positionTabs)[number]>('ALL')
-  const { open: showBreakdown, toggle: toggleBreakdown } = useBreakdownPanelOpen()
-  const [offBoardSearch, setOffBoardSearch] = useState('')
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [draggingProspectId, setDraggingProspectId] = useState<number | null>(null)
+  // One cell is editable at a time, so this is board-level state rather than
+  // per-row state, which would force the row into its own component.
+  const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
+  const [editDraft, setEditDraft] = useState('')
+  const [sortByMyGrade, setSortByMyGrade] = useState(false)
   const seededYearRef = useRef<number | null>(null)
+
+  const canGrade = isLoggedIn && Boolean(onSetGrade)
 
   // Bulk-fetch KTC history via SWR (automatic retry on error, revalidation)
   const ktcNamesKey = useMemo(() => {
@@ -316,12 +248,30 @@ export function DraftBoardTab({
     return Array.from(grouped.entries())
       // Nearest class first — 2027 drafts before 2028, so it leads the board.
       .sort((a, b) => a[0] - b[0])
-      .map(([year, prospects]) => ({
-        year,
+      .map(([year, prospects]) => {
+        // "My #" always means position in the saved drag order, even while the
+        // view is sorted by My Grade — otherwise it degrades into a row counter.
+        const manualRankById = new Map<number, number>()
+        prospects.forEach((p, idx) => manualRankById.set(p.id, idx + 1))
+
         // Keep user-defined drag order within each class section.
-        prospects,
-      }))
-  }, [boardProspects])
+        if (!sortByMyGrade) return { year, prospects, manualRankById }
+
+        // Graded players first, best My Grade on top; ungraded players fall to
+        // the bottom holding their manual order.
+        const sorted = [...prospects].sort((a, b) => {
+          const aGrade = myGradeOf(gradesByProspectId, a.id)
+          const bGrade = myGradeOf(gradesByProspectId, b.id)
+          if (aGrade !== null && bGrade !== null && aGrade !== bGrade) {
+            return bGrade - aGrade
+          }
+          if (aGrade === null && bGrade !== null) return 1
+          if (bGrade === null && aGrade !== null) return -1
+          return (manualRankById.get(a.id) ?? 0) - (manualRankById.get(b.id) ?? 0)
+        })
+        return { year, prospects: sorted, manualRankById }
+      })
+  }, [boardProspects, sortByMyGrade, gradesByProspectId])
 
   const boardPlayerMap = useMemo(() => {
     const map = new Map<number, BoardPlayer>()
@@ -426,129 +376,46 @@ export function DraftBoardTab({
     return byYear
   }, [allEligibleProspects, position])
 
-  // Contrarian score scoped to the primary class on board
-  const contrarianScore = useMemo(() => {
-    // Find the primary year on the board (most players)
-    const yearCounts = new Map<number, number>()
-    for (const p of userBoard) {
-      const year = p.draftYear ?? 0
-      yearCounts.set(year, (yearCounts.get(year) || 0) + 1)
-    }
-    let primaryYear = 0
-    let maxCount = 0
-    for (const [year, count] of yearCounts) {
-      if (count > maxCount) { primaryYear = year; maxCount = count }
-    }
-    const classUsers = userBoard.filter((p) => (p.draftYear ?? 0) === primaryYear)
-    const classConsensus = consensusBoard.filter((p) => (p.draftYear ?? 0) === primaryYear)
-    return calculateContrarianScore(classUsers, classConsensus)
-  }, [userBoard, consensusBoard])
-  const contrarianLabel = useMemo(() => getContrarianLabel(contrarianScore), [contrarianScore])
-
-  const boardStats = useMemo(
-    () => ({
-      avgGrade:
-        userBoard.length > 0
-          ? userBoard.reduce((sum, p) => sum + p.grade, 0) / userBoard.length
-          : 0,
-      avgPhysical:
-        userBoard.length > 0
-          ? userBoard.reduce((sum, p) => sum + p.physical, 0) / userBoard.length
-          : 0,
-      avgProduction:
-        userBoard.length > 0
-          ? userBoard.reduce((sum, p) => sum + p.production, 0) / userBoard.length
-          : 0,
-      speedsters: userBoard.filter((p) => p.fortyTime && p.fortyTime < 4.45).length,
-      bigBoys: userBoard.filter((p) => p.weight > 220).length,
-      generational: userBoard.filter((p) => p.tier === 'Generational').length,
-      blueChips: userBoard.filter((p) => p.tier === 'Blue Chip').length,
-    }),
-    [userBoard]
-  )
-
-  const classAverages = useMemo(() => {
-    if (userBoard.length === 0) {
-      return { grade: 0, physical: 0, production: 0 }
-    }
-
-    const scoped =
-      position === 'ALL'
-        ? allEligibleProspects
-        : allEligibleProspects.filter((p) => p.position === position)
-
-    const cohortAveragesByYear = new Map<number | null, { grade: number; physical: number; production: number }>()
-    const grouped = new Map<number | null, BoardPlayer[]>()
-    for (const prospect of scoped) {
-      const year = prospect.draft_year ?? null
-      if (!grouped.has(year)) grouped.set(year, [])
-      grouped.get(year)!.push(toBoardPlayer(prospect))
-    }
-    for (const [year, cohort] of grouped.entries()) {
-      if (cohort.length === 0) continue
-      cohortAveragesByYear.set(year, {
-        grade: cohort.reduce((sum, p) => sum + p.grade, 0) / cohort.length,
-        physical: cohort.reduce((sum, p) => sum + p.physical, 0) / cohort.length,
-        production: cohort.reduce((sum, p) => sum + p.production, 0) / cohort.length,
-      })
-    }
-
-    const perPlayerClassBaseline = userBoard
-      .map((player) => cohortAveragesByYear.get(player.draftYear))
-      .filter((x): x is { grade: number; physical: number; production: number } => x !== undefined)
-
-    if (perPlayerClassBaseline.length === 0) {
-      return {
-        grade:
-          consensusBoard.length > 0
-            ? consensusBoard.reduce((sum, p) => sum + p.grade, 0) / consensusBoard.length
-            : 0,
-        physical:
-          consensusBoard.length > 0
-            ? consensusBoard.reduce((sum, p) => sum + p.physical, 0) / consensusBoard.length
-            : 0,
-        production:
-          consensusBoard.length > 0
-            ? consensusBoard.reduce((sum, p) => sum + p.production, 0) / consensusBoard.length
-            : 0,
-      }
-    }
-
-    return {
-      grade:
-        perPlayerClassBaseline.reduce((sum, x) => sum + x.grade, 0) / perPlayerClassBaseline.length,
-      physical:
-        perPlayerClassBaseline.reduce((sum, x) => sum + x.physical, 0) /
-        perPlayerClassBaseline.length,
-      production:
-        perPlayerClassBaseline.reduce((sum, x) => sum + x.production, 0) /
-        perPlayerClassBaseline.length,
-    }
-  }, [consensusBoard, allEligibleProspects, position, userBoard])
-
-  const boardConsensusDiffs = useMemo(() => {
-    // Group user board by year to compute within-class index
-    const byYear = new Map<number, BoardPlayer[]>()
-    for (const p of userBoard) {
-      const year = p.draftYear ?? 0
-      if (!byYear.has(year)) byYear.set(year, [])
-      byYear.get(year)!.push(p)
-    }
-    const results: { player: BoardPlayer; diff: number }[] = []
-    for (const [year, players] of byYear) {
-      const classNameMap = consensusRankByClassName.get(year)
-      players.forEach((p, idx) => {
-        const consensusRank = classNameMap?.get(p.name) ?? idx + 1
-        results.push({ player: p, diff: consensusRank - (idx + 1) })
-      })
-    }
-    return results
-  }, [userBoard, consensusRankByClassName])
 
   const addTopAvailable = () => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
     const firstMissing = availableProspects.find((p) => !onBoardIds.has(p.id))
     if (firstMissing) onAddToDraftBoard(firstMissing)
+  }
+
+  // ── Inline film / talent grading ───────────────────────────────────
+  // Click a cell to edit, Enter or blur to commit, Escape to abandon. Tab
+  // commits too, because leaving the field blurs it.
+  const beginEdit = (prospectId: number, field: GradeField) => {
+    if (!canGrade) return
+    const current = userGradeOf(gradesByProspectId?.get(prospectId), field)
+    setEditingCell({ prospectId, field })
+    setEditDraft(current === null ? '' : String(current))
+  }
+
+  const cancelEdit = () => {
+    setEditingCell(null)
+    setEditDraft('')
+  }
+
+  const commitEdit = () => {
+    if (!editingCell || !onSetGrade) {
+      cancelEdit()
+      return
+    }
+    const { prospectId, field } = editingCell
+    const parsed = parseUserGrade(editDraft)
+    cancelEdit()
+
+    // undefined means the text was not a usable number — leave the grade as is
+    // rather than guessing at what was meant.
+    if (parsed === undefined) return
+    if (parsed === userGradeOf(gradesByProspectId?.get(prospectId), field)) return
+
+    void onSetGrade(
+      prospectId,
+      field === 'film' ? { film_grade: parsed } : { talent_grade: parsed }
+    )
   }
 
   // ── Deferred drag reorder ──────────────────────────────────────────
@@ -603,14 +470,6 @@ export function DraftBoardTab({
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
     return availableProspects.filter((p) => !onBoardIds.has(p.id))
   }, [draftBoard, availableProspects])
-
-  const filteredOffBoardProspects = useMemo(() => {
-    const q = offBoardSearch.trim().toLowerCase()
-    if (!q) return offBoardProspects
-    return offBoardProspects.filter((p) =>
-      `${p.name} ${p.school} ${p.position}`.toLowerCase().includes(q)
-    )
-  }, [offBoardProspects, offBoardSearch])
 
   const compHeadshotMap = useMemo(() => {
     const map = new Map<string, CompAvatarMeta>()
@@ -675,6 +534,25 @@ export function DraftBoardTab({
           >
             Add Next
           </button>
+          {sortByMyGrade && (
+            <button
+              type="button"
+              onClick={() => setSortByMyGrade(false)}
+              className="min-h-10 px-3 sm:min-h-7 text-xs font-semibold rounded-md bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25 transition-colors active:scale-[0.98]"
+            >
+              Sorted by My Grade · Clear
+            </button>
+          )}
+          {gradeSaveError && (
+            <button
+              type="button"
+              onClick={onDismissGradeError}
+              className="min-h-10 px-3 sm:min-h-7 text-xs font-semibold rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 transition-colors"
+              title={gradeSaveError}
+            >
+              Grade didn&apos;t save · Dismiss
+            </button>
+          )}
         </div>
 
         {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
@@ -688,19 +566,42 @@ export function DraftBoardTab({
       </div>
 
       <div className="w-full px-1 sm:px-2 pb-24 lg:pb-3">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.9fr)_minmax(360px,1fr)] gap-5">
+        {/* The board carries three more columns than it used to, so it takes a
+            larger share of the row and the sidebar gives up its minimum. */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2.2fr)_minmax(320px,1fr)] gap-5">
           <div>
-            <div className="rounded-lg overflow-hidden border border-slate-700/80 bg-slate-900 xl:max-h-[calc(100vh-220px)] xl:flex xl:flex-col">
+            {/* overflow-x-auto so a narrow viewport scrolls the columns rather
+                than crushing the player name into nothing. */}
+            <div className="rounded-lg overflow-hidden lg:overflow-x-auto border border-slate-700/80 bg-slate-900 xl:max-h-[calc(100vh-220px)] xl:flex xl:flex-col">
               {/* Column header — slate navy to match app chrome */}
               <div
                 className="hidden lg:grid items-center border-b border-slate-700/70 bg-slate-800/85 px-2 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 select-none"
-                style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 120px 24px' }}
+                style={{ gridTemplateColumns: BOARD_GRID_TEMPLATE }}
               >
                 <span />
                 <span className="pl-1.5">Player</span>
                 <span className="text-center">Pos</span>
                 <span className="text-center">Rank</span>
                 <span className="text-center">Grade</span>
+                <span className="text-center text-sky-400/80">Film</span>
+                <span className="text-center text-sky-400/80">Talent</span>
+                <button
+                  type="button"
+                  onClick={() => setSortByMyGrade((prev) => !prev)}
+                  aria-pressed={sortByMyGrade}
+                  title={
+                    sortByMyGrade
+                      ? 'Back to your drag order'
+                      : 'Sort the board by your grade'
+                  }
+                  className={cn(
+                    'flex items-center justify-center gap-0.5 font-mono uppercase tracking-wider transition-colors hover:text-sky-300',
+                    sortByMyGrade ? 'text-sky-300' : 'text-sky-400/80'
+                  )}
+                >
+                  My Grd
+                  {sortByMyGrade && <ChevronDown className="w-3 h-3" />}
+                </button>
                 <span className="text-center">My #</span>
                 <span className="text-center">40</span>
                 <span className="text-center">Ht</span>
@@ -738,7 +639,11 @@ export function DraftBoardTab({
                             value={prospect}
                             layout="position"
                             transition={{ type: 'spring', stiffness: 400, damping: 25, mass: 0.8 }}
-                            drag="y"
+                            // Sorting by My Grade and dragging are mutually
+                            // exclusive: a sorted view has no manual order to
+                            // rearrange. Reorder.Item spreads props after its
+                            // own `drag={axis}`, so false wins here.
+                            drag={sortByMyGrade ? false : 'y'}
                             dragDirectionLock
                             dragMomentum={false}
                             dragElastic={0.08}
@@ -753,7 +658,8 @@ export function DraftBoardTab({
                             }}
                             whileDrag={{ scale: 1.01, zIndex: 40, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', cursor: 'grabbing' }}
                             className={cn(
-                              'relative border-b border-slate-700/45 last:border-0 cursor-grab active:cursor-grabbing focus:outline-none',
+                              'relative border-b border-slate-700/45 last:border-0 focus:outline-none',
+                              sortByMyGrade ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
                               isEven
                                 ? 'bg-slate-800/35 hover:bg-slate-800/55'
                                 : 'bg-slate-900 hover:bg-slate-800/45',
@@ -762,7 +668,9 @@ export function DraftBoardTab({
                           >
                             <div className="w-full">
                             {(() => {
-                              const myRank = index + 1
+                              // Position in the saved drag order, which stays
+                              // meaningful even while the view is sorted.
+                              const myRank = section.manualRankById.get(prospect.id) ?? index + 1
                               const heatKey = player.position
                               const stats = positionalHeatStats.get(heatKey)
                               const gradePct = stats ? rankPercentile(player.grade, stats.grade) : 0.5
@@ -776,9 +684,33 @@ export function DraftBoardTab({
                               const weightPct = (stats && player.weight) ? rankPercentile(player.weight, stats.weight) : 0.5
                               const physicalPct = (stats && player.physical > 0) ? rankPercentile(player.physical, stats.physical) : 0.5
 
+                              const userGrade = gradesByProspectId?.get(prospect.id)
+                              const filmGrade = userGradeOf(userGrade, 'film')
+                              const talentGrade = userGradeOf(userGrade, 'talent')
+                              const myGrade = computeMyGrade(filmGrade, talentGrade)
+                              const editingFilm =
+                                editingCell?.prospectId === prospect.id &&
+                                editingCell.field === 'film'
+                              const editingTalent =
+                                editingCell?.prospectId === prospect.id &&
+                                editingCell.field === 'talent'
+
+                              // Colour the user's grades against the same
+                              // per-position model-grade spread the GRADE column
+                              // uses, so an 88 you gave reads like an 88.
+                              const filmPct =
+                                stats && filmGrade !== null ? rankPercentile(filmGrade, stats.grade) : 0.5
+                              const talentPct =
+                                stats && talentGrade !== null ? rankPercentile(talentGrade, stats.grade) : 0.5
+                              const myGradePct =
+                                stats && myGrade !== null ? rankPercentile(myGrade, stats.grade) : 0.5
+
                               const gradeHeat = heatCell(gradePct)
                               const rankHeat = heatCell(rankPct)
                               const myRankHeat = heatCell(myRankPct)
+                              const filmHeat = heatCell(filmPct)
+                              const talentHeat = heatCell(talentPct)
+                              const myGradeHeat = heatCell(myGradePct)
                               const fortyHeat = heatCell(fortyPct)
                               const heightHeat = heatCell(heightPct)
                               const weightHeat = heatCell(weightPct)
@@ -880,6 +812,107 @@ export function DraftBoardTab({
                                           </div>
                                         </div>
                                         <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[3rem]"
+                                          style={
+                                            filmGrade !== null && !editingFilm
+                                              ? { backgroundColor: filmHeat.bg }
+                                              : undefined
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
+                                            Film
+                                          </div>
+                                          {editingFilm ? (
+                                            <GradeCellInput
+                                              value={editDraft}
+                                              label={`Film grade for ${player.name}`}
+                                              onChange={setEditDraft}
+                                              onCommit={commitEdit}
+                                              onCancel={cancelEdit}
+                                              className="w-10 bg-transparent text-[11px] font-mono font-bold tabular-nums leading-tight text-sky-200 outline-none"
+                                            />
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              disabled={!canGrade}
+                                              onPointerDownCapture={(e) => e.stopPropagation()}
+                                              onClick={() => beginEdit(prospect.id, 'film')}
+                                              aria-label={`Film grade for ${player.name}`}
+                                              className="text-[11px] font-mono font-bold tabular-nums leading-tight disabled:cursor-default"
+                                              style={{
+                                                color:
+                                                  filmGrade !== null
+                                                    ? filmHeat.color
+                                                    : 'rgb(100,100,110)',
+                                              }}
+                                            >
+                                              {filmGrade !== null ? filmGrade.toFixed(1) : '—'}
+                                            </button>
+                                          )}
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[3rem]"
+                                          style={
+                                            talentGrade !== null && !editingTalent
+                                              ? { backgroundColor: talentHeat.bg }
+                                              : undefined
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
+                                            Talent
+                                          </div>
+                                          {editingTalent ? (
+                                            <GradeCellInput
+                                              value={editDraft}
+                                              label={`Talent grade for ${player.name}`}
+                                              onChange={setEditDraft}
+                                              onCommit={commitEdit}
+                                              onCancel={cancelEdit}
+                                              className="w-10 bg-transparent text-[11px] font-mono font-bold tabular-nums leading-tight text-sky-200 outline-none"
+                                            />
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              disabled={!canGrade}
+                                              onPointerDownCapture={(e) => e.stopPropagation()}
+                                              onClick={() => beginEdit(prospect.id, 'talent')}
+                                              aria-label={`Talent grade for ${player.name}`}
+                                              className="text-[11px] font-mono font-bold tabular-nums leading-tight disabled:cursor-default"
+                                              style={{
+                                                color:
+                                                  talentGrade !== null
+                                                    ? talentHeat.color
+                                                    : 'rgb(100,100,110)',
+                                              }}
+                                            >
+                                              {talentGrade !== null ? talentGrade.toFixed(1) : '—'}
+                                            </button>
+                                          )}
+                                        </div>
+                                        <div
+                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
+                                          style={
+                                            myGrade !== null
+                                              ? { backgroundColor: myGradeHeat.bg }
+                                              : undefined
+                                          }
+                                        >
+                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
+                                            My Grd
+                                          </div>
+                                          <div
+                                            className="text-[11px] font-mono font-bold tabular-nums leading-tight"
+                                            style={{
+                                              color:
+                                                myGrade !== null
+                                                  ? myGradeHeat.color
+                                                  : 'rgb(100,100,110)',
+                                            }}
+                                          >
+                                            {myGrade !== null ? myGrade.toFixed(1) : '—'}
+                                          </div>
+                                        </div>
+                                        <div
                                           className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
                                           style={{ backgroundColor: myRankHeat.bg }}
                                         >
@@ -957,7 +990,7 @@ export function DraftBoardTab({
                                 </div>
                                 <div
                                   className="hidden lg:grid items-stretch h-24 pl-2 pr-2"
-                                  style={{ gridTemplateColumns: '20px 1fr 40px 52px 60px 52px 50px 46px 52px 48px 120px 24px' }}
+                                  style={{ gridTemplateColumns: BOARD_GRID_TEMPLATE }}
                                 >
                                   {/* Drag handle */}
                                   <div className="flex items-center">
@@ -968,7 +1001,7 @@ export function DraftBoardTab({
                                   {/* Player: full-height cutout image + name */}
                                   <div className="flex items-center gap-3 min-w-0">
                                     {/* Cutout image — no circle, like ProspectCard */}
-                                    <div className="relative w-28 h-full flex-shrink-0 bg-slate-800/40 overflow-hidden rounded-sm">
+                                    <div className="relative w-20 h-full flex-shrink-0 bg-slate-800/40 overflow-hidden rounded-sm">
                                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent z-[1]" />
                                       {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                         <Image
@@ -1017,6 +1050,82 @@ export function DraftBoardTab({
                                       style={{ backgroundColor: gradeHeat.bg, color: gradeHeat.color }}
                                     >
                                       {player.grade.toFixed(1)}
+                                    </div>
+                                  </div>
+
+                                  {/* Film — the user's own grade, click to edit */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    {editingFilm ? (
+                                      <GradeCellInput
+                                        value={editDraft}
+                                        label={`Film grade for ${player.name}`}
+                                        onChange={setEditDraft}
+                                        onCommit={commitEdit}
+                                        onCancel={cancelEdit}
+                                        className="w-full h-full min-w-0 rounded bg-sky-500/15 text-center text-sm font-mono font-bold tabular-nums text-sky-200 outline-none ring-1 ring-sky-400/60"
+                                      />
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={!canGrade}
+                                        onPointerDownCapture={(e) => e.stopPropagation()}
+                                        onClick={() => beginEdit(prospect.id, 'film')}
+                                        aria-label={`Film grade for ${player.name}`}
+                                        title={canGrade ? 'Your film grade' : 'Sign in to grade'}
+                                        className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums enabled:hover:ring-1 enabled:hover:ring-sky-400/40 disabled:cursor-default"
+                                        style={
+                                          filmGrade !== null
+                                            ? { backgroundColor: filmHeat.bg, color: filmHeat.color }
+                                            : { color: 'rgb(100,100,110)' }
+                                        }
+                                      >
+                                        {filmGrade !== null ? filmGrade.toFixed(1) : '—'}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Talent — the user's own grade, click to edit */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    {editingTalent ? (
+                                      <GradeCellInput
+                                        value={editDraft}
+                                        label={`Talent grade for ${player.name}`}
+                                        onChange={setEditDraft}
+                                        onCommit={commitEdit}
+                                        onCancel={cancelEdit}
+                                        className="w-full h-full min-w-0 rounded bg-sky-500/15 text-center text-sm font-mono font-bold tabular-nums text-sky-200 outline-none ring-1 ring-sky-400/60"
+                                      />
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={!canGrade}
+                                        onPointerDownCapture={(e) => e.stopPropagation()}
+                                        onClick={() => beginEdit(prospect.id, 'talent')}
+                                        aria-label={`Talent grade for ${player.name}`}
+                                        title={canGrade ? 'Your talent grade' : 'Sign in to grade'}
+                                        className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums enabled:hover:ring-1 enabled:hover:ring-sky-400/40 disabled:cursor-default"
+                                        style={
+                                          talentGrade !== null
+                                            ? { backgroundColor: talentHeat.bg, color: talentHeat.color }
+                                            : { color: 'rgb(100,100,110)' }
+                                        }
+                                      >
+                                        {talentGrade !== null ? talentGrade.toFixed(1) : '—'}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* My Grade — film and talent, 50/50 */}
+                                  <div className="flex items-center justify-center py-3.5 px-0.5">
+                                    <div
+                                      className="w-full h-full flex items-center justify-center rounded text-base font-mono font-bold tabular-nums"
+                                      style={
+                                        myGrade !== null
+                                          ? { backgroundColor: myGradeHeat.bg, color: myGradeHeat.color }
+                                          : { color: 'rgb(100,100,110)' }
+                                      }
+                                    >
+                                      {myGrade !== null ? myGrade.toFixed(1) : '—'}
                                     </div>
                                   </div>
 
@@ -1076,7 +1185,7 @@ export function DraftBoardTab({
                                       playerName={player.name}
                                       history={ktcHistoryMap[player.name]}
                                       useSf={true}
-                                      width={88}
+                                      width={72}
                                       height={44}
                                     />
                                   </div>
@@ -1108,343 +1217,19 @@ export function DraftBoardTab({
           </div>
 
           <div className="space-y-3 xl:sticky xl:top-24 self-start xl:max-h-[calc(100vh-220px)] xl:overflow-y-auto">
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="p-4 border-b border-border flex items-center justify-between">
-                <h3 className="font-mono font-bold text-foreground">Prospects Not On Board</h3>
-                <span className="text-xs text-muted-foreground">
-                  {filteredOffBoardProspects.length}
-                </span>
-              </div>
-
-              <div className="p-3 border-b border-border">
-                <input
-                  value={offBoardSearch}
-                  onChange={(e) => setOffBoardSearch(e.target.value)}
-                  placeholder="Search available prospects..."
-                  className="w-full h-9 rounded bg-background border border-border px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/40"
-                />
-              </div>
-
-              <div className="max-h-[340px] overflow-y-auto">
-                {filteredOffBoardProspects.length === 0 ? (
-                  <div className="p-4 text-xs text-muted-foreground">
-                    {offBoardSearch
-                      ? 'No matching available prospects.'
-                      : 'All available prospects are on your board.'}
-                  </div>
-                ) : (
-                  filteredOffBoardProspects.slice(0, OFF_BOARD_VISIBLE_LIMIT).map((prospect) => {
-                    const p = toBoardPlayer(prospect)
-                    return (
-                      <button
-                        key={`offboard-${p.id}`}
-                        type="button"
-                        onClick={() => onAddToDraftBoard(prospect)}
-                        className="w-full px-3 py-2.5 border-b border-border/60 last:border-0 flex items-center gap-2 text-left hover:bg-secondary/50 active:bg-secondary/70 transition-colors"
-                      >
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-secondary flex-shrink-0 pointer-events-none">
-                          {!imageErrors.has(p.name) && getPlayerImageUrl(p) ? (
-                            <Image
-                              src={getPlayerImageUrl(p)}
-                              alt={p.name}
-                              width={32}
-                              height={32}
-                              className="w-full h-full object-cover"
-                              onError={() => setImageErrors((prev) => new Set(prev).add(p.name))}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-                              {p.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0 pointer-events-none">
-                          <div className="text-sm font-medium text-foreground truncate">
-                            {p.name}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground truncate">
-                            {p.draftYear ? `${p.draftYear} • ` : ''}
-                            {p.position} • {p.school} • {p.grade.toFixed(1)}
-                          </div>
-                        </div>
-
-                        <Plus
-                          className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none"
-                          aria-hidden
-                        />
-                      </button>
-                      )
-                    })
-                  )}
-                {filteredOffBoardProspects.length > OFF_BOARD_VISIBLE_LIMIT && (
-                  <div className="px-3 py-2 text-[10px] text-muted-foreground">
-                    Showing first {OFF_BOARD_VISIBLE_LIMIT} of{' '}
-                    {filteredOffBoardProspects.length} — search to narrow.
-                  </div>
-                )}
-                </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-lg p-4">
-              <h3 className="font-mono font-bold text-foreground mb-3">Quick Actions</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={addTopAvailable}
-                  className="px-3 py-2 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                >
-                  Add Next
-                </button>
-                <button
-                  onClick={onClearDraftBoard}
-                  className="px-3 py-2 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                >
-                  Clear Board
-                </button>
-              </div>
-            </div>
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={toggleBreakdown}
-                className="w-full p-3 lg:p-4 hover:bg-secondary/50 transition-colors text-left flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-0"
-              >
-                <div className="flex items-center justify-between gap-2 w-full lg:w-auto lg:flex-1 lg:min-w-0">
-                  <h3 className="font-mono font-bold text-foreground">Board Breakdown</h3>
-                  {showBreakdown ? (
-                    <ChevronUp className="w-4 h-4 shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 shrink-0" />
-                  )}
-                </div>
-                {userBoard.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 w-full lg:hidden pointer-events-none">
-                    <span className="inline-flex items-baseline gap-1 rounded-md border border-primary/35 bg-primary/10 px-2 py-1">
-                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-primary/80">
-                        GRD
-                      </span>
-                      <span className="text-xs font-mono font-bold text-primary tabular-nums">
-                        {boardStats.avgGrade.toFixed(1)}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-baseline gap-1 rounded-md border border-border bg-secondary/70 px-2 py-1">
-                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-muted-foreground">
-                        PHYS
-                      </span>
-                      <span className="text-xs font-mono font-bold text-foreground tabular-nums">
-                        {boardStats.avgPhysical.toFixed(0)}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-baseline gap-1 rounded-md border border-border bg-secondary/70 px-2 py-1">
-                      <span className="text-[9px] font-mono font-black uppercase tracking-wide text-muted-foreground">
-                        PROD
-                      </span>
-                      <span className="text-xs font-mono font-bold text-foreground tabular-nums">
-                        {boardStats.avgProduction.toFixed(0)}
-                      </span>
-                    </span>
-                  </div>
-                )}
-              </button>
-
-              <AnimatePresence>
-                {showBreakdown && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-4 pt-0 space-y-4">
-                      <div className="hidden lg:grid grid-cols-3 gap-3">
-                        <div className="text-center p-3 bg-secondary/50 rounded">
-                          <div className="text-xl font-mono font-bold text-primary">
-                            {boardStats.avgGrade.toFixed(1)}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">AVG GRADE</div>
-                        </div>
-                        <div className="text-center p-3 bg-secondary/50 rounded">
-                          <div className="text-xl font-mono font-bold text-foreground">
-                            {boardStats.avgPhysical.toFixed(0)}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">AVG PHYS</div>
-                        </div>
-                        <div className="text-center p-3 bg-secondary/50 rounded">
-                          <div className="text-xl font-mono font-bold text-foreground">
-                            {boardStats.avgProduction.toFixed(0)}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">AVG PROD</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                          TIER DISTRIBUTION
-                        </h4>
-                        <div className="space-y-2">
-                          {SCOUTING_DISPLAY_TIER_ORDER.map((tier) => {
-                            const colors = SCOUTING_TIER_STYLES[tier]
-                            const count = userBoard.filter((p) => p.tier === tier).length
-                            const pct = userBoard.length > 0 ? (count / userBoard.length) * 100 : 0
-                            return (
-                              <div key={tier} className="flex items-center gap-2">
-                                <span className={cn('text-xs w-24 shrink-0 truncate', colors.text)}>
-                                  {tier}
-                                </span>
-                                <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${pct}%` }}
-                                    className={cn(
-                                      'h-full rounded-full',
-                                      colors.bg.replace('/20', '/60')
-                                    )}
-                                  />
-                                </div>
-                                <span className="text-xs font-mono text-muted-foreground w-6">
-                                  {count}
-                                </span>
-                              </div>
-                            )
-                          })}
-              </div>
-            </div>
-
-                      <div>
-                        <h4 className="text-xs font-medium text-muted-foreground mb-2">
-                          PLAYER TYPES
-                        </h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
-                            <Zap className="w-4 h-4 text-cyan-400" />
-                            <div>
-                              <div className="text-sm font-mono font-bold">
-                                {boardStats.speedsters}
-                              </div>
-                              <div className="text-[9px] text-muted-foreground">Speedsters</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
-                            <Scale className="w-4 h-4 text-purple-400" />
-                            <div>
-                              <div className="text-sm font-mono font-bold">
-                                {boardStats.bigBoys}
-                              </div>
-                              <div className="text-[9px] text-muted-foreground">
-                                {'Big Boys (>220)'}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
-                            <Target className="w-4 h-4 text-amber-400" />
-                            <div>
-                              <div className="text-sm font-mono font-bold">
-                                {boardStats.generational}
-                              </div>
-                              <div className="text-[9px] text-muted-foreground">Generational</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 p-2 bg-secondary/50 rounded">
-                            <TrendingUp className="w-4 h-4 text-blue-400" />
-                            <div>
-                              <div className="text-sm font-mono font-bold">
-                                {boardStats.blueChips}
-                              </div>
-                              <div className="text-[9px] text-muted-foreground">Blue Chips</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-                </div>
-
-            <div className="bg-card border border-border rounded-lg p-4">
-              <h3 className="font-mono font-bold text-foreground mb-3">Your Biggest Takes</h3>
-              <div className="mb-4">
-                <h4 className="text-xs text-emerald-400 font-medium mb-2 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> HIGHER THAN CONSENSUS
-                </h4>
-                <div className="space-y-1">
-                  {boardConsensusDiffs
-                    .filter((x) => x.diff > 0)
-                    .sort((a, b) => b.diff - a.diff)
-                    .slice(0, 3)
-                    .map(({ player, diff }) => (
-                      <div key={player.id} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground truncate">{player.name}</span>
-                        <span className="text-emerald-400 font-mono">+{diff}</span>
-                      </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                <h4 className="text-xs text-rose-400 font-medium mb-2 flex items-center gap-1">
-                  <TrendingDown className="w-3 h-3" /> LOWER THAN CONSENSUS
-                </h4>
-                <div className="space-y-1">
-                  {boardConsensusDiffs
-                    .filter((x) => x.diff < 0)
-                    .sort((a, b) => a.diff - b.diff)
-                    .slice(0, 3)
-                    .map(({ player, diff }) => (
-                      <div key={player.id} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground truncate">{player.name}</span>
-                        <span className="text-rose-400 font-mono">{diff}</span>
-                      </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-            <div className="bg-card border border-border rounded-lg p-4">
-              <h3 className="font-mono font-bold text-foreground mb-3">vs Class Average</h3>
-              <div className="space-y-3">
-                {[
-                  { label: 'Grade', yours: boardStats.avgGrade, klass: classAverages.grade },
-                  {
-                    label: 'Physical',
-                    yours: boardStats.avgPhysical,
-                    klass: classAverages.physical,
-                  },
-                  {
-                    label: 'Production',
-                    yours: boardStats.avgProduction,
-                    klass: classAverages.production,
-                  },
-                ].map((stat) => {
-                  const diff = stat.yours - stat.klass
-                  return (
-                    <div key={stat.label} className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">{stat.label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-foreground">{stat.yours.toFixed(1)}</span>
-                        <span
-                          className={cn(
-                            'text-xs font-mono',
-                            diff > 0
-                              ? 'text-emerald-400'
-                              : diff < 0
-                                ? 'text-rose-400'
-                                : 'text-muted-foreground'
-                          )}
-                        >
-                          ({diff > 0 ? '+' : ''}
-                          {diff.toFixed(1)})
-                        </span>
-                  </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+            <OffBoardPanel
+              offBoardProspects={offBoardProspects}
+              onAddToDraftBoard={onAddToDraftBoard}
+              onAddNext={addTopAvailable}
+              onClearBoard={onClearDraftBoard}
+            />
+            <BoardBreakdownPanel
+              userBoard={userBoard}
+              consensusBoard={consensusBoard}
+              allEligibleProspects={allEligibleProspects}
+              position={position}
+              consensusRankByClassName={consensusRankByClassName}
+            />
           </div>
         </div>
     </div>

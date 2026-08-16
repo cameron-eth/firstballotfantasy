@@ -201,20 +201,46 @@ export function computeTradeAnalytics(
   const perDay = totalTradeEvents / spanDays
   const avgGapDays = totalTradeEvents > 1 ? spanDays / (totalTradeEvents - 1) : 0
 
-  // Busiest single calendar day (most trades in one UTC day)
-  const dayBuckets: Record<string, number> = {}
+  // Busiest single calendar day, bucketed by local date rather than UTC. A
+  // trade made at 9pm ET belongs to that evening, not to the following UTC day
+  // — bucketing in UTC splits one busy night across two days and hides the
+  // real peak.
+  const dayBuckets = new Map<string, { count: number; ts: number }>()
   for (const ts of sortedTs) {
-    const key = new Date(ts).toISOString().slice(0, 10)
-    dayBuckets[key] = (dayBuckets[key] || 0) + 1
+    const d = new Date(ts)
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+    const bucket = dayBuckets.get(key)
+    if (bucket) bucket.count += 1
+    // Keep the first timestamp in the day; it labels the bucket later.
+    else dayBuckets.set(key, { count: 1, ts })
   }
+
   let busiestCount = 0
-  let busiestLabel = '—'
-  for (const [day, count] of Object.entries(dayBuckets)) {
-    if (count > busiestCount) {
+  let busiestTs = 0
+  // `>=` rather than `>` so a tie resolves to the most recent day. sortedTs is
+  // ascending, so buckets are inserted oldest-first and the later day wins;
+  // with `>` an old day would hold the title against every equal day since.
+  for (const { count, ts } of dayBuckets.values()) {
+    if (count >= busiestCount) {
       busiestCount = count
-      busiestLabel = new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      busiestTs = ts
     }
   }
+
+  // Label off the winning trade's own timestamp. Formatting a "YYYY-MM-DD"
+  // string instead parses it as UTC midnight and then renders it locally,
+  // which reports the previous day for anyone west of Greenwich.
+  const spansYears =
+    firstTs > 0 && new Date(firstTs).getFullYear() !== new Date(lastTs).getFullYear()
+  const busiestLabel = busiestTs
+    ? new Date(busiestTs).toLocaleDateString(
+        'en-US',
+        // A bare "Jul 31" reads as this year on a board spanning several.
+        spansYears
+          ? { month: 'short', day: 'numeric', year: 'numeric' }
+          : { month: 'short', day: 'numeric' }
+      )
+    : '—'
 
   const velocity: LeagueVelocity = {
     totalTrades: totalTradeEvents,

@@ -102,7 +102,7 @@ test('file size guard: only approved legacy files may exceed the default budget'
     ['components/LeagueBuddy.tsx', 1480],
     ['components/TeamValueGraph.tsx', 1140],
     ['components/landing/LandingPage.tsx', 760],
-    ['components/scouting/DraftBoardTab.tsx', 1500],
+    ['components/scouting/DraftBoardTab.tsx', 1260],
     ['components/scouting/ProspectCharts.tsx', 820],
     ['components/scouting/ProspectComparison.tsx', 800],
     ['components/scouting/ScoutingPortal.tsx', 920],

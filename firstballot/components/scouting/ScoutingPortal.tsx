@@ -18,6 +18,7 @@ import {
 } from '@/components/scouting'
 import type { Prospect } from '@/components/scouting/types'
 import { useDraftboard } from '@/hooks/use-draftboard'
+import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 
@@ -235,6 +236,15 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   // Draftboard persistence
   const { savedBoard, saving: savingBoard, saveBoard } = useDraftboard()
   const [initialBoardLoaded, setInitialBoardLoaded] = useState(false)
+
+  // The user's own film/talent grades. Saved per cell as they are entered,
+  // separate from the board's explicit Save button.
+  const {
+    gradesByProspectId,
+    saveError: gradeSaveError,
+    dismissSaveError: dismissGradeError,
+    setGrade,
+  } = useProspectGrades()
 
   // Derived — no useEffect needed; recomputes whenever draftBoard or savedBoard changes
   const hasUnsavedChanges = useMemo(() => {
@@ -835,6 +845,11 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 hasUnsavedChanges={hasUnsavedChanges}
                 onSaveBoard={handleSaveBoard}
                 isLoggedIn={!!user}
+                // Per-user film/talent grades
+                gradesByProspectId={gradesByProspectId}
+                onSetGrade={setGrade}
+                gradeSaveError={gradeSaveError}
+                onDismissGradeError={dismissGradeError}
               />
             </TabsContent>
 

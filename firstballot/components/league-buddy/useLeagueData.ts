@@ -48,6 +48,7 @@ interface SleeperRoster {
   settings?: {
     wins?: number
     losses?: number
+    ties?: number
     fpts?: number
     fpts_against?: number
     waiver_position?: number
@@ -389,6 +390,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
           ownerUsername: owner?.display_name || 'Unknown',
           wins: roster.settings?.wins || 0,
           losses: roster.settings?.losses || 0,
+          ties: roster.settings?.ties || 0,
           pointsFor: roster.settings?.fpts || 0,
           pointsAgainst: roster.settings?.fpts_against || 0,
           rank: roster.rank || 0,

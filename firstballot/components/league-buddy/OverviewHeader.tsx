@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
@@ -22,6 +23,8 @@ import type {
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
 import { CompetitiveStateMap } from './CompetitiveStateMap'
+import { DraftOrderPanel } from './draft-order/DraftOrderPanel'
+import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
 
 const GRADE_COLORS = {
   'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
@@ -84,13 +87,23 @@ function RecentFormPips({ form }: { form: string }) {
   )
 }
 
-/** The three league-wide ranking inputs the header reads, grouped into one prop. */
+/** The league-wide derived inputs the header reads, grouped into one prop. */
 export interface OverviewRankings {
   playerRankings: PlayerRankingsMap
   placements: LeaguePlacements
   positionRankings?: Record<number, Record<string, number>>
   /** rosterId → 0–100 power score; the outlook board ranks on it. */
   powerScores: Record<number, number>
+  /** Season Max PF per roster; the projected draft-order board ranks on it. */
+  draftOrder: OverviewDraftOrder
+}
+
+/** Season Max Points For, the input to the anti-tanking draft-order board. */
+export interface OverviewDraftOrder {
+  maxPointsFor: Record<number, MaxPointsForEntry>
+  weeksCounted: number
+  season: string
+  loading: boolean
 }
 
 interface OverviewHeaderProps {
@@ -112,6 +125,7 @@ export function OverviewHeader({
   actions,
   rankings,
 }: OverviewHeaderProps) {
+  const [showDraftOrder, setShowDraftOrder] = useState(false)
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
   const isWinning = pointDiff > 0
@@ -398,7 +412,32 @@ export function OverviewHeader({
               Playoffs
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => setShowDraftOrder((open) => !open)}
+            aria-expanded={showDraftOrder}
+            className={`flex-1 min-w-[5.5rem] rounded-md border px-2 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+              showDraftOrder
+                ? 'border-yellow-400/60 bg-yellow-400/10 text-yellow-400'
+                : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-yellow-400/50 hover:text-yellow-400'
+            }`}
+          >
+            Draft Order
+          </button>
         </div>
+
+        {showDraftOrder && (
+          <div className="mb-4">
+            <DraftOrderPanel
+              teams={teams}
+              maxPointsFor={rankings.draftOrder.maxPointsFor}
+              weeksCounted={rankings.draftOrder.weeksCounted}
+              season={rankings.draftOrder.season}
+              loading={rankings.draftOrder.loading}
+              selectedRosterId={selectedTeam.rosterId}
+            />
+          </div>
+        )}
 
         {/* ── MATCHUP / OFF-SEASON PANEL ── */}
         {isOffSeason() ? (() => {

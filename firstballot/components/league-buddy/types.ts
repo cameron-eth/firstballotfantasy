@@ -50,6 +50,7 @@ export interface TeamData {
   ownerUsername?: string
   wins: number
   losses: number
+  ties?: number
   pointsFor: number
   pointsAgainst: number
   rank: number

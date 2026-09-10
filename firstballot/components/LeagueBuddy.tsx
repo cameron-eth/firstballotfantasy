@@ -36,6 +36,7 @@ import { AuditSection } from './league-buddy/AuditSection'
 import { LeagueActivityBanner } from './league-buddy/LeagueActivityBanner'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
 import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings'
+import { useDraftOrder } from './league-buddy/draft-order/useDraftOrder'
 
 export default function LeagueBuddy({
   leagueId,
@@ -137,14 +138,32 @@ export default function LeagueBuddy({
     rosterPositionsRaw
   )
 
+  const {
+    maxPointsFor,
+    weeksCounted,
+    season: draftOrderSeason,
+    loading: draftOrderLoading,
+  } = useDraftOrder(leagueId, currentWeek, allPlayers, rosterPositionsRaw)
+
+  const draftOrder = useMemo(
+    () => ({
+      maxPointsFor,
+      weeksCounted,
+      season: draftOrderSeason,
+      loading: draftOrderLoading,
+    }),
+    [maxPointsFor, weeksCounted, draftOrderSeason, draftOrderLoading]
+  )
+
   const overviewRankings = useMemo<OverviewRankings>(
     () => ({
       playerRankings,
       placements: leaguePlacements,
       positionRankings: leaguePositionRankings,
       powerScores,
+      draftOrder,
     }),
-    [playerRankings, leaguePlacements, leaguePositionRankings, powerScores]
+    [playerRankings, leaguePlacements, leaguePositionRankings, powerScores, draftOrder]
   )
 
   const overviewActions = useMemo<OverviewActions>(

@@ -8,7 +8,20 @@
 import type { TeamData } from '../types'
 import type { MaxPointsForEntry } from './maxPointsFor'
 
-export type DraftOrderMetric = 'record' | 'maxpf'
+export type DraftOrderMetric = 'record' | 'maxpf' | 'projected'
+
+/**
+ * The metric each view is measured against in the comparison column.
+ *
+ * Record and Max PF check each other — that pairing is the anti-tanking signal. The
+ * projected board checks today's Max PF instead, so the column reads as "where the
+ * race stands now" against "where it finishes".
+ */
+const ALTERNATE_METRIC: Record<DraftOrderMetric, DraftOrderMetric> = {
+  record: 'maxpf',
+  maxpf: 'record',
+  projected: 'maxpf',
+}
 
 export interface DraftOrderRow {
   /** 1-based pick number; 1 is the 1.01. */
@@ -24,7 +37,9 @@ export interface DraftOrderRow {
   /** Season points actually scored. */
   pointsFor: number
   maxPointsFor: number
-  /** Where this team would pick under the *other* metric. */
+  /** Projected season-end Max PF. */
+  projectedMaxPointsFor: number
+  /** Where this team would pick under the comparison metric. */
   altPick: number
   altLabel: string
   /**
@@ -55,6 +70,7 @@ interface Scored {
   winPct: number
   pointsFor: number
   maxPointsFor: number
+  projectedMaxPointsFor: number
 }
 
 /**
@@ -66,6 +82,12 @@ interface Scored {
  */
 function comparatorFor(metric: DraftOrderMetric) {
   return (a: Scored, b: Scored): number => {
+    if (metric === 'projected') {
+      if (a.projectedMaxPointsFor !== b.projectedMaxPointsFor) {
+        return a.projectedMaxPointsFor - b.projectedMaxPointsFor
+      }
+      return a.maxPointsFor - b.maxPointsFor
+    }
     if (metric === 'maxpf') {
       if (a.maxPointsFor !== b.maxPointsFor) return a.maxPointsFor - b.maxPointsFor
       if (a.winPct !== b.winPct) return a.winPct - b.winPct
@@ -80,6 +102,7 @@ function comparatorFor(metric: DraftOrderMetric) {
 export function buildDraftOrder(
   teams: TeamData[],
   maxPointsForByRoster: Record<number, MaxPointsForEntry>,
+  projectedByRoster: Record<number, number>,
   metric: DraftOrderMetric
 ): DraftOrderRow[] {
   const scored: Scored[] = teams.map((team) => {
@@ -91,14 +114,19 @@ export function buildDraftOrder(
       // separate field, so it reads a fraction of a point low.
       pointsFor: entry?.actualPointsFor ?? team.pointsFor,
       maxPointsFor: entry?.maxPointsFor ?? 0,
+      projectedMaxPointsFor: projectedByRoster[team.rosterId] ?? entry?.maxPointsFor ?? 0,
     }
   })
 
   const ordered = [...scored].sort(comparatorFor(metric))
-  const alternate = [...scored].sort(comparatorFor(metric === 'record' ? 'maxpf' : 'record'))
+  const alternate = [...scored].sort(comparatorFor(ALTERNATE_METRIC[metric]))
   const altPickOf = new Map(alternate.map((s, index) => [s.team.rosterId, index + 1]))
 
-  const valueOf = (s: Scored) => (metric === 'maxpf' ? s.maxPointsFor : s.winPct)
+  const valueOf = (s: Scored) => {
+    if (metric === 'projected') return s.projectedMaxPointsFor
+    if (metric === 'maxpf') return s.maxPointsFor
+    return s.winPct
+  }
   const top = ordered.length > 0 ? valueOf(ordered[0]) : 0
   const bottom = ordered.length > 0 ? valueOf(ordered[ordered.length - 1]) : 0
   const spread = bottom - top
@@ -108,8 +136,8 @@ export function buildDraftOrder(
     const altPick = altPickOf.get(s.team.rosterId) ?? pick
     const gamesPlayed = s.team.wins + s.team.losses + (s.team.ties ?? 0)
     const gapToTop =
-      metric === 'maxpf'
-        ? s.maxPointsFor - top
+      metric !== 'record'
+        ? valueOf(s) - top
         : // Win percentage differences are hard to read; convert back to wins so the
           // gap says "you are two wins away from the 1.01".
           (s.winPct - top) * gamesPlayed
@@ -125,6 +153,7 @@ export function buildDraftOrder(
       winPct: s.winPct,
       pointsFor: s.pointsFor,
       maxPointsFor: s.maxPointsFor,
+      projectedMaxPointsFor: s.projectedMaxPointsFor,
       altPick,
       altLabel: pickLabel(altPick),
       gapToTop,
@@ -141,8 +170,19 @@ export function formatRecord(wins: number, losses: number, ties: number): string
 /** How far this team is from the 1.01, phrased for the metric in play. */
 export function formatGap(row: DraftOrderRow, metric: DraftOrderMetric): string {
   if (row.pick === 1) return 'holds 1.01'
-  if (metric === 'maxpf') return `+${row.gapToTop.toFixed(1)} pts`
+  if (metric !== 'record') return `+${row.gapToTop.toFixed(1)} pts`
   const wins = Math.round(row.gapToTop * 10) / 10
   if (wins <= 0) return 'tiebreak'
   return `+${wins % 1 === 0 ? wins.toFixed(0) : wins.toFixed(1)} ${wins === 1 ? 'win' : 'wins'}`
+}
+
+/** Which metric the comparison column is measured against. */
+export function alternateMetric(metric: DraftOrderMetric): DraftOrderMetric {
+  return ALTERNATE_METRIC[metric]
+}
+
+export const METRIC_LABELS: Record<DraftOrderMetric, string> = {
+  record: 'Record',
+  maxpf: 'Max PF',
+  projected: 'Projected',
 }

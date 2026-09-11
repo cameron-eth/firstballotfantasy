@@ -37,7 +37,9 @@ import { LeagueActivityBanner } from './league-buddy/LeagueActivityBanner'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
 import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings'
 import { useDraftOrder } from './league-buddy/draft-order/useDraftOrder'
+import { computeProjectedMaxPointsFor } from './league-buddy/draft-order/projectedMaxPointsFor'
 import { useProjections } from './league-buddy/projections/useProjections'
+import { lineupNeedsKickerOrDefense } from '@/lib/projections/scoring'
 
 export default function LeagueBuddy({
   leagueId,
@@ -139,10 +141,12 @@ export default function LeagueBuddy({
     rosterPositionsRaw
   )
 
-  const { season: seasonProjections, week: weekProjectionEntries } = useProjections(
-    leagueId,
-    currentWeek
-  )
+  const {
+    season: seasonProjections,
+    week: weekProjectionEntries,
+    exact: projectionsExact,
+    loading: projectionsLoading,
+  } = useProjections(leagueId, currentWeek)
 
   /** playerId → projected points per game, from season totals. */
   const projectedPpg = useMemo(() => {
@@ -166,17 +170,72 @@ export default function LeagueBuddy({
     maxPointsFor,
     weeksCounted,
     season: draftOrderSeason,
+    lastRegularWeek,
+    maxPointsForCompleted,
+    completedWeeks,
     loading: draftOrderLoading,
   } = useDraftOrder(leagueId, currentWeek, allPlayers, rosterPositionsRaw)
+
+  const projection = useMemo(() => {
+    const realized: Record<number, number> = {}
+    for (const entry of Object.values(maxPointsFor)) {
+      realized[entry.rosterId] = entry.maxPointsFor
+    }
+    return computeProjectedMaxPointsFor({
+      teams: teams.map((team) => ({
+        rosterId: team.rosterId,
+        players: team.players.map((p) => ({ playerId: p.playerId, position: p.position })),
+      })),
+      seasonProjections,
+      rosterPositions: rosterPositionsRaw,
+      realizedMaxPointsFor: realized,
+      realizedCompletedWeeks: maxPointsForCompleted,
+      completedWeeks,
+      weeksPlayed: weeksCounted,
+      lastRegularWeek,
+    })
+  }, [
+    teams,
+    seasonProjections,
+    rosterPositionsRaw,
+    maxPointsFor,
+    maxPointsForCompleted,
+    completedWeeks,
+    weeksCounted,
+    lastRegularWeek,
+  ])
+
+  const rosterProjections = useMemo(
+    () => ({
+      ppg: projectedPpg,
+      week: weekProjections,
+      rosterPositions: rosterPositionsRaw,
+      currentWeek,
+      // The unprojected scoring rules are all kicker and defense, so a lineup with
+      // no K or DEF slot is scored exactly regardless.
+      approximate: !projectionsExact && lineupNeedsKickerOrDefense(rosterPositionsRaw),
+      loading: projectionsLoading,
+    }),
+    [
+      projectedPpg,
+      weekProjections,
+      rosterPositionsRaw,
+      currentWeek,
+      projectionsExact,
+      projectionsLoading,
+    ]
+  )
 
   const draftOrder = useMemo(
     () => ({
       maxPointsFor,
+      projectedMaxPointsFor: projection.projected,
       weeksCounted,
+      remainingWeeks: projection.remainingWeeks,
       season: draftOrderSeason,
       loading: draftOrderLoading,
     }),
-    [maxPointsFor, weeksCounted, draftOrderSeason, draftOrderLoading]
+    [maxPointsFor, projection, weeksCounted, draftOrderSeason, draftOrderLoading]
   )
 
   const overviewRankings = useMemo<OverviewRankings>(
@@ -551,7 +610,7 @@ export default function LeagueBuddy({
               selectedTeam={selectedTeam}
               sortedTeams={sortedTeams}
               teams={teams}
-              projectedPpg={projectedPpg}
+              projections={rosterProjections}
             />
           )}
 

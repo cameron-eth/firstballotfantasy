@@ -19,6 +19,8 @@ export interface SeasonWindow {
   /** Every regular-season week to total up, 1 through the current one. */
   weeks: number[]
   season: string
+  /** Last week that counts toward draft order — the week before the playoffs. */
+  lastRegularWeek: number
   /**
    * The week still being played, if any. It is included in `weeks` — a season total
    * has to move as this week scores — but it is the one week that can't be cached.
@@ -66,5 +68,5 @@ export function resolveSeasonWindow(
 
   const weeks: number[] = []
   for (let week = 1; week <= throughWeek; week++) weeks.push(week)
-  return { weeks, season, liveWeek }
+  return { weeks, season, liveWeek, lastRegularWeek }
 }

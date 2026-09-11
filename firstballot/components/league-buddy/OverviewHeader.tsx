@@ -97,7 +97,10 @@ export interface OverviewRankings {
 /** Season Max Points For, the input to the anti-tanking draft-order board. */
 export interface OverviewDraftOrder {
   maxPointsFor: Record<number, MaxPointsForEntry>
+  /** rosterId → projected season-end Max PF. */
+  projectedMaxPointsFor: Record<number, number>
   weeksCounted: number
+  remainingWeeks: number
   season: string
   loading: boolean
 }
@@ -432,7 +435,9 @@ export function OverviewHeader({
             <DraftOrderPanel
               teams={teams}
               maxPointsFor={rankings.draftOrder.maxPointsFor}
+              projectedMaxPointsFor={rankings.draftOrder.projectedMaxPointsFor}
               weeksCounted={rankings.draftOrder.weeksCounted}
+              remainingWeeks={rankings.draftOrder.remainingWeeks}
               season={rankings.draftOrder.season}
               loading={rankings.draftOrder.loading}
               selectedRosterId={selectedTeam.rosterId}

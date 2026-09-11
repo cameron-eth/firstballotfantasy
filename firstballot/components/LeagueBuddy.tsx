@@ -37,6 +37,7 @@ import { LeagueActivityBanner } from './league-buddy/LeagueActivityBanner'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
 import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings'
 import { useDraftOrder } from './league-buddy/draft-order/useDraftOrder'
+import { useProjections } from './league-buddy/projections/useProjections'
 
 export default function LeagueBuddy({
   leagueId,
@@ -138,6 +139,29 @@ export default function LeagueBuddy({
     rosterPositionsRaw
   )
 
+  const { season: seasonProjections, week: weekProjectionEntries } = useProjections(
+    leagueId,
+    currentWeek
+  )
+
+  /** playerId → projected points per game, from season totals. */
+  const projectedPpg = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const [playerId, entry] of Object.entries(seasonProjections)) {
+      if (entry.gp) map[playerId] = entry.pts / entry.gp
+    }
+    return map
+  }, [seasonProjections])
+
+  /** playerId → this week's projected points. */
+  const weekProjections = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const [playerId, entry] of Object.entries(weekProjectionEntries)) {
+      map[playerId] = entry.pts
+    }
+    return map
+  }, [weekProjectionEntries])
+
   const {
     maxPointsFor,
     weeksCounted,
@@ -157,13 +181,13 @@ export default function LeagueBuddy({
 
   const overviewRankings = useMemo<OverviewRankings>(
     () => ({
-      playerRankings,
       placements: leaguePlacements,
       positionRankings: leaguePositionRankings,
       powerScores,
       draftOrder,
+      weekProjections,
     }),
-    [playerRankings, leaguePlacements, leaguePositionRankings, powerScores, draftOrder]
+    [leaguePlacements, leaguePositionRankings, powerScores, draftOrder, weekProjections]
   )
 
   const overviewActions = useMemo<OverviewActions>(
@@ -523,7 +547,12 @@ export default function LeagueBuddy({
 
           {/* ROSTER SECTION */}
           {activeSection === 'roster' && selectedTeam && (
-            <RosterSection selectedTeam={selectedTeam} sortedTeams={sortedTeams} teams={teams} />
+            <RosterSection
+              selectedTeam={selectedTeam}
+              sortedTeams={sortedTeams}
+              teams={teams}
+              projectedPpg={projectedPpg}
+            />
           )}
 
           {/* LEAGUE SECTION - Matchup Details (or off-season standings) */}

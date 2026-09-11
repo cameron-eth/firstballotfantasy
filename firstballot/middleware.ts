@@ -14,6 +14,7 @@ async function middleware(request: NextRequest) {
     '/api/prospects',
     '/api/draft-analysis',
     '/api/ktc-values',
+    '/api/projections',
   ]
 
   // Check if this is an API route that needs auth

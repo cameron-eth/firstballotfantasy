@@ -93,12 +93,14 @@ function getRankTier(rank: number): string {
 }
 
 interface RosterSectionProps {
+  /** playerId → projected points per game under league scoring; empty until loaded. */
+  projectedPpg?: Record<string, number>
   selectedTeam: TeamData
   sortedTeams: TeamData[]
   teams: TeamData[]
 }
 
-export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectionProps) {
+export function RosterSection({ selectedTeam, sortedTeams, teams, projectedPpg }: RosterSectionProps) {
   // Sort players by rank (best first), then non-skill positions at the end
   const sortedPlayers = useMemo(() => {
     const skill = selectedTeam.players.filter((p) =>
@@ -247,13 +249,14 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
         </div>
 
         {/* Column header — desktop only */}
-        <div className="hidden md:grid grid-cols-[112px_1fr_52px_64px_52px_72px_88px] gap-0 px-0 py-2 border-b border-border/60 bg-secondary/5">
+        <div className="hidden md:grid grid-cols-[112px_1fr_52px_64px_52px_72px_60px_88px] gap-0 px-0 py-2 border-b border-border/60 bg-secondary/5">
           <div />
           <span className="text-[10px] font-mono text-muted-foreground uppercase px-3">Player</span>
           <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Rank</span>
           <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Tier</span>
           <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Age</span>
           <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Window</span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Proj PPG</span>
           <span className="text-[10px] font-mono text-muted-foreground uppercase text-center pr-3">KTC SF</span>
         </div>
 
@@ -272,7 +275,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           return (
             <div
               key={`scorecard-${player.playerId}`}
-              className={`flex md:grid md:grid-cols-[112px_1fr_52px_64px_52px_72px_88px] items-stretch h-24 border-b border-border/40 last:border-0 transition-colors hover:bg-secondary/20 ${
+              className={`flex md:grid md:grid-cols-[112px_1fr_52px_64px_52px_72px_60px_88px] items-stretch h-24 border-b border-border/40 last:border-0 transition-colors hover:bg-secondary/20 ${
                 isEven ? 'bg-secondary/10' : 'bg-card'
               }`}
             >
@@ -320,6 +323,17 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                 <span className={`text-xs font-mono font-semibold ${windowColor}`}>
                   {windowLabel}
                 </span>
+              </div>
+
+              {/* Projected points per game (rotowire, scored with this league's settings) */}
+              <div className="hidden md:flex items-center justify-center">
+                {projectedPpg?.[player.playerId] ? (
+                  <span className="text-foreground font-mono text-sm font-semibold tabular-nums">
+                    {projectedPpg[player.playerId].toFixed(1)}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/40 text-xs">—</span>
+                )}
               </div>
 
               {/* KTC SF value / sparkline */}

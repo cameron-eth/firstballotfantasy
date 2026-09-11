@@ -14,12 +14,7 @@ import {
   Minus,
   Star,
 } from 'lucide-react'
-import type {
-  MatchupData,
-  OverviewActions,
-  PlayerRankingsMap,
-  TeamData,
-} from './types'
+import type { MatchupData, OverviewActions, TeamData } from './types'
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
 import { CompetitiveStateMap } from './CompetitiveStateMap'
@@ -89,19 +84,23 @@ function RecentFormPips({ form }: { form: string }) {
 
 /** The league-wide derived inputs the header reads, grouped into one prop. */
 export interface OverviewRankings {
-  playerRankings: PlayerRankingsMap
   placements: LeaguePlacements
   positionRankings?: Record<number, Record<string, number>>
   /** rosterId → 0–100 power score; the outlook board ranks on it. */
   powerScores: Record<number, number>
   /** Season Max PF per roster; the projected draft-order board ranks on it. */
   draftOrder: OverviewDraftOrder
+  /** playerId → this week's projected points under league scoring. */
+  weekProjections: Record<string, number>
 }
 
 /** Season Max Points For, the input to the anti-tanking draft-order board. */
 export interface OverviewDraftOrder {
   maxPointsFor: Record<number, MaxPointsForEntry>
+  /** rosterId → projected season-end Max PF. */
+  projectedMaxPointsFor: Record<number, number>
   weeksCounted: number
+  remainingWeeks: number
   season: string
   loading: boolean
 }
@@ -154,7 +153,14 @@ export function OverviewHeader({
   const leagueRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
   // Competitive-state placement (Now × Future), relative to the league
-  const { playerRankings, placements, positionRankings = {}, powerScores } = rankings
+  const { placements, positionRankings = {}, powerScores, weekProjections } = rankings
+
+  // What this team's current starters are projected to score this week. Starters can
+  // be empty before a lineup is set, in which case there is nothing to total.
+  const projectedThisWeek = (selectedTeam.starters ?? []).reduce(
+    (sum, playerId) => sum + (weekProjections[playerId] ?? 0),
+    0
+  )
   const selectedPlacement = placements.placements[selectedTeam.rosterId]
   const stateMeta = selectedPlacement ? COMPETITIVE_STATES[selectedPlacement.state] : null
 
@@ -298,9 +304,7 @@ export function OverviewHeader({
           <div className="bg-slate-800/80 px-3 py-2">
             <div className="text-slate-500 text-[9px] font-mono uppercase mb-0.5">Proj / Wk</div>
             <span className="text-base font-black font-mono text-yellow-400">
-              {selectedTeam.players
-                .reduce((sum, player) => sum + (playerRankings[player.playerName]?.projection || 0), 0)
-                .toFixed(1)}
+              {projectedThisWeek.toFixed(1)}
             </span>
           </div>
         </div>
@@ -431,7 +435,9 @@ export function OverviewHeader({
             <DraftOrderPanel
               teams={teams}
               maxPointsFor={rankings.draftOrder.maxPointsFor}
+              projectedMaxPointsFor={rankings.draftOrder.projectedMaxPointsFor}
               weeksCounted={rankings.draftOrder.weeksCounted}
+              remainingWeeks={rankings.draftOrder.remainingWeeks}
               season={rankings.draftOrder.season}
               loading={rankings.draftOrder.loading}
               selectedRosterId={selectedTeam.rosterId}

@@ -4,30 +4,91 @@ import { useMemo, useState } from 'react'
 import { Gavel, Crown, Loader2 } from 'lucide-react'
 import type { TeamData } from '../types'
 import type { MaxPointsForEntry } from './maxPointsFor'
-import { buildDraftOrder, formatGap, formatRecord, type DraftOrderMetric } from './draftOrderBoard'
+import {
+  alternateMetric,
+  buildDraftOrder,
+  formatGap,
+  formatRecord,
+  METRIC_LABELS,
+  type DraftOrderMetric,
+  type DraftOrderRow,
+} from './draftOrderBoard'
 
 const ACCENT = '#fbbf24' // yellow-400, the app's draft-capital accent
 
 interface DraftOrderPanelProps {
   teams: TeamData[]
   maxPointsFor: Record<number, MaxPointsForEntry>
+  /** rosterId → projected season-end Max PF. */
+  projectedMaxPointsFor: Record<number, number>
   /** Regular-season weeks that have been scored; 0 means Max PF has no data yet. */
   weeksCounted: number
+  /** Regular-season weeks still to play. */
+  remainingWeeks: number
   /** The season these totals cover, shown so the board can't be read as last year's. */
   season: string
   loading: boolean
   selectedRosterId: number
 }
 
-const METRICS: Array<{ key: DraftOrderMetric; label: string }> = [
-  { key: 'record', label: 'Record' },
-  { key: 'maxpf', label: 'Max PF' },
-]
+const METRICS: DraftOrderMetric[] = ['record', 'maxpf', 'projected']
+
+interface NumericColumn {
+  label: string
+  render: (row: DraftOrderRow) => string
+  /** The column the board is currently sorted by. */
+  emphasis?: boolean
+}
+
+/**
+ * Three numeric columns, always — which three depends on the view.
+ *
+ * The projected board drops Record rather than adding a fourth column: at the width
+ * this panel renders on a phone a fourth number overflows, and record is the least
+ * relevant number next to a projected finish.
+ */
+function columnsFor(
+  metric: DraftOrderMetric,
+  maxPfReady: boolean,
+  projectedReady: boolean
+): NumericColumn[] {
+  const altLabel = `By ${METRIC_LABELS[alternateMetric(metric)]}`
+  const maxPf: NumericColumn = {
+    label: 'Max PF',
+    render: (row) => (maxPfReady ? row.maxPointsFor.toFixed(1) : '—'),
+    emphasis: metric === 'maxpf',
+  }
+  const comparison: NumericColumn = { label: altLabel, render: (row) => row.altLabel }
+
+  if (metric === 'projected') {
+    return [
+      maxPf,
+      {
+        label: 'Proj',
+        render: (row) => (projectedReady ? row.projectedMaxPointsFor.toFixed(0) : '—'),
+        emphasis: true,
+      },
+      comparison,
+    ]
+  }
+
+  return [
+    {
+      label: 'Rec',
+      render: (row) => formatRecord(row.wins, row.losses, row.ties),
+      emphasis: metric === 'record',
+    },
+    maxPf,
+    comparison,
+  ]
+}
 
 export function DraftOrderPanel({
   teams,
   maxPointsFor,
+  projectedMaxPointsFor,
   weeksCounted,
+  remainingWeeks,
   season,
   loading,
   selectedRosterId,
@@ -35,21 +96,23 @@ export function DraftOrderPanel({
   const [metric, setMetric] = useState<DraftOrderMetric>('record')
 
   const rows = useMemo(
-    () => buildDraftOrder(teams, maxPointsFor, metric),
-    [teams, maxPointsFor, metric]
+    () => buildDraftOrder(teams, maxPointsFor, projectedMaxPointsFor, metric),
+    [teams, maxPointsFor, projectedMaxPointsFor, metric]
   )
 
   // Max PF needs at least one scored week to mean anything; until then every team
   // sits at zero and the board would be an arbitrary shuffle presented as a race.
   const maxPfReady = weeksCounted > 0
-  const showingUnreadyMaxPf = metric === 'maxpf' && !maxPfReady && !loading
+  const projectedReady = Object.keys(projectedMaxPointsFor).length > 0
+  const unready =
+    !loading && ((metric === 'maxpf' && !maxPfReady) || (metric === 'projected' && !projectedReady))
 
   const leader = rows[0]
   const mine = rows.find((row) => row.rosterId === selectedRosterId)
+  const columns = columnsFor(metric, maxPfReady, projectedReady)
   // Before any game is decided every team is 0-0, so the record board is really just
   // the points-scored tiebreaker. Say so rather than letting it read as a projection.
   const noGamesDecided = rows.every((row) => row.wins + row.losses + row.ties === 0)
-  const altMetricName = metric === 'maxpf' ? 'Record' : 'Max PF'
 
   return (
     <div
@@ -66,16 +129,16 @@ export function DraftOrderPanel({
         <div className="ml-auto flex items-center gap-0.5 rounded-md bg-slate-800/60 p-0.5 border border-slate-700/50">
           {METRICS.map((option) => (
             <button
-              key={option.key}
+              key={option}
               type="button"
-              onClick={() => setMetric(option.key)}
+              onClick={() => setMetric(option)}
               className={`rounded px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
-                metric === option.key
+                metric === option
                   ? 'bg-slate-700 text-slate-100'
                   : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              {option.label}
+              {METRIC_LABELS[option]}
             </button>
           ))}
         </div>
@@ -86,9 +149,11 @@ export function DraftOrderPanel({
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           Scoring every lineup…
         </div>
-      ) : showingUnreadyMaxPf ? (
+      ) : unready ? (
         <div className="py-6 text-center text-slate-500 text-xs">
-          Max PF unlocks once Week 1 scores post.
+          {metric === 'maxpf'
+            ? 'Max PF unlocks once Week 1 scores post.'
+            : 'Projections are still loading.'}
         </div>
       ) : (
         <>
@@ -133,9 +198,11 @@ export function DraftOrderPanel({
             <div className="grid grid-cols-[34px_1fr_auto_auto_auto] gap-2 px-2 text-[9px] font-mono uppercase text-slate-500">
               <span>Pick</span>
               <span>Team</span>
-              <span className="text-right">Rec</span>
-              <span className="text-right">Max PF</span>
-              <span className="text-right">By {altMetricName}</span>
+              {columns.map((column) => (
+                <span key={column.label} className="text-right">
+                  {column.label}
+                </span>
+              ))}
             </div>
 
             <div className="divide-y divide-slate-800">
@@ -143,7 +210,7 @@ export function DraftOrderPanel({
                 const isMine = row.rosterId === selectedRosterId
                 const holdsPick = row.pick === 1
                 // A three-slot move between the two orderings is the interesting
-                // signal: it means record and roster ceiling disagree about this team.
+                // signal: it means the two measures disagree about this team.
                 const swung = Math.abs(row.altPick - row.pick) >= 3
 
                 return (
@@ -194,28 +261,29 @@ export function DraftOrderPanel({
                         </span>
                       </div>
 
-                      <span
-                        className={`text-[10px] font-mono tabular-nums text-right ${
-                          metric === 'record' ? 'text-slate-200 font-semibold' : 'text-slate-500'
-                        }`}
-                      >
-                        {formatRecord(row.wins, row.losses, row.ties)}
-                      </span>
-
-                      <span
-                        className={`text-[10px] font-mono tabular-nums text-right w-14 ${
-                          metric === 'maxpf' ? 'text-slate-200 font-semibold' : 'text-slate-500'
-                        }`}
-                      >
-                        {maxPfReady ? row.maxPointsFor.toFixed(1) : '—'}
-                      </span>
-
-                      <span
-                        className="text-[10px] font-mono tabular-nums text-right w-9"
-                        style={{ color: swung ? ACCENT : undefined }}
-                      >
-                        <span className={swung ? '' : 'text-slate-600'}>{row.altLabel}</span>
-                      </span>
+                      {columns.map((column, index) => {
+                        const isComparison = index === columns.length - 1
+                        const emphasised = column.emphasis
+                        return (
+                          <span
+                            key={column.label}
+                            className={`text-[10px] font-mono tabular-nums text-right ${
+                              isComparison ? 'w-9' : 'w-14'
+                            } ${
+                              emphasised
+                                ? 'text-slate-200 font-semibold'
+                                : isComparison && swung
+                                  ? ''
+                                  : isComparison
+                                    ? 'text-slate-600'
+                                    : 'text-slate-500'
+                            }`}
+                            style={isComparison && swung ? { color: ACCENT } : undefined}
+                          >
+                            {column.render(row)}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
                 )
@@ -224,15 +292,26 @@ export function DraftOrderPanel({
           </div>
 
           <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
-            Max PF is what each roster <em>would</em> have scored starting its best lineup every
-            week — benching your starters doesn&apos;t move it. The{' '}
-            <span className="font-mono">By {altMetricName}</span> column is where each team would
-            pick under the other rule.
-            {maxPfReady && (
+            {metric === 'projected' ? (
               <>
-                {' '}
-                Through {weeksCounted} {weeksCounted === 1 ? 'week' : 'weeks'}
-                {season ? ` of ${season}` : ''}.
+                Season-end Max PF: what&apos;s already banked plus {remainingWeeks} projected{' '}
+                {remainingWeeks === 1 ? 'week' : 'weeks'} of each roster&apos;s best lineup.
+                Projected ceilings read about 5% under realized ones, so they&apos;re scaled to
+                match; the estimate firms up as real weeks replace projected ones.
+              </>
+            ) : (
+              <>
+                Max PF is what each roster <em>would</em> have scored starting its best lineup every
+                week — benching your starters doesn&apos;t move it. The{' '}
+                <span className="font-mono">By {METRIC_LABELS[alternateMetric(metric)]}</span>{' '}
+                column is where each team would pick under the other rule.
+                {maxPfReady && (
+                  <>
+                    {' '}
+                    Through {weeksCounted} {weeksCounted === 1 ? 'week' : 'weeks'}
+                    {season ? ` of ${season}` : ''}.
+                  </>
+                )}
               </>
             )}
           </p>

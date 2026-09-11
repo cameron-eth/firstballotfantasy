@@ -82,8 +82,21 @@ export function parseScoringSlots(rosterPositions: string[] | undefined): string
 // ---------------------------------------------------------------------------
 
 interface Candidate {
+  playerId: string
   points: number
   slots: number[] // indices of slots this player is eligible for
+}
+
+export interface SeatedPlayer {
+  playerId: string
+  points: number
+  /** Index into the slot list this player was seated in. */
+  slotIndex: number
+}
+
+export interface OptimalLineup {
+  seated: SeatedPlayer[]
+  total: number
 }
 
 /**
@@ -100,12 +113,12 @@ interface Candidate {
  * Negative scorers sort last and so are only seated in slots nothing else can fill,
  * which matches reality: a lineup slot has to be filled by someone.
  */
-export function optimalLineupPoints(
+export function optimalLineup(
   playersPoints: Record<string, number>,
   slots: string[][],
   positionOf: (playerId: string) => string | undefined
-): number {
-  if (slots.length === 0) return 0
+): OptimalLineup {
+  if (slots.length === 0) return { seated: [], total: 0 }
 
   const candidates: Candidate[] = []
   for (const [playerId, points] of Object.entries(playersPoints)) {
@@ -116,7 +129,7 @@ export function optimalLineupPoints(
       if (slots[i].includes(position)) eligible.push(i)
     }
     if (eligible.length > 0) {
-      candidates.push({ points: Number(points) || 0, slots: eligible })
+      candidates.push({ playerId, points: Number(points) || 0, slots: eligible })
     }
   }
 
@@ -146,7 +159,27 @@ export function optimalLineupPoints(
     }
   }
 
-  return total
+  const lineup: SeatedPlayer[] = []
+  for (let slotIndex = 0; slotIndex < slotOwner.length; slotIndex++) {
+    const owner = slotOwner[slotIndex]
+    if (owner === -1) continue
+    lineup.push({
+      playerId: candidates[owner].playerId,
+      points: candidates[owner].points,
+      slotIndex,
+    })
+  }
+
+  return { seated: lineup, total }
+}
+
+/** Just the score of the best legal lineup. */
+export function optimalLineupPoints(
+  playersPoints: Record<string, number>,
+  slots: string[][],
+  positionOf: (playerId: string) => string | undefined
+): number {
+  return optimalLineup(playersPoints, slots, positionOf).total
 }
 
 // ---------------------------------------------------------------------------

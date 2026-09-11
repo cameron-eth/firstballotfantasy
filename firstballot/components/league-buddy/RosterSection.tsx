@@ -8,12 +8,19 @@ import { KtcSparkline } from '@/components/scouting/KtcSparkline'
 import { TradeIntelligencePanel } from './TradeIntelligencePanel'
 import { BarChart3, TrendingUp } from 'lucide-react'
 import type { TeamData, PlayerData } from './types'
+import { computeStartSit } from './projections/startSit'
+import { StartSitPanel } from './projections/StartSitPanel'
 
 function PlayerCutout({ player }: { player: PlayerData }) {
   const [imgErr, setImgErr] = useState(false)
   const src = !imgErr
-    ? (player.headshot_url ?? (player.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png` : null))
-    : (player.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png` : null)
+    ? (player.headshot_url ??
+      (player.espn_id
+        ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
+        : null))
+    : player.espn_id
+      ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
+      : null
 
   const initials = player.playerName
     .split(' ')
@@ -92,21 +99,49 @@ function getRankTier(rank: number): string {
   return 'Depth'
 }
 
+/** Everything the roster view needs from the projections layer, grouped. */
+export interface RosterProjections {
+  /** playerId → projected points per game, from season totals. */
+  ppg: Record<string, number>
+  /** playerId → this week's projected points. */
+  week: Record<string, number>
+  rosterPositions: string[]
+  currentWeek: number
+  /** A paying scoring rule isn't projected — K/DEF leagues only. */
+  approximate: boolean
+  loading: boolean
+}
+
 interface RosterSectionProps {
+  projections?: RosterProjections
   selectedTeam: TeamData
   sortedTeams: TeamData[]
   teams: TeamData[]
 }
 
-export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectionProps) {
+export function RosterSection({
+  selectedTeam,
+  sortedTeams,
+  teams,
+  projections,
+}: RosterSectionProps) {
+  const startSit = useMemo(
+    () =>
+      projections
+        ? computeStartSit(
+            selectedTeam.players,
+            selectedTeam.starters,
+            projections.week,
+            projections.rosterPositions
+          )
+        : null,
+    [projections, selectedTeam.players, selectedTeam.starters]
+  )
+
   // Sort players by rank (best first), then non-skill positions at the end
   const sortedPlayers = useMemo(() => {
-    const skill = selectedTeam.players.filter((p) =>
-      ['QB', 'RB', 'WR', 'TE'].includes(p.position)
-    )
-    const other = selectedTeam.players.filter(
-      (p) => !['QB', 'RB', 'WR', 'TE'].includes(p.position)
-    )
+    const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+    const other = selectedTeam.players.filter((p) => !['QB', 'RB', 'WR', 'TE'].includes(p.position))
     return [
       ...skill.sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)),
       ...other.sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)),
@@ -115,14 +150,10 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
 
   // Compute roster-level metrics
   const metrics = useMemo(() => {
-    const skill = selectedTeam.players.filter((p) =>
-      ['QB', 'RB', 'WR', 'TE'].includes(p.position)
-    )
+    const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
     const totalKtcSf = skill.reduce((sum, p) => sum + (p.ktcValueSf ?? 0), 0)
     const avgAge =
-      skill.length > 0
-        ? skill.reduce((sum, p) => sum + (p.age ?? 0), 0) / skill.length
-        : 0
+      skill.length > 0 ? skill.reduce((sum, p) => sum + (p.age ?? 0), 0) / skill.length : 0
     const tier1Count = skill.filter((p) => p.rank <= 12).length
     const tier2Count = skill.filter((p) => p.rank > 12 && p.rank <= 36).length
 
@@ -134,8 +165,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
         .reduce((sum, p) => sum + (p.ktcValueSf ?? 0), 0),
     }))
     teamTotals.sort((a, b) => b.total - a.total)
-    const ktcLeagueRank =
-      teamTotals.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+    const ktcLeagueRank = teamTotals.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
     return { totalKtcSf, avgAge, tier1Count, tier2Count, ktcLeagueRank, leagueSize: teams.length }
   }, [selectedTeam.players, selectedTeam.rosterId, teams])
@@ -158,17 +188,23 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">Tier Density</div>
+            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">
+              Tier Density
+            </div>
             <div className="text-foreground text-2xl font-bold font-mono">
               {metrics.tier1Count}
-              <span className="text-muted-foreground text-base font-normal">+{metrics.tier2Count}</span>
+              <span className="text-muted-foreground text-base font-normal">
+                +{metrics.tier2Count}
+              </span>
             </div>
             <div className="text-muted-foreground/60 text-[10px] mt-0.5">T1 + T2 assets</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">KTC Total SF</div>
+            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">
+              KTC Total SF
+            </div>
             <div className="text-foreground text-2xl font-bold font-mono">
               {metrics.totalKtcSf > 0 ? metrics.totalKtcSf.toLocaleString() : '—'}
             </div>
@@ -179,19 +215,23 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           <CardContent className="p-4">
             <div className="text-muted-foreground text-xs font-mono uppercase mb-1">KTC Rank</div>
             <div className="flex items-baseline gap-1">
-              <div className={`text-2xl font-bold font-mono ${
-                metrics.ktcLeagueRank === 0
-                  ? 'text-muted-foreground'
-                  : metrics.ktcLeagueRank <= Math.ceil(metrics.leagueSize / 4)
-                  ? 'text-emerald-400'
-                  : metrics.ktcLeagueRank <= Math.ceil(metrics.leagueSize / 2)
-                  ? 'text-yellow-400'
-                  : 'text-orange-400'
-              }`}>
+              <div
+                className={`text-2xl font-bold font-mono ${
+                  metrics.ktcLeagueRank === 0
+                    ? 'text-muted-foreground'
+                    : metrics.ktcLeagueRank <= Math.ceil(metrics.leagueSize / 4)
+                      ? 'text-emerald-400'
+                      : metrics.ktcLeagueRank <= Math.ceil(metrics.leagueSize / 2)
+                        ? 'text-yellow-400'
+                        : 'text-orange-400'
+                }`}
+              >
                 {metrics.ktcLeagueRank > 0 ? `#${metrics.ktcLeagueRank}` : '—'}
               </div>
               {metrics.ktcLeagueRank > 0 && (
-                <span className="text-muted-foreground text-sm font-mono">of {metrics.leagueSize}</span>
+                <span className="text-muted-foreground text-sm font-mono">
+                  of {metrics.leagueSize}
+                </span>
               )}
             </div>
             <div className="text-muted-foreground/60 text-[10px] mt-0.5">by total KTC SF</div>
@@ -228,7 +268,8 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
               variant="outline"
               className="text-[10px] text-muted-foreground border-border ml-auto"
             >
-              Signals based on production value (P/E) and age — accumulate daily KTC data for trend signals too
+              Signals based on production value (P/E) and age — accumulate daily KTC data for trend
+              signals too
             </Badge>
           )}
         </div>
@@ -237,6 +278,15 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           leaguePlayerPool={teams.flatMap((t) => t.players)}
         />
       </div>
+
+      {startSit && projections && (
+        <StartSitPanel
+          result={startSit}
+          week={projections.currentWeek}
+          approximate={projections.approximate}
+          loading={projections.loading}
+        />
+      )}
 
       {/* Roster Scorecard */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -247,21 +297,33 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
         </div>
 
         {/* Column header — desktop only */}
-        <div className="hidden md:grid grid-cols-[112px_1fr_52px_64px_52px_72px_88px] gap-0 px-0 py-2 border-b border-border/60 bg-secondary/5">
+        <div className="hidden md:grid grid-cols-[112px_1fr_52px_64px_52px_72px_60px_88px] gap-0 px-0 py-2 border-b border-border/60 bg-secondary/5">
           <div />
           <span className="text-[10px] font-mono text-muted-foreground uppercase px-3">Player</span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Rank</span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Tier</span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Age</span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">Window</span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center pr-3">KTC SF</span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
+            Rank
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
+            Tier
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
+            Age
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
+            Window
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
+            Proj PPG
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center pr-3">
+            KTC SF
+          </span>
         </div>
 
         {/* Rows */}
         {sortedPlayers.map((player, idx) => {
           const posColor =
-            POSITION_BADGE[player.position] ??
-            'bg-slate-500/20 text-slate-400 border-slate-500/40'
+            POSITION_BADGE[player.position] ?? 'bg-slate-500/20 text-slate-400 border-slate-500/40'
           const tierLabel = getRankTier(player.rank)
           const { label: windowLabel, color: windowColor } = getDynastyWindow(
             player.age ?? 0,
@@ -272,7 +334,7 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
           return (
             <div
               key={`scorecard-${player.playerId}`}
-              className={`flex md:grid md:grid-cols-[112px_1fr_52px_64px_52px_72px_88px] items-stretch h-24 border-b border-border/40 last:border-0 transition-colors hover:bg-secondary/20 ${
+              className={`flex md:grid md:grid-cols-[112px_1fr_52px_64px_52px_72px_60px_88px] items-stretch h-24 border-b border-border/40 last:border-0 transition-colors hover:bg-secondary/20 ${
                 isEven ? 'bg-secondary/10' : 'bg-card'
               }`}
             >
@@ -285,7 +347,10 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                   {player.playerName}
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border font-mono ${posColor}`}>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 border font-mono ${posColor}`}
+                  >
                     {player.position}
                   </Badge>
                   <span className="text-muted-foreground/60 text-xs">{player.team}</span>
@@ -320,6 +385,17 @@ export function RosterSection({ selectedTeam, sortedTeams, teams }: RosterSectio
                 <span className={`text-xs font-mono font-semibold ${windowColor}`}>
                   {windowLabel}
                 </span>
+              </div>
+
+              {/* Projected points per game (rotowire, scored with this league's settings) */}
+              <div className="hidden md:flex items-center justify-center">
+                {projections?.ppg[player.playerId] ? (
+                  <span className="text-foreground font-mono text-sm font-semibold tabular-nums">
+                    {projections!.ppg[player.playerId].toFixed(1)}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/40 text-xs">—</span>
+                )}
               </div>
 
               {/* KTC SF value / sparkline */}

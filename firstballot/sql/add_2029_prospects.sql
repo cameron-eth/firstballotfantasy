@@ -12,13 +12,13 @@ SELECT seed.id, seed.rank, seed.name, seed.first_name, seed.last_name,
        seed.weight, seed.hometown, seed.jersey, seed.headshot_url, now(), now()
 FROM (VALUES
   (-2029001, 1, 'Jesse Legree', 'Jesse', 'Legree', 'WR', 'Oregon State', 70, 172, 'Baltimore, Maryland', 12,
-   'https://images.sidearmdev.com/resize?url=https%3A%2F%2Fdxbhsrqyrr690.cloudfront.net%2Fsidearm.nextgen.sites%2Foregonstate.sidearmsports.com%2Fimages%2F2026%2F3%2F9%2F02112026_FB_Headshot_LegreeJesse_0691.jpg&width=480&type=webp'),
+   '/prospects/2029/jesse-legree.png'),
   (-2029002, 2, 'Chris Henry Jr.', 'Chris', 'Henry Jr.', 'WR', 'Ohio State', 77, 211, 'Charlotte, North Carolina', 15,
-   'https://images.sidearmdev.com/resize?url=https%3A%2F%2Fdxbhsrqyrr690.cloudfront.net%2Fsidearm.nextgen.sites%2Fohiostatebuckeyes.com%2Fimages%2F2026%2F8%2F3%2F15_Henry_Jr__Chris.jpg&width=480&type=webp'),
+   '/prospects/2029/chris-henry-jr.png'),
   (-2029003, 3, 'Legend Bey', 'Legend', 'Bey', 'RB', 'Ohio State', 70, 195, 'Forney, Texas', 2,
-   'https://images.sidearmdev.com/resize?url=https%3A%2F%2Fdxbhsrqyrr690.cloudfront.net%2Fsidearm.nextgen.sites%2Fohiostatebuckeyes.com%2Fimages%2F2026%2F8%2F3%2F02_Bey__Legend.jpg&width=480&type=webp'),
+   '/prospects/2029/legend-bey.png'),
   (-2029004, 4, 'Brock Boyd', 'Brock', 'Boyd', 'WR', 'Ohio State', 73, 196, 'Southlake, Texas', 11,
-   'https://images.sidearmdev.com/resize?url=https%3A%2F%2Fdxbhsrqyrr690.cloudfront.net%2Fsidearm.nextgen.sites%2Fohiostatebuckeyes.com%2Fimages%2F2026%2F8%2F3%2F11_Boyd__Brock.jpg&width=480&type=webp')
+   '/prospects/2029/brock-boyd.png')
 ) AS seed(id, rank, name, first_name, last_name, position, school, height, weight, hometown, jersey, headshot_url)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.dynasty_prospects existing

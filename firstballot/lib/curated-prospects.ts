@@ -7,36 +7,33 @@
  * Draft year is an early projection for the 2026 freshman class, not a claim
  * that a player has declared. No scouting scores are invented for this class.
  */
-const image = (site: string, file: string) =>
-  `https://images.sidearmdev.com/resize?url=${encodeURIComponent(`https://dxbhsrqyrr690.cloudfront.net/sidearm.nextgen.sites/${site}/images/2026/${file}`)}&width=480&type=webp`
-
 export const curated2029Prospects = [
   {
     id: -2029001, rank: 1, position_rank: 1, name: 'Jesse Legree', first_name: 'Jesse', last_name: 'Legree',
     position: 'WR', school: 'Oregon State', draft_year: 2029, class: 'Freshman',
     height: 70, weight: 172, hometown: 'Baltimore, Maryland', jersey: 12,
-    headshot_url: image('oregonstate.sidearmsports.com', '3/9/02112026_FB_Headshot_LegreeJesse_0691.jpg'),
+    headshot_url: '/prospects/2029/jesse-legree.png',
     source_url: 'https://osubeavers.com/sports/football/roster/jesse-legree/12214',
   },
   {
     id: -2029002, rank: 2, position_rank: 2, name: 'Chris Henry Jr.', first_name: 'Chris', last_name: 'Henry Jr.',
     position: 'WR', school: 'Ohio State', draft_year: 2029, class: 'Freshman',
     height: 77, weight: 211, hometown: 'Charlotte, North Carolina', jersey: 15,
-    headshot_url: image('ohiostatebuckeyes.com', '8/3/15_Henry_Jr__Chris.jpg'),
+    headshot_url: '/prospects/2029/chris-henry-jr.png',
     source_url: 'https://ohiostatebuckeyes.com/sports/football/roster/chris-henry%20jr./13356',
   },
   {
     id: -2029003, rank: 3, position_rank: 1, name: 'Legend Bey', first_name: 'Legend', last_name: 'Bey',
     position: 'RB', school: 'Ohio State', draft_year: 2029, class: 'Freshman',
     height: 70, weight: 195, hometown: 'Forney, Texas', jersey: 2,
-    headshot_url: image('ohiostatebuckeyes.com', '8/3/02_Bey__Legend.jpg'),
+    headshot_url: '/prospects/2029/legend-bey.png',
     source_url: 'https://ohiostatebuckeyes.com/sports/football/roster/legend-bey/13346',
   },
   {
     id: -2029004, rank: 4, position_rank: 3, name: 'Brock Boyd', first_name: 'Brock', last_name: 'Boyd',
     position: 'WR', school: 'Ohio State', draft_year: 2029, class: 'Freshman',
     height: 73, weight: 196, hometown: 'Southlake, Texas', jersey: 11,
-    headshot_url: image('ohiostatebuckeyes.com', '8/3/11_Boyd__Brock.jpg'),
+    headshot_url: '/prospects/2029/brock-boyd.png',
     source_url: 'https://ohiostatebuckeyes.com/sports/football/roster/brock-boyd/13353',
   },
 ] as const

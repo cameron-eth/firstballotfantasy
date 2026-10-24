@@ -17,6 +17,12 @@ export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
   { id: 'audit', label: 'Audit', shortLabel: 'Audit', icon: ClipboardList },
 ]
 
+export function resolveLeagueSection(tab: string | null): LeagueSection {
+  if (tab === 'roster' || tab === 'league' || tab === 'audit') return tab
+  if (tab === 'matchup') return 'league'
+  return 'overview'
+}
+
 export interface LeagueQuickLink {
   key: string
   label: string

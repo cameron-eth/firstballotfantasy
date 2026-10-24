@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Users, AlertCircle, TrendingUp, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +22,7 @@ import { isOffSeason } from '@/lib/season-utils'
 // Import extracted types and components
 import type { LeagueBuddyProps, LeagueSection, OverviewActions, TeamData } from './league-buddy/types'
 import { calculateLeaguePositionRankings, countRosterPositions } from './league-buddy/utils'
-import { LEAGUE_SECTIONS } from './league-buddy/navigation'
+import { LEAGUE_SECTIONS, resolveLeagueSection } from './league-buddy/navigation'
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { LeagueOverviewSection } from './league-buddy/LeagueOverviewSection'
 import { RosterSection } from './league-buddy/RosterSection'
@@ -46,7 +47,20 @@ export default function LeagueBuddy({
   user,
 }: LeagueBuddyProps) {
   const router = useRouter()
-  const [activeSection, setActiveSection] = useState<LeagueSection>('overview')
+  const searchParams = useSearchParams()
+  const [activeSection, setActiveSection] = useState<LeagueSection>(() => resolveLeagueSection(searchParams.get('tab')))
+
+  useEffect(() => {
+    setActiveSection(resolveLeagueSection(searchParams.get('tab')))
+  }, [searchParams])
+
+  const changeSection = useCallback((section: LeagueSection) => {
+    setActiveSection(section)
+    const params = new URLSearchParams(searchParams.toString())
+    if (section === 'overview') params.delete('tab')
+    else params.set('tab', section)
+    router.replace(`/league-buddy${params.size ? `?${params.toString()}` : ''}`, { scroll: false })
+  }, [router, searchParams])
 
   const {
     teams,
@@ -530,7 +544,7 @@ export default function LeagueBuddy({
         selectedTeam={selectedTeam}
         sortedTeams={sortedTeams}
         activeSection={activeSection}
-        setActiveSection={setActiveSection}
+        setActiveSection={changeSection}
         currentWeek={currentWeek}
         leagueOverview={leagueOverview}
       />
@@ -545,7 +559,7 @@ export default function LeagueBuddy({
               {LEAGUE_SECTIONS.map((section) => (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => changeSection(section.id)}
                   className={`flex-1 px-2 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
                     activeSection === section.id
                       ? 'bg-yellow-400 text-slate-900'

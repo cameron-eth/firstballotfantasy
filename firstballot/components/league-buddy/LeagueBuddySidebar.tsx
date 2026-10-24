@@ -106,7 +106,11 @@ export function LeagueBuddySidebar({
   const goTo = (href: string) => {
     // Preserve league context across tools that accept a leagueId.
     const leagueId = leagueCache.getLeagueId()
-    router.push(leagueId ? `${href}?leagueId=${leagueId}` : href)
+    if (!leagueId) return router.push(href)
+    const [path, query] = href.split('?')
+    const params = new URLSearchParams(query || '')
+    params.set('leagueId', leagueId)
+    router.push(`${path}?${params.toString()}`)
   }
 
   return (

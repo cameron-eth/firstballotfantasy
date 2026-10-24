@@ -5,10 +5,11 @@ import type React from 'react'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { Header } from '@/components/header'
+import Link from 'next/link'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, TrendingUp, BarChart3 } from 'lucide-react'
+import { Eye, TrendingUp, BarChart3, ArrowRight, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ProspectsTab,
   DraftBoardTab,
@@ -148,6 +149,7 @@ async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
 }
 
 export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const urlTab = searchParams.get('tab')
 
@@ -198,15 +200,23 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       return response.json()
     }
   )
-  const loading = prospectsLoading || rosterLoading
+  // The public prospect catalog must remain usable while a linked league is
+  // loading or unavailable. Roster data only enriches team needs.
+  const loading = prospectsLoading
   const prospectsError: string | null = prospectsFetchError?.message ?? null
-  const dataError = prospectsError || rosterError
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [draftYear, setDraftYear] = useState(() => /^20\d{2}$/.test(searchParams.get('year') || '') ? searchParams.get('year')! : 'all')
   const [activeTab, setActiveTab] = useState(() =>
     resolveTab(urlTab || initialTab)
   )
+  const changeTab = useCallback((nextTab: PortalTab) => {
+    setActiveTab(nextTab)
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextTab === 'prospects') params.delete('tab')
+    else params.set('tab', nextTab)
+    router.replace(`/scouting-portal${params.size ? `?${params.toString()}` : ''}`, { scroll: false })
+  }, [router, searchParams])
   const savedNotesByProspectId = useMemo(
     () => new Map((savedNotes?.notes ?? []).map((note) => [note.prospect_id, note.notes])),
     [savedNotes]
@@ -771,17 +781,40 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
       <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
+          <section className="mb-4 rounded-2xl border border-blue-400/20 bg-gradient-to-r from-slate-800/90 via-slate-900 to-slate-950 px-4 py-4 md:px-6 md:py-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="mb-1 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-blue-300">Scouting workspace</p>
+                <h1 className="text-xl font-bold text-white md:text-2xl">Scout the class. Shape your board.</h1>
+                <p className="mt-1 text-sm text-slate-400">
+                  {loading ? 'Loading prospects…' : `${prospects.length} prospect profiles`}
+                  <span className="mx-2 text-slate-600">·</span>
+                  {draftBoard.length} on your board
+                  {leagueId && <><span className="mx-2 text-slate-600">·</span>{rosterLoading ? 'Loading team needs…' : rosterError ? 'Team needs unavailable' : 'Team needs connected'}</>}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => changeTab('draftboard')} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-400 px-3 py-2 text-sm font-semibold text-slate-950 hover:bg-blue-300">
+                  Open my board <ArrowRight className="h-4 w-4" />
+                </button>
+                <Link href="/league-buddy?tab=roster" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200 hover:border-blue-400 hover:text-white">
+                  <Users className="h-4 w-4" /> My team
+                </Link>
+              </div>
+            </div>
+          </section>
           <ProspectFreshness prospects={rawProspects} />
-          {dataError && (
+          {prospectsError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-              {dataError}
+              {prospectsError}
             </div>
           )}
+          {rosterError && <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">Team needs could not load. Prospect scouting is still available.</div>}
           {noteSaveError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{noteSaveError}</div>}
           {notesFetchError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">Saved scouting notes could not be loaded.</div>}
           <Tabs
             value={activeTab}
-            onValueChange={(value) => setActiveTab(resolveTab(value))}
+            onValueChange={(value) => changeTab(resolveTab(value))}
             className="w-full"
           >
             <div className="mb-3 md:mb-4 shrink-0">

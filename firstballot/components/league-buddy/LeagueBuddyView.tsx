@@ -24,6 +24,8 @@ export function LeagueBuddyView() {
     selectLeague,
     leagues,
     isLoading: leaguesLoading,
+    error: leaguesError,
+    refreshLeagues,
   } = useLeagueContext()
 
   const [username, setUsername] = useState('')
@@ -74,15 +76,14 @@ export function LeagueBuddyView() {
           sleeper_username: (userData as SleeperUser).username,
         })
 
-        // Trigger a refresh of leagues in context
-        window.location.reload() // Simplest way to re-sync everything for now
+        await refreshLeagues()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to connect')
       } finally {
         setLoading(false)
       }
     },
-    [username]
+    [username, refreshLeagues]
   )
 
   return (
@@ -91,7 +92,7 @@ export function LeagueBuddyView() {
       <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
         <div className="space-y-6">
           {/* Connection Section */}
-          {!sleeperUser && !leaguesLoading && (
+          {!sleeperUser && leagues.length === 0 && !leaguesLoading && (
             <Card className="bg-slate-800 border-slate-700 max-w-2xl mx-auto">
               <CardHeader>
                 <CardTitle className="text-green-400 font-mono">CONNECT TO SLEEPER</CardTitle>
@@ -126,6 +127,14 @@ export function LeagueBuddyView() {
             </Card>
           )}
 
+          {leaguesError && <div role="alert" className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">Your leagues could not be refreshed. Check your Sleeper connection and try again.</div>}
+
+          {selectedLeagueId && !sleeperUser && !leaguesLoading && (
+            <div className="rounded-xl border border-blue-400/25 bg-blue-400/10 p-4 text-sm text-slate-200">
+              League data is available. Connect your Sleeper username to identify your own roster in the team view.
+            </div>
+          )}
+
           {/* League Selection (Grid) - Only show if no league is selected yet */}
           {leagues.length > 0 && !selectedLeagueId && (
             <div className="space-y-4">
@@ -150,7 +159,7 @@ export function LeagueBuddyView() {
           )}
 
           {/* League Dashboard - Reacts to global selection */}
-          {selectedLeagueId && sleeperUser && (
+          {selectedLeagueId && (
             <LeagueBuddy
               leagueId={selectedLeagueId}
               user={sleeperUser}

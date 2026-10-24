@@ -85,9 +85,47 @@ export const curated2029Prospects = [
     headshot_url: '/prospects/2029/jaeden-ricketts.png',
     source_url: 'https://ohiostatebuckeyes.com/sports/football/roster/jaeden-ricketts/13384',
   },
+  { id: -2029011, rank: 11, position_rank: 3, name: 'Faizon Brandon', first_name: 'Faizon', last_name: 'Brandon',
+    position: 'QB', school: 'Tennessee', draft_year: 2029, class: 'Freshman', height: 76, weight: 225, hometown: 'Greensboro, North Carolina', jersey: 11,
+    college_stats: { passing_yards: 697, passing_tds: 7, interceptions: 1, rushing_attempts: 53, rushing_yards: 130, rushing_tds: 3 },
+    headshot_url: '/prospects/2029/faizon-brandon.png', source_url: 'https://utsports.com/sports/football/roster/faizon-brandon/23058' },
+  { id: -2029012, rank: 12, position_rank: 4, name: 'Jared Curtis', first_name: 'Jared', last_name: 'Curtis',
+    position: 'QB', school: 'Vanderbilt', draft_year: 2029, class: 'Freshman', height: 75, weight: 230, hometown: 'Dickson, Tennessee', jersey: 2,
+    headshot_url: '/prospects/2029/jared-curtis.png', source_url: 'https://vucommodores.com/sports/football/roster/player/jared-curtis-2/' },
+  { id: -2029013, rank: 13, position_rank: 6, name: 'Trent Mosley', first_name: 'Trent', last_name: 'Mosley',
+    position: 'WR', school: 'USC', draft_year: 2029, class: 'Freshman', height: 70, weight: 180, hometown: 'Chicago, Illinois', jersey: 4,
+    college_stats: { receptions: 22, receiving_yards: 366, receiving_tds: 5 },
+    headshot_url: '/prospects/2029/trent-mosley.png', source_url: 'https://usctrojans.com/sports/football/roster/trent-mosley/18843' },
+  { id: -2029014, rank: 14, position_rank: 1, name: 'Mark Bowman', first_name: 'Mark', last_name: 'Bowman',
+    position: 'TE', school: 'USC', draft_year: 2029, class: 'Freshman', height: 77, weight: 245, hometown: 'Castle Rock, Colorado', jersey: 19,
+    college_stats: { receptions: 21, receiving_yards: 204, receiving_tds: 2 },
+    headshot_url: '/prospects/2029/mark-bowman.png', source_url: 'https://usctrojans.com/sports/football/roster/mark-bowman/18796' },
+  { id: -2029015, rank: 15, position_rank: 7, name: 'Kayden Dixon-Wyatt', first_name: 'Kayden', last_name: 'Dixon-Wyatt',
+    position: 'WR', school: 'USC', draft_year: 2029, class: 'Freshman', height: 74, weight: 200, hometown: 'Hayward, California', jersey: 17,
+    college_stats: { receptions: 27, receiving_yards: 400, receiving_tds: 4 },
+    headshot_url: '/prospects/2029/kayden-dixon-wyatt.png', source_url: 'https://usctrojans.com/sports/football/roster/kayden-dixonwyatt/18706' },
+  { id: -2029016, rank: 16, position_rank: 5, name: 'Jamal Rule', first_name: 'Jamal', last_name: 'Rule',
+    position: 'RB', school: 'Nebraska', draft_year: 2029, class: 'Freshman', height: 72, weight: 215, hometown: 'Salisbury, North Carolina', jersey: 25,
+    college_stats: { rushing_yards: 386, rushing_tds: 5, receptions: 4, receiving_yards: 82, receiving_tds: 1 },
+    headshot_url: '/prospects/2029/jamal-rule.png', source_url: 'https://huskers.com/sports/football/roster/player/jamal-rule' },
+] as const
+
+export const curated2028Prospects = [
+  { id: -2028001, rank: 31, position_rank: 1, name: 'Ousmane Kromah', first_name: 'Ousmane', last_name: 'Kromah',
+    position: 'RB', school: 'Florida State', draft_year: 2028, class: 'Sophomore', height: 73, weight: 216, hometown: 'Leesburg, Georgia', jersey: 32,
+    college_stats: { rushing_attempts: 100, rushing_yards: 565, rushing_tds: 5, receptions: 11, receiving_yards: 97 },
+    headshot_url: '/prospects/2028/ousmane-kromah.png', source_url: 'https://seminoles.com/sports/football/roster/ousmane-kromah/8356' },
+  { id: -2028002, rank: 32, position_rank: 1, name: 'Malik Washington', first_name: 'Malik', last_name: 'Washington',
+    position: 'QB', school: 'Maryland', draft_year: 2028, class: 'Sophomore', height: 77, weight: 227, hometown: 'Glen Burnie, Maryland', jersey: 7,
+    headshot_url: '/prospects/2028/malik-washington.png', source_url: 'https://umterps.com/sports/football/roster/washington-malik/15660' },
 ] as const
 
 export function missingCurated2029(records: { name: string; draft_year: number | null }[]) {
   const known = new Set(records.map((record) => `${record.draft_year}:${record.name.toLowerCase()}`))
   return curated2029Prospects.filter((record) => !known.has(`${record.draft_year}:${record.name.toLowerCase()}`))
+}
+
+export function missingCurated2028(records: { name: string; draft_year: number | null }[]) {
+  const known = new Set(records.map((record) => `${record.draft_year}:${record.name.toLowerCase()}`))
+  return curated2028Prospects.filter((record) => !known.has(`${record.draft_year}:${record.name.toLowerCase()}`))
 }

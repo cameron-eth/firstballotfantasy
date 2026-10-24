@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import useSWR from 'swr'
 import { ArrowRight, BookOpen, ClipboardList, RefreshCw, Shield, Users } from 'lucide-react'
+import { CommunityRankingPrompt } from './CommunityRankingPrompt'
 
 type Prospect = {
   id: number
@@ -109,6 +110,8 @@ export function LandingPage() {
           {staleClasses.length > 0 && <p role="status" className="mt-4 max-w-2xl rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">{staleClasses.join(', ')} class records are over 14 days old. Check player news and college stats before making a draft decision.</p>}
         </div>
       </section>
+
+      <CommunityRankingPrompt />
 
       {watchlist.length > 0 && <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8" aria-labelledby="watchlist-heading">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

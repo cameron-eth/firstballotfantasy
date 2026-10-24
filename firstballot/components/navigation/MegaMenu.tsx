@@ -4,7 +4,6 @@ import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import {
   Trophy,
-  Eye,
   BarChart3,
   Target,
   LayoutDashboard,
@@ -36,12 +35,6 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
           href: '/scouting-portal?tab=draftboard',
           description: 'Build and save your prospect board',
           icon: Users,
-        },
-        {
-          name: 'Class Rankings',
-          href: '/prospect-board',
-          description: 'Compare players across classes',
-          icon: Eye,
         },
         {
           name: 'Historical Outcomes',

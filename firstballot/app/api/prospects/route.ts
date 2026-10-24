@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { missingCurated2029 } from '@/lib/curated-prospects'
+import { missingCurated2028, missingCurated2029 } from '@/lib/curated-prospects'
 
 export const dynamic = 'force-dynamic'
 
@@ -236,10 +236,13 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // The 2029 class is included as a source-checked server fallback until its
-    // database import runs. Database rows win by name and class after import.
-    if (isAllYears || yearNum === 2029) {
-      const curated: Prospect[] = missingCurated2029(prospects).map((player) => ({
+    // Source-checked rows remain visible until the database imports run.
+    if (isAllYears || yearNum === 2029 || yearNum === 2028) {
+      const missing = [
+        ...(isAllYears || yearNum === 2029 ? missingCurated2029(prospects) : []),
+        ...(isAllYears || yearNum === 2028 ? missingCurated2028(prospects) : []),
+      ]
+      const curated: Prospect[] = missing.map((player) => ({
         ...player,
         is_fallback: true,
         rank: player.position_rank,

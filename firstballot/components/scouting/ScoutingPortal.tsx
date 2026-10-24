@@ -198,7 +198,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const loading = prospectsLoading
   const prospectsError: string | null = prospectsFetchError?.message ?? null
   const [searchTerm, setSearchTerm] = useState('')
-  const [positionFilter, setPositionFilter] = useState('all')
+  const [positionFilter, setPositionFilter] = useState(() => ['QB', 'RB', 'WR', 'TE'].includes(searchParams.get('position') || '') ? searchParams.get('position')! : 'all')
   const [draftYear, setDraftYear] = useState(() => /^20\d{2}$/.test(searchParams.get('year') || '') ? searchParams.get('year')! : 'all')
   const [activeTab, setActiveTab] = useState(() =>
     resolveTab(urlTab || initialTab)

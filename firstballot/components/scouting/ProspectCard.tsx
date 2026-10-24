@@ -94,7 +94,7 @@ function toCardPlayer(prospect: Prospect): CardPlayer {
     physical: prospect.physical_measurables_score == null ? null : clampScore(prospect.physical_measurables_score),
     position: prospect.position,
     isCollege: (prospect.draft_year || 0) >= 2025,
-    seasonLine: prospect.draft_year === 2029 ? formatSeasonLine(prospect.college_stats) : null,
+    seasonLine: (prospect.draft_year || 0) >= 2028 && prospect.overall_grade == null ? formatSeasonLine(prospect.college_stats) : null,
   }
 }
 
@@ -230,7 +230,7 @@ function UnifiedProspectCard({
                 : 'bg-secondary text-muted-foreground border-border'
             )}
           >
-            {player.year ?? '--'} {player.year === 2029 && player.grade == null ? 'PRELIMINARY' : player.isCollege ? 'PROSPECT' : 'CLASS'}
+            {player.year ?? '--'} {(player.year || 0) >= 2028 && player.grade == null ? 'PRELIMINARY' : player.isCollege ? 'PROSPECT' : 'CLASS'}
           </span>
         </div>
       </div>

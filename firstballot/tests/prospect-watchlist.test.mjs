@@ -4,10 +4,10 @@ import { curated2029Prospects, missingCurated2029 } from '../lib/curated-prospec
 import { fetchAllProspects } from '../lib/players.ts'
 
 test('2029 fallback adds only missing roster-verified players', () => {
-  assert.equal(curated2029Prospects.length, 10)
+  assert.equal(curated2029Prospects.length, 16)
   assert.deepEqual(
     missingCurated2029([{ name: 'Jesse Legree', draft_year: 2029 }]).map((player) => player.name),
-    ['Chris Henry Jr.', 'Legend Glasker', 'Legend Bey', 'Brock Boyd', 'Savion Hiter', 'Dia Bell', 'Derrek Cooper', 'Brady Smigiel', 'Jaeden Ricketts']
+    ['Chris Henry Jr.', 'Legend Glasker', 'Legend Bey', 'Brock Boyd', 'Savion Hiter', 'Dia Bell', 'Derrek Cooper', 'Brady Smigiel', 'Jaeden Ricketts', 'Faizon Brandon', 'Jared Curtis', 'Trent Mosley', 'Mark Bowman', 'Kayden Dixon-Wyatt', 'Jamal Rule']
   )
 })
 

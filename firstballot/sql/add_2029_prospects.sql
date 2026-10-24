@@ -1,7 +1,8 @@
 -- Apply in the Supabase SQL editor after reviewing the 2026 roster sources
 -- in lib/curated-prospects.ts. 2029 is an early draft-year projection.
 -- Stable negative IDs match the server fallback, preserving saved board IDs.
--- Grades, college production, and draft projection remain NULL until evaluated.
+-- Grades and draft projections remain NULL; the dated production snapshot is
+-- applied separately by sql/update_2029_preliminary_data.sql.
 
 INSERT INTO public.dynasty_prospects
   (id, rank, name, first_name, last_name, position, school, draft_year,
@@ -15,15 +16,16 @@ FROM (VALUES
    '/prospects/2029/jesse-legree.png'),
   (-2029002, 2, 'Chris Henry Jr.', 'Chris', 'Henry Jr.', 'WR', 'Ohio State', 77, 211, 'Charlotte, North Carolina', 15,
    '/prospects/2029/chris-henry-jr.png'),
-  (-2029003, 6, 'Legend Bey', 'Legend', 'Bey', 'RB', 'Ohio State', 70, 195, 'Forney, Texas', 2,
+  (-2029003, 7, 'Legend Bey', 'Legend', 'Bey', 'RB', 'Ohio State', 70, 195, 'Forney, Texas', 2,
    '/prospects/2029/legend-bey.png'),
-  (-2029004, 7, 'Brock Boyd', 'Brock', 'Boyd', 'WR', 'Ohio State', 73, 196, 'Southlake, Texas', 11,
+  (-2029004, 8, 'Brock Boyd', 'Brock', 'Boyd', 'WR', 'Ohio State', 73, 196, 'Southlake, Texas', 11,
    '/prospects/2029/brock-boyd.png'),
-  (-2029005, 3, 'Savion Hiter', 'Savion', 'Hiter', 'RB', 'Michigan', 71, 212, 'Louisa, Virginia', 5, '/prospects/2029/savion-hiter.png'),
-  (-2029006, 4, 'Dia Bell', 'Dia', 'Bell', 'QB', 'Texas', 75, 206, 'Fort Lauderdale, Florida', 6, '/prospects/2029/dia-bell.png'),
-  (-2029007, 5, 'Derrek Cooper', 'Derrek', 'Cooper', 'RB', 'Texas', 73, 212, 'Lauderhill, Florida', 5, '/prospects/2029/derrek-cooper.png'),
-  (-2029008, 8, 'Brady Smigiel', 'Brady', 'Smigiel', 'QB', 'Michigan', 76, 217, 'Thousand Oaks, California', 17, '/prospects/2029/brady-smigiel.png'),
-  (-2029009, 9, 'Jaeden Ricketts', 'Jaeden', 'Ricketts', 'WR', 'Ohio State', 71, 202, 'Pataskala, Ohio', 80, '/prospects/2029/jaeden-ricketts.png')
+  (-2029005, 4, 'Savion Hiter', 'Savion', 'Hiter', 'RB', 'Michigan', 71, 212, 'Louisa, Virginia', 5, '/prospects/2029/savion-hiter.png'),
+  (-2029006, 5, 'Dia Bell', 'Dia', 'Bell', 'QB', 'Texas', 75, 206, 'Fort Lauderdale, Florida', 6, '/prospects/2029/dia-bell.png'),
+  (-2029007, 6, 'Derrek Cooper', 'Derrek', 'Cooper', 'RB', 'Texas', 73, 212, 'Lauderhill, Florida', 5, '/prospects/2029/derrek-cooper.png'),
+  (-2029008, 9, 'Brady Smigiel', 'Brady', 'Smigiel', 'QB', 'Michigan', 76, 217, 'Thousand Oaks, California', 17, '/prospects/2029/brady-smigiel.png'),
+  (-2029009, 10, 'Jaeden Ricketts', 'Jaeden', 'Ricketts', 'WR', 'Ohio State', 71, 202, 'Pataskala, Ohio', 80, '/prospects/2029/jaeden-ricketts.png'),
+  (-2029010, 3, 'Legend Glasker', 'Legend', 'Glasker', 'WR', 'BYU', 73, 175, 'Lehi, Utah', 1, '/prospects/2029/legend-glasker.png')
 ) AS seed(id, rank, name, first_name, last_name, position, school, height, weight, hometown, jersey, headshot_url)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.dynasty_prospects existing

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     default: 'First Ballot Fantasy',
     template: '%s | First Ballot Fantasy',
   },
-  description: 'Advanced dynasty fantasy football analytics — trade tools, prospect scouting, player rankings, and league intelligence.',
+  description: 'College football prospect scouting, dynasty projections, draft boards, and fantasy league management.',
   generator: 'v0.dev',
 }
 

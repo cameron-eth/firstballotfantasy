@@ -158,7 +158,17 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
-  const [prospectNotes, setProspectNotes] = useState<Record<number, string>>({})
+  const [noteSaveError, setNoteSaveError] = useState<string | null>(null)
+  const [noteSaveStatus, setNoteSaveStatus] = useState<string | null>(null)
+  const { user } = useAuth()
+  const { data: savedNotes, error: notesFetchError, mutate: refreshNotes } = useSWR<{ notes: { prospect_id: number; notes: string }[] }>(
+    user ? `/api/scouting-notes?account=${encodeURIComponent(user.id)}` : null,
+    async (url: string) => {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Could not load scouting notes')
+      return response.json()
+    }
+  )
 
   // Fetch roster via useSWR — avoids fetch-in-effect pattern
   const {
@@ -202,14 +212,18 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const [activeTab, setActiveTab] = useState(() =>
     resolveTab(urlTab || initialTab)
   )
+  const savedNotesByProspectId = useMemo(
+    () => new Map((savedNotes?.notes ?? []).map((note) => [note.prospect_id, note.notes])),
+    [savedNotes]
+  )
   const prospects = useMemo<Prospect[]>(
     () =>
       rawProspects.map((prospect) => ({
         ...prospect,
         grade: getProspectGradeValue(prospect),
-        notes: prospectNotes[prospect.id] ?? prospect.notes ?? '',
+        notes: savedNotesByProspectId.get(prospect.id) ?? prospect.notes ?? '',
       })),
-    [rawProspects, prospectNotes]
+    [rawProspects, savedNotesByProspectId]
   )
 
   // Sync tab with URL if it changes
@@ -229,9 +243,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     prospect: Prospect
     index: number
   } | null>(null)
-
-  // Auth for checking if user is logged in
-  const { user } = useAuth()
 
   // Draftboard persistence
   const { savedBoard, saving: savingBoard, saveBoard } = useDraftboard()
@@ -617,6 +628,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   }, [])
 
   const handleProspectSelect = useCallback((prospect: Prospect) => {
+    setNoteSaveStatus(null)
+    setNoteSaveError(null)
     setSelectedProspect(prospect)
     setShowModal(true)
   }, [])
@@ -636,14 +649,24 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     setSelectedProspectForComps(null)
   }, [])
 
-  const handleSaveNotes = useCallback((id: number, notes: string) => {
-    setProspectNotes((prev) => ({ ...prev, [id]: notes }))
-    // Update selected prospect if it's the one being edited
-    setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
-
-    // In a real app, we would save this to Supabase here
-    console.log(`Saving notes for prospect ${id}: ${notes}`)
-  }, [])
+  const handleSaveNotes = useCallback(async (id: number, notes: string) => {
+    setNoteSaveError(null)
+    setNoteSaveStatus('Saving…')
+    try {
+      const response = await fetch('/api/scouting-notes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect_id: id, notes }),
+      })
+      if (!response.ok) throw new Error('Could not save note. Please try again.')
+      setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
+      await refreshNotes()
+      setNoteSaveStatus('Saved to your account')
+    } catch (error) {
+      setNoteSaveStatus(null)
+      setNoteSaveError(error instanceof Error ? error.message : 'Could not save note')
+    }
+  }, [refreshNotes])
 
   // Draft Board handlers
   const handleAddToDraftBoard = useCallback((prospect: Prospect) => {
@@ -758,6 +781,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
               {dataError}
             </div>
           )}
+          {noteSaveError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{noteSaveError}</div>}
+          {notesFetchError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">Saved scouting notes could not be loaded.</div>}
           <Tabs
             value={activeTab}
             onValueChange={(value) => setActiveTab(resolveTab(value))}
@@ -860,6 +885,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
           <ProspectDetailModal
             prospect={selectedProspect}
+            noteSaveStatus={noteSaveStatus}
+            noteSaveError={noteSaveError}
             positionNeeds={positionNeeds}
             onClose={handleCloseModal}
             onAddToDraftBoard={() => {

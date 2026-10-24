@@ -28,5 +28,5 @@ export interface LeagueQuickLink {
 export const LEAGUE_QUICK_LINKS: LeagueQuickLink[] = [
   { key: 'trade-market', label: 'Trade Market', icon: Trophy, href: '/trade-market' },
   { key: 'scouting', label: 'Scouting Portal', icon: Eye, href: '/scouting-portal' },
-  { key: 'draft-buddy', label: 'Draft Buddy', icon: Users, href: '/draft-buddy' },
+  { key: 'draft-board', label: 'Draft Board', icon: Users, href: '/scouting-portal?tab=draftboard' },
 ]

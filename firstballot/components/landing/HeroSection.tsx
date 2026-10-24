@@ -30,7 +30,7 @@ export function HeroSection() {
         <div className="flex flex-col items-center justify-center gap-4 mb-12 animate-on-scroll">
           <div className="inline-flex items-center space-x-2 text-[10px] font-black font-mono text-yellow-400 uppercase tracking-[0.3em] px-4 py-1.5 border border-yellow-400/20 rounded-full bg-yellow-400/5 backdrop-blur-md shadow-[0_0_30px_rgba(250,204,21,0.1)]">
             <Trophy className="h-3 w-3" />
-            <span>2026 Dynasty Season Live</span>
+            <span>College scouting and dynasty analysis</span>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
@@ -102,20 +102,20 @@ export function HeroSection() {
             </div>
           </Link>
 
-          {/* Module 3: Trade Calc */}
-          <Link href="/trade-calculator" className="group">
+          {/* Module 3: Draft Board */}
+          <Link href="/scouting-portal?tab=draftboard" className="group">
             <div className="h-full bg-slate-950/40 backdrop-blur-sm border border-white/5 rounded-2xl p-6 transition-all duration-500 hover:border-emerald-400/30 hover:bg-slate-900/60 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mb-6 group-hover:-rotate-6 transition-transform">
                 <ShoppingCart className="h-6 w-6 text-emerald-400" />
               </div>
               <h3 className="text-sm font-black text-white font-mono uppercase tracking-widest mb-2">
-                Trade Calc
+                Draft Board
               </h3>
               <p className="text-[10px] text-slate-500 font-mono uppercase leading-relaxed mb-6">
-                Evaluate dynasty trades using our ML value index.
+                Rank college prospects and save your own draft board.
               </p>
               <div className="mt-auto w-full py-3 border border-slate-800 text-slate-500 font-black font-mono text-[10px] uppercase tracking-widest rounded-lg group-hover:border-emerald-400/30 group-hover:text-emerald-400 transition-all">
-                Evaluate Trade
+                Build Your Board
               </div>
             </div>
           </Link>

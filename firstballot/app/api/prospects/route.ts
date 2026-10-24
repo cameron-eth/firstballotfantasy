@@ -4,10 +4,10 @@ import { supabaseServer } from '@/lib/supabase-server'
 export const dynamic = 'force-dynamic'
 
 // Prospect grades change when the ETL runs, not per request. Serving a short
-// shared cache with a long stale window keeps the ~1MB all-years payload off
-// the database on every page load while still refreshing promptly after a run.
+// shared cache keeps the ~1MB all-years payload off the database on every
+// page load while bounding how long an older snapshot can be served.
 const CACHE_HEADERS = {
-  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
 }
 
 interface Prospect {
@@ -160,7 +160,7 @@ function deriveRanks(records: RankedRecord[]) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const draftYear = searchParams.get('draft_year') || '2026'
+    const draftYear = searchParams.get('draft_year') || String(Math.max(2027, new Date().getFullYear() + 1))
     const isAllYears = draftYear === 'all'
     const yearNum = !isAllYears ? toNumberOrNull(draftYear) : null
 

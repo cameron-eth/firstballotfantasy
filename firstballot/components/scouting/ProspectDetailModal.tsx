@@ -14,6 +14,8 @@ interface ProspectDetailModalProps {
   onClose: () => void
   onAddToDraftBoard: () => void
   onSaveNotes: (id: number, notes: string) => void
+  noteSaveStatus?: string | null
+  noteSaveError?: string | null
   getProspectGrade: (prospect: Prospect) => string
   getDraftPick: (prospect: Prospect) => string
   getProspectTier: (rank: number, tier?: string | null) => string
@@ -27,6 +29,8 @@ export function ProspectDetailModal({
   onClose,
   onAddToDraftBoard,
   onSaveNotes,
+  noteSaveStatus,
+  noteSaveError,
   getProspectGrade,
   getDraftPick,
   getProspectTier,
@@ -189,6 +193,8 @@ export function ProspectDetailModal({
                 value={localNotes}
                 onChange={(e) => setLocalNotes(e.target.value)}
               />
+              {noteSaveStatus && <p role="status" className="mt-2 text-xs text-blue-300">{noteSaveStatus}</p>}
+              {noteSaveError && <p role="alert" className="mt-2 text-xs text-red-300">{noteSaveError}</p>}
             </div>
 
             <div className="flex gap-3">

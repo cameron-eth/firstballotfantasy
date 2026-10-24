@@ -191,7 +191,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                 <SelectContent className="bg-slate-900 border-white/10 text-white font-mono text-xs">
                   <SelectItem value="all">All Classes</SelectItem>
                   <SelectItem value="2027">2027 Class</SelectItem>
-                  <SelectItem value="2026">2026 (Current)</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
                   <SelectItem value="2025">2025</SelectItem>
                   <SelectItem value="2024">2024</SelectItem>
                   <SelectItem value="2023">2023</SelectItem>

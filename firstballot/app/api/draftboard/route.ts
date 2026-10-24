@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         .from('user_draftboards')
         .update({
           prospect_ids: body.prospect_ids,
-          draft_year: body.draft_year || 2026,
+          draft_year: body.draft_year || Math.max(2027, new Date().getFullYear() + 1),
         })
         .eq('id', existingBoard.id)
         .eq('user_id', userId)
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         name: body.name,
-        draft_year: body.draft_year || 2026,
+        draft_year: body.draft_year || Math.max(2027, new Date().getFullYear() + 1),
         prospect_ids: body.prospect_ids,
       })
       .select()

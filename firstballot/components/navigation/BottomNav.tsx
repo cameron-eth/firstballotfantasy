@@ -1,20 +1,21 @@
 'use client'
 
-import * as React from 'react'
+import { Suspense } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Trophy, Search, ShoppingCart, BarChart3, Home } from 'lucide-react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Trophy, Search, ClipboardList, Users, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function BottomNav() {
+function BottomNavContent() {
   const pathname = usePathname()
+  const tab = useSearchParams().get('tab')
 
   const items = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'League', href: '/league-buddy', icon: Trophy },
     { name: 'Scout', href: '/scouting-portal', icon: Search },
-    { name: 'Trade', href: '/trade-calculator', icon: ShoppingCart },
-    { name: 'Ranks', href: '/rankings', icon: BarChart3 },
+    { name: 'Board', href: '/scouting-portal?tab=draftboard', icon: ClipboardList },
+    { name: 'Team', href: '/league-buddy?tab=roster', icon: Users },
+    { name: 'League', href: '/league-buddy', icon: Trophy },
   ]
 
   return (
@@ -22,13 +23,16 @@ export function BottomNav() {
       <div className="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 pb-safe pt-2">
         <nav className="flex items-center justify-between max-w-lg mx-auto">
           {items.map((item) => {
-            const isActive = pathname === item.href
+            const [itemPath, itemQuery] = item.href.split('?')
+            const itemTab = itemQuery?.split('=')[1] ?? null
+            const isActive = pathname === itemPath && tab === itemTab
             const Icon = item.icon
 
             return (
               <Link
                 key={item.name}
                 href={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
                   'flex flex-col items-center justify-center py-2 px-1 relative transition-colors duration-200',
                   isActive ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-200'
@@ -53,4 +57,8 @@ export function BottomNav() {
       </div>
     </div>
   )
+}
+
+export function BottomNav() {
+  return <Suspense fallback={null}><BottomNavContent /></Suspense>
 }

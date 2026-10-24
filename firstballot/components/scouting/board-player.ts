@@ -36,7 +36,7 @@ export type GradeField = 'film' | 'talent'
 
 export const BOARD_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 /** Earliest class the draft board will show — classes before this are history. */
-export const DRAFT_BOARD_MIN_YEAR = 2027
+export const DRAFT_BOARD_MIN_YEAR = Math.max(2027, new Date().getFullYear() + 1)
 
 export function getTierLabel(gradeTier: string | null, grade: number): string {
   return normalizeScoutingGradeTier(gradeTier, grade)

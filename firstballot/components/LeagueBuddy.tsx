@@ -129,7 +129,7 @@ export default function LeagueBuddy({
   }, [router, leagueId])
 
   const handleDraftBuddyClick = useCallback(() => {
-    router.push(`/draft-buddy?leagueId=${leagueId}`)
+    router.push(`/scouting-portal?tab=draftboard&leagueId=${leagueId}`)
   }, [router, leagueId])
 
   const handlePlayoffOddsClick = useCallback(() => {

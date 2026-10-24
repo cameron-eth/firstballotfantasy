@@ -21,6 +21,7 @@ import { useDraftboard } from '@/hooks/use-draftboard'
 import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
+import { ProspectFreshness } from './ProspectFreshness'
 
 interface RosterPlayer {
   id: string
@@ -39,12 +40,10 @@ interface RosterPlayer {
   fantasy_ppg?: number
   games_played?: number
 }
-
 interface ScoutingPortalProps {
   leagueId: string
   initialTab?: string
 }
-
 const PORTAL_TABS = ['prospects', 'draftboard', 'historical'] as const
 type PortalTab = (typeof PORTAL_TABS)[number]
 
@@ -52,7 +51,6 @@ type PortalTab = (typeof PORTAL_TABS)[number]
 function resolveTab(tab: string | null | undefined): PortalTab {
   return PORTAL_TABS.includes(tab as PortalTab) ? (tab as PortalTab) : 'prospects'
 }
-
 // Module-level pure function — no component state needed
 function calculatePlayerValue(rank: number, position?: string): number {
   if (!rank || rank <= 0 || rank > 1000) return 1
@@ -73,17 +71,14 @@ function calculatePlayerValue(rank: number, position?: string): number {
   } else {
     return 15
   }
-
   let value = baseValue * Math.exp(-k * (rank - tierStart)) + tierFloor
 
   if (position) {
     const positionMultipliers: Record<string, number> = { QB: 1.3, RB: 0.9, WR: 1.0, TE: 1.1 }
     value *= positionMultipliers[position] || 1.0
   }
-
   return Math.round(value * 100) / 100
 }
-
 function getProspectGradeValue(prospect: Prospect): string {
   if (
     !prospect.grade_tier &&
@@ -206,14 +201,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const loading = prospectsLoading || rosterLoading
   const prospectsError: string | null = prospectsFetchError?.message ?? null
   const dataError = prospectsError || rosterError
-  const latestProspectUpdate = useMemo(
-    () => rawProspects.reduce<string | null>((latest, prospect) =>
-      prospect.updated_at && (!latest || prospect.updated_at > latest) ? prospect.updated_at : latest, null),
-    [rawProspects]
-  )
-  const prospectDataAgeDays = latestProspectUpdate
-    ? Math.floor((Date.now() - new Date(latestProspectUpdate).getTime()) / 86400000)
-    : null
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [draftYear, setDraftYear] = useState('all')
@@ -784,12 +771,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
       <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
-          {latestProspectUpdate && (
-            <p className="mb-3 text-xs text-muted-foreground font-mono">
-              Scouting database last updated {new Date(latestProspectUpdate).toLocaleDateString()}
-              {prospectDataAgeDays !== null && prospectDataAgeDays > 14 && <span className="ml-2 text-amber-400">· Data may be stale</span>}
-            </p>
-          )}
+          <ProspectFreshness prospects={rawProspects} />
           {dataError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {dataError}

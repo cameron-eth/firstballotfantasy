@@ -91,10 +91,11 @@ export function ProspectsTab({
 
   return (
     <div className="relative">
-      {/* Offset matches the 64px app header so the bar parks directly under it.
+      {/* On desktop, the offset matches the 64px app header. On mobile the
+          filters scroll away so they do not cover most of the player cards.
           Needs a near-opaque background, not `liquid-glass` — cards scroll
           underneath and read straight through a 50–74% translucent panel. */}
-      <div className="sticky top-16 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
+      <div className="md:sticky md:top-16 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 md:gap-6 px-2">
           <div>
             <h2 className="text-xl md:text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-1 md:mb-2">

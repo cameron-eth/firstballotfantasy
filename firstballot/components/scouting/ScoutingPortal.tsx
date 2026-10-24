@@ -345,7 +345,13 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       filtered = filtered.filter((prospect) => prospect.draft_year === year)
     }
 
-    return filtered
+    // Keep evaluated prospects ahead of newly sourced watchlist entries within
+    // each class. Supabase can place NULL grades first in descending sorts.
+    return [...filtered].sort((a, b) =>
+      (b.draft_year ?? 0) - (a.draft_year ?? 0) ||
+      (b.overall_grade ?? -1) - (a.overall_grade ?? -1) ||
+      (a.overall_rank ?? 9999) - (b.overall_rank ?? 9999)
+    )
   }, [prospects, searchTerm, positionFilter, draftYear])
 
   // Calculate #1 player at each position (Diamond Tier for prospects)

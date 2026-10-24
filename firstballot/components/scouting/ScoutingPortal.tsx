@@ -21,7 +21,6 @@ import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 import { ProspectFreshness } from './ProspectFreshness'
-import { ScoutingWorkspaceHeader } from './ScoutingWorkspaceHeader'
 import { sortProspectsForBrowse } from './sortProspectsForBrowse'
 
 interface RosterPlayer {
@@ -772,7 +771,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
       <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
-          <ScoutingWorkspaceHeader prospectCount={prospects.length} boardCount={draftBoard.length} loading={loading} leagueId={leagueId} rosterLoading={rosterLoading} rosterError={rosterError} onOpenBoard={() => changeTab('draftboard')} />
           <ProspectFreshness prospects={rawProspects} />
           {prospectsError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">

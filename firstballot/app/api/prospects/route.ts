@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
         school: record.school || 'TBD',
         espn_id: espnId,
         cfbd_id: toNumberOrNull(record.cfbd_id),
-        projectedRound: getProjectedRound(overallRank),
+        projectedRound: record.overall_grade == null ? 'TBD' : getProjectedRound(overallRank),
         tier: record.tier,
         tier_numeric: toNumberOrNull(record.tier_numeric),
         valuation: toNumberOrNull(record.valuation),
@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
         espn_id: null, cfbd_id: null, projectedRound: 'TBD',
         tier: null, tier_numeric: null, valuation: null,
         overall_grade: null, grade_tier: null, nfl_comparisons: null,
-        team_color: null, college_stats: null, updated_at: null,
+        team_color: null, college_stats: 'college_stats' in player ? player.college_stats : null, updated_at: null,
         college_production_score: null, physical_measurables_score: null,
         hs_recruiting_score: null, draft_projection_score: null, expert_consensus_score: null,
       }))

@@ -11,9 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, BarChart3, Users, Calendar, Shield, Search } from 'lucide-react'
+import { TrendingUp, BarChart3, Users, Shield, Search } from 'lucide-react'
 import type { Prospect } from './types'
 import { ProspectCard } from './ProspectCard'
+import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import { Input } from '@/components/ui/input'
 
 interface HistoricalProspect extends Prospect {
@@ -174,21 +175,21 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
   return (
     <div className="space-y-6">
       {/* Year Selector & View Toggle */}
-      <Card className="bg-slate-800/50 border border-slate-700">
-        <CardHeader className="py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-yellow-400" />
-                <CardTitle className="text-white font-mono text-base uppercase tracking-wider">
-                  Compare to Class
-                </CardTitle>
-              </div>
+      <ScoutingSectionHeader title="Class History" description="Compare earlier draft classes and player profiles" secondary={viewMode === 'athletes' && (
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full max-w-md flex-1">
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input aria-label="Search historical prospects" placeholder="Search this class..." value={searchTerm} onChange={(e) => handleSearchChange(e.target.value)} className="h-10 rounded-xl border-border bg-background pl-10 font-mono text-xs" />
+          </div>
+          <span className="font-mono text-[10px] uppercase text-muted-foreground">Showing {visibleHistorical.length} / {filteredHistorical.length}</span>
+        </div>
+      )}>
+          <div className="flex flex-wrap items-center gap-3">
               <Select value={selectedYear} onValueChange={handleYearChange}>
-                <SelectTrigger className="w-28 bg-slate-900 border-white/5 text-white h-9 text-xs font-mono">
+                <SelectTrigger className="w-32 bg-background border-border text-foreground h-10 text-xs font-mono rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/10 text-white font-mono text-xs">
+                <SelectContent className="bg-card border-border text-foreground font-mono text-xs">
                   <SelectItem value="all">All Classes</SelectItem>
                   <SelectItem value="2027">2027 Class</SelectItem>
                   <SelectItem value="2026">2026</SelectItem>
@@ -201,9 +202,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                   <SelectItem value="2019">2019</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="flex items-center gap-2 bg-slate-900/60 p-1 rounded-xl border border-white/5">
+            <div className="flex items-center gap-2 bg-background p-1 rounded-xl border border-border">
               <button
                 onClick={() => handleViewModeChange('athletes')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black font-mono uppercase tracking-widest transition-all ${
@@ -218,7 +217,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
                 onClick={() => handleViewModeChange('charts')}
                 className={`px-4 py-1.5 rounded-lg text-[10px] font-black font-mono uppercase tracking-widest transition-all ${
                   viewMode === 'charts'
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                     : 'text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -226,8 +225,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
               </button>
             </div>
           </div>
-        </CardHeader>
-      </Card>
+      </ScoutingSectionHeader>
 
       {viewMode === 'charts' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -414,23 +412,7 @@ export function HistoricalRankingsTab({ currentProspects }: HistoricalRankingsTa
         </div>
       ) : (
         <div className="space-y-8 md:space-y-10">
-          {/* Search bar for historical class */}
-          <div className="sticky top-16 z-20 -mx-2 px-4 py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90 flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md group">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
-              <Input
-                placeholder={`Search ${selectedYear} class...`}
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10 h-10 bg-slate-950/60 border-white/5 text-white w-full focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
-              />
-            </div>
-            <div className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest bg-slate-900/40 px-3 py-2 rounded-lg border border-white/5">
-              Showing {visibleHistorical.length} / {filteredHistorical.length} Athletes
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 pb-24 md:pb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4 pb-24 md:pb-10">
             {visibleHistorical.length > 0 ? (
               visibleHistorical.map((prospect) => (
                 <ProspectCard

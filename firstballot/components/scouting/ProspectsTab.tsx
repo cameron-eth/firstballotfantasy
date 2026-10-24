@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import { ProspectCard } from './ProspectCard'
+import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import {
   Select,
   SelectContent,
@@ -91,24 +92,14 @@ export function ProspectsTab({
 
   return (
     <div className="relative">
-      {/* On desktop, the offset matches the 64px app header. On mobile the
-          filters scroll away so they do not cover most of the player cards.
-          Needs a near-opaque background, not `liquid-glass` — cards scroll
-          underneath and read straight through a 50–74% translucent panel. */}
-      <div className="md:sticky md:top-16 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 lg:gap-6 px-2">
-          <div>
-            <h2 className="text-xl md:text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-1 md:mb-2">
-              College <span className="text-blue-400">Prospects</span>
-            </h2>
-            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
-              {displayedProspects.length} {draftYear === 'all' ? '' : `${draftYear} `}prospect
-              {displayedProspects.length === 1 ? '' : 's'}
-              {positionFilter === 'all' ? '' : ` · ${positionFilter}`}
-              {onBoardOnly ? ' · on my board' : ''}
-            </p>
-          </div>
-
+      <ScoutingSectionHeader
+        title="College Prospects"
+        description={`${displayedProspects.length} ${draftYear === 'all' ? '' : `${draftYear} `}prospects${positionFilter === 'all' ? '' : ` · ${positionFilter}`}${onBoardOnly ? ' · on my board' : ''}`}
+        secondary={<>
+          <button type="button" onClick={() => { setOnBoardOnly((current) => !current); setVisibleCount(PAGE_SIZE) }} aria-pressed={onBoardOnly} className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold ${onBoardOnly ? 'border-blue-400 bg-blue-400/15 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'}`}>On my board · {draftBoard.length}</button>
+          {(searchTerm || draftYear !== 'all' || positionFilter !== 'all' || onBoardOnly) && <button type="button" onClick={clearFilters} className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /> Clear filters</button>}
+        </>}
+      >
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(12rem,1fr)_8rem_9rem] lg:w-auto">
             <div className="relative group col-span-2 sm:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
@@ -148,18 +139,7 @@ export function ProspectsTab({
               </SelectContent>
             </Select>
           </div>
-        </div>
-        <div className="mt-3 flex items-center gap-2 overflow-x-auto px-2 pb-0.5">
-          <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Classes</span>
-          <button type="button" onClick={() => handleDraftYearChange('all')} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${draftYear === 'all' ? 'border-blue-400 bg-blue-400/15 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'}`}>All</button>
-          {draftYears.filter((year) => year >= new Date().getFullYear()).slice(0, 5).map((year) => (
-            <button key={year} type="button" onClick={() => handleDraftYearChange(String(year))} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${draftYear === String(year) ? 'border-blue-400 bg-blue-400/15 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'}`}>{year}</button>
-          ))}
-          <span className="mx-1 h-5 shrink-0 border-l border-border" />
-          <button type="button" onClick={() => { setOnBoardOnly((current) => !current); setVisibleCount(PAGE_SIZE) }} aria-pressed={onBoardOnly} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${onBoardOnly ? 'border-blue-400 bg-blue-400/15 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'}`}>On my board · {draftBoard.length}</button>
-          {(searchTerm || draftYear !== 'all' || positionFilter !== 'all' || onBoardOnly) && <button type="button" onClick={clearFilters} className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs text-slate-400 hover:text-white"><X className="h-3 w-3" /> Clear</button>}
-        </div>
-      </div>
+      </ScoutingSectionHeader>
 
       {loading ? (
         <div className="text-center py-20">

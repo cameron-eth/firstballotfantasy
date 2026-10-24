@@ -1,6 +1,6 @@
 # 2028 and 2029 watchlist research
 
-Reviewed 2026-10-24. College roster pages are the source for each player's current school, position, class, measurements, hometown, and jersey. Draft year is the earliest eligible year inferred from first college enrollment; it is not a declaration or a talent ranking. New records have no scouting grade, production score, valuation, or draft round projection. Their display order follows existing records only to keep IDs and boards stable.
+Reviewed 2026-10-24. College roster pages are the source for each player's current school, position, class, measurements, hometown, and jersey. Draft year is the earliest eligible year inferred from first college enrollment; it is not a declaration. New records have no scouting grade, production score, valuation, or draft round projection. The 2029 class has the preliminary watchlist order documented below.
 
 | Watchlist | Player | Current roster source |
 | --- | --- | --- |
@@ -16,3 +16,21 @@ Reviewed 2026-10-24. College roster pages are the source for each player's curre
 | 2029 | Jaeden Ricketts | [Ohio State](https://ohiostatebuckeyes.com/sports/football/roster/jaeden-ricketts/13384) |
 
 The five new 2029 records are also in `lib/curated-prospects.ts` as a server fallback. Existing 2029 sources for Jesse Legree, Chris Henry Jr., Legend Bey, and Brock Boyd are there as well. New records intentionally use the card's initials treatment until a licensed, background-free portrait is available; mixing official roster backgrounds into the card art would undo the cutout consistency work.
+
+## 2029 preliminary order and production snapshot
+
+Reviewed October 24, 2026. The order below is an editorial *watchlist* order, based on 2026 college production through completed games on October 17, plus published recruiting pedigree where college playing time is limited. It is not the full scouting model: overall grade, production score, valuation, and projected draft round stay empty until film and comparable position-adjusted inputs are evaluated. Missing college stats remain null, never zero. The stored `rank` gives this preliminary order; the card labels it “Preliminary.”
+
+| Order | Player | Verified 2026 college signal | Recruiting signal | Primary source |
+| --- | --- | --- | --- | --- |
+| 1 | Jesse Legree | 1,040 receiving yards and 14 TD after seven games | Breakout freshman | [Oregon State, Oct. 19](https://osubeavers.com/news/2026/10/19/football-jesse-legree-named-pac-12-freshman-of-the-week-for-seventh-straight-time) |
+| 2 | Chris Henry Jr. | Six catches, 202 yards, two TD from seven game notes | 247 composite No. 10 overall, five stars | [Ohio State bio](https://ohiostatebuckeyes.com/sports/football/roster/chris-henry%20jr./13356) |
+| 3 | Savion Hiter | 57 carries, 223 yards, two TD; seven catches, 61 yards in six games | 247 composite No. 8 overall, five stars | [Michigan bio and game log](https://mgoblue.com/sports/football/roster/savion-hiter/28100) |
+| 4 | Dia Bell | No verified college game line yet | 247 No. 27 overall, five stars | [Texas bio](https://texaslonghorns.com/sports/football/roster/dia-bell/16947) |
+| 5 | Derrek Cooper | 28 carries, 98 yards, one TD; one catch, six yards in four games | Rivals No. 74 overall, four stars | [Texas bio](https://texaslonghorns.com/sports/football/roster/derrek-cooper/16945) |
+| 6 | Legend Bey | 14 carries, 56 yards; two catches, 37 yards, one TD in five noted games | 247 top 200 | [Ohio State bio](https://ohiostatebuckeyes.com/sports/football/roster/legend-bey/13346) |
+| 7 | Brock Boyd | Six catches, 110 yards in six noted games | Three stars | [Ohio State bio](https://ohiostatebuckeyes.com/sports/football/roster/brock-boyd/13353) |
+| 8 | Brady Smigiel | No verified college game line yet | Freshman QB | [Michigan bio](https://mgoblue.com/sports/football/roster/brady-smigiel/28104) |
+| 9 | Jaeden Ricketts | No verified college game line yet | Freshman WR | [Ohio State bio](https://ohiostatebuckeyes.com/sports/football/roster/jaeden-ricketts/13384) |
+
+For heterogeneous recruiting services, `hs_rank` is the national number from the specific service named in the table, not a blended rank. Do not compare it as a calibrated model feature without normalizing the services first. This snapshot should be refreshed after each game week before numerical grading.

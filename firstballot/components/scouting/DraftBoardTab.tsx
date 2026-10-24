@@ -8,6 +8,7 @@ import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ClipboardList, GripVertical, X } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
+import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import { KtcSparkline } from './KtcSparkline'
 import { BoardBreakdownPanel } from './BoardBreakdownPanel'
 import { OffBoardPanel } from './OffBoardPanel'
@@ -508,8 +509,8 @@ export function DraftBoardTab({
 
   return (
     <main className="min-h-[70vh] bg-background">
-      {/* Compact toolbar — position tabs + actions */}
-      <div className="w-full px-2 sm:px-3 pt-1 pb-2 flex items-center justify-between gap-2 sm:gap-3 flex-wrap shrink-0">
+      <ScoutingSectionHeader title="Draft Board" description={`${draftBoard.length} players · drag to set your order`}>
+      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
         <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
           {positionTabs.map((pos) => (
             <button
@@ -564,6 +565,7 @@ export function DraftBoardTab({
           />
         )}
       </div>
+      </ScoutingSectionHeader>
 
       <div className="w-full px-1 sm:px-2 pb-24 lg:pb-3">
         {/* The board carries three more columns than it used to, so it takes a

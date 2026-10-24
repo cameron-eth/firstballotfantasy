@@ -36,6 +36,17 @@ interface CardPlayer {
   physical: number | null
   position: string
   isCollege: boolean
+  seasonLine: string | null
+}
+
+function formatSeasonLine(stats?: Record<string, number> | null): string | null {
+  if (!stats) return null
+  const parts: string[] = []
+  if (stats.rushing_yards != null) parts.push(`${stats.rushing_yards} rush yds`)
+  if (stats.rushing_tds != null) parts.push(`${stats.rushing_tds} rush TD`)
+  if (stats.receiving_yards != null) parts.push(`${stats.receiving_yards.toLocaleString()} rec yds`)
+  if (stats.receiving_tds != null) parts.push(`${stats.receiving_tds} rec TD`)
+  return parts.length ? parts.join(' · ') : null
 }
 
 function formatHeight(inches: number | null): string {
@@ -83,6 +94,7 @@ function toCardPlayer(prospect: Prospect): CardPlayer {
     physical: prospect.physical_measurables_score == null ? null : clampScore(prospect.physical_measurables_score),
     position: prospect.position,
     isCollege: (prospect.draft_year || 0) >= 2025,
+    seasonLine: prospect.draft_year === 2029 ? formatSeasonLine(prospect.college_stats) : null,
   }
 }
 
@@ -218,7 +230,7 @@ function UnifiedProspectCard({
                 : 'bg-secondary text-muted-foreground border-border'
             )}
           >
-            {player.year ?? '--'} {player.isCollege ? 'PROSPECT' : 'CLASS'}
+            {player.year ?? '--'} {player.year === 2029 && player.grade == null ? 'PRELIMINARY' : player.isCollege ? 'PROSPECT' : 'CLASS'}
           </span>
         </div>
       </div>
@@ -257,7 +269,7 @@ function UnifiedProspectCard({
             {player.production != null && <StatBar label="PROD" value={player.production} />}
             {player.physical != null && <StatBar label="PHYS" value={player.physical} />}
           </div>
-        ) : <p className="text-xs text-muted-foreground">Early class watchlist · evaluation pending</p>}
+        ) : <p className="text-xs text-muted-foreground">{player.seasonLine ? `2026 · ${player.seasonLine}` : 'Early class watchlist · evaluation pending'}</p>}
       </div>
     </div>
   )

@@ -26,3 +26,9 @@ The Vercel Development environment was pulled into the ignored `firstballot/.env
 ## Remaining data work
 
 The app can refresh its copy of prospect rows, but true freshness depends on the upstream import into `dynasty_prospects`. Locate or add an ingestion job with a recorded `source_updated_at`, source name, class coverage, and health alert. The newest row is over two months old, so the underlying data needs a new import. Verify whether Production uses the same database before concluding that Production has the same counts. Apply `sql/add_user_prospect_notes.sql` before deploying the notes feature. The invalid Development service-role key also needs correction; do not copy the working anon key into that variable.
+
+## 2029 watchlist follow-up
+
+The Development table has no 2029 rows and none of Jesse Legree, Legend Bey, Brock Boyd, or Chris Henry Jr. Their 2026 freshman status, school, position, and headshots were checked against the official [Oregon State roster](https://osubeavers.com/sports/football/roster/jesse-legree/12214) and [Ohio State roster](https://ohiostatebuckeyes.com/sports/football/roster/). `lib/curated-prospects.ts` supplies four server-side watchlist records to the prospect API until `sql/add_2029_prospects.sql` is applied. The SQL preserves the fallback IDs so saved board references remain stable. The 2029 year is a draft projection; no model grade, production score, or draft round is assigned. Personal notes and film/talent grade saving for fallback records are disabled until their database rows exist. The homepage uses roster photos for the 2029 watchlist and player photos for the existing upcoming classes.
+
+After applying the SQL, verify all four rows in `dynasty_prospects`, test authenticated notes and grades, and run the normal scouting ingestion for the rest of the class. The freshness warning now checks each upcoming class separately, so a freshly inserted 2029 row cannot hide older 2027 and 2028 records.

@@ -98,7 +98,7 @@ export function PlayerCard({ player, index }: PlayerCardProps) {
           <div className="flex-1">
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-mono font-bold text-primary">
-                {player.grade.toFixed(1)}
+                {player.grade == null ? '—' : player.grade.toFixed(1)}
               </span>
               <span className="text-[10px] text-muted-foreground uppercase">Grade</span>
             </div>
@@ -114,14 +114,12 @@ export function PlayerCard({ player, index }: PlayerCardProps) {
         </div>
 
         {/* Stats Bars */}
-        <div className="space-y-2">
-          <StatBar
-            label="PROD"
-            value={player.production}
-            delay={Math.min(index * 0.03, 0.5) + 0.3}
-          />
-          <StatBar label="PHYS" value={player.physical} delay={Math.min(index * 0.03, 0.5) + 0.4} />
-        </div>
+        {player.production != null || player.physical != null ? (
+          <div className="space-y-2">
+            {player.production != null && <StatBar label="PROD" value={player.production} delay={Math.min(index * 0.03, 0.5) + 0.3} />}
+            {player.physical != null && <StatBar label="PHYS" value={player.physical} delay={Math.min(index * 0.03, 0.5) + 0.4} />}
+          </div>
+        ) : <p className="text-xs text-muted-foreground">Evaluation pending</p>}
       </div>
     </motion.div>
   )

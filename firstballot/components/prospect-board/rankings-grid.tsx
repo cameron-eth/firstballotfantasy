@@ -7,7 +7,7 @@ import { PlayerCard } from './player-card'
 import { SkeletonGrid } from './player-skeleton'
 import { cn } from '@/lib/utils'
 
-type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot'
+type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot' | 'Ungraded'
 
 /** Class filter: every undrafted class, one specific class, or the whole archive. */
 type YearFilter = number | 'all' | 'upcoming'
@@ -22,6 +22,7 @@ const TIER_ORDER: Exclude<FilterTier, 'all'>[] = [
   'Rotational',
   'Depth',
   'Longshot',
+  'Ungraded',
 ]
 
 function matchesYear(year: number | null, filter: YearFilter): boolean {
@@ -77,15 +78,15 @@ export function RankingsGrid() {
     .filter((p) => filter === 'all' || p.tier === filter)
     .sort((a, b) => {
       if (sortBy === 'rank') {
-        if (b.grade !== a.grade) return b.grade - a.grade
+        if (b.grade !== a.grade) return (b.grade ?? -1) - (a.grade ?? -1)
         return a.rank - b.rank
       }
       if (sortBy === 'grade') {
-        if (b.grade !== a.grade) return b.grade - a.grade
+        if (b.grade !== a.grade) return (b.grade ?? -1) - (a.grade ?? -1)
         return a.rank - b.rank
       }
-      if (sortBy === 'physical') return b.physical - a.physical
-      if (sortBy === 'production') return b.production - a.production
+      if (sortBy === 'physical') return (b.physical ?? -1) - (a.physical ?? -1)
+      if (sortBy === 'production') return (b.production ?? -1) - (a.production ?? -1)
       return 0
     })
     .map((player) => ({
@@ -104,6 +105,7 @@ export function RankingsGrid() {
     Rotational: 0,
     Depth: 0,
     Longshot: 0,
+    Ungraded: 0,
   }
   for (const player of yearFilteredPlayers) {
     if (player.tier in tierCounts && player.tier !== 'all') {

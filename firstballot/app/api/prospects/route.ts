@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { missingCurated2029 } from '@/lib/curated-prospects'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,8 @@ interface Prospect {
   hs_recruiting_score: number | null
   draft_projection_score: number | null
   expert_consensus_score: number | null
+  source_url?: string
+  is_fallback?: boolean
 }
 
 const SELECT_COLUMNS = `
@@ -232,6 +235,24 @@ export async function GET(request: NextRequest) {
         expert_consensus_score: toNumberOrNull(record.expert_consensus_score),
       }
     })
+
+    // The 2029 class is included as a source-checked server fallback until its
+    // database import runs. Database rows win by name and class after import.
+    if (isAllYears || yearNum === 2029) {
+      const curated: Prospect[] = missingCurated2029(prospects).map((player) => ({
+        ...player,
+        is_fallback: true,
+        rank: player.position_rank,
+        overall_rank: player.rank,
+        espn_id: null, cfbd_id: null, projectedRound: 'TBD',
+        tier: null, tier_numeric: null, valuation: null,
+        overall_grade: null, grade_tier: null, nfl_comparisons: null,
+        team_color: null, college_stats: null, updated_at: null,
+        college_production_score: null, physical_measurables_score: null,
+        hs_recruiting_score: null, draft_projection_score: null, expert_consensus_score: null,
+      }))
+      prospects.push(...curated)
+    }
 
     return NextResponse.json(prospects, { headers: CACHE_HEADERS })
   } catch (error) {

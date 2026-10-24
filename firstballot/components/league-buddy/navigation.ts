@@ -23,6 +23,14 @@ export function resolveLeagueSection(tab: string | null): LeagueSection {
   return 'overview'
 }
 
+export function withLeagueId(href: string, leagueId: string | null): string {
+  if (!leagueId) return href
+  const [path, query] = href.split('?')
+  const params = new URLSearchParams(query || '')
+  params.set('leagueId', leagueId)
+  return `${path}?${params.toString()}`
+}
+
 export interface LeagueQuickLink {
   key: string
   label: string

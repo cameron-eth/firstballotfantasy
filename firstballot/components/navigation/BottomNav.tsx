@@ -19,7 +19,7 @@ function BottomNavContent() {
   ]
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
       <div className="bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 pb-safe pt-2">
         <nav className="flex items-center justify-between max-w-lg mx-auto">
           {items.map((item) => {

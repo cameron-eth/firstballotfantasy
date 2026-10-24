@@ -1,4 +1,4 @@
--- Apply in the Supabase SQL editor after reviewing the four 2026 roster sources
+-- Apply in the Supabase SQL editor after reviewing the 2026 roster sources
 -- in lib/curated-prospects.ts. 2029 is an early draft-year projection.
 -- Stable negative IDs match the server fallback, preserving saved board IDs.
 -- Grades, college production, and draft projection remain NULL until evaluated.
@@ -18,7 +18,12 @@ FROM (VALUES
   (-2029003, 3, 'Legend Bey', 'Legend', 'Bey', 'RB', 'Ohio State', 70, 195, 'Forney, Texas', 2,
    '/prospects/2029/legend-bey.png'),
   (-2029004, 4, 'Brock Boyd', 'Brock', 'Boyd', 'WR', 'Ohio State', 73, 196, 'Southlake, Texas', 11,
-   '/prospects/2029/brock-boyd.png')
+   '/prospects/2029/brock-boyd.png'),
+  (-2029005, 5, 'Savion Hiter', 'Savion', 'Hiter', 'RB', 'Michigan', 71, 212, 'Louisa, Virginia', 5, NULL),
+  (-2029006, 6, 'Dia Bell', 'Dia', 'Bell', 'QB', 'Texas', 75, 206, 'Fort Lauderdale, Florida', 6, NULL),
+  (-2029007, 7, 'Derrek Cooper', 'Derrek', 'Cooper', 'RB', 'Texas', 73, 212, 'Lauderhill, Florida', 5, NULL),
+  (-2029008, 8, 'Brady Smigiel', 'Brady', 'Smigiel', 'QB', 'Michigan', 76, 217, 'Thousand Oaks, California', 17, NULL),
+  (-2029009, 9, 'Jaeden Ricketts', 'Jaeden', 'Ricketts', 'WR', 'Ohio State', 71, 202, 'Pataskala, Ohio', 80, NULL)
 ) AS seed(id, rank, name, first_name, last_name, position, school, height, weight, hometown, jersey, headshot_url)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.dynasty_prospects existing

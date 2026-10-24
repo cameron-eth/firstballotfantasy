@@ -98,7 +98,7 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
   ]
 
   return (
-    <nav className="hidden md:flex items-center space-x-1">
+    <nav className="hidden lg:flex items-center space-x-1">
       {navGroups.map((group) => {
         const isGroupActive = group.items.some((item) => pathname === item.href.split('?')[0])
         return (
@@ -108,6 +108,7 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
             items={group.items}
             isActive={isGroupActive}
             isLoggedIn={isLoggedIn}
+            align={group.label === 'RANKINGS' ? 'right' : 'left'}
           />
         )
       })}

@@ -96,7 +96,7 @@ export function ProspectsTab({
           Needs a near-opaque background, not `liquid-glass` — cards scroll
           underneath and read straight through a 50–74% translucent panel. */}
       <div className="md:sticky md:top-16 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 md:gap-6 px-2">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 lg:gap-6 px-2">
           <div>
             <h2 className="text-xl md:text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-1 md:mb-2">
               College <span className="text-blue-400">Prospects</span>
@@ -109,20 +109,20 @@ export function ProspectsTab({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative group">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(12rem,1fr)_8rem_9rem] lg:w-auto">
+            <div className="relative group col-span-2 sm:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
               <Input
                 placeholder="Search prospects..."
                 aria-label="Search prospects"
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10 h-10 bg-background border-border text-foreground w-full sm:w-64 focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
+                className="pl-10 h-10 bg-background border-border text-foreground w-full focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
               />
             </div>
 
             <Select value={draftYear} onValueChange={handleDraftYearChange}>
-              <SelectTrigger className="h-10 w-full sm:w-32 bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
+              <SelectTrigger className="h-10 w-full bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border text-foreground font-mono text-[10px]">
@@ -136,7 +136,7 @@ export function ProspectsTab({
             </Select>
 
             <Select value={positionFilter} onValueChange={handlePositionChange}>
-              <SelectTrigger className="h-10 w-full sm:w-36 bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
+              <SelectTrigger className="h-10 w-full bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Position" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border text-foreground font-mono text-[10px]">

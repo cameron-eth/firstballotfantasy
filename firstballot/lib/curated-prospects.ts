@@ -1,5 +1,5 @@
 /**
- * A small, source-checked 2029 watchlist. These records live on the server so
+ * A source-checked 2029 watchlist. These records live on the server so
  * the class remains visible until the database import in sql/add_2029_prospects.sql
  * is applied. Keep the negative IDs in that import: saved board references then
  * survive the move from this fallback to database rows.
@@ -35,6 +35,41 @@ export const curated2029Prospects = [
     height: 73, weight: 196, hometown: 'Southlake, Texas', jersey: 11,
     headshot_url: '/prospects/2029/brock-boyd.png',
     source_url: 'https://ohiostatebuckeyes.com/sports/football/roster/brock-boyd/13353',
+  },
+  {
+    id: -2029005, rank: 5, position_rank: 2, name: 'Savion Hiter', first_name: 'Savion', last_name: 'Hiter',
+    position: 'RB', school: 'Michigan', draft_year: 2029, class: 'Freshman',
+    height: 71, weight: 212, hometown: 'Louisa, Virginia', jersey: 5,
+    headshot_url: null,
+    source_url: 'https://mgoblue.com/sports/football/roster/savion-hiter/28100',
+  },
+  {
+    id: -2029006, rank: 6, position_rank: 1, name: 'Dia Bell', first_name: 'Dia', last_name: 'Bell',
+    position: 'QB', school: 'Texas', draft_year: 2029, class: 'Freshman',
+    height: 75, weight: 206, hometown: 'Fort Lauderdale, Florida', jersey: 6,
+    headshot_url: null,
+    source_url: 'https://texaslonghorns.com/sports/football/roster/dia-bell/16947',
+  },
+  {
+    id: -2029007, rank: 7, position_rank: 3, name: 'Derrek Cooper', first_name: 'Derrek', last_name: 'Cooper',
+    position: 'RB', school: 'Texas', draft_year: 2029, class: 'Freshman',
+    height: 73, weight: 212, hometown: 'Lauderhill, Florida', jersey: 5,
+    headshot_url: null,
+    source_url: 'https://texaslonghorns.com/sports/football/roster/derrek-cooper/16945',
+  },
+  {
+    id: -2029008, rank: 8, position_rank: 2, name: 'Brady Smigiel', first_name: 'Brady', last_name: 'Smigiel',
+    position: 'QB', school: 'Michigan', draft_year: 2029, class: 'Freshman',
+    height: 76, weight: 217, hometown: 'Thousand Oaks, California', jersey: 17,
+    headshot_url: null,
+    source_url: 'https://mgoblue.com/sports/football/roster/brady-smigiel/28104',
+  },
+  {
+    id: -2029009, rank: 9, position_rank: 4, name: 'Jaeden Ricketts', first_name: 'Jaeden', last_name: 'Ricketts',
+    position: 'WR', school: 'Ohio State', draft_year: 2029, class: 'Freshman',
+    height: 71, weight: 202, hometown: 'Pataskala, Ohio', jersey: 80,
+    headshot_url: null,
+    source_url: 'https://ohiostatebuckeyes.com/sports/football/roster/jaeden-ricketts/13384',
   },
 ] as const
 

@@ -18,9 +18,10 @@ interface NavGroupProps {
   items: NavItem[]
   isActive?: boolean
   isLoggedIn?: boolean
+  align?: 'left' | 'right'
 }
 
-export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) {
+export function NavGroup({ label, items, isActive, isLoggedIn, align = 'left' }: NavGroupProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
@@ -36,8 +37,12 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
   }
 
   return (
-    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onKeyDown={(event) => { if (event.key === 'Escape') setIsOpen(false) }}>
       <button
+        type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        onClick={() => setIsOpen((open) => !open)}
         className={cn(
           'flex items-center space-x-1 px-4 py-2 text-sm font-mono transition-all duration-200 rounded-lg',
           isActive
@@ -53,7 +58,8 @@ export function NavGroup({ label, items, isActive, isLoggedIn }: NavGroupProps) 
 
       <div
         className={cn(
-          'absolute top-full left-0 mt-1 w-64 z-50 transition-all duration-150 ease-out origin-top',
+          'absolute top-full mt-1 w-64 z-50 transition-all duration-150 ease-out origin-top',
+          align === 'right' ? 'right-0' : 'left-0',
           isOpen
             ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 scale-95 translate-y-1 pointer-events-none'

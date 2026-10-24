@@ -43,9 +43,9 @@ export function Header() {
                 <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-yellow-400" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-green-400 font-mono tracking-wide">
+                <div className="text-lg font-bold text-green-400 font-mono tracking-wide">
                   FIRST BALLOT
-                </h1>
+                </div>
                 <p className="text-xs text-gray-400 font-mono leading-none">FANTASY</p>
               </div>
             </Link>
@@ -57,7 +57,7 @@ export function Header() {
 
             {/* Navigation and User */}
             <div className="flex items-center space-x-4">
-              <div className="hidden md:block">
+              <div className="hidden lg:block">
                 <MegaMenu isLoggedIn={!!user} />
               </div>
 
@@ -150,7 +150,9 @@ export function Header() {
               {user && (
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-2 text-gray-300 hover:text-white hover:bg-slate-700/50 hover:scale-105 active:scale-95 rounded-lg transition-all flex items-center justify-center"
+                  className="lg:hidden p-2 text-gray-300 hover:text-white hover:bg-slate-700/50 hover:scale-105 active:scale-95 rounded-lg transition-all flex items-center justify-center"
+                  aria-label={mobileMenuOpen ? 'Close account menu' : 'Open account menu'}
+                  aria-expanded={mobileMenuOpen}
                 >
                   {mobileMenuOpen ? <X className="h-5 w-5" /> : <User className="h-5 w-5" />}
                 </button>
@@ -161,7 +163,7 @@ export function Header() {
           {/* Mobile Profile Menu (Dropdown from top) */}
           <div
             className={cn(
-              'md:hidden overflow-hidden transition-all duration-200 ease-in-out',
+              'lg:hidden overflow-hidden transition-all duration-200 ease-in-out',
               mobileMenuOpen && user
                 ? 'max-h-80 opacity-100 pb-4 border-t border-slate-700/50 pt-4'
                 : 'max-h-0 opacity-0'

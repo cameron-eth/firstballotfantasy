@@ -51,9 +51,9 @@ export function ProspectDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <Card className="bg-slate-900 border-slate-700/50 w-full max-w-2xl overflow-hidden shadow-2xl">
+      <Card className="bg-slate-900 border-slate-700/50 w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl">
         {/* Modern Hero Header */}
-        <div className="relative h-40 overflow-hidden border-b border-white/5 bg-[#0a0f1a]">
+        <div className="relative h-44 shrink-0 overflow-hidden border-b border-white/5 bg-[#0a0f1a]">
           {/* Large Player Image - Positioned to the left and sitting on the border */}
           <div className="absolute left-0 bottom-0 w-48 h-full z-10 pointer-events-none">
             <div className="relative w-full h-full flex items-end">
@@ -61,8 +61,9 @@ export function ProspectDetailModal({
                 headshotUrl={prospect.headshot_url}
                 espnId={prospect.espn_id}
                 playerName={prospect.name}
-                size={180}
-                className="!rounded-none !bg-transparent border-none shadow-none transform translate-x-[-10%] translate-y-[2%] object-bottom brightness-110 contrast-110"
+                size={176}
+                imageFit="contain"
+                className="!rounded-none !bg-transparent border-none shadow-none transform translate-x-[-10%] brightness-110 contrast-110"
               />
             </div>
           </div>
@@ -71,14 +72,14 @@ export function ProspectDetailModal({
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0f1a]/20 via-transparent to-transparent z-20" />
 
           {/* Header Content Overlay - Aligned to the top of the header area */}
-          <div className="relative z-30 h-full flex flex-col justify-start pt-6 pl-40">
+          <div className="relative z-30 h-full flex flex-col justify-start pt-6 pl-36 pr-12 sm:pl-40">
             <div className="flex items-center gap-3 mb-2">
               <div className="px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-[9px] font-black text-blue-400 font-mono tracking-widest uppercase">
                 {prospect.position}{prospect.rank} · {prospect.draft_year ?? '—'} projection
               </div>
               <div className="h-px w-8 bg-white/10" />
             </div>
-            <h1 className="text-3xl font-black text-white font-mono uppercase tracking-tighter leading-none mb-2">
+            <h1 className="text-xl sm:text-3xl font-black text-white font-mono uppercase tracking-tighter leading-none mb-2">
               {prospect.name}
             </h1>
             <p className="text-[10px] text-slate-400 font-mono uppercase tracking-[0.3em] flex items-center gap-2">

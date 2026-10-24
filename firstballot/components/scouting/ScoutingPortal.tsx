@@ -1,7 +1,6 @@
 'use client'
 
 import type React from 'react'
-
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { Header } from '@/components/header'
@@ -23,6 +22,7 @@ import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 import { ProspectFreshness } from './ProspectFreshness'
 import { ScoutingWorkspaceHeader } from './ScoutingWorkspaceHeader'
+import { sortProspectsForBrowse } from './sortProspectsForBrowse'
 
 interface RosterPlayer {
   id: string
@@ -345,13 +345,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       filtered = filtered.filter((prospect) => prospect.draft_year === year)
     }
 
-    // Keep evaluated prospects ahead of newly sourced watchlist entries within
-    // each class. Supabase can place NULL grades first in descending sorts.
-    return [...filtered].sort((a, b) =>
-      (b.draft_year ?? 0) - (a.draft_year ?? 0) ||
-      (b.overall_grade ?? -1) - (a.overall_grade ?? -1) ||
-      (a.overall_rank ?? 9999) - (b.overall_rank ?? 9999)
-    )
+    return sortProspectsForBrowse(filtered)
   }, [prospects, searchTerm, positionFilter, draftYear])
 
   // Calculate #1 player at each position (Diamond Tier for prospects)

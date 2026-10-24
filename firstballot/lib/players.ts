@@ -188,14 +188,12 @@ export async function fetchAllProspects(): Promise<Record<Position, Player[]>> {
     const filtered = data
       .filter((p) => p.position === pos)
       .sort((a, b) => (b.overall_grade || 0) - (a.overall_grade || 0))
-    result[pos] = filtered.map((raw, index) => {
+    result[pos] = filtered.map((raw) => {
       const normalized = normalize(raw)
-      // Rank reflects position within this grade-sorted list, across all classes.
-      const positionalRank = index + 1
       return {
         ...normalized,
-        rank: positionalRank,
-        positionRank: `${pos}${positionalRank}`,
+        rank: normalized.rank,
+        positionRank: `${pos}${normalized.rank}`,
       }
     })
   }

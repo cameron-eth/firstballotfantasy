@@ -48,9 +48,9 @@ export function PlayerCard({ player, index }: PlayerCardProps) {
           <Image
             src={imageUrl}
             alt={player.name}
-            width={200}
-            height={200}
-            className="object-contain object-bottom scale-110 group-hover:scale-115 transition-transform duration-500"
+            width={480}
+            height={480}
+            className="h-full w-full object-contain object-bottom transition-transform duration-500 group-hover:scale-105"
             onError={() => setImageError(true)}
           />
         ) : (

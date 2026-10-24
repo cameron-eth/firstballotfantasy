@@ -15,7 +15,7 @@ Reviewed 2026-10-24. College roster pages are the source for each player's curre
 | 2029 | Brady Smigiel | [Michigan](https://mgoblue.com/sports/football/roster/brady-smigiel/28104) |
 | 2029 | Jaeden Ricketts | [Ohio State](https://ohiostatebuckeyes.com/sports/football/roster/jaeden-ricketts/13384) |
 
-The five new 2029 records are also in `lib/curated-prospects.ts` as a server fallback. Existing 2029 sources for Jesse Legree, Chris Henry Jr., Legend Bey, and Brock Boyd are there as well. New records intentionally use the card's initials treatment until a licensed, background-free portrait is available; mixing official roster backgrounds into the card art would undo the cutout consistency work.
+The five new 2029 records are also in `lib/curated-prospects.ts` as a server fallback. Existing 2029 sources for Jesse Legree, Chris Henry Jr., Legend Bey, and Brock Boyd are there as well. All nine 2029 cards now use locally stored, background-free cutouts based on the official roster portraits linked above. The cutouts preserve each player's uniform and keep transparent backgrounds for the card layout.
 
 ## 2029 preliminary order and production snapshot
 

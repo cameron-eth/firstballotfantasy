@@ -22,3 +22,15 @@ FROM (VALUES
   (-2029009, 9, NULL::jsonb, NULL::integer, NULL::integer, NULL::integer)
 ) AS evidence(id, rank, college_stats, college_games, hs_stars, hs_rank)
 WHERE player.id = evidence.id AND player.draft_year = 2029;
+
+-- The remaining five roster portraits were cut out and stored in the app.
+UPDATE public.dynasty_prospects AS player
+SET headshot_url = portraits.headshot_url, updated_at = now()
+FROM (VALUES
+  (-2029005, '/prospects/2029/savion-hiter.png'),
+  (-2029006, '/prospects/2029/dia-bell.png'),
+  (-2029007, '/prospects/2029/derrek-cooper.png'),
+  (-2029008, '/prospects/2029/brady-smigiel.png'),
+  (-2029009, '/prospects/2029/jaeden-ricketts.png')
+) AS portraits(id, headshot_url)
+WHERE player.id = portraits.id AND player.draft_year = 2029;

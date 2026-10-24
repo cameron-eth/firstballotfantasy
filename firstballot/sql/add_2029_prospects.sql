@@ -19,11 +19,11 @@ FROM (VALUES
    '/prospects/2029/legend-bey.png'),
   (-2029004, 7, 'Brock Boyd', 'Brock', 'Boyd', 'WR', 'Ohio State', 73, 196, 'Southlake, Texas', 11,
    '/prospects/2029/brock-boyd.png'),
-  (-2029005, 3, 'Savion Hiter', 'Savion', 'Hiter', 'RB', 'Michigan', 71, 212, 'Louisa, Virginia', 5, NULL),
-  (-2029006, 4, 'Dia Bell', 'Dia', 'Bell', 'QB', 'Texas', 75, 206, 'Fort Lauderdale, Florida', 6, NULL),
-  (-2029007, 5, 'Derrek Cooper', 'Derrek', 'Cooper', 'RB', 'Texas', 73, 212, 'Lauderhill, Florida', 5, NULL),
-  (-2029008, 8, 'Brady Smigiel', 'Brady', 'Smigiel', 'QB', 'Michigan', 76, 217, 'Thousand Oaks, California', 17, NULL),
-  (-2029009, 9, 'Jaeden Ricketts', 'Jaeden', 'Ricketts', 'WR', 'Ohio State', 71, 202, 'Pataskala, Ohio', 80, NULL)
+  (-2029005, 3, 'Savion Hiter', 'Savion', 'Hiter', 'RB', 'Michigan', 71, 212, 'Louisa, Virginia', 5, '/prospects/2029/savion-hiter.png'),
+  (-2029006, 4, 'Dia Bell', 'Dia', 'Bell', 'QB', 'Texas', 75, 206, 'Fort Lauderdale, Florida', 6, '/prospects/2029/dia-bell.png'),
+  (-2029007, 5, 'Derrek Cooper', 'Derrek', 'Cooper', 'RB', 'Texas', 73, 212, 'Lauderhill, Florida', 5, '/prospects/2029/derrek-cooper.png'),
+  (-2029008, 8, 'Brady Smigiel', 'Brady', 'Smigiel', 'QB', 'Michigan', 76, 217, 'Thousand Oaks, California', 17, '/prospects/2029/brady-smigiel.png'),
+  (-2029009, 9, 'Jaeden Ricketts', 'Jaeden', 'Ricketts', 'WR', 'Ohio State', 71, 202, 'Pataskala, Ohio', 80, '/prospects/2029/jaeden-ricketts.png')
 ) AS seed(id, rank, name, first_name, last_name, position, school, height, weight, hometown, jersey, headshot_url)
 WHERE NOT EXISTS (
   SELECT 1 FROM public.dynasty_prospects existing

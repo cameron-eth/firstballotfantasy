@@ -38,6 +38,7 @@ export interface Prospect {
   draft_projection_score?: number | null
   expert_consensus_score?: number | null
   draft_year: number | null
+  updated_at?: string | null
 }
 
 export interface ProspectCardProps {

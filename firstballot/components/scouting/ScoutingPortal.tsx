@@ -206,6 +206,14 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const loading = prospectsLoading || rosterLoading
   const prospectsError: string | null = prospectsFetchError?.message ?? null
   const dataError = prospectsError || rosterError
+  const latestProspectUpdate = useMemo(
+    () => rawProspects.reduce<string | null>((latest, prospect) =>
+      prospect.updated_at && (!latest || prospect.updated_at > latest) ? prospect.updated_at : latest, null),
+    [rawProspects]
+  )
+  const prospectDataAgeDays = latestProspectUpdate
+    ? Math.floor((Date.now() - new Date(latestProspectUpdate).getTime()) / 86400000)
+    : null
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [draftYear, setDraftYear] = useState('all')
@@ -776,6 +784,12 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
       <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
+          {latestProspectUpdate && (
+            <p className="mb-3 text-xs text-muted-foreground font-mono">
+              Scouting database last updated {new Date(latestProspectUpdate).toLocaleDateString()}
+              {prospectDataAgeDays !== null && prospectDataAgeDays > 14 && <span className="ml-2 text-amber-400">· Data may be stale</span>}
+            </p>
+          )}
           {dataError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {dataError}

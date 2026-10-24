@@ -41,6 +41,7 @@ interface Prospect {
   // Stats
   college_stats: Record<string, number> | null
   draft_year: number | null
+  updated_at: string | null
   college_production_score: number | null
   physical_measurables_score: number | null
   hs_recruiting_score: number | null
@@ -73,6 +74,7 @@ const SELECT_COLUMNS = `
   team_color,
   college_stats,
   draft_year,
+  updated_at,
   college_production_score,
   physical_measurables_score,
   hs_recruiting_score,
@@ -222,6 +224,7 @@ export async function GET(request: NextRequest) {
         team_color: record.team_color,
         college_stats: record.college_stats || null,
         draft_year: draftYearValue,
+        updated_at: record.updated_at || null,
         college_production_score: toNumberOrNull(record.college_production_score),
         physical_measurables_score: toNumberOrNull(record.physical_measurables_score),
         hs_recruiting_score: toNumberOrNull(record.hs_recruiting_score),

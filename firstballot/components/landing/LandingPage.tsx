@@ -15,6 +15,7 @@ type Prospect = {
   grade_tier: string | null
   draft_projection_score: number | null
   college_production_score: number | null
+  updated_at?: string | null
 }
 
 type ProspectSnapshot = { prospects: Prospect[]; fetchedAt: string }
@@ -44,6 +45,9 @@ export function LandingPage() {
     .sort((a, b) => (a.draft_year ?? 0) - (b.draft_year ?? 0) || (a.overall_rank ?? 999) - (b.overall_rank ?? 999))
     .slice(0, 6)
   const years = [...new Set(prospects.map((player) => player.draft_year).filter((year): year is number => year !== null && year >= currentYear))].sort()
+  const latestRowUpdate = prospects.reduce<string | null>((latest, player) =>
+    player.updated_at && (!latest || player.updated_at > latest) ? player.updated_at : latest, null)
+  const ageDays = latestRowUpdate ? Math.floor((Date.now() - new Date(latestRowUpdate).getTime()) / 86400000) : null
 
   return (
     <main className="min-h-screen bg-[#090f1a] text-slate-100 pb-24 md:pb-12">
@@ -71,11 +75,14 @@ export function LandingPage() {
             <span aria-hidden="true">·</span>
             <span>{years.length ? `Upcoming classes: ${years.join(', ')}` : 'Upcoming class data pending'}</span>
             <span aria-hidden="true">·</span>
+            <span>{latestRowUpdate ? `Database updated ${new Date(latestRowUpdate).toLocaleDateString()}` : 'Database update time unavailable'}</span>
+            <span aria-hidden="true">·</span>
             <span>{data ? `Checked ${new Date(data.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Checking data'}</span>
             <button onClick={() => void mutate()} disabled={isValidating} className="inline-flex items-center gap-1 text-blue-300 hover:text-blue-200 disabled:opacity-50" aria-label="Refresh prospect data">
               <RefreshCw className={`h-3 w-3 ${isValidating ? 'animate-spin' : ''}`} /> Refresh
             </button>
           </div>
+          {ageDays !== null && ageDays > 14 && <p role="status" className="mt-4 max-w-2xl rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">Scouting records have not been updated in {ageDays} days. Check player news and college stats before making a draft decision.</p>}
         </div>
       </section>
 
@@ -115,7 +122,7 @@ export function LandingPage() {
             </div>
           </Link>)}
         </div>}
-        <p className="mt-4 text-xs text-slate-500">Grades and projections are model estimates. “Checked” shows when this page requested the database snapshot, not when the underlying source was updated.</p>
+        <p className="mt-4 text-xs text-slate-500">Grades and projections are model estimates. “Database updated” is the newest row edit time; “Checked” is when this page requested the snapshot.</p>
       </section>
     </main>
   )

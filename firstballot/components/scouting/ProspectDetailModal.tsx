@@ -11,9 +11,13 @@ import type { Prospect } from './types'
 interface ProspectDetailModalProps {
   prospect: Prospect | null
   positionNeeds: Record<string, number>
+  hasTeamContext: boolean
+  isLoggedIn: boolean
   onClose: () => void
   onAddToDraftBoard: () => void
   onSaveNotes: (id: number, notes: string) => void
+  noteSaveStatus?: string | null
+  noteSaveError?: string | null
   getProspectGrade: (prospect: Prospect) => string
   getDraftPick: (prospect: Prospect) => string
   getProspectTier: (rank: number, tier?: string | null) => string
@@ -24,9 +28,13 @@ interface ProspectDetailModalProps {
 export function ProspectDetailModal({
   prospect,
   positionNeeds,
+  hasTeamContext,
+  isLoggedIn,
   onClose,
   onAddToDraftBoard,
   onSaveNotes,
+  noteSaveStatus,
+  noteSaveError,
   getProspectGrade,
   getDraftPick,
   getProspectTier,
@@ -43,9 +51,9 @@ export function ProspectDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <Card className="bg-slate-900 border-slate-700/50 w-full max-w-2xl overflow-hidden shadow-2xl">
+      <Card className="bg-slate-900 border-slate-700/50 w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl">
         {/* Modern Hero Header */}
-        <div className="relative h-40 overflow-hidden border-b border-white/5 bg-[#0a0f1a]">
+        <div className="relative h-44 shrink-0 overflow-hidden border-b border-white/5 bg-[#0a0f1a]">
           {/* Large Player Image - Positioned to the left and sitting on the border */}
           <div className="absolute left-0 bottom-0 w-48 h-full z-10 pointer-events-none">
             <div className="relative w-full h-full flex items-end">
@@ -53,8 +61,9 @@ export function ProspectDetailModal({
                 headshotUrl={prospect.headshot_url}
                 espnId={prospect.espn_id}
                 playerName={prospect.name}
-                size={180}
-                className="!rounded-none !bg-transparent border-none shadow-none transform translate-x-[-10%] translate-y-[2%] object-bottom brightness-110 contrast-110"
+                size={176}
+                imageFit="contain"
+                className="!rounded-none !bg-transparent border-none shadow-none transform translate-x-[-10%] brightness-110 contrast-110"
               />
             </div>
           </div>
@@ -63,14 +72,14 @@ export function ProspectDetailModal({
           <div className="absolute inset-0 bg-gradient-to-r from-[#0a0f1a]/20 via-transparent to-transparent z-20" />
 
           {/* Header Content Overlay - Aligned to the top of the header area */}
-          <div className="relative z-30 h-full flex flex-col justify-start pt-6 pl-40">
+          <div className="relative z-30 h-full flex flex-col justify-start pt-6 pl-36 pr-12 sm:pl-40">
             <div className="flex items-center gap-3 mb-2">
               <div className="px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-[9px] font-black text-blue-400 font-mono tracking-widest uppercase">
-                #{prospect.rank} Overall
+                {prospect.position}{prospect.rank} · {prospect.draft_year ?? '—'} projection
               </div>
               <div className="h-px w-8 bg-white/10" />
             </div>
-            <h1 className="text-3xl font-black text-white font-mono uppercase tracking-tighter leading-none mb-2">
+            <h1 className="text-xl sm:text-3xl font-black text-white font-mono uppercase tracking-tighter leading-none mb-2">
               {prospect.name}
             </h1>
             <p className="text-[10px] text-slate-400 font-mono uppercase tracking-[0.3em] flex items-center gap-2">
@@ -97,18 +106,19 @@ export function ProspectDetailModal({
               >
                 {getProspectGrade(prospect)}
               </Badge>
-              <Badge
+              {prospect.overall_grade != null && <Badge
                 variant="outline"
                 className="text-blue-400 border-blue-400/20 bg-blue-400/5 text-[10px] uppercase font-black"
               >
                 {getDraftPick(prospect)} ROUND
-              </Badge>
-              <Badge
+              </Badge>}
+              {prospect.overall_grade != null && <Badge
                 variant="outline"
                 className="text-emerald-400 border-emerald-400/20 bg-emerald-400/5 text-[10px] uppercase font-black"
               >
                 {getProspectTier(prospect.rank, prospect.tier)}
-              </Badge>
+              </Badge>}
+              {prospect.source_url && <a href={prospect.source_url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-blue-300 hover:underline">Verified team roster ↗</a>}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -118,22 +128,22 @@ export function ProspectDetailModal({
                   Market Valuation
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  {prospect.overall_grade != null ? <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-400 font-mono">Index Score</span>
                     <span className="text-blue-400 font-black font-mono">
                       {calculateProspectValue(prospect.rank, prospect.position)}
                     </span>
-                  </div>
+                  </div> : <p className="text-xs text-slate-400">Evaluation pending for this early class.</p>}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-400 font-mono">Positional Rank</span>
                     <span className="text-white font-black font-mono">#{prospect.rank}</span>
                   </div>
-                  <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                  {prospect.overall_grade != null && <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500"
                       style={{ width: `${Math.max(10, 100 - prospect.rank * 2)}%` }}
                     />
-                  </div>
+                  </div>}
                 </div>
               </div>
 
@@ -147,23 +157,17 @@ export function ProspectDetailModal({
                     <span className="text-xs text-slate-400 font-mono">Position Need</span>
                     <Badge
                       className={
-                        positionNeeds[prospect.position] > 0
+                        !hasTeamContext
+                          ? 'bg-slate-500/20 text-slate-300 border border-slate-500/30 text-[9px] font-black'
+                          : positionNeeds[prospect.position] > 0
                           ? 'bg-red-500/20 text-red-300 border border-red-500/30 text-[9px] font-black'
                           : 'bg-green-500/20 text-green-300 border border-green-500/30 text-[9px] font-black'
                       }
                     >
-                      {positionNeeds[prospect.position] > 0 ? 'CRITICAL' : 'STABLE'}
+                      {!hasTeamContext ? 'CONNECT TEAM' : positionNeeds[prospect.position] > 0 ? 'CRITICAL' : 'STABLE'}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-mono">System Fit</span>
-                    <span className="text-emerald-400 font-black font-mono text-xs">
-                      ELITE (94%)
-                    </span>
-                  </div>
-                  <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500" style={{ width: '94%' }} />
-                  </div>
+                  <p className="text-xs text-slate-400">{hasTeamContext ? 'Use your scouting notes to assess roster fit.' : 'Connect a league to see how this prospect fits your roster.'}</p>
                 </div>
               </div>
             </div>
@@ -179,8 +183,9 @@ export function ProspectDetailModal({
                   variant="ghost"
                   className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-tighter"
                   onClick={() => onSaveNotes(prospect.id, localNotes)}
+                  disabled={prospect.is_fallback || !isLoggedIn}
                 >
-                  Save Analysis
+                  {prospect.is_fallback ? 'Available after import' : isLoggedIn ? 'Save Analysis' : 'Log in to save'}
                 </Button>
               </div>
               <textarea
@@ -189,6 +194,9 @@ export function ProspectDetailModal({
                 value={localNotes}
                 onChange={(e) => setLocalNotes(e.target.value)}
               />
+              {noteSaveStatus && <p role="status" className="mt-2 text-xs text-blue-300">{noteSaveStatus}</p>}
+              {noteSaveError && <p role="alert" className="mt-2 text-xs text-red-300">{noteSaveError}</p>}
+              {prospect.is_fallback && <p className="mt-2 text-xs text-amber-300">Personal notes for this player become available when the 2029 database import is applied.</p>}
             </div>
 
             <div className="flex gap-3">

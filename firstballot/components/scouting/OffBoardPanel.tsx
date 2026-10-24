@@ -96,7 +96,7 @@ export function OffBoardPanel({
                     <div className="text-sm font-medium text-foreground truncate">{p.name}</div>
                     <div className="text-[10px] text-muted-foreground truncate">
                       {p.draftYear ? `${p.draftYear} • ` : ''}
-                      {p.position} • {p.school} • {p.grade.toFixed(1)}
+                      {p.position} • {p.school} • {prospect.overall_grade == null ? 'Ungraded' : p.grade.toFixed(1)}
                     </div>
                   </div>
 

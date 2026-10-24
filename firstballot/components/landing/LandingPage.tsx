@@ -1,734 +1,172 @@
 'use client'
 
-import { motion, useReducedMotion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
-import { memo, useEffect, useMemo, useState } from 'react'
-import {
-  LayoutGrid,
-  BarChart3,
-  Activity,
-  Briefcase,
-  ClipboardList,
-  GitCompare,
-  ArrowRight,
-  TrendingUp,
-  TrendingDown,
-  Terminal,
-  ChevronRight,
-  Crown,
-} from 'lucide-react'
+import { useState } from 'react'
 import useSWR from 'swr'
-import { cn } from '@/lib/utils'
+import { ArrowRight, BookOpen, ClipboardList, RefreshCw, Shield, Users } from 'lucide-react'
+import { CommunityRankingPrompt } from './CommunityRankingPrompt'
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
-
-interface ProspectLite {
-  id?: number
-  name?: string
-  school?: string
-  position?: string
-  espn_id?: number | string | null
-  draft_year?: number | null
-  overall_grade?: number | null
-  grade_tier?: string | null
-  over_under_pct?: number | null
-}
-
-interface HeroPlayer {
+type Prospect = {
+  id: number
   name: string
-  school: string
   position: string
-  espnId: string
-  year: number
-  grade: number
-  tier: string
-  overUnderPct: number | null
-  isCollege: boolean
+  school: string
+  draft_year: number | null
+  overall_grade: number | null
+  overall_rank?: number
+  grade_tier: string | null
+  draft_projection_score: number | null
+  college_production_score: number | null
+  updated_at?: string | null
+  headshot_url?: string | null
+  source_url?: string
 }
 
-function getPlayerImageUrl(espnId: string, isCollege: boolean): string {
-  if (!espnId) return ''
-  const cleanId = espnId.toString().split('.')[0]
-  if (isCollege) {
-    return `https://a.espncdn.com/i/headshots/college-football/players/full/${cleanId}.png`
-  }
-  return `https://a.espncdn.com/i/headshots/nfl/players/full/${cleanId}.png`
+type ProspectSnapshot = { prospects: Prospect[]; fetchedAt: string }
+
+async function loadProspects(): Promise<ProspectSnapshot> {
+  const response = await fetch('/api/prospects?draft_year=all')
+  if (!response.ok) throw new Error('Prospects are unavailable right now')
+  return { prospects: await response.json(), fetchedAt: new Date().toISOString() }
 }
 
-function toTierLabel(gradeTier: string | null | undefined, grade: number): string {
-  if (grade >= 90) return 'Elite'
-  if (gradeTier === 'Elite') return 'Elite'
-  if (gradeTier === 'Blue Chip') return 'Blue Chip'
-  if (grade >= 85) return 'Blue Chip'
-  if (grade >= 78) return 'Starter'
-  return 'Depth'
-}
-
-function useTypewriter(text: string, speed = 50, delay = 0) {
-  const shouldReduceMotion = useReducedMotion()
-  const [displayed, setDisplayed] = useState('')
-  const [started, setStarted] = useState(false)
-
-  useEffect(() => {
-    if (shouldReduceMotion) return
-    const startTimeout = setTimeout(() => setStarted(true), delay)
-    return () => clearTimeout(startTimeout)
-  }, [delay, shouldReduceMotion])
-
-  useEffect(() => {
-    if (shouldReduceMotion) return
-    if (!started) return
-    if (displayed.length < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayed(text.slice(0, displayed.length + 1))
-      }, speed)
-      return () => clearTimeout(timeout)
-    }
-  }, [displayed, text, speed, started, shouldReduceMotion])
-
-  return shouldReduceMotion ? text : displayed
-}
-
-// ── Pure CSS matrix rain — zero JS per frame ────────────────────────
-const MatrixRain = memo(function MatrixRain() {
-  const shouldReduceMotion = useReducedMotion()
-  if (shouldReduceMotion) return null
-  return (
-    <div className="absolute inset-0 overflow-hidden opacity-[0.03] pointer-events-none">
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            @keyframes matrix-fall {
-              from { transform: translateY(-100px); }
-              to   { transform: translateY(100vh); }
-            }
-            .matrix-col {
-              position: absolute;
-              top: 0;
-              font-family: monospace;
-              font-size: 12px;
-              color: hsl(var(--primary));
-              animation: matrix-fall var(--dur) linear infinite;
-              animation-delay: var(--delay);
-            }
-          `,
-        }}
-      />
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div
-          key={`rain-col-${i}`}
-          className="matrix-col"
-          style={
-            {
-              left: `${i * 8.3}%`,
-              '--dur': `${10 + (i % 5) * 2}s`,
-              '--delay': `${(i % 4) * 0.8}s`,
-            } as React.CSSProperties
-          }
-        >
-          {Array.from({ length: 20 }).map((__, j) => (
-            <div key={`rain-char-${i}-${j}`} className="opacity-50">
-              {String.fromCharCode(65 + ((i * 7 + j * 11) % 26))}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-})
-
-const Scanlines = memo(function Scanlines() {
-  return (
-    <div
-      className="absolute inset-0 pointer-events-none opacity-[0.02]"
-      style={{
-        background:
-          'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
-      }}
-    />
-  )
-})
-
-// ── Isolated clock — only this 8px label re-renders every second ────
-function ClockDisplay() {
-  const [time, setTime] = useState<Date | null>(null)
-
-  useEffect(() => {
-    setTime(new Date())
-    const interval = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <span className="font-mono text-[10px] text-muted-foreground">
-      {time ? time.toLocaleTimeString('en-US', { hour12: false }) : '--:--:--'} UTC
-    </span>
-  )
-}
-
-// ── Ticker Row — single scrolling line ──
-function TickerRow({
-  players,
-  direction,
-  speed,
-}: {
-  players: HeroPlayer[]
-  direction: 'left' | 'right'
-  speed: number
-}) {
-  const shouldReduceMotion = useReducedMotion()
-  const doubled = useMemo(() => [...players, ...players], [players])
-  const trackClass = direction === 'left' ? 'ticker-row-left' : 'ticker-row-right'
-
-  return (
-    <div className="overflow-hidden">
-      <div
-        className={cn(trackClass, 'flex gap-6 py-1.5 px-4')}
-        style={
-          shouldReduceMotion
-            ? { animation: 'none', transform: 'translateX(0)' }
-            : { animationDuration: `${speed}s` }
-        }
-      >
-        {doubled.map((player, i) => {
-          const cycle = i < players.length ? 'primary' : 'secondary'
-          const hasOverUnder = Number.isFinite(player.overUnderPct)
-          const change = hasOverUnder ? Number(player.overUnderPct) : null
-          const displayValue = hasOverUnder
-            ? `${change! >= 0 ? '+' : ''}${change!.toFixed(1)}%`
-            : `${player.grade.toFixed(1)} GRD`
-          const isPositive = hasOverUnder ? change! >= 0 : player.grade >= 82
-          return (
-            <Link
-              key={`ticker-${direction}-${player.name}-${player.year}-${player.position}-${cycle}`}
-              href="/prospect-board"
-              className="flex items-center gap-2 flex-shrink-0 hover:bg-primary/10 rounded px-2 py-0.5 transition-colors cursor-pointer"
-            >
-              <span className="font-mono text-xs text-foreground font-semibold max-w-[140px] truncate">
-                {player.name}
-              </span>
-              <span className="font-mono text-[10px] text-muted-foreground">{player.position}</span>
-              <span
-                className={cn(
-                  'font-mono text-xs font-bold',
-                  isPositive ? 'text-emerald-400' : 'text-red-400'
-                )}
-              >
-                {displayValue}
-              </span>
-              {isPositive ? (
-                <TrendingUp className="w-3 h-3 text-emerald-400" />
-              ) : (
-                <TrendingDown className="w-3 h-3 text-red-400" />
-              )}
-            </Link>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ── LiveTicker — 2-line ticker, memoized ──
-const LiveTicker = memo(function LiveTicker({ players }: { players: HeroPlayer[] }) {
-  const mid = Math.ceil(players.length / 2)
-  const row1 = useMemo(() => players.slice(0, mid), [players, mid])
-  const row2 = useMemo(() => players.slice(mid), [players, mid])
-
-  return (
-    <div className="relative border-y border-primary/20 bg-black/50 backdrop-blur">
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            @keyframes ticker-left {
-              from { transform: translateX(0); }
-              to   { transform: translateX(-50%); }
-            }
-            @keyframes ticker-right {
-              from { transform: translateX(-50%); }
-              to   { transform: translateX(0); }
-            }
-            .ticker-row-left {
-              animation: ticker-left var(--duration, 90s) linear infinite;
-            }
-            .ticker-row-right {
-              animation: ticker-right var(--duration, 100s) linear infinite;
-            }
-          `,
-        }}
-      />
-      <div className="flex items-stretch">
-        <div className="flex-shrink-0 px-3 py-2 bg-primary/20 border-r border-primary/30 flex items-center">
-          <span className="font-mono text-[10px] text-primary font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            LIVE
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <TickerRow players={row1} direction="left" speed={90} />
-          <div className="border-t border-primary/10" />
-          <TickerRow players={row2} direction="right" speed={100} />
-        </div>
-      </div>
-    </div>
-  )
-})
-
-function GlitchText({ text, className }: { text: string; className?: string }) {
-  return (
-    <div className={cn('relative', className)}>
-      <span className="relative z-10">{text}</span>
-      <span className="absolute top-0 left-0.5 text-cyan-500/30 z-0" aria-hidden>
-        {text}
-      </span>
-      <span className="absolute top-0 -left-0.5 text-red-500/30 z-0" aria-hidden>
-        {text}
-      </span>
-    </div>
-  )
-}
-
-const AllTimePlayerCard = memo(function AllTimePlayerCard({
-  player,
-  rank,
-  delay,
-}: {
-  player: HeroPlayer
-  rank: number
-  delay: number
-}) {
-  const shouldReduceMotion = useReducedMotion()
-  const [imageError, setImageError] = useState(false)
-  const tierColors: Record<string, { bg: string; border: string; text: string }> = {
-    Elite: { bg: 'bg-amber-500/20', border: 'border-amber-500/50', text: 'text-amber-400' },
-    'Blue Chip': { bg: 'bg-blue-500/20', border: 'border-blue-500/50', text: 'text-blue-400' },
-    Starter: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/50', text: 'text-emerald-400' },
-  }
-  const tierColor = tierColors[player.tier] || tierColors.Starter
-
-  return (
-    <motion.div
-      initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={shouldReduceMotion ? { duration: 0 } : { delay, duration: 0.4 }}
-      className="relative group"
-    >
-      <div
-        className={cn(
-          'relative bg-black/60 border rounded-lg overflow-hidden backdrop-blur transition-all duration-300',
-          'hover:border-primary/50 hover:scale-[1.02]',
-          tierColor.border
-        )}
-      >
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
-          {rank <= 3 && <Crown className="w-3 h-3 text-amber-400" />}
-          <span className="text-xl font-mono font-bold text-primary">{rank}</span>
-        </div>
-
-        <div className="absolute top-2 right-2 z-10">
-          <span
-            className={cn(
-              'px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider rounded border',
-              tierColor.bg,
-              tierColor.text,
-              tierColor.border
-            )}
-          >
-            {player.tier}
-          </span>
-        </div>
-
-        <div className="relative h-20 bg-gradient-to-b from-secondary/30 to-transparent flex items-end justify-center overflow-hidden">
-          {!imageError && player.espnId ? (
-            <Image
-              src={getPlayerImageUrl(player.espnId, player.isCollege)}
-              alt={player.name}
-              width={80}
-              height={80}
-              className="object-contain object-bottom scale-125 group-hover:scale-130 transition-transform duration-300"
-              onError={() => setImageError(true)}
-              unoptimized
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-2xl font-bold text-muted-foreground/20">
-                {player.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')}
-              </span>
-            </div>
-          )}
-          <div className="absolute bottom-1 left-2">
-            <span className="px-1.5 py-0.5 text-[7px] font-mono rounded bg-black/70 text-muted-foreground border border-border/50">
-              {player.year}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-2">
-          <h3 className="font-mono text-xs font-bold text-foreground truncate">{player.name}</h3>
-          <p className="text-[9px] text-muted-foreground truncate mb-1">
-            {player.school} - {player.position}
-          </p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-mono font-bold text-primary">{player.grade.toFixed(1)}</span>
-              <span className="text-[8px] text-muted-foreground">GRD</span>
-            </div>
-            {player.overUnderPct !== null && (
-              <div
-                className={cn(
-                  'text-xs font-mono font-bold flex items-center gap-0.5',
-                  player.overUnderPct >= 0 ? 'text-emerald-400' : 'text-red-400'
-                )}
-              >
-                {player.overUnderPct >= 0 ? (
-                  <TrendingUp className="w-3 h-3" />
-                ) : (
-                  <TrendingDown className="w-3 h-3" />
-                )}
-                {player.overUnderPct >= 0 ? '+' : ''}
-                {player.overUnderPct.toFixed(0)}%
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-})
-
-const features = [
-  { icon: LayoutGrid, title: 'Rankings', href: '/prospect-board', cmd: 'prospect --list' },
-  { icon: Activity, title: 'Market', href: '/trade-market', cmd: 'market --live' },
-  { icon: Briefcase, title: 'Portfolio', href: '/league-buddy', cmd: 'portfolio --sync' },
-  {
-    icon: ClipboardList,
-    title: 'Draft Board',
-    href: '/scouting-portal?tab=draftboard',
-    cmd: 'draft --rank',
-  },
-  {
-    icon: BarChart3,
-    title: 'History',
-    href: '/scouting-portal?tab=historical',
-    cmd: 'stats --hitrate',
-  },
-  { icon: GitCompare, title: 'Trade', href: '/trade-calculator', cmd: 'trade --value' },
+const paths = [
+  { href: '/scouting-portal', title: 'Scout prospects', detail: 'Explore college production, player grades, comps and draft projections.', icon: BookOpen, action: 'Open scouting' },
+  { href: '/scouting-portal?tab=draftboard', title: 'Build your board', detail: 'Rank the next classes and save your own draft order.', icon: ClipboardList, action: 'Open draft board' },
+  { href: '/league-buddy?tab=roster', title: 'Manage your team', detail: 'See roster strengths, positional needs and lineup decisions.', icon: Shield, action: 'View my team' },
+  { href: '/league-buddy', title: 'Run your league', detail: 'Track standings, matchups, activity and playoff outlook.', icon: Users, action: 'View league' },
 ]
 
-// ── Isolated feature rotator — only its tile highlights re-render ────
-function FeatureGrid() {
-  const shouldReduceMotion = useReducedMotion()
-  const [activeFeature, setActiveFeature] = useState(0)
+const watchlistOrder = ['Jesse Legree', 'Chris Henry Jr.', 'Legend Bey', 'Brock Boyd']
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveFeature((prev) => (prev + 1) % features.length)
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {features.map((feature, i) => (
-        <motion.div
-          key={feature.title}
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={shouldReduceMotion ? { duration: 0 } : { delay: i * 0.1 }}
-          onMouseEnter={() => setActiveFeature(i)}
-        >
-          <Link href={feature.href}>
-            <div
-              className={cn(
-                'p-3 border rounded-lg transition-all duration-300 group cursor-pointer',
-                activeFeature === i
-                  ? 'bg-primary/10 border-primary/50'
-                  : 'bg-black/30 border-border/50 hover:border-primary/30'
-              )}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className={cn(
-                    'w-8 h-8 rounded flex items-center justify-center transition-colors',
-                    activeFeature === i ? 'bg-primary/20' : 'bg-secondary'
-                  )}
-                >
-                  <feature.icon
-                    className={cn(
-                      'w-4 h-4 transition-colors',
-                      activeFeature === i ? 'text-primary' : 'text-muted-foreground'
-                    )}
-                  />
-                </div>
-                <div>
-                  <div className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                    {feature.title}
-                  </div>
-                  <div className="font-mono text-[10px] text-muted-foreground">
-                    <span className="text-primary/60">$</span> {feature.cmd}
-                  </div>
-                </div>
-              </div>
-              <div
-                className={cn(
-                  'h-0.5 bg-secondary rounded-full overflow-hidden',
-                  activeFeature === i && 'animate-pulse'
-                )}
-              >
-                <motion.div
-                  className="h-full bg-primary"
-                  initial={shouldReduceMotion ? false : { width: 0 }}
-                  animate={{ width: activeFeature === i ? '100%' : '0%' }}
-                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 3 }}
-                />
-              </div>
-            </div>
-          </Link>
-        </motion.div>
-      ))}
-    </div>
-  )
+function ProspectPortrait({ player }: { player: Prospect }) {
+  const [failed, setFailed] = useState(false)
+  return <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-500/15 via-slate-800 to-slate-950">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(96,165,250,0.15),transparent_65%)]" />
+    <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-5xl font-bold text-blue-300/30">{player.name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
+    {player.headshot_url && !failed && <Image src={player.headshot_url} alt={player.name} width={480} height={480} loading="eager" className="relative mx-auto h-full w-full object-contain object-bottom transition-transform duration-300 group-hover:scale-105" onError={() => setFailed(true)} />}
+    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-900 to-transparent" />
+  </div>
 }
 
 export function LandingPage() {
-  const shouldReduceMotion = useReducedMotion()
-  const { data } = useSWR('/api/prospects?draft_year=all', fetcher)
-
-  const headline = useTypewriter('FIRST', 80, 500)
-  const headline2 = useTypewriter('BALLOT_', 80, 1200)
-
-  const prospects: ProspectLite[] = useMemo(() => {
-    if (Array.isArray(data)) return data
-    if (Array.isArray(data?.prospects)) return data.prospects
-    return []
-  }, [data])
-
-  const allPlayers: HeroPlayer[] = useMemo(() => {
-    return prospects.map((p) => {
-      const grade = Number(p.overall_grade || 0)
-      const year = Number(p.draft_year || 2026)
-      return {
-        name: p.name || 'Unknown',
-        school: p.school || 'Unknown',
-        position: p.position || '-',
-        espnId: p.espn_id ? String(p.espn_id) : '',
-        year,
-        grade,
-        tier: toTierLabel(p.grade_tier, grade),
-        overUnderPct: p.over_under_pct ?? null,
-        isCollege: year >= 2025,
-      }
-    })
-  }, [prospects])
-
-  const topAllTime = useMemo(() => {
-    // Top 5 from 2026 + top 5 from 2027, sorted by grade
-    const targetYears = [2026, 2027]
-    const byYear = new Map<number, HeroPlayer[]>()
-    for (const p of [...allPlayers].sort((a, b) => b.grade - a.grade)) {
-      if (!targetYears.includes(p.year)) continue
-      const arr = byYear.get(p.year) || []
-      if (arr.length < 5) {
-        arr.push(p)
-        byYear.set(p.year, arr)
-      }
-    }
-    return [...byYear.values()].flat().sort((a, b) => b.grade - a.grade)
-  }, [allPlayers])
+  const { data, error, isLoading, isValidating, mutate } = useSWR('/api/prospects?draft_year=all', loadProspects, {
+    refreshInterval: 5 * 60 * 1000,
+    revalidateOnFocus: true,
+  })
+  const prospects = data?.prospects ?? []
+  const currentYear = new Date().getFullYear()
+  const watchlist = watchlistOrder
+    .map((name) => prospects.find((player) => player.draft_year === 2029 && player.name === name))
+    .filter((player): player is Prospect => Boolean(player))
+  const upcoming = prospects
+    .filter((player) => (player.draft_year ?? 0) >= Math.max(2027, currentYear + 1) && player.draft_year !== 2029 && player.overall_grade != null)
+    .sort((a, b) => (a.draft_year ?? 0) - (b.draft_year ?? 0) || (a.overall_rank ?? 999) - (b.overall_rank ?? 999))
+    .slice(0, 6)
+  const years = [...new Set(prospects.map((player) => player.draft_year).filter((year): year is number => year !== null && year >= Math.max(2027, currentYear + 1)))].sort()
+  const latestRowUpdate = prospects.reduce<string | null>((latest, player) =>
+    player.updated_at && (!latest || player.updated_at > latest) ? player.updated_at : latest, null)
+  const staleClasses = years.filter((year) => {
+    const latestForClass = prospects.reduce<string | null>((latest, player) =>
+      player.draft_year === year && player.updated_at && (!latest || player.updated_at > latest)
+        ? player.updated_at : latest, null)
+    return latestForClass && Date.now() - new Date(latestForClass).getTime() > 14 * 86400000
+  })
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      <MatrixRain />
-      <Scanlines />
-
-      <div className="border-b border-border/50 bg-black/50 backdrop-blur sticky z-40 -mt-px">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-8">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="font-mono text-[10px] text-emerald-500">SYSTEM ONLINE</span>
-            </div>
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {allPlayers.length || 0} ASSETS TRACKED
-            </span>
+    <main className="min-h-screen bg-[#090f1a] text-slate-100 pb-24 md:pb-12">
+      <section className="border-b border-white/10 bg-[radial-gradient(ellipse_at_75%_10%,rgba(37,99,235,0.19),transparent_55%)]">
+        <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-400/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-blue-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-400" /> College scouting & dynasty management
           </div>
-          <ClockDisplay />
-        </div>
-      </div>
-
-      {allPlayers.length > 0 && <LiveTicker players={allPlayers} />}
-
-      <section className="relative pt-8 pb-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.6 }}
-            >
-              <div className="mb-4">
-                <motion.div
-                  initial={shouldReduceMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={shouldReduceMotion ? { duration: 0 } : undefined}
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded bg-primary/10 border border-primary/30 mb-4"
-                >
-                  <Terminal className="w-4 h-4 text-primary" />
-                  <span className="font-mono text-xs text-primary">
-                    v2.0.26 // FIRSTBALLOT DRAFT ENGINE LOADED
-                  </span>
-                </motion.div>
-              </div>
-
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold font-mono tracking-tighter mb-4">
-                <GlitchText text={headline} className="text-primary" />
-                <br />
-                <span className="text-foreground">{headline2}</span>
-                <motion.span
-                  animate={shouldReduceMotion ? { opacity: 1 } : { opacity: [1, 0] }}
-                  transition={
-                    shouldReduceMotion ? { duration: 0 } : { duration: 0.5, repeat: Infinity }
-                  }
-                  className="text-primary"
-                >
-                  |
-                </motion.span>
-              </h1>
-
-              <p className="text-sm text-muted-foreground font-mono mb-6 max-w-md">
-                {'>'} Dynasty fantasy intelligence platform.
-                <br />
-                {'>'} Real-time prospect analytics.
-                <br />
-                {'>'} Portfolio tracking. Market views.
-              </p>
-
-              <div className="flex flex-wrap gap-3 mb-8">
-                <Link href="/prospect-board">
-                  <motion.button
-                    whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    className="px-5 py-2.5 bg-primary text-primary-foreground font-mono text-sm font-bold rounded flex items-center gap-2"
-                  >
-                    <span>$</span> prospect --explore
-                    <ArrowRight className="w-4 h-4" />
-                  </motion.button>
-                </Link>
-                <Link href="/trade-market">
-                  <motion.button
-                    whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    className="px-5 py-2.5 bg-transparent text-foreground font-mono text-sm font-bold rounded border border-border hover:border-primary/50 transition-colors"
-                  >
-                    <span className="text-muted-foreground">$</span> market --view
-                  </motion.button>
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2">
-                <div className="p-2 bg-black/50 border border-primary/20 rounded text-center">
-                  <div className="text-xl font-mono font-bold text-primary">{allPlayers.length || 0}</div>
-                  <div className="text-[9px] font-mono text-muted-foreground">PROSPECTS</div>
-                </div>
-                <div className="p-2 bg-black/50 border border-emerald-500/20 rounded text-center">
-                  <div className="text-xl font-mono font-bold text-emerald-400">73%</div>
-                  <div className="text-[9px] font-mono text-muted-foreground">HIT RATE</div>
-                </div>
-                <div className="p-2 bg-black/50 border border-blue-500/20 rounded text-center">
-                  <div className="text-xl font-mono font-bold text-blue-400">12</div>
-                  <div className="text-[9px] font-mono text-muted-foreground">CLASSES</div>
-                </div>
-                <div className="p-2 bg-black/50 border border-purple-500/20 rounded text-center">
-                  <div className="text-xl font-mono font-bold text-purple-400">4</div>
-                  <div className="text-[9px] font-mono text-muted-foreground">POSITIONS</div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.6, delay: 0.2 }}
-            >
-              <div className="bg-black/60 border border-primary/30 rounded-lg overflow-hidden backdrop-blur">
-                <div className="flex items-center justify-between px-4 py-2 border-b border-primary/20 bg-primary/5">
-                  <div className="flex items-center gap-2">
-                    <Crown className="w-4 h-4 text-amber-400" />
-                    <span className="font-mono text-sm font-bold text-foreground">TOP PROSPECTS</span>
-                  </div>
-                  <Link
-                    href="/prospect-board"
-                    className="font-mono text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    View All <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
-
-                <div className="p-3">
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                    {topAllTime.map((player, i) => (
-                      <AllTimePlayerCard
-                        key={`${player.name}-${player.year}-${player.position}`}
-                        player={player}
-                        rank={i + 1}
-                        delay={0.3 + i * 0.05}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="px-4 py-2 border-t border-primary/20 bg-primary/5">
-                  <div className="font-mono text-[10px] text-muted-foreground flex items-center gap-2">
-                    <span className="text-emerald-400">$</span> sorted by grade desc // top 5 per class // all positions
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+          <h1 className="max-w-4xl font-[family-name:var(--font-space-grotesk)] text-5xl font-bold tracking-tight sm:text-7xl">
+            Know the next class.<br /><span className="text-blue-400">Build the next winner.</span>
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
+            Grade college prospects, compare draft classes, and turn scouting into better decisions for your team and league.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/scouting-portal" className="inline-flex items-center gap-2 rounded-xl bg-blue-400 px-5 py-3 font-semibold text-slate-950 hover:bg-blue-300">
+              Start scouting <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link href="/league-buddy" className="inline-flex items-center gap-2 rounded-xl border border-slate-600 px-5 py-3 font-semibold text-slate-100 hover:border-blue-400">
+              Open my league
+            </Link>
           </div>
+          <div className="mt-10 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span>{prospects.length ? `${prospects.length} prospect profiles` : 'Prospect data'}</span>
+            <span aria-hidden="true">·</span>
+            <span>{years.length ? `Upcoming classes: ${years.join(', ')}` : 'Upcoming class data pending'}</span>
+            <span aria-hidden="true">·</span>
+            <span>{latestRowUpdate ? `Latest database edit ${new Date(latestRowUpdate).toLocaleDateString()}` : 'Database update time unavailable'}</span>
+            <span aria-hidden="true">·</span>
+            <span>{data ? `Checked ${new Date(data.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Checking data'}</span>
+            <button onClick={() => void mutate()} disabled={isValidating} className="inline-flex items-center gap-1 text-blue-300 hover:text-blue-200 disabled:opacity-50" aria-label="Refresh prospect data">
+              <RefreshCw className={`h-3 w-3 ${isValidating ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
+          {staleClasses.length > 0 && <p role="status" className="mt-4 max-w-2xl rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">{staleClasses.join(', ')} class records are over 14 days old. Check player news and college stats before making a draft decision.</p>}
         </div>
       </section>
 
-      <section className="pt-5 pb-8 border-y border-border/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={shouldReduceMotion ? { duration: 0 } : undefined}
-            className="text-center mb-8"
-          >
-            <h2 className="font-mono text-xl font-bold text-foreground mb-2">
-              <span className="text-primary">$</span> available_commands
-            </h2>
-            <p className="font-mono text-sm text-muted-foreground">{'>'} select module to initialize</p>
-          </motion.div>
+      <CommunityRankingPrompt />
 
-          <FeatureGrid />
+      {watchlist.length > 0 && <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8" aria-labelledby="watchlist-heading">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">2029 class watchlist</p><h2 id="watchlist-heading" className="mt-2 text-3xl font-bold">Meet the next wave</h2><p className="mt-2 max-w-2xl text-sm text-slate-400">Verified 2026 freshmen with projected 2029 draft eligibility. Scouting grades will appear when the class is evaluated.</p></div>
+          <Link href="/scouting-portal?year=2029" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200">Scout the 2029 class <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {watchlist.map((player) => <Link href="/scouting-portal?year=2029" key={player.id} className="group overflow-hidden rounded-2xl border border-white/10 bg-slate-900 transition hover:-translate-y-1 hover:border-blue-400/60 hover:shadow-[0_18px_50px_rgba(37,99,235,0.12)]">
+            <ProspectPortrait player={player} />
+            <div className="p-5"><div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-blue-300"><span>{player.position} · 2029 projection</span><span>↗</span></div><h3 className="mt-3 text-xl font-bold">{player.name}</h3><p className="mt-1 text-sm text-slate-400">{player.school}</p><div className="mt-4 border-t border-white/10 pt-3 text-xs text-slate-400">Freshman watchlist · grade pending</div></div>
+          </Link>)}
+        </div>
+      </section>}
+
+      <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+        <div className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">Your workflow</p>
+          <h2 className="mt-2 text-3xl font-bold">From the scouting room to your roster</h2>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {paths.map(({ href, title, detail, icon: Icon, action }, index) => (
+            <Link key={href} href={href} className="group flex min-h-60 flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-5 transition hover:border-blue-400/50 hover:bg-slate-800/80">
+              <div className="flex items-center justify-between"><Icon className="h-6 w-6 text-blue-400" /><span className="font-mono text-xs text-slate-500">0{index + 1}</span></div>
+              <h3 className="mt-8 text-xl font-bold">{title}</h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-400">{detail}</p>
+              <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-blue-300 group-hover:gap-2">{action} <ArrowRight className="h-4 w-4" /></span>
+            </Link>
+          ))}
         </div>
       </section>
 
-      <footer className="py-8 border-t border-border/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-lg font-bold text-foreground">
-                FIRST<span className="text-primary">BALLOT</span>
-              </span>
-              <span className="text-xs text-muted-foreground font-mono">
-                // Dynasty Intelligence Platform
-              </span>
-            </div>
-            <div className="font-mono text-xs text-muted-foreground">
-              Player images via ESPN. Data for educational purposes.
-            </div>
-          </div>
+      <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-8">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">College projection</p><h2 className="mt-2 text-3xl font-bold">Upcoming prospects</h2></div>
+          <Link href="/scouting-portal" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200">Explore all prospects <ArrowRight className="h-4 w-4" /></Link>
         </div>
-      </footer>
-    </div>
+        {error && <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 p-5 text-red-200">Prospect data could not be loaded. Try Refresh.</p>}
+        {isLoading && <p className="rounded-xl border border-white/10 p-5 text-slate-400">Loading prospect profiles…</p>}
+        {!isLoading && !error && upcoming.length === 0 && <p className="rounded-xl border border-white/10 p-5 text-slate-400">No upcoming class profiles are available yet.</p>}
+        {upcoming.length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {upcoming.map((player) => <Link href="/scouting-portal" key={player.id} className="group overflow-hidden rounded-xl border border-white/10 bg-slate-900/70 hover:border-blue-400/50">
+            <ProspectPortrait player={player} />
+            <div className="p-5">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400"><span>{player.draft_year} class · {player.position}</span><span>#{player.overall_rank ?? '—'}</span></div>
+            <h3 className="mt-4 text-xl font-bold">{player.name}</h3><p className="mt-1 text-sm text-slate-400">{player.school}</p>
+            <div className="mt-5 space-y-2 border-t border-white/10 pt-3 text-sm">
+              <div className="flex items-center justify-between"><span className="text-slate-400">Scouting grade</span><strong className="text-blue-300">{player.overall_grade?.toFixed(1) ?? '—'}</strong></div>
+              <div className="flex items-center justify-between"><span className="text-slate-400">College production</span><strong>{player.college_production_score?.toFixed(1) ?? '—'}</strong></div>
+              <div className="flex items-center justify-between"><span className="text-slate-400">Draft projection</span><strong>{player.draft_projection_score?.toFixed(1) ?? '—'}</strong></div>
+            </div>
+            </div>
+          </Link>)}
+        </div>}
+        <p className="mt-4 text-xs text-slate-500">Grades and projections are model estimates. “Latest database edit” is the newest row edit time; “Checked” is when this page requested the snapshot. The 2029 watchlist uses verified roster details and has no model grades yet.</p>
+      </section>
+    </main>
   )
 }

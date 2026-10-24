@@ -74,7 +74,7 @@ export function useDraftboard(): UseDraftboardReturn {
           body: JSON.stringify({
             id: savedBoard?.id,
             name: 'My Draft Board',
-            draft_year: 2026,
+            draft_year: Math.max(2027, new Date().getFullYear() + 1),
             prospect_ids: prospectIds,
           }),
         })

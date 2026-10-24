@@ -29,6 +29,8 @@ export interface Prospect {
   class?: string | null // Freshman, Sophomore, Junior, Senior
   // Headshot & Team
   headshot_url?: string | null
+  source_url?: string
+  is_fallback?: boolean
   team_color?: string | null
   // Stats
   college_stats?: Record<string, number> | null
@@ -38,6 +40,7 @@ export interface Prospect {
   draft_projection_score?: number | null
   expert_consensus_score?: number | null
   draft_year: number | null
+  updated_at?: string | null
 }
 
 export interface ProspectCardProps {

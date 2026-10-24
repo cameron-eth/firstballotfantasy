@@ -39,7 +39,7 @@ export function FeaturesSection() {
               Real-time draft board with rankings, tier analysis, and value calculations. Make the
               right pick every time.
             </p>
-            <Link href="/draft-buddy">
+            <Link href="/scouting-portal?tab=draftboard">
               <Button
                 variant="ghost"
                 size="sm"
@@ -104,7 +104,7 @@ export function FeaturesSection() {
               Scouting Portal
             </h3>
             <p className="text-gray-300 leading-relaxed">
-              2026 rookie rankings with college stats and dynasty projections. Stay ahead of the
+              College prospect rankings with college stats and dynasty projections. Stay ahead of the
               draft curve.
             </p>
             <Link href="/scouting-portal">

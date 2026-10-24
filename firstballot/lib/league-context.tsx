@@ -8,9 +8,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/lib/auth'
 import { leagueCache } from '@/lib/league-cache'
-import type { UserLeague, LeagueContextType, SleeperLeagueResponse } from '@/types/league'
+import type { UserLeague, LeagueContextType } from '@/types/league'
 
-const SLEEPER_API_BASE = 'https://api.sleeper.app/v1'
 const STORAGE_KEY = 'firstballot_selected_league_id'
 
 // Create context with undefined default
@@ -30,42 +29,6 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     return leagues.find((l) => l.league_id === selectedLeagueId) || leagues[0] || null
   }, [leagues, selectedLeagueId])
 
-  // Fetch leagues for a Sleeper username
-  const fetchLeaguesForUsername = useCallback(
-    async (sleeperUsername: string): Promise<UserLeague[]> => {
-      try {
-        const userResponse = await fetch(`${SLEEPER_API_BASE}/user/${sleeperUsername}`)
-        if (!userResponse.ok) throw new Error('Sleeper user not found')
-
-        const sleeperUser = await userResponse.json()
-        const sleeperId = sleeperUser.user_id
-
-        const currentYear = new Date().getFullYear()
-        const leaguesResponse = await fetch(
-          `${SLEEPER_API_BASE}/user/${sleeperId}/leagues/nfl/${currentYear}`
-        )
-
-        if (!leaguesResponse.ok) throw new Error('Failed to fetch leagues')
-
-        const leaguesData: SleeperLeagueResponse[] = await leaguesResponse.json()
-
-        return leaguesData.map((league) => ({
-          league_id: league.league_id,
-          name: league.name,
-          season: league.season,
-          total_rosters: league.total_rosters,
-          roster_positions: league.roster_positions,
-          scoring_settings: league.scoring_settings,
-          status: league.status as UserLeague['status'],
-        }))
-      } catch (err) {
-        console.error('Error fetching leagues:', err)
-        return []
-      }
-    },
-    []
-  )
-
   // Initial load
   const loadLeagues = useCallback(async () => {
     if (!user) {
@@ -76,28 +39,9 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoading(true)
     try {
-      // 1. Get user profile
-      const profileResponse = await fetch('/api/user-profile')
-
-      if (!profileResponse.ok) {
-        // If profile doesn't exist or unauthorized, just assume no leagues for now
-        if (profileResponse.status === 404 || profileResponse.status === 401) {
-          setLeagues([])
-          setIsLoading(false)
-          return
-        }
-        throw new Error(`Profile fetch failed: ${profileResponse.status}`)
-      }
-
-      const profile = await profileResponse.json()
-      if (!profile.sleeper_username) {
-        setLeagues([])
-        setIsLoading(false)
-        return
-      }
-
-      // 2. Fetch leagues from Sleeper
-      const userLeagues = await fetchLeaguesForUsername(profile.sleeper_username)
+      const response = await fetch('/api/leagues', { cache: 'no-store' })
+      if (!response.ok) throw new Error('Could not refresh your leagues')
+      const { leagues: userLeagues } = (await response.json()) as { leagues: UserLeague[] }
       setLeagues(userLeagues)
 
       // 3. Restore selected league from cache
@@ -113,7 +57,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [user, fetchLeaguesForUsername])
+  }, [user])
 
   useEffect(() => {
     loadLeagues()

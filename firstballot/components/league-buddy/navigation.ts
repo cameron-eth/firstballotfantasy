@@ -17,6 +17,20 @@ export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
   { id: 'audit', label: 'Audit', shortLabel: 'Audit', icon: ClipboardList },
 ]
 
+export function resolveLeagueSection(tab: string | null): LeagueSection {
+  if (tab === 'roster' || tab === 'league' || tab === 'audit') return tab
+  if (tab === 'matchup') return 'league'
+  return 'overview'
+}
+
+export function withLeagueId(href: string, leagueId: string | null): string {
+  if (!leagueId) return href
+  const [path, query] = href.split('?')
+  const params = new URLSearchParams(query || '')
+  params.set('leagueId', leagueId)
+  return `${path}?${params.toString()}`
+}
+
 export interface LeagueQuickLink {
   key: string
   label: string
@@ -28,5 +42,5 @@ export interface LeagueQuickLink {
 export const LEAGUE_QUICK_LINKS: LeagueQuickLink[] = [
   { key: 'trade-market', label: 'Trade Market', icon: Trophy, href: '/trade-market' },
   { key: 'scouting', label: 'Scouting Portal', icon: Eye, href: '/scouting-portal' },
-  { key: 'draft-buddy', label: 'Draft Buddy', icon: Users, href: '/draft-buddy' },
+  { key: 'draft-board', label: 'Draft Board', icon: Users, href: '/scouting-portal?tab=draftboard' },
 ]

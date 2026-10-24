@@ -7,7 +7,7 @@ import { PlayerCard } from './player-card'
 import { SkeletonGrid } from './player-skeleton'
 import { cn } from '@/lib/utils'
 
-type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot'
+type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot' | 'Ungraded'
 
 /** Class filter: every undrafted class, one specific class, or the whole archive. */
 type YearFilter = number | 'all' | 'upcoming'
@@ -22,6 +22,7 @@ const TIER_ORDER: Exclude<FilterTier, 'all'>[] = [
   'Rotational',
   'Depth',
   'Longshot',
+  'Ungraded',
 ]
 
 function matchesYear(year: number | null, filter: YearFilter): boolean {
@@ -77,15 +78,15 @@ export function RankingsGrid() {
     .filter((p) => filter === 'all' || p.tier === filter)
     .sort((a, b) => {
       if (sortBy === 'rank') {
-        if (b.grade !== a.grade) return b.grade - a.grade
+        if (b.grade !== a.grade) return (b.grade ?? -1) - (a.grade ?? -1)
         return a.rank - b.rank
       }
       if (sortBy === 'grade') {
-        if (b.grade !== a.grade) return b.grade - a.grade
+        if (b.grade !== a.grade) return (b.grade ?? -1) - (a.grade ?? -1)
         return a.rank - b.rank
       }
-      if (sortBy === 'physical') return b.physical - a.physical
-      if (sortBy === 'production') return b.production - a.production
+      if (sortBy === 'physical') return (b.physical ?? -1) - (a.physical ?? -1)
+      if (sortBy === 'production') return (b.production ?? -1) - (a.production ?? -1)
       return 0
     })
     .map((player) => ({
@@ -104,6 +105,7 @@ export function RankingsGrid() {
     Rotational: 0,
     Depth: 0,
     Longshot: 0,
+    Ungraded: 0,
   }
   for (const player of yearFilteredPlayers) {
     if (player.tier in tierCounts && player.tier !== 'all') {
@@ -120,16 +122,19 @@ export function RankingsGrid() {
       {/* Toolbar. On lg+ it is a flex sibling of the scroll area below, so it is
           already pinned; `sticky` only applies while the whole page scrolls. */}
       <div className="lg:static sticky top-16 z-20 mb-4 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90 space-y-2.5 shrink-0">
-        {!isLoading && (
-          <div className="text-sm text-muted-foreground">
-            Showing {visiblePlayers.length} of {filteredPlayers.length} prospect
-            {filteredPlayers.length !== 1 ? 's' : ''}
-            {selectedYear === 'upcoming'
-              ? ` from ${FIRST_UPCOMING_CLASS}+`
-              : selectedYear !== 'all' && ` from ${selectedYear}`}
-            {filter !== 'all' && ` (${filter})`}
-          </div>
-        )}
+        <div>
+          <h1 className="font-mono text-xl font-black uppercase tracking-tight text-foreground sm:text-2xl">Class rankings</h1>
+          {!isLoading && (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Showing {visiblePlayers.length} of {filteredPlayers.length} prospect
+              {filteredPlayers.length !== 1 ? 's' : ''}
+              {selectedYear === 'upcoming'
+                ? ` from ${FIRST_UPCOMING_CLASS}+`
+                : selectedYear !== 'all' && ` from ${selectedYear}`}
+              {filter !== 'all' && ` (${filter})`}
+            </p>
+          )}
+        </div>
 
         {/* Row 1: Position + Draft Class */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
@@ -186,7 +191,7 @@ export function RankingsGrid() {
             >
               ALL
             </button>
-            {years.map((year) => (
+            {years.filter((year) => year >= FIRST_UPCOMING_CLASS).map((year) => (
               <button
                 key={year}
                 onClick={() => {
@@ -203,6 +208,21 @@ export function RankingsGrid() {
                 {year}
               </button>
             ))}
+            {years.some((year) => year < FIRST_UPCOMING_CLASS) && (
+              <select
+                aria-label="Older draft class"
+                value={typeof selectedYear === 'number' && selectedYear < FIRST_UPCOMING_CLASS ? selectedYear : ''}
+                onChange={(event) => {
+                  if (!event.target.value) return
+                  setSelectedYear(Number(event.target.value))
+                  setVisibleCount(PAGE_SIZE)
+                }}
+                className="h-7 rounded border border-border bg-secondary/80 px-2 text-[11px] font-mono text-muted-foreground focus:border-primary focus:outline-none"
+              >
+                <option value="">OLDER CLASSES</option>
+                {years.filter((year) => year < FIRST_UPCOMING_CLASS).map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+            )}
           </div>
         </div>
 

@@ -4,15 +4,12 @@ import * as React from 'react'
 import { usePathname } from 'next/navigation'
 import {
   Trophy,
-  Eye,
   BarChart3,
   Target,
   LayoutDashboard,
-  ShoppingCart,
   Users,
   Search,
   History,
-  Calculator,
 } from 'lucide-react'
 import { NavGroup } from './NavGroup'
 
@@ -25,74 +22,58 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
 
   const navGroups = [
     {
-      label: 'LEAGUE',
+      label: 'SCOUTING',
       items: [
         {
-          name: 'League Buddy',
+          name: 'Scout Prospects',
+          href: '/scouting-portal',
+          description: 'College profiles, grades and projections',
+          icon: Search,
+        },
+        {
+          name: 'My Draft Board',
+          href: '/scouting-portal?tab=draftboard',
+          description: 'Build and save your prospect board',
+          icon: Users,
+        },
+        {
+          name: 'Historical Outcomes',
+          href: '/scouting-portal?tab=historical',
+          description: 'Past classes and hit rates',
+          icon: History,
+        },
+      ],
+    },
+    {
+      label: 'MY LEAGUE',
+      items: [
+        {
+          name: 'My Team',
+          href: '/league-buddy?tab=roster',
+          description: 'Roster strengths and needs',
+          icon: Users,
+          requiresAuth: true,
+        },
+        {
+          name: 'League Overview',
           href: '/league-buddy',
-          description: 'Your central league dashboard',
+          description: 'Standings, teams and activity',
           icon: LayoutDashboard,
           requiresAuth: true,
         },
         {
           name: 'Matchups',
           href: '/league-buddy?tab=matchup',
-          description: 'Live scores and projections',
+          description: 'Scores and projections',
           icon: Trophy,
           requiresAuth: true,
         },
         {
           name: 'Playoff Odds',
           href: '/playoff-odds',
-          description: 'Chances to make the post-season',
+          description: 'Postseason outlook',
           icon: Target,
           requiresAuth: true,
-        },
-      ],
-    },
-    {
-      label: 'SCOUT',
-      items: [
-        {
-          name: 'Scouting Portal',
-          href: '/scouting-portal',
-          description: 'Deep dive into incoming prospects',
-          icon: Search,
-        },
-        {
-          name: 'Draft Board',
-          href: '/scouting-portal?tab=draftboard',
-          description: 'Build your 2027 & 2028 big board',
-          icon: Users,
-        },
-        {
-          name: 'Prospect Board',
-          href: '/prospect-board',
-          description: 'Every graded class, side by side',
-          icon: Eye,
-        },
-        {
-          name: 'Historical Data',
-          href: '/scouting-portal?tab=historical',
-          description: 'Past class performance & hit rates',
-          icon: History,
-        },
-      ],
-    },
-    {
-      label: 'TRADE',
-      items: [
-        {
-          name: 'Trade Calculator',
-          href: '/trade-calculator',
-          description: 'Analyze dynasty trade values',
-          icon: Calculator,
-        },
-        {
-          name: 'Trade Market',
-          href: '/trade-market',
-          description: 'Real league trade activity',
-          icon: ShoppingCart,
         },
       ],
     },
@@ -110,9 +91,9 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
   ]
 
   return (
-    <nav className="hidden md:flex items-center space-x-1">
+    <nav className="hidden lg:flex items-center space-x-1">
       {navGroups.map((group) => {
-        const isGroupActive = group.items.some((item) => pathname === item.href)
+        const isGroupActive = group.items.some((item) => pathname === item.href.split('?')[0])
         return (
           <NavGroup
             key={group.label}
@@ -120,6 +101,7 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
             items={group.items}
             isActive={isGroupActive}
             isLoggedIn={isLoggedIn}
+            align={group.label === 'RANKINGS' ? 'right' : 'left'}
           />
         )
       })}

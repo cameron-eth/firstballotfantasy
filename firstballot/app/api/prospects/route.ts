@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
+import { missingCurated2028, missingCurated2029 } from '@/lib/curated-prospects'
 
 export const dynamic = 'force-dynamic'
 
 // Prospect grades change when the ETL runs, not per request. Serving a short
-// shared cache with a long stale window keeps the ~1MB all-years payload off
-// the database on every page load while still refreshing promptly after a run.
+// shared cache keeps the ~1MB all-years payload off the database on every
+// page load while bounding how long an older snapshot can be served.
 const CACHE_HEADERS = {
-  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
 }
 
 interface Prospect {
@@ -41,11 +42,14 @@ interface Prospect {
   // Stats
   college_stats: Record<string, number> | null
   draft_year: number | null
+  updated_at: string | null
   college_production_score: number | null
   physical_measurables_score: number | null
   hs_recruiting_score: number | null
   draft_projection_score: number | null
   expert_consensus_score: number | null
+  source_url?: string
+  is_fallback?: boolean
 }
 
 const SELECT_COLUMNS = `
@@ -73,6 +77,7 @@ const SELECT_COLUMNS = `
   team_color,
   college_stats,
   draft_year,
+  updated_at,
   college_production_score,
   physical_measurables_score,
   hs_recruiting_score,
@@ -160,7 +165,7 @@ function deriveRanks(records: RankedRecord[]) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const draftYear = searchParams.get('draft_year') || '2026'
+    const draftYear = searchParams.get('draft_year') || String(Math.max(2027, new Date().getFullYear() + 1))
     const isAllYears = draftYear === 'all'
     const yearNum = !isAllYears ? toNumberOrNull(draftYear) : null
 
@@ -206,7 +211,7 @@ export async function GET(request: NextRequest) {
         school: record.school || 'TBD',
         espn_id: espnId,
         cfbd_id: toNumberOrNull(record.cfbd_id),
-        projectedRound: getProjectedRound(overallRank),
+        projectedRound: record.overall_grade == null ? 'TBD' : getProjectedRound(overallRank),
         tier: record.tier,
         tier_numeric: toNumberOrNull(record.tier_numeric),
         valuation: toNumberOrNull(record.valuation),
@@ -222,6 +227,7 @@ export async function GET(request: NextRequest) {
         team_color: record.team_color,
         college_stats: record.college_stats || null,
         draft_year: draftYearValue,
+        updated_at: record.updated_at || null,
         college_production_score: toNumberOrNull(record.college_production_score),
         physical_measurables_score: toNumberOrNull(record.physical_measurables_score),
         hs_recruiting_score: toNumberOrNull(record.hs_recruiting_score),
@@ -229,6 +235,27 @@ export async function GET(request: NextRequest) {
         expert_consensus_score: toNumberOrNull(record.expert_consensus_score),
       }
     })
+
+    // Source-checked rows remain visible until the database imports run.
+    if (isAllYears || yearNum === 2029 || yearNum === 2028) {
+      const missing = [
+        ...(isAllYears || yearNum === 2029 ? missingCurated2029(prospects) : []),
+        ...(isAllYears || yearNum === 2028 ? missingCurated2028(prospects) : []),
+      ]
+      const curated: Prospect[] = missing.map((player) => ({
+        ...player,
+        is_fallback: true,
+        rank: player.position_rank,
+        overall_rank: player.rank,
+        espn_id: null, cfbd_id: null, projectedRound: 'TBD',
+        tier: null, tier_numeric: null, valuation: null,
+        overall_grade: null, grade_tier: null, nfl_comparisons: null,
+        team_color: null, college_stats: 'college_stats' in player ? player.college_stats : null, updated_at: null,
+        college_production_score: null, physical_measurables_score: null,
+        hs_recruiting_score: null, draft_projection_score: null, expert_consensus_score: null,
+      }))
+      prospects.push(...curated)
+    }
 
     return NextResponse.json(prospects, { headers: CACHE_HEADERS })
   } catch (error) {

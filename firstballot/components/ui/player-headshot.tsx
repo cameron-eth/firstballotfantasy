@@ -15,6 +15,8 @@ interface PlayerHeadshotProps {
   size?: number
   /** Additional CSS classes */
   className?: string
+  /** Preserve the full portrait when it is used as large card art. */
+  imageFit?: 'cover' | 'contain'
 }
 
 /**
@@ -30,6 +32,7 @@ export function PlayerHeadshot({
   playerName,
   size = 40,
   className = '',
+  imageFit = 'cover',
 }: PlayerHeadshotProps) {
   const [imageError, setImageError] = useState(false)
   const [fallbackError, setFallbackError] = useState(false)
@@ -92,7 +95,7 @@ export function PlayerHeadshot({
         alt={playerName || 'Player'}
         fill
         sizes={`${size}px`}
-        className="object-cover"
+        className={imageFit === 'contain' ? 'object-contain object-bottom' : 'object-cover'}
         onError={() => {
           if (!imageError) {
             setImageError(true)

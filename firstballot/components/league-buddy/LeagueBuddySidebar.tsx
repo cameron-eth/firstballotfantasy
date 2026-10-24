@@ -21,7 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { UserAvatar } from '@/components/user-avatar'
 import { useRouter } from 'next/navigation'
 import { leagueCache } from '@/lib/league-cache'
-import { LEAGUE_QUICK_LINKS, LEAGUE_SECTIONS } from './navigation'
+import { LEAGUE_QUICK_LINKS, LEAGUE_SECTIONS, withLeagueId } from './navigation'
 import type { LeagueOverview, LeagueSection, TeamData } from './types'
 
 const GRADE_COLORS: Record<string, string> = {
@@ -105,8 +105,7 @@ export function LeagueBuddySidebar({
 
   const goTo = (href: string) => {
     // Preserve league context across tools that accept a leagueId.
-    const leagueId = leagueCache.getLeagueId()
-    router.push(leagueId ? `${href}?leagueId=${leagueId}` : href)
+    router.push(withLeagueId(href, leagueCache.getLeagueId()))
   }
 
   return (

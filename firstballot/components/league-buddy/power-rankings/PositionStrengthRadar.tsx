@@ -71,7 +71,7 @@ export function PositionStrengthRadar({ data }: PositionStrengthRadarProps) {
               fontSize: 12,
             }}
             labelStyle={{ color: '#fbbf24', fontFamily: 'monospace' }}
-            formatter={(value: number, name: string) => [`${value}/100`, name]}
+            formatter={(value, name) => [`${Number(value ?? 0)}/100`, String(name)]}
           />
         </RadarChart>
       </ResponsiveContainer>

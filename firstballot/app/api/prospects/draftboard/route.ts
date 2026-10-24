@@ -5,7 +5,7 @@ import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 export const dynamic = 'force-dynamic'
 
 /** Draft boards only cover classes that have not been drafted yet. */
-const MIN_DRAFT_YEAR = 2027
+const MIN_DRAFT_YEAR = Math.max(2027, new Date().getFullYear() + 1)
 
 interface RawProspect {
   rank: number | null

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { ProspectCard } from './ProspectCard'
+import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import {
   Select,
   SelectContent,
@@ -46,7 +47,12 @@ export function ProspectsTab({
 }: ProspectsTabProps) {
   const PAGE_SIZE = 30
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const visibleProspects = filteredProspects.slice(0, visibleCount)
+  const [onBoardOnly, setOnBoardOnly] = useState(false)
+  const boardIds = useMemo(() => new Set(draftBoard.map((player) => player.id)), [draftBoard])
+  const displayedProspects = onBoardOnly
+    ? filteredProspects.filter((player) => boardIds.has(player.id))
+    : filteredProspects
+  const visibleProspects = displayedProspects.slice(0, visibleCount)
 
   // Derived from the data so a newly imported class shows up without an edit.
   const draftYears = useMemo(
@@ -76,37 +82,38 @@ export function ProspectsTab({
     setPositionFilter(nextPosition)
   }
 
+  const clearFilters = () => {
+    setSearchTerm('')
+    setDraftYear('all')
+    setPositionFilter('all')
+    setOnBoardOnly(false)
+    setVisibleCount(PAGE_SIZE)
+  }
+
   return (
     <div className="relative">
-      {/* Offset matches the 64px app header so the bar parks directly under it.
-          Needs a near-opaque background, not `liquid-glass` — cards scroll
-          underneath and read straight through a 50–74% translucent panel. */}
-      <div className="sticky top-16 z-20 mb-4 md:mb-6 -mx-2 px-2 py-2.5 md:py-3 rounded-xl border border-border bg-card/95 shadow-xl backdrop-blur-md supports-[backdrop-filter]:bg-card/90">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 md:gap-6 px-2">
-          <div>
-            <h2 className="text-xl md:text-3xl font-black text-foreground font-mono tracking-tighter uppercase mb-1 md:mb-2">
-              College <span className="text-blue-400">Prospects</span>
-            </h2>
-            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
-              {filteredProspects.length} {draftYear === 'all' ? '' : `${draftYear} `}prospect
-              {filteredProspects.length === 1 ? '' : 's'}
-              {positionFilter === 'all' ? '' : ` · ${positionFilter}`}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative group">
+      <ScoutingSectionHeader
+        title="College Prospects"
+        description={`${displayedProspects.length} ${draftYear === 'all' ? '' : `${draftYear} `}prospects${positionFilter === 'all' ? '' : ` · ${positionFilter}`}${onBoardOnly ? ' · on my board' : ''}`}
+        secondary={<>
+          <button type="button" onClick={() => { setOnBoardOnly((current) => !current); setVisibleCount(PAGE_SIZE) }} aria-pressed={onBoardOnly} className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold ${onBoardOnly ? 'border-blue-400 bg-blue-400/15 text-blue-300' : 'border-border text-muted-foreground hover:text-foreground'}`}>On my board · {draftBoard.length}</button>
+          {(searchTerm || draftYear !== 'all' || positionFilter !== 'all' || onBoardOnly) && <button type="button" onClick={clearFilters} className="ml-auto inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /> Clear filters</button>}
+        </>}
+      >
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(12rem,1fr)_8rem_9rem] lg:w-auto">
+            <div className="relative group col-span-2 sm:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
               <Input
                 placeholder="Search prospects..."
+                aria-label="Search prospects"
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10 h-10 bg-background border-border text-foreground w-full sm:w-64 focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
+                className="pl-10 h-10 bg-background border-border text-foreground w-full focus:border-blue-500/30 focus:ring-0 font-mono text-xs rounded-xl transition-all"
               />
             </div>
 
             <Select value={draftYear} onValueChange={handleDraftYearChange}>
-              <SelectTrigger className="h-10 w-full sm:w-32 bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
+              <SelectTrigger className="h-10 w-full bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border text-foreground font-mono text-[10px]">
@@ -120,7 +127,7 @@ export function ProspectsTab({
             </Select>
 
             <Select value={positionFilter} onValueChange={handlePositionChange}>
-              <SelectTrigger className="h-10 w-full sm:w-36 bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
+              <SelectTrigger className="h-10 w-full bg-background border-border text-foreground focus:border-blue-500/30 focus:ring-0 font-mono text-[10px] uppercase tracking-widest rounded-xl transition-all">
                 <SelectValue placeholder="Position" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border text-foreground font-mono text-[10px]">
@@ -132,8 +139,7 @@ export function ProspectsTab({
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </div>
+      </ScoutingSectionHeader>
 
       {loading ? (
         <div className="text-center py-20">
@@ -146,21 +152,28 @@ export function ProspectsTab({
         // The grid scrolls with the page — a fixed-height inner scroller here
         // traps the wheel and clips rows behind the sticky filter bar.
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4 pb-24 md:pb-10">
+          {displayedProspects.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
+              <Search className="mx-auto mb-3 h-6 w-6 text-blue-300" />
+              <h3 className="text-lg font-semibold text-foreground">No prospects match this view</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Try another class or position, or clear the filters to see everyone.</p>
+              <button type="button" onClick={clearFilters} className="mt-5 rounded-lg bg-blue-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-blue-300">Show all prospects</button>
+            </div>
+          ) : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4 pb-24 md:pb-10">
             {visibleProspects.map((prospect) => (
               <ProspectCard
                 key={prospect.id}
                 prospect={prospect}
                 onSelect={onProspectSelect}
                 onCompare={onShowComps}
-                isOnBoard={draftBoard.some((p) => p.id === prospect.id)}
+                isOnBoard={boardIds.has(prospect.id)}
                 variant="dossier"
                 isDiamondTier={isDiamondTier(prospect)}
                 positionNeed={positionNeeds[prospect.position] || 0}
               />
             ))}
-          </div>
-          {visibleProspects.length < filteredProspects.length && (
+          </div>}
+          {visibleProspects.length < displayedProspects.length && (
             <div className="pb-8 flex justify-center">
               <button
                 onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}

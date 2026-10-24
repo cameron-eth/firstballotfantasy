@@ -1,14 +1,13 @@
 'use client'
 
 import type React from 'react'
-
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Eye, TrendingUp, BarChart3 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ProspectsTab,
   DraftBoardTab,
@@ -21,6 +20,8 @@ import { useDraftboard } from '@/hooks/use-draftboard'
 import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
+import { ProspectFreshness } from './ProspectFreshness'
+import { sortProspectsForBrowse } from './sortProspectsForBrowse'
 
 interface RosterPlayer {
   id: string
@@ -39,12 +40,10 @@ interface RosterPlayer {
   fantasy_ppg?: number
   games_played?: number
 }
-
 interface ScoutingPortalProps {
   leagueId: string
   initialTab?: string
 }
-
 const PORTAL_TABS = ['prospects', 'draftboard', 'historical'] as const
 type PortalTab = (typeof PORTAL_TABS)[number]
 
@@ -52,7 +51,6 @@ type PortalTab = (typeof PORTAL_TABS)[number]
 function resolveTab(tab: string | null | undefined): PortalTab {
   return PORTAL_TABS.includes(tab as PortalTab) ? (tab as PortalTab) : 'prospects'
 }
-
 // Module-level pure function — no component state needed
 function calculatePlayerValue(rank: number, position?: string): number {
   if (!rank || rank <= 0 || rank > 1000) return 1
@@ -73,28 +71,19 @@ function calculatePlayerValue(rank: number, position?: string): number {
   } else {
     return 15
   }
-
   let value = baseValue * Math.exp(-k * (rank - tierStart)) + tierFloor
 
   if (position) {
     const positionMultipliers: Record<string, number> = { QB: 1.3, RB: 0.9, WR: 1.0, TE: 1.1 }
     value *= positionMultipliers[position] || 1.0
   }
-
   return Math.round(value * 100) / 100
 }
-
 function getProspectGradeValue(prospect: Prospect): string {
-  if (
-    !prospect.grade_tier &&
-    (prospect.overall_grade == null || prospect.overall_grade <= 0)
-  ) {
-    return 'Ungraded'
-  }
-  return normalizeScoutingGradeTier(
-    prospect.grade_tier,
-    prospect.overall_grade ?? 0
-  )
+  const grade = prospect.overall_grade ?? 0
+  return !prospect.grade_tier && grade <= 0
+    ? 'Ungraded'
+    : normalizeScoutingGradeTier(prospect.grade_tier, grade)
 }
 
 async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
@@ -153,12 +142,23 @@ async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
 }
 
 export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const urlTab = searchParams.get('tab')
 
   const [roster, setRoster] = useState<RosterPlayer[]>([])
   const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
-  const [prospectNotes, setProspectNotes] = useState<Record<number, string>>({})
+  const [noteSaveError, setNoteSaveError] = useState<string | null>(null)
+  const [noteSaveStatus, setNoteSaveStatus] = useState<string | null>(null)
+  const { user } = useAuth()
+  const { data: savedNotes, error: notesFetchError, mutate: refreshNotes } = useSWR<{ notes: { prospect_id: number; notes: string }[] }>(
+    user ? `/api/scouting-notes?account=${encodeURIComponent(user.id)}` : null,
+    async (url: string) => {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Could not load scouting notes')
+      return response.json()
+    }
+  )
 
   // Fetch roster via useSWR — avoids fetch-in-effect pattern
   const {
@@ -193,26 +193,37 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       return response.json()
     }
   )
-  const loading = prospectsLoading || rosterLoading
+  // The public prospect catalog must remain usable while a linked league is
+  // loading or unavailable. Roster data only enriches team needs.
+  const loading = prospectsLoading
   const prospectsError: string | null = prospectsFetchError?.message ?? null
-  const dataError = prospectsError || rosterError
   const [searchTerm, setSearchTerm] = useState('')
-  const [positionFilter, setPositionFilter] = useState('all')
-  const [draftYear, setDraftYear] = useState('all')
+  const [positionFilter, setPositionFilter] = useState(() => ['QB', 'RB', 'WR', 'TE'].includes(searchParams.get('position') || '') ? searchParams.get('position')! : 'all')
+  const [draftYear, setDraftYear] = useState(() => /^20\d{2}$/.test(searchParams.get('year') || '') ? searchParams.get('year')! : 'all')
   const [activeTab, setActiveTab] = useState(() =>
     resolveTab(urlTab || initialTab)
+  )
+  const changeTab = useCallback((nextTab: PortalTab) => {
+    setActiveTab(nextTab)
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextTab === 'prospects') params.delete('tab')
+    else params.set('tab', nextTab)
+    router.replace(`/scouting-portal${params.size ? `?${params.toString()}` : ''}`, { scroll: false })
+  }, [router, searchParams])
+  const savedNotesByProspectId = useMemo(
+    () => new Map((savedNotes?.notes ?? []).map((note) => [note.prospect_id, note.notes])),
+    [savedNotes]
   )
   const prospects = useMemo<Prospect[]>(
     () =>
       rawProspects.map((prospect) => ({
         ...prospect,
         grade: getProspectGradeValue(prospect),
-        notes: prospectNotes[prospect.id] ?? prospect.notes ?? '',
+        notes: savedNotesByProspectId.get(prospect.id) ?? prospect.notes ?? '',
       })),
-    [rawProspects, prospectNotes]
+    [rawProspects, savedNotesByProspectId]
   )
 
-  // Sync tab with URL if it changes
   useEffect(() => {
     if (!urlTab) return
     const next = resolveTab(urlTab)
@@ -229,9 +240,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     prospect: Prospect
     index: number
   } | null>(null)
-
-  // Auth for checking if user is logged in
-  const { user } = useAuth()
 
   // Draftboard persistence
   const { savedBoard, saving: savingBoard, saveBoard } = useDraftboard()
@@ -259,7 +267,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   // Memoized expensive computations
   const positionNeeds = useMemo(() => {
-    if (!roster) return {}
+    if (!leagueId || !fetchedRoster?.length || rosterError) return {}
 
     const needs: Record<string, number> = {}
     const current: Record<string, number> = {}
@@ -285,7 +293,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     })
 
     return needs
-  }, [roster])
+  }, [roster, leagueId, fetchedRoster, rosterError])
 
   // Calculate positional rankings for roster players
   const rosterWithPositionalRanks = useMemo(() => {
@@ -336,7 +344,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
       filtered = filtered.filter((prospect) => prospect.draft_year === year)
     }
 
-    return filtered
+    return sortProspectsForBrowse(filtered)
   }, [prospects, searchTerm, positionFilter, draftYear])
 
   // Calculate #1 player at each position (Diamond Tier for prospects)
@@ -617,6 +625,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   }, [])
 
   const handleProspectSelect = useCallback((prospect: Prospect) => {
+    setNoteSaveStatus(null)
+    setNoteSaveError(null)
     setSelectedProspect(prospect)
     setShowModal(true)
   }, [])
@@ -636,15 +646,24 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     setSelectedProspectForComps(null)
   }, [])
 
-  const handleSaveNotes = useCallback((id: number, notes: string) => {
-    setProspectNotes((prev) => ({ ...prev, [id]: notes }))
-    // Update selected prospect if it's the one being edited
-    setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
-
-    // In a real app, we would save this to Supabase here
-    console.log(`Saving notes for prospect ${id}: ${notes}`)
-  }, [])
-
+  const handleSaveNotes = useCallback(async (id: number, notes: string) => {
+    setNoteSaveError(null)
+    setNoteSaveStatus('Saving…')
+    try {
+      const response = await fetch('/api/scouting-notes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect_id: id, notes }),
+      })
+      if (!response.ok) throw new Error('Could not save note. Please try again.')
+      setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
+      await refreshNotes()
+      setNoteSaveStatus('Saved to your account')
+    } catch (error) {
+      setNoteSaveStatus(null)
+      setNoteSaveError(error instanceof Error ? error.message : 'Could not save note')
+    }
+  }, [refreshNotes])
   // Draft Board handlers
   const handleAddToDraftBoard = useCallback((prospect: Prospect) => {
     if (!prospect?.id) {
@@ -743,7 +762,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     }
   }, [savedBoard, prospects, initialBoardLoaded])
 
-
   // `overflow-x-clip` rather than `-hidden` below: hidden turns these wrappers
   // into scroll containers, which makes the app header and the in-page filter
   // bars stick to the wrapper instead of the viewport — i.e. not stick at all.
@@ -753,14 +771,18 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
       <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
-          {dataError && (
+          <ProspectFreshness prospects={rawProspects} />
+          {prospectsError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-              {dataError}
+              {prospectsError}
             </div>
           )}
+          {rosterError && <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">Team needs could not load. Prospect scouting is still available.</div>}
+          {noteSaveError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{noteSaveError}</div>}
+          {notesFetchError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">Saved scouting notes could not be loaded.</div>}
           <Tabs
             value={activeTab}
-            onValueChange={(value) => setActiveTab(resolveTab(value))}
+            onValueChange={(value) => changeTab(resolveTab(value))}
             className="w-full"
           >
             <div className="mb-3 md:mb-4 shrink-0">
@@ -860,6 +882,10 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
           <ProspectDetailModal
             prospect={selectedProspect}
+            hasTeamContext={Boolean(leagueId && fetchedRoster?.length && !rosterError)}
+            isLoggedIn={Boolean(user)}
+            noteSaveStatus={noteSaveStatus}
+            noteSaveError={noteSaveError}
             positionNeeds={positionNeeds}
             onClose={handleCloseModal}
             onAddToDraftBoard={() => {

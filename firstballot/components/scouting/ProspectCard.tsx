@@ -27,15 +27,26 @@ interface CardPlayer {
   headshotUrl?: string | null
   school: string
   year: number | null
-  grade: number
+  grade: number | null
   tier: string
   height: string
   weight: number
   fortyTime: number | null
-  production: number
-  physical: number
+  production: number | null
+  physical: number | null
   position: string
   isCollege: boolean
+  seasonLine: string | null
+}
+
+function formatSeasonLine(stats?: Record<string, number> | null): string | null {
+  if (!stats) return null
+  const parts: string[] = []
+  if (stats.rushing_yards != null) parts.push(`${stats.rushing_yards} rush yds`)
+  if (stats.rushing_tds != null) parts.push(`${stats.rushing_tds} rush TD`)
+  if (stats.receiving_yards != null) parts.push(`${stats.receiving_yards.toLocaleString()} rec yds`)
+  if (stats.receiving_tds != null) parts.push(`${stats.receiving_tds} rec TD`)
+  return parts.length ? parts.join(' · ') : null
 }
 
 function formatHeight(inches: number | null): string {
@@ -74,15 +85,16 @@ function toCardPlayer(prospect: Prospect): CardPlayer {
     headshotUrl: prospect.headshot_url || null,
     school: prospect.school || 'TBD',
     year: prospect.draft_year ?? null,
-    grade: prospect.overall_grade || 0,
-    tier: normalizeTier(prospect),
+    grade: prospect.overall_grade ?? null,
+    tier: prospect.overall_grade == null ? 'Ungraded' : normalizeTier(prospect),
     height: formatHeight(prospect.height),
     weight: prospect.weight || 0,
     fortyTime: parseFortyTime(prospect.college_stats),
-    production: clampScore(prospect.college_production_score),
-    physical: clampScore(prospect.physical_measurables_score),
+    production: prospect.college_production_score == null ? null : clampScore(prospect.college_production_score),
+    physical: prospect.physical_measurables_score == null ? null : clampScore(prospect.physical_measurables_score),
     position: prospect.position,
     isCollege: (prospect.draft_year || 0) >= 2025,
+    seasonLine: (prospect.draft_year || 0) >= 2028 && prospect.overall_grade == null ? formatSeasonLine(prospect.college_stats) : null,
   }
 }
 
@@ -152,7 +164,16 @@ function UnifiedProspectCard({
         className
       )}
       style={{ animationDelay: `${Math.min(index * 30, 500)}ms` }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View scouting profile for ${player.name}`}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
     >
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
         <span className="text-3xl font-mono font-bold text-primary drop-shadow-lg">
@@ -181,13 +202,13 @@ function UnifiedProspectCard({
         )}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent z-[1]" />
-        {!imageError && player.espnId ? (
+        {!imageError && getPlayerImageUrl(player) ? (
           <Image
             src={getPlayerImageUrl(player)}
             alt={player.name}
-            width={200}
-            height={200}
-            className="object-contain object-bottom scale-110 group-hover:scale-115 transition-transform duration-500"
+            width={480}
+            height={480}
+            className="h-full w-full object-contain object-bottom transition-transform duration-500 group-hover:scale-105"
             onError={() => setImageError(true)}
           />
         ) : (
@@ -209,7 +230,7 @@ function UnifiedProspectCard({
                 : 'bg-secondary text-muted-foreground border-border'
             )}
           >
-            {player.year ?? '--'} {player.isCollege ? 'PROSPECT' : 'CLASS'}
+            {player.year ?? '--'} {(player.year || 0) >= 2028 && player.grade == null ? 'PRELIMINARY' : player.isCollege ? 'PROSPECT' : 'CLASS'}
           </span>
         </div>
       </div>
@@ -228,7 +249,7 @@ function UnifiedProspectCard({
           <div className="flex-1">
             <div className="flex items-baseline gap-1">
               <span className="text-2xl font-mono font-bold text-primary">
-                {player.grade.toFixed(1)}
+                {player.grade == null ? '—' : player.grade.toFixed(1)}
               </span>
               <span className="text-[10px] text-muted-foreground uppercase">Grade</span>
             </div>
@@ -243,10 +264,12 @@ function UnifiedProspectCard({
           )}
         </div>
 
-        <div className="space-y-2">
-          <StatBar label="PROD" value={player.production} />
-          <StatBar label="PHYS" value={player.physical} />
-        </div>
+        {player.production != null || player.physical != null ? (
+          <div className="space-y-2">
+            {player.production != null && <StatBar label="PROD" value={player.production} />}
+            {player.physical != null && <StatBar label="PHYS" value={player.physical} />}
+          </div>
+        ) : <p className="text-xs text-muted-foreground">{player.seasonLine ? `2026 · ${player.seasonLine}` : 'Early class watchlist · evaluation pending'}</p>}
       </div>
     </div>
   )

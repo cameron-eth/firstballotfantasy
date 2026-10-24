@@ -193,14 +193,15 @@ export async function PATCH(request: NextRequest) {
 
     const { sleeper_username } = await request.json()
 
-    if (!sleeper_username) {
-      return NextResponse.json({ error: 'sleeper_username is required' }, { status: 400 })
+    const normalizedUsername = typeof sleeper_username === 'string' ? sleeper_username.trim() : ''
+    if (!/^[A-Za-z0-9_.-]{2,32}$/.test(normalizedUsername)) {
+      return NextResponse.json({ error: 'Enter a valid Sleeper username' }, { status: 400 })
     }
 
     // Update the sleeper_username using the authenticated client (respects RLS)
     const { data, error } = await userSupabase
       .from('user_profiles')
-      .update({ sleeper_username: sleeper_username })
+      .update({ sleeper_username: normalizedUsername, updated_at: new Date().toISOString() })
       .eq('auth_id', userId)
       .select()
       .single()

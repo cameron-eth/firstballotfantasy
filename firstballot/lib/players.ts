@@ -46,12 +46,12 @@ export interface Player {
   tier: string
   /** Positional-rank badge shown on the card, e.g. "WR3". */
   positionRank: string
-  grade: number
+  grade: number | null
   height: string
   weight: number | null
   fortyTime: number | null
-  production: number
-  physical: number
+  production: number | null
+  physical: number | null
   valuation: number
   year: number | null
   isCollege: boolean
@@ -158,14 +158,14 @@ function normalize(raw: RawProspect): Player {
     position: raw.position as Position,
     school: raw.school || 'TBD',
     espnId: raw.espn_id,
-    tier: raw.grade_tier || 'Depth',
+    tier: raw.overall_grade == null ? 'Ungraded' : raw.grade_tier || 'Depth',
     positionRank: `${raw.position}${raw.rank}`,
-    grade: raw.overall_grade || 0,
+    grade: raw.overall_grade ?? null,
     height: formatHeight(raw.height),
     weight: raw.weight ? Math.round(raw.weight) : null,
     fortyTime: fortyRaw ? Number(fortyRaw) : null,
-    production: Math.round(raw.college_production_score || 0),
-    physical: Math.round(raw.physical_measurables_score || 0),
+    production: raw.college_production_score == null ? null : Math.round(raw.college_production_score),
+    physical: raw.physical_measurables_score == null ? null : Math.round(raw.physical_measurables_score),
     valuation: raw.valuation ? Number(raw.valuation) : raw.overall_grade || 0,
     year: raw.draft_year,
     isCollege: (raw.draft_year || 0) >= 2025,
@@ -186,16 +186,14 @@ export async function fetchAllProspects(): Promise<Record<Position, Player[]>> {
 
   for (const pos of ['QB', 'RB', 'WR', 'TE'] as Position[]) {
     const filtered = data
-      .filter((p) => p.position === pos && p.overall_grade !== null)
+      .filter((p) => p.position === pos)
       .sort((a, b) => (b.overall_grade || 0) - (a.overall_grade || 0))
-    result[pos] = filtered.map((raw, index) => {
+    result[pos] = filtered.map((raw) => {
       const normalized = normalize(raw)
-      // Rank reflects position within this grade-sorted list, across all classes.
-      const positionalRank = index + 1
       return {
         ...normalized,
-        rank: positionalRank,
-        positionRank: `${pos}${positionalRank}`,
+        rank: normalized.rank,
+        positionRank: `${pos}${normalized.rank}`,
       }
     })
   }

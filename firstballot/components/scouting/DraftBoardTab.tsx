@@ -8,6 +8,7 @@ import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ClipboardList, GripVertical, X } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
+import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import { KtcSparkline } from './KtcSparkline'
 import { BoardBreakdownPanel } from './BoardBreakdownPanel'
 import { OffBoardPanel } from './OffBoardPanel'
@@ -387,7 +388,7 @@ export function DraftBoardTab({
   // Click a cell to edit, Enter or blur to commit, Escape to abandon. Tab
   // commits too, because leaving the field blurs it.
   const beginEdit = (prospectId: number, field: GradeField) => {
-    if (!canGrade) return
+    if (!canGrade || allEligibleProspects.find((p) => p.id === prospectId)?.is_fallback) return
     const current = userGradeOf(gradesByProspectId?.get(prospectId), field)
     setEditingCell({ prospectId, field })
     setEditDraft(current === null ? '' : String(current))
@@ -508,8 +509,8 @@ export function DraftBoardTab({
 
   return (
     <main className="min-h-[70vh] bg-background">
-      {/* Compact toolbar — position tabs + actions */}
-      <div className="w-full px-2 sm:px-3 pt-1 pb-2 flex items-center justify-between gap-2 sm:gap-3 flex-wrap shrink-0">
+      <ScoutingSectionHeader title="Draft Board" description={`${draftBoard.length} players · drag to set your order`}>
+      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
         <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
           {positionTabs.map((pos) => (
             <button
@@ -564,6 +565,7 @@ export function DraftBoardTab({
           />
         )}
       </div>
+      </ScoutingSectionHeader>
 
       <div className="w-full px-1 sm:px-2 pb-24 lg:pb-3">
         {/* The board carries three more columns than it used to, so it takes a
@@ -808,7 +810,7 @@ export function DraftBoardTab({
                                             className="text-[11px] font-mono font-bold tabular-nums leading-tight"
                                             style={{ color: gradeHeat.color }}
                                           >
-                                            {player.grade.toFixed(1)}
+                                            {prospect.overall_grade == null ? '—' : player.grade.toFixed(1)}
                                           </div>
                                         </div>
                                         <div
@@ -834,7 +836,7 @@ export function DraftBoardTab({
                                           ) : (
                                             <button
                                               type="button"
-                                              disabled={!canGrade}
+                                              disabled={!canGrade || prospect.is_fallback}
                                               onPointerDownCapture={(e) => e.stopPropagation()}
                                               onClick={() => beginEdit(prospect.id, 'film')}
                                               aria-label={`Film grade for ${player.name}`}
@@ -873,7 +875,7 @@ export function DraftBoardTab({
                                           ) : (
                                             <button
                                               type="button"
-                                              disabled={!canGrade}
+                                              disabled={!canGrade || prospect.is_fallback}
                                               onPointerDownCapture={(e) => e.stopPropagation()}
                                               onClick={() => beginEdit(prospect.id, 'talent')}
                                               aria-label={`Talent grade for ${player.name}`}
@@ -1049,7 +1051,7 @@ export function DraftBoardTab({
                                       className="w-full h-full flex items-center justify-center rounded text-base font-mono font-bold tabular-nums"
                                       style={{ backgroundColor: gradeHeat.bg, color: gradeHeat.color }}
                                     >
-                                      {player.grade.toFixed(1)}
+                                      {prospect.overall_grade == null ? '—' : player.grade.toFixed(1)}
                                     </div>
                                   </div>
 
@@ -1067,11 +1069,11 @@ export function DraftBoardTab({
                                     ) : (
                                       <button
                                         type="button"
-                                        disabled={!canGrade}
+                                        disabled={!canGrade || prospect.is_fallback}
                                         onPointerDownCapture={(e) => e.stopPropagation()}
                                         onClick={() => beginEdit(prospect.id, 'film')}
                                         aria-label={`Film grade for ${player.name}`}
-                                        title={canGrade ? 'Your film grade' : 'Sign in to grade'}
+                                        title={prospect.is_fallback ? 'Available after database import' : canGrade ? 'Your film grade' : 'Sign in to grade'}
                                         className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums enabled:hover:ring-1 enabled:hover:ring-sky-400/40 disabled:cursor-default"
                                         style={
                                           filmGrade !== null
@@ -1098,11 +1100,11 @@ export function DraftBoardTab({
                                     ) : (
                                       <button
                                         type="button"
-                                        disabled={!canGrade}
+                                        disabled={!canGrade || prospect.is_fallback}
                                         onPointerDownCapture={(e) => e.stopPropagation()}
                                         onClick={() => beginEdit(prospect.id, 'talent')}
                                         aria-label={`Talent grade for ${player.name}`}
-                                        title={canGrade ? 'Your talent grade' : 'Sign in to grade'}
+                                        title={prospect.is_fallback ? 'Available after database import' : canGrade ? 'Your talent grade' : 'Sign in to grade'}
                                         className="w-full h-full flex items-center justify-center rounded text-sm font-mono font-bold tabular-nums enabled:hover:ring-1 enabled:hover:ring-sky-400/40 disabled:cursor-default"
                                         style={
                                           talentGrade !== null

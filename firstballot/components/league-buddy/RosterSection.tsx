@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { KtcSparkline } from '@/components/scouting/KtcSparkline'
@@ -172,9 +173,16 @@ export function RosterSection({
 
   const hasKtcData = selectedTeam.players.some((p) => p.ktcValueSf != null)
   const hasTrendData = selectedTeam.players.some((p) => (p.ktcHistory?.length ?? 0) >= 2)
+  const rosterCounts = ['QB', 'RB', 'WR', 'TE'].map((position) => ({
+    position, count: selectedTeam.players.filter((player) => player.position === position).length,
+  })).sort((a, b) => a.count - b.count)
 
   return (
     <div className="space-y-4">
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-400/20 bg-blue-400/5 px-4 py-3" aria-label="College pipeline">
+        <div><h2 className="text-sm font-semibold text-foreground">College pipeline</h2><p className="mt-0.5 text-xs text-muted-foreground">Your thinnest position by roster count is {rosterCounts[0].position} ({rosterCounts[0].count}). Scout the next classes while this season unfolds.</p></div>
+        <div className="flex flex-wrap gap-2"><Link href={`/scouting-portal?year=${new Date().getFullYear() + 1}&position=${rosterCounts[0].position}`} className="rounded-md bg-blue-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-blue-300">Scout {rosterCounts[0].position}</Link><Link href="/scouting-portal?tab=draftboard" className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:border-blue-400">My draft board</Link></div>
+      </section>
       {/* Team Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Card className="bg-card border-border">

@@ -11,6 +11,8 @@ import type { Prospect } from './types'
 interface ProspectDetailModalProps {
   prospect: Prospect | null
   positionNeeds: Record<string, number>
+  hasTeamContext: boolean
+  isLoggedIn: boolean
   onClose: () => void
   onAddToDraftBoard: () => void
   onSaveNotes: (id: number, notes: string) => void
@@ -26,6 +28,8 @@ interface ProspectDetailModalProps {
 export function ProspectDetailModal({
   prospect,
   positionNeeds,
+  hasTeamContext,
+  isLoggedIn,
   onClose,
   onAddToDraftBoard,
   onSaveNotes,
@@ -152,15 +156,17 @@ export function ProspectDetailModal({
                     <span className="text-xs text-slate-400 font-mono">Position Need</span>
                     <Badge
                       className={
-                        positionNeeds[prospect.position] > 0
+                        !hasTeamContext
+                          ? 'bg-slate-500/20 text-slate-300 border border-slate-500/30 text-[9px] font-black'
+                          : positionNeeds[prospect.position] > 0
                           ? 'bg-red-500/20 text-red-300 border border-red-500/30 text-[9px] font-black'
                           : 'bg-green-500/20 text-green-300 border border-green-500/30 text-[9px] font-black'
                       }
                     >
-                      {positionNeeds[prospect.position] > 0 ? 'CRITICAL' : 'STABLE'}
+                      {!hasTeamContext ? 'CONNECT TEAM' : positionNeeds[prospect.position] > 0 ? 'CRITICAL' : 'STABLE'}
                     </Badge>
                   </div>
-                  <p className="text-xs text-slate-400">Use your scouting notes to assess roster fit.</p>
+                  <p className="text-xs text-slate-400">{hasTeamContext ? 'Use your scouting notes to assess roster fit.' : 'Connect a league to see how this prospect fits your roster.'}</p>
                 </div>
               </div>
             </div>
@@ -176,9 +182,9 @@ export function ProspectDetailModal({
                   variant="ghost"
                   className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-tighter"
                   onClick={() => onSaveNotes(prospect.id, localNotes)}
-                  disabled={prospect.is_fallback}
+                  disabled={prospect.is_fallback || !isLoggedIn}
                 >
-                  {prospect.is_fallback ? 'Available after import' : 'Save Analysis'}
+                  {prospect.is_fallback ? 'Available after import' : isLoggedIn ? 'Save Analysis' : 'Log in to save'}
                 </Button>
               </div>
               <textarea

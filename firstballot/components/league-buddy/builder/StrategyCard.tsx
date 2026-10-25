@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, LoaderCircle } from 'lucide-react'
 import { COLLEGE_LOGOS } from '@/lib/college-logos'
 import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
 
@@ -15,6 +15,8 @@ export function StrategyCard({
   outgoing = false,
   rookie = false,
   disabled = false,
+  selected,
+  busy = false,
 }: {
   name: string
   position: string
@@ -26,6 +28,8 @@ export function StrategyCard({
   outgoing?: boolean
   rookie?: boolean
   disabled?: boolean
+  selected?: boolean
+  busy?: boolean
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const [failedLogo, setFailedLogo] = useState<string | null>(null)
@@ -38,7 +42,7 @@ export function StrategyCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex min-h-[350px] flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex min-h-[350px] flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -110,12 +114,23 @@ export function StrategyCard({
           <button
             onClick={onAction}
             disabled={disabled}
+            aria-pressed={selected}
+            aria-busy={busy}
             aria-label={`${action} ${name}`}
             className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs font-semibold transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             style={{ color: color.ink, borderColor: `${color.ink}40` }}
           >
             {action}
-            <ArrowUpRight className="h-3.5 w-3.5" />
+            <>
+              {busy ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
+                />
+              ) : (
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              )}
+            </>
           </button>
         </div>
       </div>

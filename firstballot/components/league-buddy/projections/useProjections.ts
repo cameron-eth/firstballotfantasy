@@ -5,6 +5,7 @@ export interface ProjectionEntry {
   /** Projected points under the league's own scoring. */
   pts: number
   /** Projected games played — 1 on a weekly row, ~18 on a season total. */
+  opponent?: string | null
   gp: number
 }
 
@@ -16,6 +17,8 @@ interface ProjectionResponse {
   scoring: 'league' | 'ppr'
   exact: boolean
   unmatchedKeys: string[]
+  generatedAt?: string
+  byes?: string[]
   points: ProjectionMap
 }
 
@@ -30,6 +33,9 @@ export interface UseProjectionsResult {
   weekly: (playerId: string) => number
   /** False when a league scoring rule pays out but is never projected (K/DEF only). */
   exact: boolean
+  error: string | null
+  byes: string[]
+  updatedAt?: string
   loading: boolean
 }
 
@@ -54,11 +60,20 @@ export function useProjections(leagueId: string, week: number): UseProjectionsRe
   const seasonKey = leagueId ? `/api/projections?leagueId=${leagueId}` : null
   const weekKey = leagueId && week > 0 ? `/api/projections?leagueId=${leagueId}&week=${week}` : null
 
-  const { data: seasonData, isLoading: seasonLoading } = useSWR(seasonKey, fetcher, {
+  const {
+    data: seasonData,
+    isLoading: seasonLoading,
+    error: seasonError,
+  } = useSWR(seasonKey, fetcher, {
     revalidateOnFocus: false,
   })
-  const { data: weekData, isLoading: weekLoading } = useSWR(weekKey, fetcher, {
-    revalidateOnFocus: false,
+  const {
+    data: weekData,
+    isLoading: weekLoading,
+    error: weekError,
+  } = useSWR(weekKey, fetcher, {
+    revalidateOnFocus: true,
+    refreshInterval: 15 * 60 * 1000,
   })
 
   const season = seasonData?.points ?? {}
@@ -80,7 +95,14 @@ export function useProjections(leagueId: string, week: number): UseProjectionsRe
     week: weekPoints,
     ppg,
     weekly,
-    exact: seasonData?.exact ?? true,
+    exact: (seasonData?.exact ?? true) && (weekData?.exact ?? true),
+    error: weekError
+      ? 'Weekly projections are temporarily unavailable.'
+      : seasonError
+        ? 'Season projections are temporarily unavailable.'
+        : null,
+    byes: weekData?.byes ?? [],
+    updatedAt: weekData?.generatedAt,
     loading: seasonLoading || weekLoading,
   }
 }

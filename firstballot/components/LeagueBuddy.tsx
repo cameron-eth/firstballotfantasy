@@ -40,7 +40,6 @@ import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings
 import { useDraftOrder } from './league-buddy/draft-order/useDraftOrder'
 import { computeProjectedMaxPointsFor } from './league-buddy/draft-order/projectedMaxPointsFor'
 import { useProjections } from './league-buddy/projections/useProjections'
-import { lineupNeedsKickerOrDefense } from '@/lib/projections/scoring'
 
 export default function LeagueBuddy({
   leagueId,
@@ -160,6 +159,9 @@ export default function LeagueBuddy({
     week: weekProjectionEntries,
     exact: projectionsExact,
     loading: projectionsLoading,
+    error: projectionsError,
+    byes: projectionByes,
+    updatedAt: projectionsUpdatedAt,
   } = useProjections(leagueId, currentWeek)
 
   /** playerId → projected points per game, from season totals. */
@@ -221,16 +223,22 @@ export default function LeagueBuddy({
 
   const rosterProjections = useMemo(
     () => ({
+      error: projectionsError,
+      byes: projectionByes,
+      entries: weekProjectionEntries,
+      updatedAt: projectionsUpdatedAt,
       ppg: projectedPpg,
       week: weekProjections,
       rosterPositions: rosterPositionsRaw,
       currentWeek,
-      // The unprojected scoring rules are all kicker and defense, so a lineup with
-      // no K or DEF slot is scored exactly regardless.
-      approximate: !projectionsExact && lineupNeedsKickerOrDefense(rosterPositionsRaw),
+      approximate: !projectionsExact,
       loading: projectionsLoading,
     }),
     [
+      projectionsError,
+      projectionByes,
+      weekProjectionEntries,
+      projectionsUpdatedAt,
       projectedPpg,
       weekProjections,
       rosterPositionsRaw,
@@ -379,7 +387,7 @@ export default function LeagueBuddy({
 
         {/* Desktop Skeleton - Sidebar Layout */}
         <div className="hidden md:block">
-          <SidebarProvider defaultOpen={true}>
+          <SidebarProvider defaultOpen={true} style={{ '--sidebar-width': '13rem' } as React.CSSProperties}>
             <Sidebar collapsible="none" className="!bg-slate-800 !border-slate-700">
               {/* Sidebar Skeleton */}
               <SidebarHeader className="p-4 border-b border-slate-700 !bg-slate-800">
@@ -538,7 +546,7 @@ export default function LeagueBuddy({
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true} style={{ '--sidebar-width': '13rem' } as React.CSSProperties}>
       {/* Sidebar - Hidden on mobile via Sidebar component's built-in classes */}
       <LeagueBuddySidebar
         selectedTeam={selectedTeam}
@@ -551,7 +559,7 @@ export default function LeagueBuddy({
 
       {/* Main Content Area */}
       <SidebarInset className="bg-slate-900 overflow-x-hidden">
-        <div className="w-full px-2 py-4 sm:px-4 sm:py-6 md:px-8 md:py-8">
+        <div className="w-full px-3 py-5 sm:px-5 md:px-6 lg:px-8">
           {/* Mobile Navigation & League Switcher - Only visible on mobile */}
           <div className="md:hidden mb-6 space-y-4">
             {/* Mobile Navigation Tabs */}
@@ -560,10 +568,10 @@ export default function LeagueBuddy({
                 <button
                   key={section.id}
                   onClick={() => changeSection(section.id)}
-                  className={`flex-1 px-2 py-2 rounded-md font-mono text-xs font-semibold transition-all ${
+                  className={`flex-1 px-2 py-2 rounded-md text-xs font-semibold transition-all ${
                     activeSection === section.id
-                      ? 'bg-yellow-400 text-slate-900'
-                      : 'text-slate-300 hover:text-yellow-400'
+                      ? 'bg-blue-400/15 text-blue-300'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   {section.shortLabel}

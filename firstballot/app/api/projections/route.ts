@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { analyzeCoverage, scoreFromStats, type ScoringSettings } from '@/lib/projections/scoring'
+import { analyzeCoverage, type ScoringSettings } from '@/lib/projections/scoring'
+
+import { normalizeProjection, type SleeperProjectionRow } from '@/lib/projections/normalize'
 
 /**
  * Sleeper projections, converted to a league's own scoring and slimmed for the client.
@@ -7,7 +9,7 @@ import { analyzeCoverage, scoreFromStats, type ScoringSettings } from '@/lib/pro
  * This has to be a server route. The upstream payload is ~2 MB for one week and ~3 MB
  * for season totals, nearly all of it players nobody rosters — sending that to the
  * browser (let alone once per week of the season) is not viable. Here we score it,
- * drop the zeroes, and return a map that is a few KB.
+ * drop unpublished filler rows, and return a compact map. Published zeroes remain valid.
  *
  *   GET /api/projections?leagueId=123           -> season totals, current season
  *   GET /api/projections?leagueId=123&week=3    -> one week
@@ -28,18 +30,12 @@ const FANTASY_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']
 const WEEKLY_REVALIDATE = 900 // 15 min
 const SEASON_REVALIDATE = 21600 // 6 hours
 
-interface ProjectionRow {
-  player_id: string
-  team: string | null
-  stats: Record<string, number> | null
-  player: { position?: string | null } | null
-}
-
 export interface ProjectionEntry {
   /** League-scored projected points. */
   pts: number
   /** Projected games played — 1 for a weekly row, ~18 for a season total. */
   gp: number
+  opponent?: string | null
 }
 
 export async function GET(request: NextRequest) {
@@ -47,6 +43,10 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams
     const week = params.get('week')
     const leagueId = params.get('leagueId')
+
+    if (week && (!/^\d+$/.test(week) || Number(week) < 1 || Number(week) > 18)) {
+      return NextResponse.json({ error: 'Invalid regular-season week' }, { status: 400 })
+    }
 
     const season =
       params.get('season') ||
@@ -84,9 +84,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const rows = (await projectionResponse.json()) as ProjectionRow[]
+    const rows = (await projectionResponse.json()) as SleeperProjectionRow[]
     if (!Array.isArray(rows)) {
       return NextResponse.json({ error: 'Unexpected projections payload' }, { status: 502 })
+    }
+
+    if (leagueId && !league?.scoring_settings) {
+      return NextResponse.json({ error: 'League scoring unavailable' }, { status: 502 })
     }
 
     const scoring: ScoringSettings | null = league?.scoring_settings ?? null
@@ -98,16 +102,8 @@ export async function GET(request: NextRequest) {
       if (!row?.player_id || !row.stats) continue
       for (const key of Object.keys(row.stats)) statKeys.add(key)
 
-      // Without a league we fall back to Sleeper's preset PPR, which is the best
-      // available guess but will not match a league running custom scoring.
-      const pts = scoring ? scoreFromStats(row.stats, scoring) : Number(row.stats.pts_ppr) || 0
-
-      // Zero-point rows are the overwhelming majority — deep bench, practice squad,
-      // and every player whose team is on bye that week. Dropping them is what takes
-      // the response from megabytes to kilobytes.
-      if (pts === 0) continue
-
-      points[row.player_id] = { pts: Math.round(pts * 100) / 100, gp: Number(row.stats.gp) || 0 }
+      const entry = normalizeProjection(row, scoring)
+      if (entry) points[row.player_id] = entry
     }
 
     const coverage = scoring
@@ -123,6 +119,15 @@ export async function GET(request: NextRequest) {
         exact: coverage.exact,
         unmatchedKeys: coverage.unmatchedKeys,
         count: Object.keys(points).length,
+        generatedAt: new Date().toISOString(),
+        byes: week
+          ? rows
+              .filter(
+                (row) =>
+                  row.team && row.game_id === null && !Object.hasOwn(row.stats ?? {}, 'pts_ppr')
+              )
+              .map((row) => row.player_id)
+          : [],
         points,
       },
       {

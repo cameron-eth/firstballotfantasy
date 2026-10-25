@@ -12,7 +12,7 @@ Keep this flow in Next.js. The app already owns authenticated Sleeper actions an
 
 ## Request flow
 
-1. Team Builder opens a player-specific modal. Discovery uses the parent's existing league/team/player state.
+1. Team Builder opens a floating player-specific suggestion card beside the map. Users cycle through suggestions; multi-asset offers show each asset card. Only the final offer review opens a confirmation modal. Discovery uses the parent's existing league/team/player state.
 2. `GET /api/trade-inventory?leagueId=...` reads public Sleeper league, rosters, drafts and traded picks without caching. Dynasty picks cover the next three drafts. FAAB availability comes from league budget minus roster spending; unsupported/missing values are unavailable.
 3. Users see concrete suggested player swaps and click Send to open confirmation directly. Suggestions preserve or improve both teams’ positional balance, remain within 15% KTC value, and avoid duplicate assets across suggestions. Player-specific discovery also supports actual owned picks. Customization is secondary to the confirmation flow.
 4. `POST /api/sleeper/actions` authenticates the app user, restores the stored token, verifies Sleeper identity and roster ownership, and re-reads pick/FAAB ownership before the fixed mutation. No arbitrary GraphQL is accepted from the client.

@@ -304,7 +304,7 @@ export function TeamBuilder({
             backgroundSize: '20px 20px',
           }}
         >
-          <div style={{ zoom: zoom / 100 }} className="w-max">
+          <div style={{ zoom: zoom / 100 }} className="mx-auto w-max">
             <BuilderTeamSummary
               team={team}
               placement={placement}

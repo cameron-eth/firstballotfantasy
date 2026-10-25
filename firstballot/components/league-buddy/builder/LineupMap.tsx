@@ -44,7 +44,14 @@ export function LineupMap({
   onTrade: (p: PlayerData) => void
   onAdd: (t: Target) => void
 }) {
-  const [peek, setPeek] = useState<Record<string, number>>({})
+  const [placingId, setPlacingId] = useState<string | null>(null)
+  const superflex =
+    rawSlots.some((slot) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE') ||
+    rawSlots.filter((slot) => slot === 'QB').length > 1
+  const ktcValue = (p: MapPlayer) => {
+    const value = superflex ? p.roster?.ktcValueSf : p.roster?.ktcValue1qb
+    return value != null && Number.isFinite(value) ? value.toLocaleString('en-US') : '—'
+  }
   const describe = (p: PlayerData): MapPlayer => ({
     id: `nfl:${p.playerId}`,
     name: p.playerName,
@@ -79,7 +86,7 @@ export function LineupMap({
     )
     next[slot] = id
     update({ lineups: { ...scenario.lineups, [String(horizon)]: next } })
-    setPeek({})
+    setPlacingId(null)
   }
   function remove(p: MapPlayer) {
     if (p.target) update({ targets: scenario.targets.filter((t) => t.id !== p.id) })
@@ -98,9 +105,26 @@ export function LineupMap({
         image={p.image}
         rookie={p.rookie}
         label={`${label} · ${p.ppg == null ? 'FPPG unavailable' : `${p.ppg.toFixed(1)} FPPG`}`}
-        action={slot ? 'Start here' : p.target ? 'Remove target' : 'Move out'}
-        onAction={() => (slot ? start(slot, p.id) : remove(p))}
-      />
+        action={
+          slot
+            ? placingId === p.id
+              ? 'Cancel placement'
+              : 'Choose starting slot'
+            : p.target
+              ? 'Remove target'
+              : 'Move out'
+        }
+        onAction={() => (slot ? setPlacingId(placingId === p.id ? null : p.id) : remove(p))}
+      >
+        {p.roster && (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+              KTC · {superflex ? 'SF' : '1QB'}
+            </span>
+            <span className="text-base font-semibold tabular-nums text-white">{ktcValue(p)}</span>
+          </div>
+        )}
+      </StrategyCard>
       {p.target?.kind === 'draft' && (
         <DraftFitNote
           fit={fits.find((f) => f.targetId === p.id)}
@@ -109,9 +133,29 @@ export function LineupMap({
         />
       )}
       {slot && (
-        <button className="text-xs text-slate-400 hover:text-white" onClick={() => remove(p)}>
-          {p.target ? 'Remove target' : 'Move out'}
-        </button>
+        <div className="space-y-2">
+          {placingId === p.id && (
+            <div className="flex flex-wrap gap-2" aria-label={`Starting slots for ${p.name}`}>
+              {slots
+                .filter((s) => fitsSlot(s.eligible, p))
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    className="rounded-lg border border-blue-400/40 bg-blue-400/10 px-3 py-2 text-xs text-blue-200 hover:bg-blue-400/20"
+                    title={
+                      s.starter ? `Replace ${byId.get(s.starter.id)?.name}` : `Fill ${s.label}`
+                    }
+                    onClick={() => start(s.id, p.id)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+            </div>
+          )}
+          <button className="text-xs text-slate-400 hover:text-white" onClick={() => remove(p)}>
+            {p.target ? 'Remove target' : 'Move out'}
+          </button>
+        </div>
       )}
     </div>
   )
@@ -126,18 +170,16 @@ export function LineupMap({
             className="text-blue-300"
             onClick={() => {
               update({ lineups: { ...scenario.lineups, [String(horizon)]: {} } })
-              setPeek({})
+              setPlacingId(null)
             }}
           >
             Reset to best lineup
           </button>
         )}
       </div>
-      <div className="flex gap-4 border-t border-slate-700 pt-5">
+      <div className="flex justify-center gap-4 border-t border-slate-700 pt-5">
         {slots.map((slot) => {
           const starter = slot.starter ? byId.get(slot.starter.id) : undefined
-          const index = (peek[slot.id] ?? 0) % Math.max(1, slot.backups.length)
-          const backup = slot.backups[index] ? byId.get(slot.backups[index].id) : undefined
           return (
             <section key={slot.id} className="w-60 shrink-0 space-y-3">
               <header className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900 px-3 py-3">
@@ -166,64 +208,43 @@ export function LineupMap({
                   Open {slot.label} slot
                 </div>
               )}
-              {backup && (
-                <div className="space-y-2 border-t border-slate-700 pt-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>
-                      Backups · {index + 1} / {slot.backups.length}
-                    </span>
-                    <div>
-                      <button
-                        aria-label={`Previous ${slot.label} backup`}
-                        className="px-2 py-1"
-                        onClick={() =>
-                          setPeek({
-                            ...peek,
-                            [slot.id]: (index - 1 + slot.backups.length) % slot.backups.length,
-                          })
-                        }
-                      >
-                        ←
-                      </button>
-                      <button
-                        aria-label={`Next ${slot.label} backup`}
-                        className="px-2 py-1"
-                        onClick={() => setPeek({ ...peek, [slot.id]: index + 1 })}
-                      >
-                        →
-                      </button>
-                    </div>
-                  </div>
-                  {card(backup, 'Backup', slot.id)}
-                </div>
-              )}
-              {board.length > 0 && (
-                <BoardFitStack
-                  players={board.filter((p) => slot.eligible.includes(p.position))}
-                  position={slot.label}
-                  eligible={slot.eligible}
-                  targets={scenario.targets}
-                  full={scenario.targets.length >= 100}
-                  onAdd={onAdd}
-                />
-              )}
             </section>
           )
         })}
       </div>
-      {players.some((p) => !slots.some((s) => fitsSlot(s.eligible, p))) && (
-        <div className="mt-5">
-          <h3 className="mb-3 text-sm text-slate-400">Outside this league’s starting slots</h3>
-          <div className="flex gap-4">
-            {players
-              .filter((p) => !slots.some((s) => fitsSlot(s.eligible, p)))
-              .map((p) => (
-                <div className="w-60" key={p.id}>
-                  {card(p, 'Reserve')}
-                </div>
-              ))}
-          </div>
+      <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared bench">
+        <h3 className="mb-3 text-sm font-medium text-slate-300">Bench & planned arrivals</h3>
+        <div className="flex flex-wrap justify-center gap-4">
+          {players
+            .filter((p) => !slots.some((s) => s.starter?.id === p.id))
+            .map((p) => (
+              <div className="w-60" key={p.id}>
+                {card(
+                  p,
+                  p.target ? 'Planned arrival' : 'Bench',
+                  slots.some((s) => fitsSlot(s.eligible, p)) ? 'bench' : undefined
+                )}
+              </div>
+            ))}
         </div>
+      </section>
+      {board.length > 0 && (
+        <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared prospect board">
+          <h3 className="mb-3 text-sm font-medium text-blue-200">Your board</h3>
+          <div className="flex justify-center gap-4">
+            {[...new Set(board.map((p) => p.position))].map((position) => (
+              <div key={position} className="w-60 shrink-0">
+                <BoardFitStack
+                  players={board.filter((p) => p.position === position)}
+                  position={position}
+                  targets={scenario.targets}
+                  full={scenario.targets.length >= 100}
+                  onAdd={onAdd}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
       )}
       {view.outgoing.length > 0 && (
         <div className="mt-5 flex flex-wrap gap-2">

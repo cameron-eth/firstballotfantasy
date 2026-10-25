@@ -1,4 +1,3 @@
-import { Card } from './card'
 import { IconLogo } from './icons'
 import { cn } from '@/lib/utils'
 

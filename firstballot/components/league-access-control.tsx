@@ -4,7 +4,6 @@ import { ReactNode } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Crown, CheckCircle } from 'lucide-react'
-import { UpgradePrompt } from './upgrade-prompt'
 
 interface LeagueAccessControlProps {
   leagueIndex: number
@@ -23,7 +22,6 @@ export function LeagueAccessControl({
   children,
   className = '',
   onClick,
-  leagueName,
 }: LeagueAccessControlProps) {
   const handleClick = () => {
     if (canAccess && onClick) {

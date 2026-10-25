@@ -16,7 +16,7 @@ export function useMembershipCheck(): {
 } {
   const { isMember, loading } = useMembership()
 
-  const canAccessLeague = (leagueIndex: number): boolean => {
+  const canAccessLeague = (): boolean => {
     // TEMPORARILY BYPASSING ACCESS CHECKS - ALL USERS CAN ACCESS ALL LEAGUES
     return true
 

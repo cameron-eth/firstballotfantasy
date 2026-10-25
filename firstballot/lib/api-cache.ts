@@ -5,8 +5,6 @@ interface CacheEntry {
   ttl: number
 }
 
-import { CACHE_TTL, CACHE_KEYS, CACHE_CONFIG, CACHE_VALIDATION } from './cache-config'
-
 class ApiCache {
   private cache = new Map<string, CacheEntry>()
   private pendingRequests = new Map<string, Promise<any>>()

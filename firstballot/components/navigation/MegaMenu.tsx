@@ -2,9 +2,8 @@
 
 import { useLeagueFormat } from '@/hooks/use-league-format'
 
-import * as React from 'react'
 import { usePathname } from 'next/navigation'
-import { Trophy, BarChart3, Target, LayoutDashboard, Users, Search, History } from 'lucide-react'
+import { Trophy, BarChart3, LayoutDashboard, Users, Search, History } from 'lucide-react'
 import { NavGroup } from './NavGroup'
 
 interface MegaMenuProps {
@@ -50,9 +49,9 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
           requiresAuth: true,
         },
         {
-          name: 'League Overview',
+          name: 'Team Builder',
           href: '/league-buddy',
-          description: 'Standings, teams and activity',
+          description: 'Map your roster and future plans',
           icon: LayoutDashboard,
           requiresAuth: true,
         },

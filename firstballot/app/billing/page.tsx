@@ -8,18 +8,7 @@ import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Check,
-  Crown,
-  Zap,
-  Users,
-  BarChart3,
-  Shield,
-  ArrowRight,
-  CreditCard,
-  ExternalLink,
-  CheckCircle,
-} from 'lucide-react'
+import { Check, Crown, CreditCard, ExternalLink, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { StripePaymentLinks } from '@/lib/stripe-payment-links'
 import { supabase } from '@/lib/supabase'
@@ -261,9 +250,8 @@ function BillingSimpleContent() {
 
           {/* Pricing Plans */}
           <div className="grid md:grid-cols-3 gap-8 mb-12">
-            {PRICING_PLANS.map((plan, index) => {
+            {PRICING_PLANS.map((plan) => {
               // Determine if this plan should be clickable
-              const isClickable = plan.paymentLink && !isSubscribed && !emailLoading
               const planType = plan.paymentLink as 'monthly' | 'yearly'
 
               return (

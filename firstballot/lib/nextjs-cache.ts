@@ -1,5 +1,4 @@
 // Next.js-aware caching utility that integrates with Next.js built-in caching
-import { CACHE_TTL, CACHE_KEYS } from './cache-config'
 
 // Next.js cache options for different data types
 export const NEXTJS_CACHE_OPTIONS = {
@@ -209,7 +208,7 @@ export async function uncachedFetch<T>(url: string): Promise<T> {
 // Revalidation utilities
 export const revalidateCache = {
   // Revalidate all league data
-  league: async (leagueId: string) => {
+  league: async () => {
     const { revalidateTag } = await import('next/cache')
     await (revalidateTag as any)(CACHE_TAGS.LEAGUE)
   },

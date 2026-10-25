@@ -1,19 +1,7 @@
 'use client'
 
-import {
-  Zap,
-  Users2,
-  Trophy,
-  ArrowRight,
-  Eye,
-  ShoppingCart,
-  ShieldCheck,
-  Activity,
-  Target,
-  Sparkles,
-} from 'lucide-react'
+import { Users2, Trophy, ShoppingCart, ShieldCheck, Target, Sparkles } from 'lucide-react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { PlayerCardHero } from '@/components/PlayerCardHero'
 
 export function HeroSection() {

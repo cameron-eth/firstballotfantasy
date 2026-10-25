@@ -3,12 +3,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import type React from 'react'
-
-// Framer Motion Reorder types are incompatible with React 19 JSX — cast to any
-const ReorderAny = Reorder as unknown as {
-  Group: React.ComponentType<Record<string, unknown>>
-  Item: React.ComponentType<Record<string, unknown>>
-}
 import Image from 'next/image'
 import useSWR from 'swr'
 import { cn } from '@/lib/utils'
@@ -34,6 +28,12 @@ import {
 } from 'lucide-react'
 import { Header } from '@/components/header'
 import { useBreakdownPanelOpen } from '@/hooks/use-breakdown-panel-open'
+
+// Framer Motion Reorder types are incompatible with React 19 JSX — cast to any
+const ReorderAny = Reorder as unknown as {
+  Group: React.ComponentType<Record<string, unknown>>
+  Item: React.ComponentType<Record<string, unknown>>
+}
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 

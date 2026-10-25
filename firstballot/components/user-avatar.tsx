@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 interface UserAvatarProps {

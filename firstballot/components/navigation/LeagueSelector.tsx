@@ -9,12 +9,11 @@ import { useState } from 'react'
 import { ChevronDown, Trophy, Check, Loader2, Link as LinkIcon, Settings } from 'lucide-react'
 import { useLeagueContext } from '@/lib/league-context'
 import { useAuth } from '@/lib/auth'
-import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import type { LeagueSelectorProps } from '@/types/league'
 import { cn } from '@/lib/utils'
 
-export function LeagueSelector({ compact = false, className = '' }: LeagueSelectorProps) {
+export function LeagueSelector({ className = '' }: LeagueSelectorProps) {
   const { user } = useAuth()
   const { selectedLeague, leagues, selectLeague, isLoading } = useLeagueContext()
 

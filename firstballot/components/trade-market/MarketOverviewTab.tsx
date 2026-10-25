@@ -1,11 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import Image from 'next/image'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatValue, type PlayerValue } from '@/lib/trade-utils'
 import type { LeagueVelocity, RosterKPI } from './types'
-import { formatGap, gradeColor, tradeTempo } from './utils'
+import { formatGap, gradeColor } from './utils'
 import { TradePlayerCard } from './TradePlayerCard'
 
 export function MarketOverviewTab({

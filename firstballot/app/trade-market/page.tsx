@@ -140,7 +140,6 @@ function TradeMarketContent() {
       computeTradeAnalytics(
         filteredTransactions,
         allPlayers,
-        dynastyRankings,
         getTeamMeta,
         playerValuationCache
       ),

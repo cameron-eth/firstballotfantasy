@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, TrendingUp, BarChart3, LineChart, Star } from 'lucide-react'
+import { Activity, BarChart3, LineChart, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export function StatsSection() {

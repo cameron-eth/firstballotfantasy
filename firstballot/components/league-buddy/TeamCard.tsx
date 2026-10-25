@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
 import type { TeamData } from './types'
-import { GRADE_COLORS } from './types'
 import { COMPETITIVE_STATES, type TeamPlacement } from './competitiveState'
 
 interface TeamCardProps {

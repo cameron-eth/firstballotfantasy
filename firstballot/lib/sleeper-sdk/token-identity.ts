@@ -16,3 +16,17 @@ export function sleeperTokenIdentity(token: string): { user_id: string; exp: num
     throw new Error('Invalid Sleeper token identity')
   return { user_id: id, exp: decoded.exp }
 }
+
+export function sleeperConnectionStatus(token: string | null, now = Date.now()) {
+  if (!token) return { saved: false }
+  try {
+    const { exp } = sleeperTokenIdentity(token)
+    return {
+      saved: true,
+      expired: exp * 1000 <= now,
+      expiresAt: new Date(exp * 1000).toISOString(),
+    }
+  } catch {
+    return { saved: true, expired: true }
+  }
+}

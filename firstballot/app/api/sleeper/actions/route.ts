@@ -1,4 +1,4 @@
-import { sleeperTokenIdentity } from '@/lib/sleeper-sdk/token-identity'
+import { sleeperTokenIdentity, sleeperConnectionStatus } from '@/lib/sleeper-sdk/token-identity'
 import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
   if (
     !body ||
     (body.token != null && (typeof body.token !== 'string' || body.token.length > 12000)) ||
-    !/^\d{10,25}$/.test(body.leagueId ?? '') ||
-    !['connect', 'restore', 'disconnect', 'trade', 'lineup'].includes(body.action)
+    (!['status', 'disconnect'].includes(body.action) && !/^\d{10,25}$/.test(body.leagueId ?? '')) ||
+    !['status', 'connect', 'restore', 'disconnect', 'trade', 'lineup'].includes(body.action)
   )
     return reply({ error: 'Invalid Sleeper request.' }, 400)
   let token: string
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       return reply({ disconnected: true })
     }
     const saved = body.action === 'connect' ? body.token?.trim() : await loadToken(user.id)
+    if (body.action === 'status') return reply(sleeperConnectionStatus(saved))
     if (!saved)
       return reply(
         body.action === 'restore'

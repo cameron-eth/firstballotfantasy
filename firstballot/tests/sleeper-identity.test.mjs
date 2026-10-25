@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { sleeperTokenIdentity } from '../lib/sleeper-sdk/token-identity.ts'
+import { sleeperTokenIdentity, sleeperConnectionStatus } from '../lib/sleeper-sdk/token-identity.ts'
 import { ownsRoster } from '../lib/sleeper-sdk/actions.ts'
 const token = payload => `header.${Buffer.from(payload).toString('base64url')}.signature`
 test('numeric Sleeper Snowflakes retain every digit for ownership checks',()=>{
@@ -17,4 +17,14 @@ test('quoted IDs work and numeric text inside strings is untouched',()=>{
  assert.equal(sleeperTokenIdentity(token(payload)).user_id,'1015846922424725504')
  assert.throws(()=>sleeperTokenIdentity(token('{"user_id":1.5,"exp":1824477188}')))
  assert.throws(()=>sleeperTokenIdentity('invalid'))
+})
+
+test('saved status is account-scoped, preserves expired state and never returns a token',()=>{
+ const saved=token('{"user_id":1015846922424725504,"exp":2000000000}')
+ assert.deepEqual(sleeperConnectionStatus(null),{saved:false})
+ assert.equal(sleeperConnectionStatus(saved,1900000000000).expired,false)
+ assert.equal(sleeperConnectionStatus(saved,2100000000000).expired,true)
+ assert.equal(sleeperConnectionStatus(saved).saved,true)
+ assert.equal(JSON.stringify(sleeperConnectionStatus(saved)).includes(saved),false)
+ assert.deepEqual(sleeperConnectionStatus('invalid'),{saved:true,expired:true})
 })

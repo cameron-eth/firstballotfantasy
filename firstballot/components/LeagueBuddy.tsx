@@ -405,6 +405,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       {selectedTeam && (
         <div hidden={activeSection !== 'builder'}>
           <TeamBuilder
+            placement={leaguePlacements.placements[selectedTeam.rosterId]}
             key={`${leagueId}:${selectedTeam.rosterId}`}
             team={selectedTeam}
             teams={teams}

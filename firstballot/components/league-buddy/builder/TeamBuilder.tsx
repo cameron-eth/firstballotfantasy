@@ -7,6 +7,9 @@ import type { TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
 import { StrategyCard } from './StrategyCard'
 import { RosterCardStack } from './RosterCardStack'
+import { BuilderTeamSummary } from './BuilderTeamSummary'
+import type { TeamPlacement } from '../competitiveState'
+import { useCanvasZoom } from './useCanvasZoom'
 
 const fresh = (): Scenario => ({
   id: crypto.randomUUID(),
@@ -30,11 +33,13 @@ export function TeamBuilder({
   teams,
   leagueId,
   isDynasty,
+  placement,
 }: {
   team: TeamData
   teams: TeamData[]
   leagueId: string
   isDynasty: boolean
+  placement?: TeamPlacement
 }) {
   const { user, loading: authLoading } = useAuth()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
@@ -48,7 +53,7 @@ export function TeamBuilder({
   const [source, setSource] = useState<'trade' | 'draft'>('trade')
   const [position, setPosition] = useState('ALL')
   const [year, setYear] = useState('ALL')
-  const [zoom, setZoom] = useState(100)
+  const { viewportRef, zoom, setZoom } = useCanvasZoom()
   const endpoint = `/api/team-scenarios?league=${leagueId}&roster=${team.rosterId}`
   const {
     data: prospects = [],
@@ -289,29 +294,38 @@ export function TeamBuilder({
               value={zoom}
               onChange={(e) => setZoom(Number(e.target.value))}
             >
+              {![50, 80, 100, 120, 150].includes(zoom) && <option value={zoom}>{zoom}%</option>}
+              <option value={50}>50%</option>
               <option value={80}>80%</option>
               <option value={100}>100%</option>
               <option value={120}>120%</option>
+              <option value={150}>150%</option>
             </select>
           </label>
         </div>
+        <p id="map-gesture-hint" className="text-xs text-slate-500">
+          Pinch to zoom · scroll to explore · Ctrl + wheel also zooms
+        </p>
         <div
           role="region"
+          ref={viewportRef}
           aria-label="Team strategy map"
+          aria-describedby="map-gesture-hint"
           tabIndex={0}
           className="max-h-[70vh] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 focus-visible:outline focus-visible:outline-blue-400"
           style={{
+            touchAction: 'pan-x pan-y',
             backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)',
             backgroundSize: '20px 20px',
           }}
         >
           <div style={{ zoom: zoom / 100 }} className="min-w-max">
-            <div className="mx-auto mb-6 w-fit max-w-md rounded-lg border border-slate-600 bg-slate-900 px-6 py-3 text-center">
-              <p className="text-sm font-semibold text-white">{scenario.name || 'Untitled plan'}</p>
-              <p className="mt-1 text-xs text-slate-400">
-                {team.teamName} · projected roster composition
-              </p>
-            </div>
+            <BuilderTeamSummary
+              team={team}
+              placement={placement}
+              leagueId={leagueId}
+              isDynasty={isDynasty}
+            />
             <div className="flex gap-4 border-t border-slate-700 pt-5">
               {positions.map((pos) => {
                 const current = team.players.filter((p) => p.position === pos)

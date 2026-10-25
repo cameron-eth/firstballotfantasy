@@ -6,6 +6,7 @@ import { plannedPositionCount, type Scenario, type Target } from '@/lib/team-sce
 import type { TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
 import { StrategyCard } from './StrategyCard'
+import { RosterCardStack } from './RosterCardStack'
 
 const fresh = (): Scenario => ({
   id: crypto.randomUUID(),
@@ -134,6 +135,9 @@ export function TeamBuilder({
           }))
         ),
     [teams, team.rosterId]
+  )
+  const rookies = new Set(
+    teams.flatMap((t) => t.players.filter((p) => p.isRookie).map((p) => `nfl:${p.playerId}`))
   )
   const pool: Target[] =
     source === 'trade'
@@ -328,6 +332,7 @@ export function TeamBuilder({
                         <StrategyCard
                           key={t.id}
                           {...t}
+                          rookie={rookies.has(t.id)}
                           label={
                             t.kind === 'draft'
                               ? `Draft target · ${t.year ?? 'Class TBD'}`
@@ -348,32 +353,18 @@ export function TeamBuilder({
                     >
                       + Find {pos} targets
                     </button>
-                    {current.map((p) => (
-                      <StrategyCard
-                        key={p.playerId}
-                        name={p.playerName}
-                        position={p.position}
-                        team={p.team}
-                        image={
-                          p.headshot_url ||
-                          `https://sleepercdn.com/content/nfl/players/${p.playerId}.jpg`
-                        }
-                        outgoing={scenario.outgoing.includes(p.playerId)}
-                        label={
-                          scenario.outgoing.includes(p.playerId)
-                            ? 'Planned departure'
-                            : 'Current roster'
-                        }
-                        action={scenario.outgoing.includes(p.playerId) ? 'Keep' : 'Move out'}
-                        onAction={() =>
-                          update({
-                            outgoing: scenario.outgoing.includes(p.playerId)
-                              ? scenario.outgoing.filter((id) => id !== p.playerId)
-                              : [...scenario.outgoing, p.playerId],
-                          })
-                        }
-                      />
-                    ))}
+                    <RosterCardStack
+                      players={current}
+                      position={pos}
+                      outgoing={scenario.outgoing}
+                      onToggle={(id) =>
+                        update({
+                          outgoing: scenario.outgoing.includes(id)
+                            ? scenario.outgoing.filter((value) => value !== id)
+                            : [...scenario.outgoing, id],
+                        })
+                      }
+                    />
                   </section>
                 )
               })}
@@ -447,6 +438,7 @@ export function TeamBuilder({
                   <StrategyCard
                     key={t.id}
                     {...t}
+                    rookie={rookies.has(t.id)}
                     label={
                       t.kind === 'draft' ? String(t.year ?? 'Class TBD') : 'Available to target'
                     }

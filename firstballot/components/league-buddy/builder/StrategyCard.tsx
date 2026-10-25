@@ -13,6 +13,7 @@ export function StrategyCard({
   action,
   onAction,
   outgoing = false,
+  rookie = false,
 }: {
   name: string
   position: string
@@ -22,6 +23,7 @@ export function StrategyCard({
   action: string
   onAction: () => void
   outgoing?: boolean
+  rookie?: boolean
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const [failedLogo, setFailedLogo] = useState<string | null>(null)
@@ -34,7 +36,7 @@ export function StrategyCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex min-h-[350px] flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${outgoing ? 'border-orange-300/40 saturate-50' : 'border-white/20 hover:border-white/40'}`}
+      className={`group/card relative isolate flex min-h-[350px] flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -53,6 +55,7 @@ export function StrategyCard({
         style={{ color: color.ink, borderColor: `${color.ink}55`, backgroundColor: color.wash }}
       >
         {position}
+        {rookie && <span className="ml-2 border-l border-white/20 pl-2 text-lime-300">Rookie</span>}
       </span>
       <div className="relative h-48 shrink-0">
         {logo && failedLogo !== logo && (

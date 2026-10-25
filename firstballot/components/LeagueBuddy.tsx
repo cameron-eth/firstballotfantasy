@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Users, AlertCircle, TrendingUp, Target } from 'lucide-react'
+import { Users, AlertCircle, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
@@ -22,8 +22,8 @@ import { LEAGUE_SECTIONS, resolveLeagueSection } from './league-buddy/navigation
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { LeagueOverviewSection } from './league-buddy/LeagueOverviewSection'
 import { RosterSection } from './league-buddy/RosterSection'
-import { MatchupView } from './league-buddy/MatchupView'
-import { PositionRankings } from './league-buddy/PositionRankings'
+import { StandingsPlayoffs } from './league-buddy/StandingsPlayoffs'
+import { DraftOrderPanel } from './league-buddy/draft-order/DraftOrderPanel'
 import { LeagueStandingsSection } from './league-buddy/LeagueStandingsSection'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
@@ -147,8 +147,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   }, [router, leagueId])
 
   const handlePlayoffOddsClick = useCallback(() => {
-    router.push(`/playoff-odds?leagueId=${leagueId}`)
-  }, [router, leagueId])
+    changeSection('league')
+  }, [changeSection])
 
   const { rankings: powerRankings, scores: powerScores } = usePowerRankings(
     teams,
@@ -429,94 +429,25 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         />
       )}
 
-      {/* LEAGUE SECTION - Matchup Details (or off-season standings) */}
       {activeSection === 'league' && selectedTeam && (
-        <>
-          <div className="space-y-4">
-            {isOffSeason() ? (
-              <>
-                {/* Off-season: skip matchup view, show standings + rankings */}
-                <LeagueStandingsSection
-                  teams={teams}
-                  selectedTeam={selectedTeam}
-                  leaguePositionRankings={leaguePositionRankings}
-                  placements={leaguePlacements}
-                  onTeamSelect={handleTeamSelect}
-                />
-                <PositionRankings
-                  teams={teams}
-                  selectedTeam={selectedTeam}
-                  leaguePositionRankings={leaguePositionRankings}
-                  placements={leaguePlacements}
-                  onTeamSelect={handleTeamSelect}
-                />
-              </>
-            ) : (
-              (() => {
-                // Find current matchup for this team
-                const teamMatchup = currentMatchups.find(
-                  (m) => m.rosterId === selectedTeam.rosterId
-                )
-
-                if (!teamMatchup) {
-                  return (
-                    <Card className="bg-slate-700 border-slate-600">
-                      <CardContent className="p-12 text-center">
-                        <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-                        <p className="text-slate-400 mb-2">No matchup available</p>
-                        <p className="text-sm text-slate-500">
-                          {currentWeek === 1
-                            ? "Season hasn't started yet"
-                            : 'Matchup data will appear once the week begins'}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )
-                }
-
-                const opponent = teams.find((t) => t.rosterId === teamMatchup.opponentRosterId)
-
-                if (!opponent) {
-                  return (
-                    <Card className="bg-slate-700 border-slate-600">
-                      <CardContent className="p-12 text-center">
-                        <Target className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-                        <p className="text-slate-400">Opponent data not available</p>
-                      </CardContent>
-                    </Card>
-                  )
-                }
-
-                return (
-                  <>
-                    <MatchupView
-                      selectedTeam={selectedTeam}
-                      opponent={opponent}
-                      teamMatchup={teamMatchup}
-                      currentWeek={currentWeek}
-                      leaguePositionRankings={leaguePositionRankings}
-                      sortedTeams={sortedTeams}
-                    />
-                    <LeagueStandingsSection
-                      teams={teams}
-                      selectedTeam={selectedTeam}
-                      leaguePositionRankings={leaguePositionRankings}
-                      placements={leaguePlacements}
-                      onTeamSelect={handleTeamSelect}
-                    />
-                    <PositionRankings
-                      teams={teams}
-                      selectedTeam={selectedTeam}
-                      leaguePositionRankings={leaguePositionRankings}
-                      placements={leaguePlacements}
-                      onTeamSelect={handleTeamSelect}
-                    />
-                  </>
-                )
-              })()
-            )}
-          </div>
-        </>
+        <div className="space-y-6">
+          <LeagueStandingsSection
+            teams={teams}
+            selectedTeam={selectedTeam}
+            leaguePositionRankings={leaguePositionRankings}
+            placements={leaguePlacements}
+            onTeamSelect={handleTeamSelect}
+          />
+          {leagueOverview?.isDynasty && (
+            <DraftOrderPanel
+              {...draftOrder}
+              teams={teams}
+              selectedRosterId={selectedTeam.rosterId}
+              initialMetric="maxpf"
+            />
+          )}
+          <StandingsPlayoffs leagueId={leagueId} teams={sortedTeams} />
+        </div>
       )}
 
       {/* AUDIT SECTION */}

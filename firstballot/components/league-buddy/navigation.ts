@@ -14,7 +14,7 @@ export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: Target },
   { id: 'roster', label: 'My Team', shortLabel: 'Team', icon: Users },
   { id: 'builder', label: 'Team Builder', shortLabel: 'Builder', icon: Users },
-  { id: 'league', label: 'League', shortLabel: 'League', icon: Trophy },
+  { id: 'league', label: 'Standings', shortLabel: 'Standings', icon: Trophy },
   { id: 'audit', label: 'Audit', shortLabel: 'Audit', icon: ClipboardList },
 ]
 

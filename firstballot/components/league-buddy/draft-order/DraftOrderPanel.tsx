@@ -28,6 +28,7 @@ interface DraftOrderPanelProps {
   /** The season these totals cover, shown so the board can't be read as last year's. */
   season: string
   loading: boolean
+  initialMetric?: DraftOrderMetric
   selectedRosterId: number
 }
 
@@ -91,9 +92,10 @@ export function DraftOrderPanel({
   remainingWeeks,
   season,
   loading,
+  initialMetric = 'record',
   selectedRosterId,
 }: DraftOrderPanelProps) {
-  const [metric, setMetric] = useState<DraftOrderMetric>('record')
+  const [metric, setMetric] = useState<DraftOrderMetric>(initialMetric)
 
   const rows = useMemo(
     () => buildDraftOrder(teams, maxPointsFor, projectedMaxPointsFor, metric),

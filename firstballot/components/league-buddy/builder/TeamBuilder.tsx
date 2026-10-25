@@ -10,13 +10,8 @@ import { StrategyCard } from './StrategyCard'
 import { RosterCardStack } from './RosterCardStack'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
 import type { TeamPlacement } from '../competitiveState'
-import { useBoardFit, BoardFitControls, BoardFitStack } from './BoardFit'
-import {
-  useTeamTimeline,
-  TeamTimeline,
-  DraftFitNote,
-  type TimelineDraftOrder,
-} from './TeamTimeline'
+import { useBoardFit, BoardFitStack } from './BoardFit'
+import { useTeamTimeline, DraftFitNote, type TimelineDraftOrder } from './TeamTimeline'
 import { useCanvasZoom } from './useCanvasZoom'
 
 const fresh = (): Scenario => ({
@@ -64,7 +59,7 @@ export function TeamBuilder({
   const [source, setSource] = useState<'trade' | 'draft'>('trade')
   const [position, setPosition] = useState('ALL')
   const [year, setYear] = useState('ALL')
-  const { viewportRef, zoom, setZoom } = useCanvasZoom()
+  const { viewportRef, zoom } = useCanvasZoom()
   const endpoint = `/api/team-scenarios?league=${leagueId}&roster=${team.rosterId}`
   const {
     data: prospects = [],
@@ -212,155 +207,110 @@ export function TeamBuilder({
     })
   }
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Team Builder</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Map the team you want to build. Plans are what-if scenarios. Trade targets open a
-            separate offer review.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <select
-            aria-label="Saved scenario"
-            className={input}
-            value={active}
-            disabled={busy}
-            onChange={(e) => setActive(e.target.value)}
-          >
-            {scenarios.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <button
-            className={button}
-            disabled={scenarios.length >= 12 || busy}
-            onClick={() => {
-              const copy = {
-                ...scenario,
-                id: crypto.randomUUID(),
-                name: `Plan ${scenarios.length + 1}`,
-              }
-              setScenarios([...scenarios, copy])
-              setActive(copy.id)
-              setDirty(true)
-            }}
-          >
-            Duplicate plan
-          </button>
-          <button
-            disabled={!user || busy || !dirty}
-            onClick={save}
-            className={`${button} border-blue-400/40 bg-blue-400/10 text-blue-200`}
-          >
-            {busy ? 'Saving…' : 'Save plans'}
-          </button>
-        </div>
-      </div>
-      <p role="status" className="text-xs text-slate-400">
-        {message ||
-          (!user
-            ? 'Sign in to save. This preview lasts until you leave the page.'
-            : dirty
-              ? 'Unsaved changes · save to keep this plan across visits.'
-              : 'Saved plans are private to your account and scoped to this league and team.')}
-      </p>
-      <fieldset disabled={busy} className="space-y-5 min-w-0">
-        <div className="flex flex-wrap gap-3">
-          <label className="w-full text-xs text-slate-400 sm:w-auto sm:flex-1">
-            Scenario name
-            <input
-              maxLength={80}
-              className={`${input} mt-1 w-full`}
-              value={scenario.name}
-              onChange={(e) => update({ name: e.target.value })}
-            />
-          </label>
-          <label className="w-full text-xs text-slate-400 sm:w-auto sm:flex-[2]">
-            Strategy notes
-            <input
-              maxLength={2000}
-              className={`${input} mt-1 w-full`}
-              placeholder="Win now, add young receivers, draft a quarterback…"
-              value={scenario.notes}
-              onChange={(e) => update({ notes: e.target.value })}
-            />
-          </label>
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         {isDynasty && (
-          <TeamTimeline
-            timeline={timeline}
-            team={team}
-            teams={teams}
-            scenario={scenario}
-            onYear={(horizon) => {
+          <select
+            aria-label="Roster year"
+            className={input}
+            value={timeline.horizon}
+            disabled={busy}
+            onChange={(e) => {
+              const horizon = Number(e.target.value)
               update({ horizon })
               setYear(horizon > timeline.baseYear ? String(horizon) : 'ALL')
             }}
-          />
+          >
+            {[0, 1, 2, 3].map((offset) => (
+              <option key={offset} value={timeline.baseYear + offset}>
+                {offset === 0 ? 'Now' : `${timeline.baseYear + offset} · +${offset}y`}
+              </option>
+            ))}
+          </select>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-white/10 py-3 text-sm">
-          <div className="flex flex-wrap gap-5 text-slate-300">
-            <span>
-              {team.players.length -
-                view.outgoing.filter((id) => team.players.some((p) => p.playerId === id))
-                  .length}{' '}
-              retained
-            </span>
-            <span className="text-blue-300">
-              +{view.targets.filter((t) => t.kind === 'trade').length} trade targets
-            </span>
-            {isDynasty && (
-              <span className="text-purple-300">
-                +{view.targets.filter((t) => t.kind === 'draft').length} draft targets
-              </span>
-            )}
-            <span className="text-orange-300">
-              {view.outgoing.filter((id) => team.players.some((p) => p.playerId === id)).length}{' '}
-              outgoing
-            </span>
+        <details className="relative ml-auto">
+          <summary className={`${button} cursor-pointer`}>Plans{dirty ? ' •' : ''}</summary>
+          <div className="absolute right-0 z-20 mt-2 w-[min(28rem,85vw)] space-y-3 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-xl">
+            {!user && <p className="text-xs text-slate-400">Sign in to save this plan.</p>}
+            <div className="flex flex-wrap gap-2">
+              <select
+                aria-label="Saved scenario"
+                className={input}
+                value={active}
+                disabled={busy}
+                onChange={(e) => setActive(e.target.value)}
+              >
+                {scenarios.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                className={button}
+                disabled={scenarios.length >= 12 || busy}
+                onClick={() => {
+                  const copy = {
+                    ...scenario,
+                    id: crypto.randomUUID(),
+                    name: `Plan ${scenarios.length + 1}`,
+                  }
+                  setScenarios([...scenarios, copy])
+                  setActive(copy.id)
+                  setDirty(true)
+                }}
+              >
+                Duplicate plan
+              </button>
+              <button
+                disabled={!user || busy || !dirty}
+                onClick={save}
+                className={`${button} border-blue-400/40 bg-blue-400/10 text-blue-200`}
+              >
+                {busy ? 'Saving…' : 'Save plans'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <label className="w-full text-xs text-slate-400 sm:w-auto sm:flex-1">
+                Scenario name
+                <input
+                  maxLength={80}
+                  className={`${input} mt-1 w-full`}
+                  value={scenario.name}
+                  onChange={(e) => update({ name: e.target.value })}
+                />
+              </label>
+              <label className="w-full text-xs text-slate-400 sm:w-auto sm:flex-[2]">
+                Strategy notes
+                <input
+                  maxLength={2000}
+                  className={`${input} mt-1 w-full`}
+                  placeholder="Win now, add young receivers, draft a quarterback…"
+                  value={scenario.notes}
+                  onChange={(e) => update({ notes: e.target.value })}
+                />
+              </label>
+            </div>
           </div>
-          <label className="flex items-center gap-2 text-xs text-slate-400">
-            Map zoom{' '}
-            <select
-              aria-label="Map zoom"
-              className={input}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-            >
-              {![50, 80, 100, 120, 150].includes(zoom) && <option value={zoom}>{zoom}%</option>}
-              <option value={50}>50%</option>
-              <option value={80}>80%</option>
-              <option value={100}>100%</option>
-              <option value={120}>120%</option>
-              <option value={150}>150%</option>
-            </select>
-          </label>
-        </div>
-        {isDynasty && (
-          <BoardFitControls
-            board={board}
-            loading={prospectsLoading}
-            failed={Boolean(prospectError)}
-            retry={() => {
-              void board.refresh()
-              void mutate()
-            }}
-          />
-        )}
-        <p id="map-gesture-hint" className="text-xs text-slate-500">
-          Pinch to zoom · scroll to explore · Ctrl + wheel also zooms
+        </details>
+      </div>
+      {message && (
+        <p role="status" className="text-xs text-slate-400">
+          {message}
         </p>
+      )}
+      {board.error && (
+        <button className="text-xs text-red-300" onClick={() => board.refresh()}>
+          Saved board unavailable · Retry
+        </button>
+      )}
+      <fieldset disabled={busy} className="space-y-3 min-w-0">
         <div
           role="region"
           ref={viewportRef}
           aria-label="Team strategy map"
-          aria-describedby="map-gesture-hint"
           tabIndex={0}
-          className="max-h-[70vh] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 focus-visible:outline focus-visible:outline-blue-400"
+          className="h-[calc(100dvh-260px)] min-h-[520px] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 focus-visible:outline focus-visible:outline-blue-400"
           style={{
             touchAction: 'pan-x pan-y',
             backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)',

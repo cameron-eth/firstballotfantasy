@@ -17,10 +17,10 @@ import {
 } from '@/components/scouting'
 import type { Prospect } from '@/components/scouting/types'
 import { useDraftboard } from '@/hooks/use-draftboard'
+import { boardsToProspects, yearsToSave } from '@/lib/draftboard-classes'
 import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
-import { ProspectFreshness } from './ProspectFreshness'
 import { sortProspectsForBrowse } from './sortProspectsForBrowse'
 
 interface RosterPlayer {
@@ -151,7 +151,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const [noteSaveError, setNoteSaveError] = useState<string | null>(null)
   const [noteSaveStatus, setNoteSaveStatus] = useState<string | null>(null)
   const { user } = useAuth()
-  const { data: savedNotes, error: notesFetchError, mutate: refreshNotes } = useSWR<{ notes: { prospect_id: number; notes: string }[] }>(
+  const { data: savedNotes, error: notesFetchError, mutate: refreshNotes } = useSWR<{ notes: { prospect_id: number; notes: string }[]; available?: boolean }>(
     user ? `/api/scouting-notes?account=${encodeURIComponent(user.id)}` : null,
     async (url: string) => {
       const response = await fetch(url)
@@ -242,8 +242,13 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   } | null>(null)
 
   // Draftboard persistence
-  const { savedBoard, saving: savingBoard, saveBoard } = useDraftboard()
+  const { savedBoards, loading: boardsLoading, saving: savingBoard, error: boardError, saveBoard } = useDraftboard()
+  const boardYears = useMemo(() => [...new Set(prospects.filter((p) => (p.draft_year ?? 0) >= 2027).map((p) => p.draft_year as number))].sort(), [prospects])
+  const [selectedBoardYear, setSelectedBoardYear] = useState<number | null>(null)
+  const activeBoardYear = selectedBoardYear && boardYears.includes(selectedBoardYear) ? selectedBoardYear : boardYears[0] ?? 2027
+  const savedBoard = savedBoards.find((board) => board.draft_year === activeBoardYear)
   const [initialBoardLoaded, setInitialBoardLoaded] = useState(false)
+  useEffect(() => { setInitialBoardLoaded(false); setDraftBoard([]) }, [user?.id])
 
   // The user's own film/talent grades. Saved per cell as they are entered,
   // separate from the board's explicit Save button.
@@ -257,13 +262,13 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   // Derived — no useEffect needed; recomputes whenever draftBoard or savedBoard changes
   const hasUnsavedChanges = useMemo(() => {
     if (!initialBoardLoaded) return false
-    const currentIds = draftBoard.map((p) => p.id)
+    const currentIds = draftBoard.filter((p) => p.draft_year === activeBoardYear).map((p) => p.id)
     const savedIds = savedBoard?.prospect_ids ?? []
     return (
       currentIds.length !== savedIds.length ||
       currentIds.some((id, idx) => id !== savedIds[idx])
     )
-  }, [draftBoard, savedBoard, initialBoardLoaded])
+  }, [draftBoard, savedBoard, initialBoardLoaded, activeBoardYear])
 
   // Memoized expensive computations
   const positionNeeds = useMemo(() => {
@@ -655,7 +660,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prospect_id: id, notes }),
       })
-      if (!response.ok) throw new Error('Could not save note. Please try again.')
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Could not save note. Please try again.')
       setSelectedProspect((prev) => (prev?.id === id ? { ...prev, notes } : prev))
       await refreshNotes()
       setNoteSaveStatus('Saved to your account')
@@ -669,6 +674,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     if (!prospect?.id) {
       return
     }
+    if (prospect.draft_year && prospect.draft_year >= 2027) setSelectedBoardYear(prospect.draft_year)
     setDraftBoard((prev) => {
       // Check if already on board - use strict comparison
       const existingIndex = prev.findIndex((p) => p.id === prospect.id)
@@ -733,34 +739,26 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     [draggedBoardProspect]
   )
 
-  const handleClearDraftBoard = useCallback(() => {
-    setDraftBoard([])
-  }, [])
-
   // Save draft board to database
   const handleSaveBoard = useCallback(async () => {
-    const prospectIds = draftBoard.map((p) => p.id)
-    await saveBoard(prospectIds)
-  }, [draftBoard, saveBoard])
-
-  // Load saved board when prospects are available
-  useEffect(() => {
-    if (savedBoard && prospects.length > 0 && !initialBoardLoaded) {
-      // Find prospects by their IDs and preserve order
-      const loadedProspects: Prospect[] = []
-      savedBoard.prospect_ids.forEach((id) => {
-        const numericId = Number(id)
-        const prospect = prospects.find((p) => Number(p.id) === numericId)
-        if (prospect) {
-          loadedProspects.push(prospect)
-        }
-      })
-      if (loadedProspects.length > 0) {
-        setDraftBoard(loadedProspects)
+    // Save later classes before replacing a legacy mixed-class board.
+    const classes = yearsToSave(savedBoards, prospects, boardYears, activeBoardYear)
+    for (const year of classes) {
+      const ids = draftBoard.filter((p) => p.draft_year === year).map((p) => p.id)
+      if (ids.length > 0 || savedBoards.some((board) => board.draft_year === year)) {
+        const result = await saveBoard(year, ids)
+        if (!result) return false
       }
-      setInitialBoardLoaded(true)
     }
-  }, [savedBoard, prospects, initialBoardLoaded])
+    return true
+  }, [draftBoard, saveBoard, activeBoardYear, savedBoards, prospects, boardYears])
+
+  useEffect(() => {
+    if (boardsLoading || prospects.length === 0 || initialBoardLoaded) return
+    const loadedProspects = boardsToProspects(savedBoards, prospects)
+    if (loadedProspects.length > 0) setDraftBoard(loadedProspects)
+    setInitialBoardLoaded(true)
+  }, [savedBoards, prospects, initialBoardLoaded, boardsLoading])
 
   // `overflow-x-clip` rather than `-hidden` below: hidden turns these wrappers
   // into scroll containers, which makes the app header and the in-page filter
@@ -771,15 +769,16 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
       <main className="w-full px-3 py-3 md:px-4 md:py-4 overflow-x-clip max-md:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
         <div className="max-w-[1800px] mx-auto">
-          <ProspectFreshness prospects={rawProspects} />
           {prospectsError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {prospectsError}
             </div>
           )}
           {rosterError && <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">Team needs could not load. Prospect scouting is still available.</div>}
+          {boardError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">Draft board: {boardError}</div>}
           {noteSaveError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{noteSaveError}</div>}
           {notesFetchError && <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">Saved scouting notes could not be loaded.</div>}
+          {savedNotes?.available === false && <div role="status" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">Personal scouting notes are temporarily unavailable. Your draft boards and grades still work.</div>}
           <Tabs
             value={activeTab}
             onValueChange={(value) => changeTab(resolveTab(value))}
@@ -853,6 +852,8 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 setPositionFilter={setPositionFilter}
                 allProspects={prospects}
                 draftBoard={draftBoard}
+                selectedYear={activeBoardYear}
+                onSelectYear={setSelectedBoardYear}
                 onAddToDraftBoard={handleAddToDraftBoard}
                 onRemoveFromDraftBoard={handleRemoveFromDraftBoard}
                 onShowComps={handleShowComps}
@@ -860,7 +861,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 onBoardDragStart={handleBoardDragStart}
                 onBoardDragOver={handleBoardDragOver}
                 onBoardDrop={handleBoardDrop}
-                onClearDraftBoard={handleClearDraftBoard}
                 // Persistence props
                 hasSavedBoard={!!savedBoard}
                 savingBoard={savingBoard}
@@ -886,6 +886,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
             isLoggedIn={Boolean(user)}
             noteSaveStatus={noteSaveStatus}
             noteSaveError={noteSaveError}
+            notesAvailable={savedNotes?.available !== false}
             positionNeeds={positionNeeds}
             onClose={handleCloseModal}
             onAddToDraftBoard={() => {

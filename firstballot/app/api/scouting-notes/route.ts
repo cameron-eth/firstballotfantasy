@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     .from('user_prospect_notes')
     .select('prospect_id, notes, updated_at')
     .eq('user_id', identity.userId)
+  if (error?.code === '42P01' || error?.code === 'PGRST205') return NextResponse.json({ notes: [], available: false }, { headers: { 'Cache-Control': 'private, no-store' } })
   if (error) return NextResponse.json({ error: 'Could not load notes' }, { status: 500 })
   return NextResponse.json({ notes: data ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
@@ -32,10 +33,12 @@ export async function PUT(request: NextRequest) {
   const client = createAuthenticatedSupabaseClient(identity.jwt)
   if (!notes.trim()) {
     const { error } = await client.from('user_prospect_notes').delete().eq('user_id', identity.userId).eq('prospect_id', prospectId)
-    if (error) return NextResponse.json({ error: 'Could not clear note' }, { status: 500 })
+    if (error?.code === '42P01' || error?.code === 'PGRST205') return NextResponse.json({ error: 'Scouting notes are temporarily unavailable' }, { status: 503 })
+  if (error) return NextResponse.json({ error: 'Could not clear note' }, { status: 500 })
     return NextResponse.json({ prospect_id: prospectId, notes: '' })
   }
   const { data, error } = await client.from('user_prospect_notes').upsert({ user_id: identity.userId, prospect_id: prospectId, notes, updated_at: new Date().toISOString() }, { onConflict: 'user_id,prospect_id' }).select('prospect_id, notes, updated_at').single()
+  if (error?.code === '42P01' || error?.code === 'PGRST205') return NextResponse.json({ error: 'Scouting notes are temporarily unavailable' }, { status: 503 })
   if (error) return NextResponse.json({ error: 'Could not save note' }, { status: 500 })
   return NextResponse.json(data)
 }

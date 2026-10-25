@@ -8,7 +8,7 @@ interface DraftBoardControlsProps {
   hasSavedBoard: boolean
   saving: boolean
   hasChanges: boolean
-  onSave: () => Promise<void>
+  onSave: () => Promise<boolean>
 }
 
 export function DraftBoardControls({
@@ -20,9 +20,10 @@ export function DraftBoardControls({
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   const handleSave = async () => {
-    await onSave()
-    setSaveSuccess(true)
-    setTimeout(() => setSaveSuccess(false), 2000)
+    if (await onSave()) {
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
+    }
   }
 
   // Reset success state when changes are made
@@ -48,7 +49,7 @@ export function DraftBoardControls({
                 ? 'Save changes'
                 : 'Save board'
         }
-        className={`h-10 w-10 min-h-10 min-w-10 p-0 sm:h-7 sm:w-auto sm:min-h-0 sm:min-w-0 sm:px-2.5 text-[11px] transition-all ${
+        className={`h-9 min-h-9 gap-2 px-3 text-[11px] transition-all ${
           saveSuccess
             ? 'bg-green-600 hover:bg-green-700'
             : hasChanges
@@ -63,7 +64,7 @@ export function DraftBoardControls({
         ) : (
           <Save className="h-4 w-4 sm:h-3 sm:w-3" />
         )}
-        <span className="sr-only">
+        <span className="text-xs">
           {saving
             ? 'Saving...'
             : saveSuccess

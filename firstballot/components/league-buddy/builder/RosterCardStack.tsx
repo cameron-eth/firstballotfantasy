@@ -10,12 +10,14 @@ export function RosterCardStack({
   outgoing,
   onToggle,
   onTrade,
+  ageOffset = 0,
 }: {
   players: PlayerData[]
   position: string
   outgoing: string[]
   onToggle: (id: string) => void
   onTrade?: (player: PlayerData) => void
+  ageOffset?: number
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const index = Math.max(
@@ -52,9 +54,15 @@ export function RosterCardStack({
             player.headshot_url ||
             `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`
           }
-          rookie={player.isRookie}
+          rookie={player.isRookie && ageOffset === 0}
           outgoing={leaving}
-          label={leaving ? 'Planned departure' : 'Current roster'}
+          label={
+            leaving
+              ? 'Planned departure'
+              : ageOffset > 0
+                ? `Retained · age ${player.age > 0 ? (player.age + ageOffset).toFixed(1) : 'unknown'}`
+                : 'Current roster'
+          }
           action={leaving ? 'Keep' : 'Move out'}
           onAction={() => onToggle(player.playerId)}
         />

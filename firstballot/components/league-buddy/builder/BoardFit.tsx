@@ -9,7 +9,7 @@ import type { Prospect } from '@/components/scouting/types'
 import type { Target } from '@/lib/team-scenarios'
 import { StrategyCard } from './StrategyCard'
 
-export function useBoardFit(enabled: boolean, prospects: Prospect[]) {
+export function useBoardFit(enabled: boolean, prospects: Prospect[], horizon?: number) {
   const { user } = useAuth()
   const [year, setYear] = useState('')
   const {
@@ -27,7 +27,7 @@ export function useBoardFit(enabled: boolean, prospects: Prospect[]) {
   )
   const players = boardsToProspects(data, prospects)
   const years = [...new Set(players.map((p) => String(p.draft_year)))].sort()
-  const activeYear = years.includes(year) ? year : (years[0] ?? '')
+  const activeYear = horizon ? String(horizon) : years.includes(year) ? year : (years[0] ?? '')
   return {
     user,
     error,
@@ -45,11 +45,13 @@ export function BoardFitControls({
   loading,
   failed,
   retry,
+  onYearChange,
 }: {
   board: ReturnType<typeof useBoardFit>
   loading: boolean
   failed: boolean
   retry: () => void
+  onYearChange?: (year: number) => void
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
@@ -69,9 +71,14 @@ export function BoardFitControls({
           <select
             aria-label="Board draft class"
             value={board.activeYear}
-            onChange={(e) => board.setYear(e.target.value)}
+            onChange={(e) =>
+              onYearChange ? onYearChange(Number(e.target.value)) : board.setYear(e.target.value)
+            }
             className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
           >
+            {!board.years.includes(board.activeYear) && (
+              <option value={board.activeYear}>{board.activeYear} · no saved prospects</option>
+            )}
             {board.years.map((year) => (
               <option key={year} value={year}>
                 {year} board

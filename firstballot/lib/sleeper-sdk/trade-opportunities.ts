@@ -25,8 +25,12 @@ export function tradeOpportunities(
         const from = value(player),
           to = value(target)
         const gap = from && to ? Math.abs(to - from) / Math.max(from, to) : null
-        const need = target.position !== player.position && count(mine, target.position) < median(target.position)
-        const partnerNeed = target.position !== player.position && count(team, player.position) < median(player.position)
+        const need =
+          target.position !== player.position &&
+          count(mine, target.position) < median(target.position)
+        const partnerNeed =
+          target.position !== player.position &&
+          count(team, player.position) < median(player.position)
         const reason =
           [
             need ? `Adds ${target.position} depth` : '',
@@ -45,4 +49,55 @@ export function tradeOpportunities(
       })
     )
     .sort((a, b) => b.score - a.score || a.target.playerName.localeCompare(b.target.playerName))
+}
+
+/** Concrete one-for-one offers: neither manager's positional depth balance worsens. */
+export function suggestedTeamTrades(mine: TeamData, teams: TeamData[], superflex: boolean) {
+  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const counts = (team: TeamData, pos: string) =>
+    team.players.filter((p) => p.position === pos).length
+  const median = (pos: string) => {
+    const list = teams.map((t) => counts(t, pos)).sort((a, b) => a - b)
+    const mid = Math.floor(list.length / 2)
+    return list.length % 2 ? list[mid] : (list[mid - 1] + list[mid]) / 2
+  }
+  const benefit = (team: TeamData, send: string, receive: string) => {
+    const s = counts(team, send) - median(send),
+      r = counts(team, receive) - median(receive)
+    return Math.abs(s) + Math.abs(r) - Math.abs(s - 1) - Math.abs(r + 1)
+  }
+  const matches = mine.players
+    .flatMap((give) =>
+      tradeOpportunities(give, mine, teams, superflex)
+        .filter((c) => {
+          const a = value(give),
+            b = value(c.target)
+          return (
+            a &&
+            b &&
+            Math.abs(a - b) / Math.max(a, b) <= 0.15 &&
+            give.position !== c.target.position &&
+            benefit(mine, give.position, c.target.position) >= 0 &&
+            benefit(c.team, c.target.position, give.position) >= 0
+          )
+        })
+        .map((c) => ({ ...c, give }))
+    )
+    .sort((a, b) => b.score - a.score)
+  const used = new Set<string>(),
+    partners = new Map<number, number>()
+  return matches
+    .filter((c) => {
+      if (
+        used.has(c.give.playerId) ||
+        used.has(c.target.playerId) ||
+        (partners.get(c.team.rosterId) ?? 0) >= 2
+      )
+        return false
+      used.add(c.give.playerId)
+      used.add(c.target.playerId)
+      partners.set(c.team.rosterId, (partners.get(c.team.rosterId) ?? 0) + 1)
+      return true
+    })
+    .slice(0, 4)
 }

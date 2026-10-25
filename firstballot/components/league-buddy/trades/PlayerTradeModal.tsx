@@ -22,20 +22,25 @@ export function PlayerTradeModal({
   teams,
   leagueId,
   onClose,
+  initialOffer,
 }: {
   player: PlayerData
   team: TeamData
   teams: TeamData[]
   leagueId: string
   onClose: () => void
+  initialOffer?: { partnerId: number; playerId: string }
 }) {
   const { user } = useAuth()
-  const [partner, setPartner] = useState<number | null>(null)
+  const [partner, setPartner] = useState<number | null>(initialOffer?.partnerId ?? null)
   const [give, setGive] = useState<OfferSide>({ ...emptySide(), players: [player.playerId] })
-  const [receive, setReceive] = useState<OfferSide>(emptySide)
+  const [receive, setReceive] = useState<OfferSide>(() => ({
+    ...emptySide(),
+    players: initialOffer ? [initialOffer.playerId] : [],
+  }))
   const [query, setQuery] = useState('')
   const [assetType, setAssetType] = useState('players')
-  const [review, setReview] = useState(false)
+  const [review, setReview] = useState(Boolean(initialOffer))
   const [busy, setBusy] = useState(false)
   const [attempted, setAttempted] = useState(false)
   const [message, setMessage] = useState('')
@@ -142,7 +147,9 @@ export function PlayerTradeModal({
     >
       <DialogContent className="max-h-[90vh] max-w-5xl sm:max-w-5xl overflow-y-auto border-slate-700 bg-slate-950 text-slate-200">
         <DialogHeader>
-          <DialogTitle>Trade opportunities · {player.playerName}</DialogTitle>
+          <DialogTitle>
+            {review ? 'Confirm suggested trade' : `Trade opportunities · ${player.playerName}`}
+          </DialogTitle>
           <DialogDescription>
             Explore players and owned picks, build an offer, then review before sending to Sleeper.
           </DialogDescription>
@@ -216,6 +223,7 @@ export function PlayerTradeModal({
                           className="flex w-full items-center gap-3 p-3 text-left hover:bg-slate-900"
                           onClick={() => {
                             setPartner(owner.rosterId)
+                            setReview(true)
                             setReceive({ ...emptySide(), players: [target.playerId] })
                           }}
                         >
@@ -253,6 +261,7 @@ export function PlayerTradeModal({
                           className="block w-full p-3 text-left hover:bg-slate-900"
                           onClick={() => {
                             setPartner(p.owner_id)
+                            setReview(true)
                             setReceive({ ...emptySide(), picks: [p.id] })
                           }}
                         >
@@ -285,28 +294,30 @@ export function PlayerTradeModal({
                         Other opportunities
                       </button>
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <TradeAssetList
-                        label="You send"
-                        team={team}
-                        teams={teams}
-                        picks={inventory.picks}
-                        budget={inventory.faab[team.rosterId] ?? null}
-                        side={give}
-                        onChange={setGive}
-                        disabled={review || busy || attempted}
-                      />
-                      <TradeAssetList
-                        label="You receive"
-                        team={other}
-                        teams={teams}
-                        picks={inventory.picks}
-                        budget={inventory.faab[other.rosterId] ?? null}
-                        side={receive}
-                        onChange={setReceive}
-                        disabled={review || busy || attempted}
-                      />
-                    </div>
+                    {!review && (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <TradeAssetList
+                          label="You send"
+                          team={team}
+                          teams={teams}
+                          picks={inventory.picks}
+                          budget={inventory.faab[team.rosterId] ?? null}
+                          side={give}
+                          onChange={setGive}
+                          disabled={review || busy || attempted}
+                        />
+                        <TradeAssetList
+                          label="You receive"
+                          team={other}
+                          teams={teams}
+                          picks={inventory.picks}
+                          budget={inventory.faab[other.rosterId] ?? null}
+                          side={receive}
+                          onChange={setReceive}
+                          disabled={review || busy || attempted}
+                        />
+                      </div>
+                    )}
                     {review && (
                       <div className="space-y-2 rounded-lg border border-blue-400/30 bg-blue-400/5 p-4 text-sm">
                         <p>
@@ -352,11 +363,11 @@ export function PlayerTradeModal({
                             disabled={busy || attempted}
                             onClick={() => setReview(false)}
                           >
-                            Edit offer
+                            Customize offer
                           </button>
                           <button
                             className="rounded-lg bg-blue-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-40"
-                            disabled={!canSend || busy || attempted}
+                            disabled={!canSend || !canReview || busy || attempted}
                             onClick={submit}
                           >
                             {busy ? 'Sending…' : success ? 'Offer sent' : 'Confirm and send trade'}

@@ -38,3 +38,14 @@ test('opportunities respect format values and exclude own roster',()=>{
  assert.equal(tradeOpportunities(p,mine,teams,false)[0].target.playerId,'3')
  assert.equal(tradeOpportunities(p,mine,teams,true).length,2)
 })
+test('suggested offers improve our depth without worsening partner balance and avoid duplicated assets',async()=>{
+ const {suggestedTeamTrades}=await import('../lib/sleeper-sdk/trade-opportunities.ts')
+ const p=(id,pos)=>({playerId:id,playerName:id,position:pos,ktcValueSf:3000})
+ const mine={rosterId:1,players:[p('a','WR'),p('b','WR'),p('c','WR'),p('d','RB')]}
+ const other={rosterId:2,players:[p('e','RB'),p('f','RB'),p('g','RB'),p('h','WR')]}
+ const matches=suggestedTeamTrades(mine,[mine,other],true)
+ assert.ok(matches.length>0)
+ assert.ok(matches.every(m=>m.give.position==='WR'&&m.target.position==='RB'))
+ assert.equal(new Set(matches.map(m=>m.give.playerId)).size,matches.length)
+ assert.deepEqual(suggestedTeamTrades(mine,[mine,{...other,players:mine.players.map(p=>({...p,playerId:p.playerId+'2'}))}],true),[])
+})

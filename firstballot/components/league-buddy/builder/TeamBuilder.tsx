@@ -11,6 +11,12 @@ import { RosterCardStack } from './RosterCardStack'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
 import type { TeamPlacement } from '../competitiveState'
 import { useBoardFit, BoardFitControls, BoardFitStack } from './BoardFit'
+import {
+  useTeamTimeline,
+  TeamTimeline,
+  DraftFitNote,
+  type TimelineDraftOrder,
+} from './TeamTimeline'
 import { useCanvasZoom } from './useCanvasZoom'
 
 const fresh = (): Scenario => ({
@@ -36,12 +42,14 @@ export function TeamBuilder({
   leagueId,
   isDynasty,
   placement,
+  draftOrder,
 }: {
   team: TeamData
   teams: TeamData[]
   leagueId: string
   isDynasty: boolean
   placement?: TeamPlacement
+  draftOrder?: TimelineDraftOrder
 }) {
   const { user, loading: authLoading } = useAuth()
   const [tradePlayer, setTradePlayer] = useState<PlayerData | null>(null)
@@ -64,7 +72,6 @@ export function TeamBuilder({
     isLoading: prospectsLoading,
     mutate,
   } = useSWR(isDynasty ? '/api/prospects?draft_year=all' : null, fetchProspects)
-  const board = useBoardFit(isDynasty, prospects)
   const accountKey = `${user?.id ?? 'guest'}:${endpoint}`
   const {
     data: saved,
@@ -101,6 +108,17 @@ export function TeamBuilder({
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
   const scenario = scenarios.find((s) => s.id === active)
+  const timeline = useTeamTimeline({
+    enabled: isDynasty,
+    leagueId,
+    team,
+    teams,
+    scenario,
+    prospects,
+    draftOrder,
+  })
+  const board = useBoardFit(isDynasty, prospects, timeline.horizon)
+  const view = timeline.view ?? scenario
   const update = (patch: Partial<Scenario>) => {
     setScenarios((all) => all.map((s) => (s.id === active ? { ...s, ...patch } : s)))
     setDirty(true)
@@ -183,11 +201,15 @@ export function TeamBuilder({
         </button>
       </div>
     )
-  if (!ready || loadedKey !== accountKey || !scenario)
+  if (!ready || loadedKey !== accountKey || !scenario || !view)
     return <p className="py-10 text-slate-400">Loading team plans…</p>
   const add = (target: Target) => {
-    if (scenario.targets.length < 100 && !scenario.targets.some((t) => t.id === target.id))
-      update({ targets: [...scenario.targets, target] })
+    if (scenario.targets.length >= 100 || scenario.targets.some((t) => t.id === target.id)) return
+    const arrival = target.kind === 'draft' ? (target.year ?? timeline.horizon) : timeline.horizon
+    update({
+      targets: [...scenario.targets, { ...target, arrivalYear: arrival }],
+      horizon: Math.max(timeline.horizon, arrival),
+    })
   }
   return (
     <div className="space-y-5">
@@ -268,24 +290,36 @@ export function TeamBuilder({
             />
           </label>
         </div>
+        {isDynasty && (
+          <TeamTimeline
+            timeline={timeline}
+            team={team}
+            teams={teams}
+            scenario={scenario}
+            onYear={(horizon) => {
+              update({ horizon })
+              setYear(horizon > timeline.baseYear ? String(horizon) : 'ALL')
+            }}
+          />
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-y border-white/10 py-3 text-sm">
           <div className="flex flex-wrap gap-5 text-slate-300">
             <span>
               {team.players.length -
-                scenario.outgoing.filter((id) => team.players.some((p) => p.playerId === id))
+                view.outgoing.filter((id) => team.players.some((p) => p.playerId === id))
                   .length}{' '}
               retained
             </span>
             <span className="text-blue-300">
-              +{scenario.targets.filter((t) => t.kind === 'trade').length} trade targets
+              +{view.targets.filter((t) => t.kind === 'trade').length} trade targets
             </span>
             {isDynasty && (
               <span className="text-purple-300">
-                +{scenario.targets.filter((t) => t.kind === 'draft').length} draft targets
+                +{view.targets.filter((t) => t.kind === 'draft').length} draft targets
               </span>
             )}
             <span className="text-orange-300">
-              {scenario.outgoing.filter((id) => team.players.some((p) => p.playerId === id)).length}{' '}
+              {view.outgoing.filter((id) => team.players.some((p) => p.playerId === id)).length}{' '}
               outgoing
             </span>
           </div>
@@ -350,27 +384,39 @@ export function TeamBuilder({
                       <span className="text-xs text-slate-400">
                         {current.length} now →{' '}
                         <strong className="text-blue-300">
-                          {plannedPositionCount(pos, team.players, scenario)} planned
+                          {plannedPositionCount(pos, team.players, view)} planned
                         </strong>
                       </span>
                     </header>
-                    {scenario.targets
+                    {view.targets
                       .filter((t) => t.position === pos)
                       .map((t) => (
-                        <StrategyCard
-                          key={t.id}
-                          {...t}
-                          rookie={rookies.has(t.id)}
-                          label={
-                            t.kind === 'draft'
-                              ? `Draft target · ${t.year ?? 'Class TBD'}`
-                              : 'Trade target'
-                          }
-                          action="Remove"
-                          onAction={() =>
-                            update({ targets: scenario.targets.filter((p) => p.id !== t.id) })
-                          }
-                        />
+                        <div key={t.id} className="space-y-2">
+                          <StrategyCard
+                            {...t}
+                            rookie={
+                              t.kind === 'draft'
+                                ? t.year === timeline.horizon
+                                : rookies.has(t.id) && timeline.horizon === timeline.baseYear
+                            }
+                            label={
+                              t.kind === 'draft'
+                                ? `Planned arrival · ${t.year ?? 'Class TBD'}`
+                                : `Trade target · ${t.arrivalYear ?? timeline.baseYear}`
+                            }
+                            action="Remove"
+                            onAction={() =>
+                              update({ targets: scenario.targets.filter((p) => p.id !== t.id) })
+                            }
+                          />
+                          {t.kind === 'draft' && (
+                            <DraftFitNote
+                              fit={timeline.fits.find((f) => f.targetId === t.id)}
+                              year={t.year}
+                              baseYear={timeline.baseYear}
+                            />
+                          )}
+                        </div>
                       ))}
                     <button
                       className="w-full rounded-lg border border-dashed border-slate-600 p-3 text-xs text-blue-300 hover:bg-slate-800"
@@ -385,12 +431,14 @@ export function TeamBuilder({
                       players={current}
                       onTrade={setTradePlayer}
                       position={pos}
-                      outgoing={scenario.outgoing}
+                      outgoing={view.outgoing}
+                      ageOffset={Math.max(0, timeline.horizon - timeline.baseYear)}
                       onToggle={(id) =>
                         update({
-                          outgoing: scenario.outgoing.includes(id)
+                          outgoing: view.outgoing.includes(id)
                             ? scenario.outgoing.filter((value) => value !== id)
-                            : [...scenario.outgoing, id],
+                            : [...new Set([...scenario.outgoing, id])],
+                          departureYears: { ...scenario.departureYears, [id]: timeline.horizon },
                         })
                       }
                     />

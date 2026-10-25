@@ -30,6 +30,7 @@ export function SleeperActions({
   const [token, setToken] = useState('')
   const [connected, setConnected] = useState<SleeperConnection | null>(null)
   const [open, setOpen] = useState(false)
+  const [restoring, setRestoring] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [mode, setMode] = useState<'trade' | 'lineup' | null>(null)
@@ -87,7 +88,11 @@ export function SleeperActions({
     onConnect(null)
     setToken('')
     setMode(null)
-    if (!user) return
+    if (!user) {
+      setRestoring(false)
+      return
+    }
+    setRestoring(true)
     let active = true
     request('restore')
       .then((result) => {
@@ -97,6 +102,9 @@ export function SleeperActions({
       })
       .catch((e) => {
         if (active) setMessage(e.message)
+      })
+      .finally(() => {
+        if (active) setRestoring(false)
       })
     return () => {
       active = false
@@ -112,6 +120,7 @@ export function SleeperActions({
       setConnected(null)
       onConnect(null)
       setMode(null)
+      setOpen(true)
       setMessage('Saved Sleeper connection deleted.')
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Disconnect failed.')
@@ -164,20 +173,21 @@ export function SleeperActions({
       setBusy(false)
     }
   }
+  if (restoring) return null
   return (
     <section
       aria-label="Sleeper actions"
       className="rounded-xl border border-white/10 bg-slate-800/30 p-4 text-sm"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-semibold text-white">Sleeper actions</h2>
-          <p className="mt-1 text-xs text-slate-400">
-            {connected
-              ? 'Connection saved · private trade interest available'
-              : 'Connect your token to see trade interest and manage your team.'}
-          </p>
-        </div>
+        {!connected && (
+          <div>
+            <h2 className="font-semibold text-white">Connect Sleeper</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Save your connection to manage trades and lineups.
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {connected ? (
             <>
@@ -208,8 +218,17 @@ export function SleeperActions({
               >
                 Review optimized lineup
               </button>
-              <button disabled={busy} className={button} onClick={disconnect}>
-                Disconnect
+              <button
+                disabled={busy}
+                className={button}
+                aria-expanded={open}
+                onClick={() => {
+                  setOpen(!open)
+                  setToken('')
+                  setMessage('')
+                }}
+              >
+                Settings
               </button>
             </>
           ) : (
@@ -224,8 +243,28 @@ export function SleeperActions({
           Delete saved connection
         </button>
       )}
-      {open && !connected && (
-        <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
+      {open && (
+        <section
+          aria-label="Sleeper connection settings"
+          className="mt-4 space-y-3 border-t border-white/10 pt-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-semibold text-white">Connection settings</h3>
+            <button
+              className={button}
+              onClick={() => {
+                setOpen(false)
+                setToken('')
+              }}
+            >
+              Close settings
+            </button>
+          </div>
+          {connected && (
+            <p className="text-xs text-emerald-300">
+              Connection saved. Paste a new token below to replace it.
+            </p>
+          )}
           <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
             In Sleeper web, open DevTools → Network, choose a GraphQL request, and copy its
             authorization header. Your token is encrypted and saved to your First Ballot account so
@@ -243,9 +282,14 @@ export function SleeperActions({
             />
           </label>
           <button disabled={!token.trim() || busy} className={button} onClick={connect}>
-            {busy ? 'Connecting…' : 'Connect securely'}
+            {busy ? 'Saving…' : connected ? 'Replace saved token' : 'Save connection'}
           </button>
-        </div>
+          {connected && (
+            <button disabled={busy} className={`${button} ml-2`} onClick={disconnect}>
+              Disconnect
+            </button>
+          )}
+        </section>
       )}
       {connected && !ownTeam && (
         <p className="mt-3 text-xs text-amber-300">

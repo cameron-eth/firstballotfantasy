@@ -59,7 +59,7 @@ export function TeamBuilder({
   const [source, setSource] = useState<'trade' | 'draft'>('trade')
   const [position, setPosition] = useState('ALL')
   const [year, setYear] = useState('ALL')
-  const { viewportRef, zoom } = useCanvasZoom()
+  const { viewportRef, zoom, setZoom } = useCanvasZoom()
   const endpoint = `/api/team-scenarios?league=${leagueId}&roster=${team.rosterId}`
   const {
     data: prospects = [],
@@ -228,7 +228,28 @@ export function TeamBuilder({
             ))}
           </select>
         )}
-        <details className="relative ml-auto">
+        <div className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+          <button
+            aria-label="Zoom out map"
+            className={button}
+            disabled={zoom <= 10}
+            onClick={() => setZoom(zoom / 1.25)}
+          >
+            −
+          </button>
+          <button aria-label="Reset map zoom" title="Reset zoom" onClick={() => setZoom(100)}>
+            {zoom}%
+          </button>
+          <button
+            aria-label="Zoom in map"
+            className={button}
+            disabled={zoom >= 150}
+            onClick={() => setZoom(zoom * 1.25)}
+          >
+            +
+          </button>
+        </div>
+        <details className="relative">
           <summary className={`${button} cursor-pointer`}>Plans{dirty ? ' •' : ''}</summary>
           <div className="absolute right-0 z-20 mt-2 w-[min(28rem,85vw)] space-y-3 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-xl">
             {!user && <p className="text-xs text-slate-400">Sign in to save this plan.</p>}
@@ -317,7 +338,7 @@ export function TeamBuilder({
             backgroundSize: '20px 20px',
           }}
         >
-          <div style={{ zoom: zoom / 100 }} className="min-w-max">
+          <div style={{ zoom: zoom / 100 }} className="w-max">
             <BuilderTeamSummary
               team={team}
               placement={placement}

@@ -114,7 +114,9 @@ export function BoardFitStack({
   onAdd: (target: Target) => void
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const matches = players.filter((p) => p.position === position)
+  const matches = players.filter(
+    (p) => p.position === position && !targets.some((t) => t.id === `prospect:${p.id}`)
+  )
   const index = Math.max(
     0,
     matches.findIndex((p) => p.id === selectedId)
@@ -123,10 +125,9 @@ export function BoardFitStack({
   if (!player)
     return (
       <p className="border-t border-dashed border-slate-700 pt-3 text-xs text-slate-500">
-        No {position} on this board
+        No unplanned {position} on this board
       </p>
     )
-  const added = targets.some((target) => target.id === `prospect:${player.id}`)
   return (
     <div className="space-y-2 border-t border-dashed border-blue-400/30 pt-4">
       <div className="flex items-center justify-between text-xs text-blue-200">
@@ -160,8 +161,8 @@ export function BoardFitStack({
         team={player.school}
         image={player.headshot_url}
         label={`Board #${players.findIndex((p) => p.id === player.id) + 1} · ${player.draft_year}`}
-        action={added ? 'In plan' : full ? 'Plan full' : 'Add to plan'}
-        disabled={added || full}
+        action={full ? 'Plan full' : 'Add to plan'}
+        disabled={full}
         onAction={() =>
           onAdd({
             id: `prospect:${player.id}`,

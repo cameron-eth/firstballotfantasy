@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import useSWR from 'swr'
 import { ArrowRight, BookOpen, ClipboardList, Shield, Users } from 'lucide-react'
-import { CommunityRankingPrompt } from './CommunityRankingPrompt'
 import { ScoutingExperience, ScrollReveal } from './ScoutingExperience'
 import { ProspectTradingCard } from './ProspectTradingCard'
 
@@ -60,7 +59,6 @@ export function LandingPage() {
     <main className="min-h-screen bg-[#090f1a] text-slate-100 pb-24 md:pb-12">
       <ScoutingExperience players={prospects} />
 
-      <ScrollReveal><CommunityRankingPrompt /></ScrollReveal>
 
       <ScrollReveal>{watchlist.length > 0 && <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8" aria-labelledby="watchlist-heading">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

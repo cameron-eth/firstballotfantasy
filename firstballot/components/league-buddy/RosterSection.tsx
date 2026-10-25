@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
+import useSWR from 'swr'
+import { playerMomentum } from '@/lib/player-momentum'
 import Link from 'next/link'
 import { ArrowUpRight, Search, Users, ArrowRight, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -33,12 +35,19 @@ const POSITION_COLOR: Record<string, string> = {
 }
 
 function Portrait({ player }: { player: PlayerData }) {
-  const [failed, setFailed] = useState(false)
-  const src =
-    player.headshot_url ||
-    (player.espn_id
-      ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
-      : null)
+  const [attempt, setAttempt] = useState(0)
+  const sources = [
+    ...new Set(
+      [
+        player.headshot_url,
+        player.espn_id
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
+          : null,
+        `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`,
+      ].filter(Boolean)
+    ),
+  ]
+  const src = sources[attempt]
   return (
     <div
       className={cn(
@@ -46,14 +55,14 @@ function Portrait({ player }: { player: PlayerData }) {
         POSITION_COLOR[player.position] || 'bg-slate-800'
       )}
     >
-      {src && !failed ? (
+      {src ? (
         <Image
           src={src}
           alt=""
           width={96}
           height={96}
           className="h-full w-full object-cover object-top"
-          onError={() => setFailed(true)}
+          onError={() => setAttempt((value) => value + 1)}
         />
       ) : (
         <Users className="m-auto h-5 w-5 opacity-50" />
@@ -81,6 +90,15 @@ export function RosterSection({
   teams: TeamData[]
   projections?: RosterProjections
 }) {
+  const { data: momentumData } = useSWR(
+    '/api/player-momentum',
+    async (url) => {
+      const r = await fetch(url)
+      if (!r.ok) throw new Error('Scoring history unavailable')
+      return r.json()
+    },
+    { revalidateOnFocus: false, dedupingInterval: 3600000 }
+  )
   const [connection, setConnection] = useState<SleeperConnection | null>(null)
   const [view, setView] = useState<'week' | 'dynasty'>('week')
   const [position, setPosition] = useState('All')
@@ -241,14 +259,18 @@ export function RosterSection({
           className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-slate-900"
         >
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pt-4">
-            <div role="group" aria-label="Roster view" className="flex gap-5">
+            <div
+              role="group"
+              aria-label="Roster view"
+              className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:flex sm:gap-5"
+            >
               {(['week', 'dynasty'] as const).map((key) => (
                 <button
                   key={key}
                   aria-pressed={view === key}
                   onClick={() => setView(key)}
                   className={cn(
-                    'border-b-2 pb-3 text-sm font-semibold',
+                    'whitespace-nowrap border-b-2 pb-3 text-xs font-semibold sm:text-sm',
                     view === key
                       ? 'border-blue-400 text-white'
                       : 'border-transparent text-slate-500 hover:text-slate-200'
@@ -258,7 +280,9 @@ export function RosterSection({
                 </button>
               ))}
             </div>
-            <span className="pb-3 text-xs text-slate-500">{filtered.length} players</span>
+            <span className="hidden shrink-0 pb-3 text-xs text-slate-500 sm:block">
+              {filtered.length} players
+            </span>
           </div>
           <div className="space-y-3 border-b border-white/10 p-4">
             <div className="flex flex-wrap gap-2">
@@ -283,7 +307,11 @@ export function RosterSection({
                 ))}
               </select>
             </div>
-            <div role="group" aria-label="Position filter" className="flex flex-wrap gap-1">
+            <div
+              role="group"
+              aria-label="Position filter"
+              className="grid grid-cols-4 gap-1 sm:flex sm:flex-wrap"
+            >
               {[
                 'All',
                 ...['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter((pos) =>
@@ -298,7 +326,7 @@ export function RosterSection({
                   aria-pressed={position === pos}
                   onClick={() => setPosition(pos)}
                   className={cn(
-                    'rounded-md px-2.5 py-1 text-xs font-medium',
+                    'whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium sm:py-1',
                     position === pos
                       ? 'bg-blue-400/15 text-blue-300'
                       : 'text-slate-400 hover:bg-slate-800'
@@ -319,10 +347,15 @@ export function RosterSection({
               role="status"
               className="border-b border-white/5 px-4 py-2 text-[11px] text-slate-400"
             >
-              {projections?.loading
-                ? 'Loading Sleeper projections…'
-                : projections?.error ||
-                  `Sleeper · ${projections?.approximate ? 'Some scoring rules are not projected' : 'League scoring'}${projections?.updatedAt ? ` · Updated ${new Date(projections.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}. — means no published forecast.`}
+              {projections?.loading ? (
+                'Updating forecasts…'
+              ) : projections?.error ? (
+                'Forecasts unavailable'
+              ) : (
+                <MetricTip label="Sleeper projections">
+                  {`${projections?.approximate ? 'Some scoring rules are not projected.' : 'Uses league scoring.'} ${projections?.updatedAt ? `Updated ${new Date(projections.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.` : ''} — means no published forecast.`}
+                </MetricTip>
+              )}
             </div>
           )}
           <div className="hidden grid-cols-[minmax(0,1fr)_76px_76px_80px] gap-3 border-b border-white/5 bg-slate-800/30 px-4 py-2 text-right text-[10px] uppercase tracking-wider text-slate-500 sm:grid">
@@ -348,6 +381,10 @@ export function RosterSection({
               const bye = byes.has(player.playerId)
               const weekly = projections?.week[player.playerId]
               const trend = player.ktcTrendDelta
+              const momentum = playerMomentum(
+                player.ktcHistory,
+                momentumData?.history?.[player.playerId]
+              )
               return (
                 <article
                   key={player.playerId}
@@ -375,15 +412,26 @@ export function RosterSection({
                         )}
                         {bye && <span className="text-amber-300">Bye</span>}
                       </div>
-                      <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-400">
-                        <MetricTip
-                          label={`Heat ${connection ? (connection.heat[player.playerId] ?? 0) : '—'}`}
-                        >
-                          {connection
-                            ? `Unique managers who requested this player in ${connection.historyCount} trades visible to your Sleeper account${connection.limited ? ' (history capped at 200)' : ''}. Includes proposed, rejected, cancelled and completed trades; not a global count.`
-                            : 'Connect your Sleeper token to count unique managers who requested this player. Public completed trades cannot measure attempted offers.'}
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
+                        <MetricTip label={`Heat ${momentum.score ?? '—'}`}>
+                          Momentum index, 0–100; 50 is neutral. Equal weight to seven-day KTC SF
+                          change (10% saturates) and recent PPR scoring change (50% saturates). Last
+                          two played games versus previous played games in six completed weeks.
+                          Requires both histories and at least four played games.
+                          {momentum.ktc != null &&
+                            ` KTC ${(momentum.ktc * 100).toFixed(1)}% (${momentum.from}–${momentum.to}).`}
+                          {momentum.recent != null &&
+                            ` Recent ${momentum.recent.toFixed(1)} vs prior ${momentum.prior?.toFixed(1)} PPR FPPG.`}
                         </MetricTip>
-                        <span>Proj. season {points(projections?.ppg[player.playerId])} PPG</span>
+                        {connection && (
+                          <MetricTip label={`Requests ${connection.heat[player.playerId] ?? 0}`}>
+                            Unique requesting managers in {connection.historyCount} visible trades
+                            {connection.limited ? ' (capped at 200)' : ''}. Separate from momentum.
+                          </MetricTip>
+                        )}
+                        <span className="hidden sm:inline">
+                          Season proj. {points(projections?.ppg[player.playerId])} PPG
+                        </span>
                       </div>
                       <p className="mt-1 text-[11px] text-slate-500 sm:hidden">
                         {view === 'week'

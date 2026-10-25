@@ -1,116 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-
-export const dynamic = 'force-dynamic'
-
-/**
- * GET /api/ktc-values
- *
- * Query params:
- *   player  – exact player name, returns all historical rows (for sparkline)
- *   names   – comma-separated list of names, returns latest value for each
- *   date    – specific scraped_date (YYYY-MM-DD), defaults to latest
- */
+import archive from '@/data/ktc-history.json'
+const normalize = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '')
+    .replace(/[^a-z0-9]/g, '')
+const assets = Object.entries(archive.players).map(([id, player]) => ({ id, ...player }))
+type Point = {
+  scraped_date: string
+  value_sf: number
+  value_1qb: number
+  rank_sf: number
+  rank_1qb: number
+}
 export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams
+  const names = (params.get('names') || params.get('player'))
+    ?.split(',')
+    .map((n) => n.trim())
+    .filter(Boolean)
+  if (names && names.length > 100)
+    return NextResponse.json({ error: 'Maximum 100 names' }, { status: 400 })
+  const selected = (names ?? assets.map((p) => p.name)).flatMap((name) => {
+    const exact = assets.filter((p) => p.names.includes(name))
+    const candidates = exact.length
+      ? exact
+      : assets.filter((p) => p.names.some((n) => normalize(n) === normalize(name)))
+    return candidates.length === 1 ? [{ name, asset: candidates[0] }] : []
+  })
+  const byId: Record<string, Point[]> = {}
+  let latestDate: string = archive.dates.at(-1)!
+  let source = 'sdk-archive'
   try {
-    const { searchParams } = request.nextUrl
-    const player = searchParams.get('player')
-    const names  = searchParams.get('names')
-
-    // ── Single player history (sparkline data) ──────────────────────
-    if (player) {
-      const { data, error } = await supabaseServer
-        .from('ktc_player_values')
-        .select('scraped_date, value_sf, value_1qb, rank_sf, rank_1qb')
-        .eq('player_name', player)
-        .order('scraped_date', { ascending: true })
-
-      if (error) throw error
-
-      return NextResponse.json({ player, history: data ?? [] }, {
-        headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' },
-      })
-    }
-
-    // ── Multiple players – latest value only (for table column) ──────
-    if (names) {
-      const nameList = names.split(',').map((n) => n.trim()).filter(Boolean)
-      if (nameList.length === 0) {
-        return NextResponse.json({ data: [] })
-      }
-
-      // Get the most recent scraped_date
-      const { data: latestRow } = await supabaseServer
-        .from('ktc_player_values')
-        .select('scraped_date')
-        .order('scraped_date', { ascending: false })
-        .limit(1)
-        .single()
-
-      const latestDate = latestRow?.scraped_date
-
-      const { data, error } = await supabaseServer
-        .from('ktc_player_values')
-        .select('player_name, value_sf, value_1qb, rank_sf, rank_1qb, scraped_date')
-        .in('player_name', nameList)
-        .eq('scraped_date', latestDate)
-
-      if (error) throw error
-
-      // Also fetch history for each player so we can render mini sparklines
-      const { data: history, error: histErr } = await supabaseServer
-        .from('ktc_player_values')
-        .select('ktc_player_id, player_name, scraped_date, value_sf, value_1qb')
-        .in('player_name', nameList)
-        .order('scraped_date', { ascending: true })
-
-      if (histErr) throw histErr
-
-      // Group history by player_name (primary) and also by ktc_player_id (stable id)
-      const historyMap: Record<string, { scraped_date: string; value_sf: number; value_1qb: number }[]> = {}
-      const historyById: Record<number, { scraped_date: string; value_sf: number; value_1qb: number }[]> = {}
-      for (const row of (history ?? [])) {
-        // by name
-        if (!historyMap[row.player_name]) historyMap[row.player_name] = []
-        historyMap[row.player_name].push({ scraped_date: row.scraped_date, value_sf: row.value_sf, value_1qb: row.value_1qb })
-        // by ktc_player_id
-        if (row.ktc_player_id) {
-          if (!historyById[row.ktc_player_id]) historyById[row.ktc_player_id] = []
-          historyById[row.ktc_player_id].push({ scraped_date: row.scraped_date, value_sf: row.value_sf, value_1qb: row.value_1qb })
-        }
-      }
-
-      return NextResponse.json(
-        { data: data ?? [], historyMap, latestDate },
-        { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' } }
-      )
-    }
-
-    // ── Full latest snapshot (all 500 players) ───────────────────────
-    const { data: latestRow } = await supabaseServer
+    const latest = await supabaseServer
       .from('ktc_player_values')
       .select('scraped_date')
       .order('scraped_date', { ascending: false })
       .limit(1)
       .single()
-
-    const latestDate = latestRow?.scraped_date
-
-    const { data, error } = await supabaseServer
-      .from('ktc_player_values')
-      .select('*')
-      .eq('scraped_date', latestDate)
-      .order('rank_sf', { ascending: true })
-
-    if (error) throw error
-
-    return NextResponse.json(
-      { data: data ?? [], latestDate },
-      { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' } }
-    )
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[ktc-values] error:', message, err)
-    return NextResponse.json({ error: 'Failed to fetch KTC values', detail: message }, { status: 500 })
+    if (latest.error || !latest.data) throw Error('No stored history')
+    const ids = [...new Set(selected.map((p) => Number(p.asset.id)))]
+    if (ids.length) {
+      for (let offset = 0; ; offset += 1000) {
+        let query = supabaseServer
+          .from('ktc_player_values')
+          .select('ktc_player_id,scraped_date,value_sf,value_1qb,rank_sf,rank_1qb')
+          .in('ktc_player_id', ids)
+          .order('scraped_date', { ascending: true })
+          .order('ktc_player_id', { ascending: true })
+          .range(offset, offset + 999)
+        if (!names) query = query.eq('scraped_date', latest.data.scraped_date)
+        const result = await query
+        if (result.error) throw result.error
+        for (const row of result.data ?? []) (byId[String(row.ktc_player_id)] ??= []).push(row)
+        if ((result.data?.length ?? 0) < 1000) break
+      }
+    }
+    latestDate = latest.data.scraped_date
+    source = 'supabase'
+  } catch {
+    for (const id of Object.keys(byId)) delete byId[id]
   }
+  const historyMap: Record<string, Point[]> = {}
+  const rows: object[] = []
+  for (const { name, asset: p } of selected) {
+    const history =
+      byId[p.id] ??
+      (source === 'sdk-archive'
+        ? p.history.map((h) => ({
+            scraped_date: String(h[0]),
+            value_sf: Number(h[1]),
+            value_1qb: Number(h[2]),
+            rank_sf: Number(h[3]),
+            rank_1qb: Number(h[4]),
+          }))
+        : [])
+    if (!history.length) continue
+    historyMap[name] = history
+    rows.push({
+      ktc_player_id: p.id,
+      player_name: name,
+      position: p.position,
+      team: p.team,
+      ...history.at(-1),
+    })
+  }
+  return NextResponse.json(
+    params.get('player')
+      ? { player: params.get('player'), history: historyMap[params.get('player')!] ?? [], source }
+      : { data: rows, historyMap: names ? historyMap : undefined, latestDate, source },
+    { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' } }
+  )
 }

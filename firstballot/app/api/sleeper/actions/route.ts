@@ -1,3 +1,4 @@
+import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import {
@@ -26,13 +27,29 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
   if (
     !body ||
-    typeof body.token !== 'string' ||
-    body.token.length > 12000 ||
+    (body.token != null && (typeof body.token !== 'string' || body.token.length > 12000)) ||
     !/^\d{10,25}$/.test(body.leagueId ?? '') ||
-    !['connect', 'trade', 'lineup'].includes(body.action)
+    !['connect', 'restore', 'disconnect', 'trade', 'lineup'].includes(body.action)
   )
     return reply({ error: 'Invalid Sleeper request.' }, 400)
-  const token = body.token.trim()
+  let token: string
+  try {
+    if (body.action === 'disconnect') {
+      await deleteToken(user.id)
+      return reply({ disconnected: true })
+    }
+    const saved = body.action === 'connect' ? body.token?.trim() : await loadToken(user.id)
+    if (!saved)
+      return reply(
+        body.action === 'restore'
+          ? { connected: false }
+          : { error: 'Connect your Sleeper token first.' },
+        body.action === 'restore' ? 200 : 401
+      )
+    token = saved
+  } catch (e) {
+    return reply({ error: e instanceof Error ? e.message : 'Connection unavailable.' }, 503)
+  }
   let identity: { user_id?: string; exp?: number }
   try {
     identity = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
@@ -87,13 +104,16 @@ export async function POST(request: NextRequest) {
     const trades = read.league_transactions_filtered
     if (!Array.isArray(trades))
       return reply({ error: 'Sleeper did not return trade history.' }, 502)
-    if (body.action === 'connect')
+    if (body.action === 'connect' || body.action === 'restore') {
+      if (body.action === 'connect') await saveToken(user.id, token)
       return reply({
+        connected: true,
         rosterId: mine.roster_id,
         heat: tradeHeat(trades, rosters),
         historyCount: trades.length,
         limited: trades.length >= 200,
       })
+    }
     if (body.confirmed !== true || Number(body.rosterId) !== mine.roster_id)
       return reply({ error: 'Review the action for your own team before confirming.' }, 400)
     if (body.action === 'trade') {

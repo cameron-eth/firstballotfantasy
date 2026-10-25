@@ -71,9 +71,8 @@ test('auth guard: user profile mutations require authenticated headers', () => {
   assert.doesNotMatch(source, /createClient\(/, 'user-profile route should not fall back to an inline client')
 })
 
-test('prop drilling guard: overview header and sidebar prop surfaces stay compact', () => {
+test('prop drilling guard: overview header prop surface stays compact', () => {
   const overviewHeader = readProjectFile('components/league-buddy/OverviewHeader.tsx')
-  const sidebar = readProjectFile('components/league-buddy/LeagueBuddySidebar.tsx')
 
   assert.match(overviewHeader, /actions:\s*OverviewActions/)
   assert.doesNotMatch(overviewHeader, /onTradeMarketClick:\s*\(\)\s*=>\s*void/)
@@ -83,13 +82,7 @@ test('prop drilling guard: overview header and sidebar prop surfaces stay compac
     'OverviewHeaderProps should stay grouped and compact'
   )
 
-  assert.doesNotMatch(sidebar, /\bleagues:\s*/)
-  assert.doesNotMatch(sidebar, /\bleagueId:\s*string/)
-  assert.doesNotMatch(sidebar, /\bonLeagueChange\?:/)
-  assert.ok(
-    countInterfaceProperties(sidebar, 'LeagueBuddySidebarProps') <= 6,
-    'LeagueBuddySidebarProps should stay compact'
-  )
+
 })
 
 // Budgets are a ratchet: a file may shrink under its entry, never grow past it.
@@ -170,7 +163,7 @@ test('type utilization guard: critical frontend files should stay free of loose 
     'components/league-buddy/types.ts',
     'components/league-buddy/OverviewHeader.tsx',
     'components/league-buddy/LeagueOverviewSection.tsx',
-    'components/league-buddy/LeagueBuddySidebar.tsx',
+    'components/league-buddy/DashboardLayout.tsx',
     'app/api/user-profile/route.ts',
   ]
 

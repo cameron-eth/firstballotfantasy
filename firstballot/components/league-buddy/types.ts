@@ -10,7 +10,7 @@ export interface LeagueBuddyProps {
   onLeagueChange?: (leagueId: string) => void
 }
 
-export type LeagueSection = 'overview' | 'roster' | 'league' | 'audit'
+export type LeagueSection = 'overview' | 'roster' | 'league' | 'audit' | 'builder'
 
 export interface PlayerRankingSummary {
   rank: number
@@ -80,6 +80,7 @@ export interface PlayerData {
   tier: string
   age: number
   experience: number
+  isRookie?: boolean
   status: string
   injury_status?: string | null // Injury status from Sleeper API (e.g., 'Questionable', 'Doubtful', 'Out', 'IR')
   injury_start_date?: string | null // Injury start date from Sleeper API - if not null, player is injured

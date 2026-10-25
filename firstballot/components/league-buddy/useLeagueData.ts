@@ -364,6 +364,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
               tier: ranking?.tier ? `Tier ${ranking.tier}` : getTierFromRank(player.search_rank),
               age: player.age || 0,
               experience: player.years_exp || 0,
+              isRookie: player.years_exp === 0,
               status: player.status || 'Active',
             injury_status: player.injury_status || null,
             injury_start_date: player.injury_start_date || null,

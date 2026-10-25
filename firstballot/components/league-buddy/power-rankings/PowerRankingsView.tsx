@@ -32,11 +32,7 @@ const CATEGORY_LABELS: Record<string, string> = {
  * and the starting lineup itself. Every number is derived in the browser from the Sleeper
  * roster data already in memory (see lib/sleeper-sdk/values.ts).
  */
-export function PowerRankingsView({
-  rankings,
-  selectedTeam,
-  leagueSize,
-}: PowerRankingsViewProps) {
+export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerRankingsViewProps) {
   const selectedEntry = useMemo(
     () => rankings.teams.find((entry) => entry.rosterId === selectedTeam?.rosterId) ?? null,
     [rankings, selectedTeam?.rosterId]
@@ -88,14 +84,16 @@ export function PowerRankingsView({
       return {
         position,
         starters: Math.round((selectedEntry.valuation.positionValues[position] / leagueMax) * 100),
-        bench: Math.round((selectedEntry.valuation.benchPositionValues[position] / leagueMax) * 100),
+        bench: Math.round(
+          (selectedEntry.valuation.benchPositionValues[position] / leagueMax) * 100
+        ),
       }
     })
   }, [rankings, selectedEntry])
 
   if (leagueSize === 0) {
     return (
-      <Card className="bg-slate-800 border-slate-700">
+      <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
         <CardContent className="py-12 text-center text-slate-400">
           No rosters available for this league yet.
         </CardContent>
@@ -110,9 +108,7 @@ export function PowerRankingsView({
           <BarChart3 className="h-5 w-5 text-yellow-400" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-yellow-400 font-mono uppercase tracking-wider">
-            Power Rankings
-          </h2>
+          <h2 className="text-lg font-semibold text-white">Power Rankings</h2>
           <p className="text-xs text-slate-400">
             {rankings.superflex ? 'Superflex' : '1QB'} dynasty values ·{' '}
             {selectedEntry
@@ -122,8 +118,8 @@ export function PowerRankingsView({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="bg-slate-800 border-slate-700">
+      <div className="space-y-4">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Positional Rankings
@@ -139,7 +135,7 @@ export function PowerRankingsView({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Starter Rankings
@@ -156,8 +152,8 @@ export function PowerRankingsView({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="bg-slate-800 border-slate-700">
+      <div className="space-y-4">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Position Strength
@@ -168,7 +164,7 @@ export function PowerRankingsView({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Starting Lineup

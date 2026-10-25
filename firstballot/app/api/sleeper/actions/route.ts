@@ -1,3 +1,5 @@
+import { loadTradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
+import { validateTradeExtras } from '@/lib/sleeper-sdk/trade-assets'
 import { sleeperTokenIdentity, sleeperConnectionStatus } from '@/lib/sleeper-sdk/token-identity'
 import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
 import { NextRequest, NextResponse } from 'next/server'
@@ -126,12 +128,27 @@ export async function POST(request: NextRequest) {
           { error: 'Player ownership changed. Refresh and review the trade again.' },
           409
         )
+      let assets
+      try {
+        assets = validateTradeExtras(
+          mine.roster_id,
+          other.roster_id,
+          body,
+          await loadTradeInventory(body.leagueId)
+        )
+      } catch (error) {
+        return reply(
+          { error: error instanceof Error ? error.message : 'Could not verify trade assets.' },
+          409
+        )
+      }
       const operation = tradeOperation(
         body.leagueId,
         mine.roster_id,
         other.roster_id,
         body.give,
-        body.receive
+        body.receive,
+        assets
       )
       const result = await gql(operation)
       if (!result.propose_trade?.transaction_id)

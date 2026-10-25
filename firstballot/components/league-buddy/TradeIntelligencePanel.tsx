@@ -329,9 +329,9 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-5">
       {columns.map((col) => (
-        <Card key={col.signal} className={`bg-card ${col.borderColor} overflow-hidden`}>
+        <Card key={col.signal} className={`rounded-none border-0 border-b border-white/10 bg-transparent shadow-none overflow-hidden`}>
           {/* Column header */}
           <div className={`flex items-center gap-2 px-4 py-3 border-b ${col.borderColor}`}>
             <span className={col.accentColor}>{col.icon}</span>

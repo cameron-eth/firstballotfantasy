@@ -14,6 +14,7 @@ export function StrategyCard({
   onAction,
   outgoing = false,
   rookie = false,
+  disabled = false,
 }: {
   name: string
   position: string
@@ -24,6 +25,7 @@ export function StrategyCard({
   onAction: () => void
   outgoing?: boolean
   rookie?: boolean
+  disabled?: boolean
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const [failedLogo, setFailedLogo] = useState<string | null>(null)
@@ -107,6 +109,7 @@ export function StrategyCard({
           </p>
           <button
             onClick={onAction}
+            disabled={disabled}
             aria-label={`${action} ${name}`}
             className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs font-semibold transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             style={{ color: color.ink, borderColor: `${color.ink}40` }}

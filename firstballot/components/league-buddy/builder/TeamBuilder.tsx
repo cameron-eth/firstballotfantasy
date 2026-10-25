@@ -9,6 +9,7 @@ import { StrategyCard } from './StrategyCard'
 import { RosterCardStack } from './RosterCardStack'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
 import type { TeamPlacement } from '../competitiveState'
+import { useBoardFit, BoardFitControls, BoardFitStack } from './BoardFit'
 import { useCanvasZoom } from './useCanvasZoom'
 
 const fresh = (): Scenario => ({
@@ -60,10 +61,8 @@ export function TeamBuilder({
     error: prospectError,
     isLoading: prospectsLoading,
     mutate,
-  } = useSWR(
-    isDynasty && source === 'draft' ? '/api/prospects?draft_year=all' : null,
-    fetchProspects
-  )
+  } = useSWR(isDynasty ? '/api/prospects?draft_year=all' : null, fetchProspects)
+  const board = useBoardFit(isDynasty, prospects)
   const accountKey = `${user?.id ?? 'guest'}:${endpoint}`
   const {
     data: saved,
@@ -185,7 +184,8 @@ export function TeamBuilder({
   if (!ready || loadedKey !== accountKey || !scenario)
     return <p className="py-10 text-slate-400">Loading team plans…</p>
   const add = (target: Target) => {
-    if (scenario.targets.length < 100) update({ targets: [...scenario.targets, target] })
+    if (scenario.targets.length < 100 && !scenario.targets.some((t) => t.id === target.id))
+      update({ targets: [...scenario.targets, target] })
   }
   return (
     <div className="space-y-5">
@@ -303,6 +303,17 @@ export function TeamBuilder({
             </select>
           </label>
         </div>
+        {isDynasty && (
+          <BoardFitControls
+            board={board}
+            loading={prospectsLoading}
+            failed={Boolean(prospectError)}
+            retry={() => {
+              void board.refresh()
+              void mutate()
+            }}
+          />
+        )}
         <p id="map-gesture-hint" className="text-xs text-slate-500">
           Pinch to zoom · scroll to explore · Ctrl + wheel also zooms
         </p>
@@ -379,6 +390,21 @@ export function TeamBuilder({
                         })
                       }
                     />
+                    {isDynasty &&
+                      board.user &&
+                      !board.error &&
+                      !prospectError &&
+                      !board.isLoading &&
+                      !prospectsLoading &&
+                      board.players.length > 0 && (
+                        <BoardFitStack
+                          players={board.players}
+                          position={pos}
+                          targets={scenario.targets}
+                          full={scenario.targets.length >= 100}
+                          onAdd={add}
+                        />
+                      )}
                   </section>
                 )
               })}

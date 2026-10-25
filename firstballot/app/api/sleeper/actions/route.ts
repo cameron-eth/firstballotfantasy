@@ -1,3 +1,4 @@
+import { sleeperTokenIdentity } from '@/lib/sleeper-sdk/token-identity'
 import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
   let identity: { user_id?: string; exp?: number }
   try {
-    identity = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
+    identity = sleeperTokenIdentity(token)
   } catch {
     return reply({ error: 'Paste a valid Sleeper authorization token.' }, 400)
   }
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
         authorization: token,
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        'User-Agent': 'Mozilla/5.0',
         origin: 'https://sleeper.com',
         referer: 'https://sleeper.com/',
         'x-sleeper-graphql-op': operation.operationName,

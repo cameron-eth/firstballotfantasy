@@ -34,7 +34,7 @@ export function ScoutingExperience({ players }: { players: Player[] }) {
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-20 lg:min-h-[760px] lg:grid-cols-[0.95fr_1.05fr]">
         <ScrollReveal>
           <p className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300"><span className="h-2 w-2 rounded-full bg-emerald-400" /> The future is already playing</p>
-          <h1 className="font-[family-name:var(--font-space-grotesk)] text-[clamp(3.5rem,6.4vw,6.2rem)] font-bold leading-[0.97] tracking-[-0.055em]">Your next<br />dynasty starts<br /><span className="bg-gradient-to-r from-blue-300 via-blue-400 to-emerald-300 bg-clip-text text-transparent">on Saturday.</span></h1>
+          <h1 className="font-[family-name:var(--font-space-grotesk)] text-[clamp(3.5rem,6.4vw,6.2rem)] font-bold leading-[0.97] tracking-[-0.055em]">Your next<br />dynasty starts<br /><span className="text-blue-300">on Saturday.</span></h1>
           <p className="mt-7 max-w-lg text-base leading-relaxed text-slate-300 sm:text-lg">Saturday’s breakout. Your next cornerstone. Follow college talent, shape your draft board, and build a dynasty that stays ahead.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/scouting-portal" className="group inline-flex min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300">Find your next player <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>

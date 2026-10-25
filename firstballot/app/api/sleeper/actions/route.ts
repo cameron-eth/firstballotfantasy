@@ -1,4 +1,4 @@
-import { sleeperTokenIdentity, sleeperConnectionStatus } from '@/lib/sleeper-sdk/token-identity'
+import { sleeperTokenIdentity, sleeperConnectionStatus, normalizeSleeperToken } from '@/lib/sleeper-sdk/token-identity'
 import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
@@ -54,9 +54,10 @@ export async function POST(request: NextRequest) {
   }
   let identity: { user_id?: string; exp?: number }
   try {
+    token = normalizeSleeperToken(token)
     identity = sleeperTokenIdentity(token)
-  } catch {
-    return reply({ error: 'Paste a valid Sleeper authorization token.' }, 400)
+  } catch (e) {
+    return reply({ error: e instanceof Error ? e.message : 'Paste a valid Sleeper authorization token.' }, 400)
   }
   if (!identity.user_id || !identity.exp || identity.exp * 1000 <= Date.now())
     return reply({ error: 'Sleeper token has expired or is invalid.' }, 401)

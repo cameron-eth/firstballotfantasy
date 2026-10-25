@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { sleeperTokenIdentity, sleeperConnectionStatus } from '../lib/sleeper-sdk/token-identity.ts'
+import { sleeperTokenIdentity, sleeperConnectionStatus, normalizeSleeperToken } from '../lib/sleeper-sdk/token-identity.ts'
 import { ownsRoster } from '../lib/sleeper-sdk/actions.ts'
 const token = payload => `header.${Buffer.from(payload).toString('base64url')}.signature`
 test('numeric Sleeper Snowflakes retain every digit for ownership checks',()=>{
@@ -27,4 +27,20 @@ test('saved status is account-scoped, preserves expired state and never returns 
  assert.equal(sleeperConnectionStatus(saved).saved,true)
  assert.equal(JSON.stringify(sleeperConnectionStatus(saved)).includes(saved),false)
  assert.deepEqual(sleeperConnectionStatus('invalid'),{saved:true,expired:true})
+})
+
+
+test('clipboard wrappers normalize to the raw token sent to Sleeper', () => {
+ const raw=token('{"user_id":1015846922424725504,"exp":2000000000}')
+ for (const input of [raw, ` Bearer ${raw} `, `Authorization: Bearer ${raw}`, `"${raw}"`, `'${raw}'`]) {
+  assert.equal(normalizeSleeperToken(input),raw)
+  assert.equal(sleeperTokenIdentity(input).user_id,'1015846922424725504')
+ }
+})
+test('invalid input explains the problem without reflecting credentials', () => {
+ assert.throws(()=>normalizeSleeperToken('payload-only'), /three dot-separated parts/)
+ assert.throws(()=>normalizeSleeperToken('head.body.sig.extra'), /three dot-separated parts/)
+ assert.throws(()=>sleeperTokenIdentity(token('{"iss":"https:\/\/example.supabase.co/auth/v1","sub":"private-id"}')), /First Ballot sign-in token/)
+ assert.throws(()=>sleeperTokenIdentity(token('null')), /not a Sleeper/)
+ assert.throws(()=>sleeperTokenIdentity(token('{')), /payload is incomplete/)
 })

@@ -12,7 +12,6 @@ async function middleware(request: NextRequest) {
     '/api/roster-stats',
     '/api/trade-market',
     '/api/prospects',
-    '/api/draft-analysis',
     '/api/ktc-values',
     '/api/projections',
     '/api/draft-capital',

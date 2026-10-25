@@ -1,8 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Shield, User, LogOut, Menu, X, Lock, Crown, Sparkles, Zap, Settings } from 'lucide-react'
+import { Shield, User, LogOut, X, Crown, Sparkles, Zap, Settings } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useMembership } from '@/hooks/use-membership'
 import { useState } from 'react'
@@ -12,7 +11,6 @@ import { LeagueSelector } from './navigation/LeagueSelector'
 import { cn } from '@/lib/utils'
 
 export function Header() {
-  const pathname = usePathname()
   const { user, signOut } = useAuth()
   const { isMember, loading: membershipLoading } = useMembership()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

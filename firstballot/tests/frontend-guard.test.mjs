@@ -91,9 +91,7 @@ test('file size guard: only approved legacy files may exceed the default budget'
   const defaultBudget = 650
   const legacyBudgets = new Map([
     ['app/draft-board/page.tsx', 720],
-    ['components/DraftAnalysis.tsx', 980],
     ['components/LeagueBuddy.tsx', 1480],
-    ['components/TeamValueGraph.tsx', 1140],
     ['components/landing/LandingPage.tsx', 760],
     ['components/scouting/DraftBoardTab.tsx', 1260],
     ['components/scouting/ProspectCharts.tsx', 820],
@@ -162,7 +160,7 @@ test('type utilization guard: critical frontend files should stay free of loose 
     'lib/auth.tsx',
     'components/league-buddy/types.ts',
     'components/league-buddy/OverviewHeader.tsx',
-    'components/league-buddy/LeagueOverviewSection.tsx',
+    'components/players/PlayerTradingCard.tsx',
     'components/league-buddy/DashboardLayout.tsx',
     'app/api/user-profile/route.ts',
   ]

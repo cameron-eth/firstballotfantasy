@@ -1,7 +1,6 @@
 'use client'
 
 import { Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { Header } from '@/components/header'
 import { ScoutingPortal } from '@/components/scouting'
 

@@ -35,7 +35,7 @@ const CORNER_DEFS: Array<{ key: CompetitiveStateKey; vertical: 'top' | 'bottom';
   { key: 'contender', vertical: 'bottom', side: 'right' },
 ]
 
-function cornerLayout(mx: number, my: number) {
+function cornerLayout(mx: number, _my: number) {
   return CORNER_DEFS.map((c) => ({
     ...c,
     x:

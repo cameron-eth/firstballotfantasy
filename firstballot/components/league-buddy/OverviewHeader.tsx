@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/user-avatar'
-import { Trophy, Target, Sun, Medal, TrendingUp, TrendingDown, Minus, Star } from 'lucide-react'
+import { Trophy, Target, Sun, Medal, TrendingUp, Star } from 'lucide-react'
 import type { MatchupData, OverviewActions, TeamData } from './types'
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
@@ -41,14 +41,6 @@ function rankTextColor(rank: number, leagueSize: number): string {
   if (rank <= Math.ceil(leagueSize / 4)) return 'text-emerald-400'
   if (rank <= Math.ceil(leagueSize / 2)) return 'text-yellow-400'
   return 'text-orange-400'
-}
-
-function getRecentFormIcon(form: string) {
-  if (!form) return null
-  const lastChar = form.slice(-1)
-  if (lastChar === 'W') return <TrendingUp className="h-3 w-3 text-emerald-400" />
-  if (lastChar === 'L') return <TrendingDown className="h-3 w-3 text-red-400" />
-  return <Minus className="h-3 w-3 text-slate-400" />
 }
 
 function RecentFormPips({ form }: { form: string }) {

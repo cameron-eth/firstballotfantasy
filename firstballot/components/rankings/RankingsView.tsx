@@ -9,7 +9,6 @@ import { RankingsPagination } from './RankingsPagination'
 import { PlayerCard } from '@/components/prospect-board/player-card'
 import { SkeletonGrid } from '@/components/prospect-board/player-skeleton'
 import type { Player, Position } from '@/lib/players'
-import type { PlayerRanking } from '@/types/rankings'
 
 /**
  * These rankings come from `dynasty_player_tiers`, which has no `grade_tier`

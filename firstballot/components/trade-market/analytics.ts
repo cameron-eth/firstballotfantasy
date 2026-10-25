@@ -16,7 +16,6 @@ import { tradeTempo } from './utils'
 export function computeTradeAnalytics(
   trades: any[],
   allPlayers: Record<string, any>,
-  dynastyRankings: Record<string, any>,
   getTeamMeta: (leagueId: string | undefined, rosterId: number) => any,
   valuationCache: Map<string, PlayerValue>
 ) {

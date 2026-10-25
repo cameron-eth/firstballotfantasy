@@ -17,11 +17,9 @@ import {
   BOARD_POSITIONS,
   DRAFT_BOARD_MIN_YEAR,
   formatHeight,
-  getComparisonNames,
   getPlayerImageUrl,
   heatCell,
   myGradeOf,
-  normalizeName,
   overallRankOf,
   parseForty,
   rankPercentile,
@@ -70,11 +68,6 @@ interface EditingCell {
   field: GradeField
 }
 
-interface CompAvatarMeta {
-  headshotUrl?: string | null
-  espnId?: number | string | null
-}
-
 const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
 /**
  * Column widths for the desktop board. The header and every row share this, so
@@ -88,7 +81,6 @@ const ReorderAny = Reorder as unknown as {
   Group: React.ComponentType<Record<string, unknown>>
   Item: React.ComponentType<Record<string, unknown>>
 }
-
 
 interface GradeCellInputProps {
   value: string
@@ -148,7 +140,6 @@ export function DraftBoardTab({
   onSelectYear,
   onAddToDraftBoard,
   onRemoveFromDraftBoard,
-  onShowComps,
   onReorderDraftBoard,
   onBoardDragStart: _onBoardDragStart,
   onBoardDragOver: _onBoardDragOver,
@@ -273,14 +264,6 @@ export function DraftBoardTab({
     return map
   }, [boardProspects])
 
-  const comparisonNamesMap = useMemo(() => {
-    const map = new Map<number, string[]>()
-    for (const p of boardProspects) {
-      map.set(p.id, getComparisonNames(p.nfl_comparisons))
-    }
-    return map
-  }, [boardProspects])
-
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
 
   /** Per-position stat arrays for heat-map percentile coloring across upcoming classes. */
@@ -351,7 +334,6 @@ export function DraftBoardTab({
     return byYear
   }, [classProspects, position])
 
-
   const addTopAvailable = () => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
     const firstMissing = availableProspects.find((p) => !onBoardIds.has(p.id))
@@ -399,7 +381,7 @@ export function DraftBoardTab({
   // cascade (parent + all memos) on every drag frame. Commit once on drop.
   const pendingReorderRef = useRef<{ year: number; prospects: Prospect[] } | null>(null)
 
-  const commitSectionReorder = (year: number, reorderedSection: Prospect[]) => {
+  const commitSectionReorder = (_year: number, reorderedSection: Prospect[]) => {
     const targetIds = new Set(reorderedSection.map((p) => p.id))
     if (targetIds.size === 0) return
 
@@ -445,30 +427,6 @@ export function DraftBoardTab({
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
     return availableProspects.filter((p) => !onBoardIds.has(p.id))
   }, [draftBoard, availableProspects])
-
-  const compHeadshotMap = useMemo(() => {
-    const map = new Map<string, CompAvatarMeta>()
-    for (const prospect of allProspects) {
-      if (!prospect?.name) continue
-      const key = normalizeName(prospect.name)
-      const nextMeta: CompAvatarMeta = {
-        headshotUrl: prospect.headshot_url ?? null,
-        espnId: prospect.espn_id ?? null,
-      }
-      const existing = map.get(key)
-      if (!existing) {
-        map.set(key, nextMeta)
-        continue
-      }
-      // Prefer entries with actual image data.
-      if (!existing.headshotUrl && nextMeta.headshotUrl) {
-        map.set(key, nextMeta)
-      } else if (!existing.espnId && nextMeta.espnId) {
-        map.set(key, { ...existing, espnId: nextMeta.espnId })
-      }
-    }
-    return map
-  }, [allProspects])
 
   if (loading) {
     return (
@@ -608,9 +566,7 @@ export function DraftBoardTab({
                         const player = boardPlayerMap.get(prospect.id) || toBoardPlayer(prospect)
                         const classRankMap = consensusRankByClassId.get(section.year)
                         const consensusRank = classRankMap?.get(player.id) ?? index + 1
-                        const rankDiff = consensusRank - (index + 1)
                         const tierColor = tierStyleFor(player.tier)
-                        const comparisonNames = comparisonNamesMap.get(prospect.id) || []
                         const isEven = index % 2 === 1
 
                         return (

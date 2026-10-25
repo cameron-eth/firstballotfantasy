@@ -17,7 +17,7 @@ function BottomNavContent() {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Scout', href: '/scouting-portal', icon: Search },
     { name: 'Board', href: '/scouting-portal?tab=draftboard', icon: ClipboardList },
-    { name: 'Team', href: '/league-buddy?tab=roster', icon: Users },
+    { name: 'Team', href: '/league-buddy', icon: Users },
     { name: 'League', href: '/league-buddy', icon: Trophy },
   ]
 

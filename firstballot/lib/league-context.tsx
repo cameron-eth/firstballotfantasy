@@ -82,16 +82,16 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   }, [loadLeagues])
 
   // Placeholder actions for interface compatibility
-  const addLeague = useCallback(async (leagueId: string) => {
+  const addLeague = useCallback(async () => {
     // This is handled via sleeper_username in profile now
     return true
   }, [])
 
-  const removeLeague = useCallback((leagueId: string) => {
+  const removeLeague = useCallback(() => {
     // Handled via Sleeper account
   }, [])
 
-  const setDefaultLeague = useCallback((leagueId: string) => {
+  const setDefaultLeague = useCallback(() => {
     // Handled via Sleeper account
   }, [])
 

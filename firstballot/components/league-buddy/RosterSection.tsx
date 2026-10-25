@@ -87,7 +87,6 @@ export function RosterSection({
   isDynasty,
   onActionComplete,
   selectedTeam,
-  sortedTeams,
   teams,
   projections,
 }: {

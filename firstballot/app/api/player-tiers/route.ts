@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     // Get top 10 players from each tier
     const topPlayersByTier = Object.entries(tierGroups)
-      .map(([tier, players]) => {
+      .map(([, players]) => {
         return players.slice(0, 10) // Top 10 in each tier
       })
       .flat()

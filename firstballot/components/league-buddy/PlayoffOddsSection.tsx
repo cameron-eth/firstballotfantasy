@@ -92,8 +92,6 @@ function calculateExactPath(
 
   // We need to either match or exceed cutoff team's wins
   // Best case: we win all remaining, they lose enough
-  const teamMaxWins = team.wins + remainingGames
-  const cutoffMinWins = cutoffTeam.wins // If they lose all remaining
 
   // For each team in playoff position that we could potentially pass
   teamsToPass.forEach((t) => {
@@ -109,7 +107,6 @@ function calculateExactPath(
       // So: theirWins - team.wins - remainingGames + theirRemaining = theirWins - team.wins
       // If we win all and they lose all: teamMaxWins vs theirWins
       // If teamMaxWins >= theirWins, we can pass them if they lose (theirWins - team.wins) games
-      const lossesNeeded = Math.max(0, theirWins - team.wins - remainingGames + gapToThem)
       const minLossesNeeded = gapToThem // Minimum losses if we win all
 
       if (minLossesNeeded > 0 && minLossesNeeded <= remainingGames) {
@@ -455,14 +452,6 @@ export function PlayoffOddsSection({
     if (probability >= 40) return 'text-orange-400'
     if (probability >= 10) return 'text-red-400'
     return 'text-gray-400'
-  }
-
-  const getProbabilityBg = (probability: number) => {
-    if (probability >= 90) return 'bg-green-500/20 border-green-500/30'
-    if (probability >= 70) return 'bg-yellow-500/20 border-yellow-500/30'
-    if (probability >= 40) return 'bg-orange-500/20 border-orange-500/30'
-    if (probability >= 10) return 'bg-red-500/20 border-red-500/30'
-    return 'bg-gray-500/20 border-gray-500/30'
   }
 
   return (

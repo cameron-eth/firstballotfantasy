@@ -1,7 +1,5 @@
 'use client'
 
-import { cn } from '@/lib/utils'
-
 export function PlayerCardSkeleton() {
   return (
     <div className="relative bg-card rounded-lg overflow-hidden border border-border animate-pulse">

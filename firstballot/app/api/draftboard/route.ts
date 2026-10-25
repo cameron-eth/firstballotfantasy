@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
-import type { Draftboard, SaveDraftboardRequest } from '@/types/draftboard'
+import type { SaveDraftboardRequest } from '@/types/draftboard'
 
 export const dynamic = 'force-dynamic'
 

@@ -179,12 +179,6 @@ export const getPlayerValue = (
 
   if (fantasyPpg && gamesPlayed && gamesPlayed >= 3) {
     // Only apply PPG adjustments for players with meaningful sample size
-    const positionMultipliers = {
-      QB: { baseline: 20, multiplier: 0.8 },
-      RB: { baseline: 15, multiplier: 1.0 },
-      WR: { baseline: 12, multiplier: 1.2 },
-      TE: { baseline: 8, multiplier: 1.5 },
-    }
 
     const baseline = 15
     const ppgRatio = fantasyPpg / baseline

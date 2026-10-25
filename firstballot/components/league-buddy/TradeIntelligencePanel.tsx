@@ -1,18 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type React from 'react'
-import Image from 'next/image'
+import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { KtcSparkline } from '@/components/scouting/KtcSparkline'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { PlayerData } from './types'
-import {
-  calculatePositionalMedians,
-  calculatePERatio,
-  type PositionalMedians,
-} from './utils'
+import { calculatePositionalMedians, calculatePERatio, type PositionalMedians } from './utils'
 
 interface TradeIntelligencePanelProps {
   players: PlayerData[]
@@ -20,14 +16,10 @@ interface TradeIntelligencePanelProps {
   leaguePlayerPool?: PlayerData[]
 }
 
-const POSITION_COLORS: Record<string, string> = {
-  QB: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-  RB: 'bg-green-500/20 text-green-400 border-green-500/40',
-  WR: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-  TE: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-}
-
-function getDynastyWindow(age: number, position: string): {
+function getDynastyWindow(
+  age: number,
+  position: string
+): {
   label: string
   color: string
 } {
@@ -133,115 +125,45 @@ function classifyPlayer(
   }
 }
 
-interface PlayerRowProps {
-  classified: ClassifiedPlayer
-  index: number
-}
-
-function PlayerCutout({ player }: { player: PlayerData }) {
-  const [imgErr, setImgErr] = useState(false)
-  const src = !imgErr
-    ? (player.headshot_url ?? (player.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png` : null))
-    : (player.espn_id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png` : null)
-
-  const initials = player.playerName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-
+function PlayerRow({ classified }: { classified: ClassifiedPlayer }) {
+  const { player, dailyDelta, reason } = classified
   return (
-    <div className="relative w-28 flex-shrink-0 overflow-hidden bg-secondary/30">
-      <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent z-[1]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/30 z-[1]" />
-      {src ? (
-        <Image
-          src={src}
-          alt={player.playerName}
-          width={120}
-          height={120}
-          className="w-full h-full object-contain object-bottom scale-110 relative z-0"
-          onError={() => setImgErr(true)}
-          unoptimized
-        />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground/40 z-0">
-          {initials}
+    <PlayerTradingCard
+      name={player.playerName}
+      position={player.position}
+      team={player.team}
+      image={
+        player.headshot_url ||
+        (player.espn_id
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
+          : `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`)
+      }
+      imageHeight="h-40"
+      badge={getDynastyWindow(player.age ?? 0, player.position).label}
+      label={reason}
+    >
+      <div className="flex justify-between gap-2">
+        <span>
+          KTC SF{' '}
+          <strong className="text-white">{player.ktcValueSf?.toLocaleString() ?? '—'}</strong>
+        </span>
+        <span className={dailyDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+          {dailyDelta > 0 ? '+' : ''}
+          {dailyDelta.toLocaleString()} today
+        </span>
+      </div>
+      {(player.ktcHistory?.length ?? 0) >= 2 && (
+        <div className="mt-2">
+          <KtcSparkline
+            playerName={player.playerName}
+            history={player.ktcHistory}
+            useSf
+            width={170}
+            height={32}
+          />
         </div>
       )}
-    </div>
-  )
-}
-
-function PlayerRow({ classified, index }: PlayerRowProps) {
-  const { player, reason, dailyDelta } = classified
-  const posColor = POSITION_COLORS[player.position] ?? 'bg-slate-500/20 text-slate-400 border-slate-500/40'
-  const isEven = index % 2 === 0
-
-  // KTC value display
-  const ktcValue = player.ktcValueSf
-  const hasHistory = (player.ktcHistory?.length ?? 0) >= 2
-
-  return (
-    <div
-      className={`flex items-stretch h-24 border-b border-border/40 last:border-0 transition-colors hover:bg-secondary/20 ${
-        isEven ? 'bg-secondary/10' : 'bg-card'
-      }`}
-    >
-      {/* Full-height cutout image */}
-      <PlayerCutout player={player} />
-
-      {/* Name + meta */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center px-3 gap-1">
-        <div className="text-base font-bold text-foreground truncate leading-tight">
-          {player.playerName}
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border font-mono ${posColor}`}>
-            {player.position}
-          </Badge>
-          <span className="text-foreground/80 text-sm font-mono font-bold tabular-nums">
-            #{player.rank}
-          </span>
-          <span className="text-muted-foreground/40 text-xs">·</span>
-          <span className={`text-xs font-mono font-semibold ${getDynastyWindow(player.age ?? 0, player.position).color}`}>
-            {getDynastyWindow(player.age ?? 0, player.position).label}
-          </span>
-        </div>
-      </div>
-
-      {/* KTC value + daily delta */}
-      <div className="flex-shrink-0 flex flex-col items-end justify-center pr-3 gap-0.5">
-        {hasHistory ? (
-          <>
-            <KtcSparkline
-              playerName={player.playerName}
-              history={player.ktcHistory}
-              useSf
-              width={72}
-              height={28}
-            />
-            {dailyDelta !== 0 && (
-              <span className={`text-[10px] font-mono font-bold tabular-nums ${dailyDelta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {dailyDelta > 0 ? `+${dailyDelta.toLocaleString()}` : dailyDelta.toLocaleString()} today
-              </span>
-            )}
-          </>
-        ) : ktcValue != null ? (
-          <>
-            <span className="text-foreground font-mono text-base font-semibold tabular-nums">
-              {ktcValue.toLocaleString()}
-            </span>
-            {dailyDelta !== 0 && (
-              <span className={`text-[10px] font-mono font-bold tabular-nums ${dailyDelta > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {dailyDelta > 0 ? `+${dailyDelta.toLocaleString()}` : dailyDelta.toLocaleString()} today
-              </span>
-            )}
-          </>
-        ) : null}
-      </div>
-    </div>
+    </PlayerTradingCard>
   )
 }
 
@@ -253,9 +175,7 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
 
   const classified = useMemo<ClassifiedPlayer[]>(() => {
     // Only include skill positions
-    const skillPlayers = players.filter((p) =>
-      ['QB', 'RB', 'WR', 'TE'].includes(p.position)
-    )
+    const skillPlayers = players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
     return skillPlayers.map((p) => classifyPlayer(p, medians))
   }, [players, medians])
 
@@ -331,14 +251,17 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
   return (
     <div className="space-y-5">
       {columns.map((col) => (
-        <Card key={col.signal} className={`rounded-none border-0 border-b border-white/10 bg-transparent shadow-none overflow-hidden`}>
+        <Card
+          key={col.signal}
+          className={`rounded-none border-0 border-b border-white/10 bg-transparent shadow-none overflow-hidden`}
+        >
           {/* Column header */}
           <div className={`flex items-center gap-2 px-4 py-3 border-b ${col.borderColor}`}>
             <span className={col.accentColor}>{col.icon}</span>
-            <span className={`font-mono text-sm font-bold ${col.accentColor}`}>{col.label}</span>
+            <span className={`text-sm font-semibold ${col.accentColor}`}>{col.label}</span>
             <Badge
               variant="outline"
-              className={`ml-auto text-[10px] px-1.5 py-0 font-mono border ${col.badgeClass}`}
+              className={`ml-auto text-[10px] px-1.5 py-0 border ${col.badgeClass}`}
             >
               {col.players.length}
             </Badge>
@@ -346,9 +269,15 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
 
           {/* Player list — draft-board style rows */}
           {col.players.length > 0 ? (
-            <div>
-              {col.players.map((c, i) => (
-                <PlayerRow key={c.player.playerId} classified={c} index={i} />
+            <div
+              className="flex gap-3 overflow-x-auto py-4"
+              tabIndex={0}
+              aria-label={`${col.label} players`}
+            >
+              {col.players.map((c) => (
+                <div key={c.player.playerId} className="w-60 shrink-0">
+                  <PlayerRow classified={c} />
+                </div>
               ))}
             </div>
           ) : (

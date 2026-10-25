@@ -1,6 +1,5 @@
 import { stripe } from './stripe'
 import { supabaseServer } from './supabase-server'
-import { STRIPE_PRODUCTS } from './stripe'
 
 export interface SubscriptionData {
   id: string

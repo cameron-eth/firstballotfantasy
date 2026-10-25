@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { formatValue } from '@/lib/trade-utils'
 import type { CounterpartyPair, MostTradedPlayer, PnlSeries, RosterKPI } from './types'
 import { tradeTempo } from './utils'
 import { MostTradedCard } from './MostTradedCard'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Users, AlertCircle, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,9 +18,8 @@ import type {
   TeamData,
 } from './league-buddy/types'
 import { calculateLeaguePositionRankings, countRosterPositions } from './league-buddy/utils'
-import { LEAGUE_SECTIONS, resolveLeagueSection } from './league-buddy/navigation'
+import { resolveLeagueSection } from './league-buddy/navigation'
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
-import { LeagueOverviewSection } from './league-buddy/LeagueOverviewSection'
 import { RosterSection } from './league-buddy/RosterSection'
 import { StandingsPlayoffs } from './league-buddy/StandingsPlayoffs'
 import { DraftOrderPanel } from './league-buddy/draft-order/DraftOrderPanel'
@@ -53,7 +52,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     (section: LeagueSection) => {
       setActiveSection(section)
       const params = new URLSearchParams(searchParams.toString())
-      if (section === 'overview') params.delete('tab')
+      if (section === 'builder') params.delete('tab')
       else params.set('tab', section)
       router.replace(`/league-buddy${params.size ? `?${params.toString()}` : ''}`, {
         scroll: false,
@@ -72,7 +71,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     currentMatchups,
     currentWeek,
     allPlayers,
-    playerRankings,
     rosterPositionsRaw,
     leagueTransactions,
     refetch: fetchLeagueData,

@@ -147,7 +147,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   const urlTab = searchParams.get('tab')
 
   const [roster, setRoster] = useState<RosterPlayer[]>([])
-  const [originalRoster, setOriginalRoster] = useState<RosterPlayer[]>([])
   const [noteSaveError, setNoteSaveError] = useState<string | null>(null)
   const [noteSaveStatus, setNoteSaveStatus] = useState<string | null>(null)
   const { user } = useAuth()
@@ -163,7 +162,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   // Fetch roster via useSWR — avoids fetch-in-effect pattern
   const {
     data: fetchedRoster,
-    isLoading: rosterLoading,
     error: rosterFetchError,
   } = useSWR<RosterPlayer[]>(
     leagueId ? `roster:${leagueId}` : null,
@@ -176,7 +174,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     if (!fetchedRoster || syncedRosterKey === leagueId) return
     setSyncedRosterKey(leagueId)
     setRoster(fetchedRoster)
-    setOriginalRoster(fetchedRoster)
   }, [fetchedRoster, leagueId, syncedRosterKey])
 
   const {
@@ -230,10 +227,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     setActiveTab((current) => (current === next ? current : next))
   }, [urlTab])
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
-  const [draggedProspect, setDraggedProspect] = useState<Prospect | null>(null)
-  const [dragOverPosition, setDragOverPosition] = useState<string | null>(null)
-  const [showModal, setShowModal] = useState(false)
-  const [showCompsModal, setShowCompsModal] = useState(false)
   const [selectedProspectForComps, setSelectedProspectForComps] = useState<Prospect | null>(null)
   const [draftBoard, setDraftBoard] = useState<Prospect[]>([])
   const [draggedBoardProspect, setDraggedBoardProspect] = useState<{
@@ -300,35 +293,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     return needs
   }, [roster, leagueId, fetchedRoster, rosterError])
 
-  // Calculate positional rankings for roster players
-  const rosterWithPositionalRanks = useMemo(() => {
-    if (!roster) return []
-
-    // Group players by position
-    const playersByPosition: Record<string, RosterPlayer[]> = {}
-    roster.forEach((player) => {
-      if (!playersByPosition[player.position]) {
-        playersByPosition[player.position] = []
-      }
-      playersByPosition[player.position].push(player)
-    })
-
-    // Sort each position group by value (descending) and add positional rank
-    const rankedRoster: (RosterPlayer & { positionalRank: number })[] = []
-
-    Object.entries(playersByPosition).forEach(([position, players]) => {
-      const sortedPlayers = players.sort((a, b) => b.value - a.value)
-      sortedPlayers.forEach((player, index) => {
-        rankedRoster.push({
-          ...player,
-          positionalRank: index + 1,
-        })
-      })
-    })
-
-    return rankedRoster
-  }, [roster])
-
   const filteredProspects = useMemo(() => {
     let filtered = prospects
 
@@ -386,34 +350,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
   // Memoized utility functions
   const getProspectGrade = useCallback((prospect: Prospect): string => {
     return getProspectGradeValue(prospect)
-  }, [])
-
-  const getGradeColor = useCallback((grade: string): string => {
-    // Support both new grade_tier names and old letter grades
-    const gradeColors: Record<string, string> = {
-      Generational: 'text-amber-300',
-      Elite: 'text-yellow-400',
-      'Blue Chip': 'text-blue-400',
-      Contributer: 'text-emerald-400',
-      Depth: 'text-slate-400',
-      'Walk-On': 'text-rose-300',
-      Ungraded: 'text-gray-400',
-      // Legacy letter grades
-      'A+': 'text-green-400',
-      A: 'text-green-400',
-      'A-': 'text-green-400',
-      'B+': 'text-blue-400',
-      B: 'text-blue-400',
-      'B-': 'text-blue-400',
-      'C+': 'text-yellow-400',
-      C: 'text-yellow-400',
-      'C-': 'text-yellow-400',
-      'D+': 'text-orange-400',
-      D: 'text-orange-400',
-      'D-': 'text-orange-400',
-      F: 'text-red-400',
-    }
-    return gradeColors[grade] || 'text-gray-400'
   }, [])
 
   const getPositionColor = useCallback((position: string): string => {
@@ -497,25 +433,6 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     return 'Undrafted'
   }, [])
 
-  // Get valuation from database or calculate fallback
-  const getProspectValue = useCallback(
-    (prospect: Prospect): number => {
-      // Use database valuation if available
-      if (prospect.valuation) return Math.round(prospect.valuation * 100) / 100
-      // Fallback to client-side calculation
-      return calculateProspectValue(prospect.rank, prospect.position)
-    },
-    [calculateProspectValue]
-  )
-
-  // Format height from inches to feet-inches
-  const formatHeight = useCallback((heightInches: number | null): string => {
-    if (!heightInches) return '-'
-    const feet = Math.floor(heightInches / 12)
-    const inches = Math.round(heightInches % 12)
-    return `${feet}'${inches}"`
-  }, [])
-
   const getTierColor = useCallback((tier: string): string => {
     const tierColors: Record<string, string> = {
       'Elite Prospect': 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-bold',
@@ -581,73 +498,29 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     []
   )
 
-
   const getDraftPick = useCallback((prospect: Prospect): string => {
     const round = prospect.projectedRound || 'UDFA'
     if (round === 'UDFA') return 'UDFA'
     return `${round}`
   }, [])
 
-  // Memoized event handlers
-  const handleDragStart = useCallback((e: React.DragEvent, prospect: Prospect) => {
-    setDraggedProspect(prospect)
-    e.dataTransfer.effectAllowed = 'move'
-  }, [])
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      if (draggedProspect) {
-        const newRosterPlayer: RosterPlayer = {
-          id: `prospect-${draggedProspect.id}`,
-          name: draggedProspect.name,
-          position: draggedProspect.position,
-          team: 'ROOKIE',
-          age: 21,
-          experience: 0,
-          value: calculateProspectValue(draggedProspect.rank, draggedProspect.position), // Use calculated value
-          isProspect: true,
-          prospectData: draggedProspect,
-        }
-        setRoster((prev) => [...prev, newRosterPlayer])
-        setDraggedProspect(null)
-      }
-    },
-    [draggedProspect, calculateProspectValue]
-  )
-
-  const resetRoster = useCallback(() => {
-    setRoster([])
-  }, [])
 
   const handleProspectSelect = useCallback((prospect: Prospect) => {
     setNoteSaveStatus(null)
     setNoteSaveError(null)
     setSelectedProspect(prospect)
-    setShowModal(true)
   }, [])
 
   const handleShowComps = useCallback((prospect: Prospect) => {
     setSelectedProspectForComps(prospect)
-    setShowCompsModal(true)
   }, [])
 
   const handleCloseModal = useCallback(() => {
-    setShowModal(false)
     setSelectedProspect(null)
   }, [])
 
   const handleCloseCompsModal = useCallback(() => {
-    setShowCompsModal(false)
     setSelectedProspectForComps(null)
   }, [])
 
@@ -704,7 +577,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     []
   )
 
-  const handleBoardDragOver = useCallback((e: React.DragEvent, index: number) => {
+  const handleBoardDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }, [])

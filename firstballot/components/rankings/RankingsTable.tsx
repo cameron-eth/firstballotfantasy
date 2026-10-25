@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { ArrowUpDown, User, Crown, Gem } from 'lucide-react'
 import type { PlayerRanking, SortField } from '@/types/rankings'
@@ -115,7 +115,6 @@ export function RankingsTable({
   rankings,
   sort,
   isDiamondTier,
-  getRowBgColor,
   getTierColor,
   getTierDisplayName,
 }: RankingsTableProps) {

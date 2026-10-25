@@ -18,6 +18,7 @@ interface ProspectDetailModalProps {
   onSaveNotes: (id: number, notes: string) => void
   noteSaveStatus?: string | null
   noteSaveError?: string | null
+  notesAvailable?: boolean
   getProspectGrade: (prospect: Prospect) => string
   getDraftPick: (prospect: Prospect) => string
   getProspectTier: (rank: number, tier?: string | null) => string
@@ -35,6 +36,7 @@ export function ProspectDetailModal({
   onSaveNotes,
   noteSaveStatus,
   noteSaveError,
+  notesAvailable = true,
   getProspectGrade,
   getDraftPick,
   getProspectTier,
@@ -183,14 +185,15 @@ export function ProspectDetailModal({
                   variant="ghost"
                   className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-tighter"
                   onClick={() => onSaveNotes(prospect.id, localNotes)}
-                  disabled={prospect.is_fallback || !isLoggedIn}
+                  disabled={prospect.is_fallback || !isLoggedIn || !notesAvailable}
                 >
-                  {prospect.is_fallback ? 'Available after import' : isLoggedIn ? 'Save Analysis' : 'Log in to save'}
+                  {!notesAvailable ? 'Notes unavailable' : prospect.is_fallback ? 'Available after import' : isLoggedIn ? 'Save Analysis' : 'Log in to save'}
                 </Button>
               </div>
               <textarea
                 className="w-full bg-slate-900/50 border border-white/5 rounded-lg p-3 text-xs text-slate-300 font-mono min-h-[100px] focus:outline-none focus:border-blue-500/30 placeholder:text-slate-700 transition-colors"
                 placeholder="Enter personal notes, draft strategy, or trait analysis..."
+                disabled={!notesAvailable}
                 value={localNotes}
                 onChange={(e) => setLocalNotes(e.target.value)}
               />

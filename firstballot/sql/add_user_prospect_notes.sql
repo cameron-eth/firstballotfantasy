@@ -16,3 +16,5 @@ DROP POLICY IF EXISTS user_prospect_notes_update_own ON public.user_prospect_not
 CREATE POLICY user_prospect_notes_update_own ON public.user_prospect_notes FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 DROP POLICY IF EXISTS user_prospect_notes_delete_own ON public.user_prospect_notes;
 CREATE POLICY user_prospect_notes_delete_own ON public.user_prospect_notes FOR DELETE USING (auth.uid() = user_id);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_prospect_notes TO authenticated;

@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Reorder } from 'framer-motion'
 import Image from 'next/image'
 import useSWR from 'swr'
@@ -43,6 +43,8 @@ interface DraftBoardTabProps {
   setPositionFilter: (filter: string) => void
   allProspects?: Prospect[]
   draftBoard: Prospect[]
+  selectedYear: number
+  onSelectYear: (year: number) => void
   onAddToDraftBoard: (prospect: Prospect) => void
   onRemoveFromDraftBoard: (prospectId: number) => void
   onShowComps?: (prospect: Prospect) => void
@@ -50,11 +52,10 @@ interface DraftBoardTabProps {
   onBoardDragStart: (e: React.DragEvent, prospect: Prospect, index: number) => void
   onBoardDragOver: (e: React.DragEvent, index: number) => void
   onBoardDrop: (e: React.DragEvent, index: number) => void
-  onClearDraftBoard: () => void
   hasSavedBoard?: boolean
   savingBoard?: boolean
   hasUnsavedChanges?: boolean
-  onSaveBoard?: () => Promise<void>
+  onSaveBoard?: () => Promise<boolean>
   isLoggedIn?: boolean
   /** The signed-in user's own film/talent grades, keyed by prospect id. */
   gradesByProspectId?: Map<number, UserProspectGrade>
@@ -143,6 +144,8 @@ export function DraftBoardTab({
   setPositionFilter: _setPositionFilter,
   allProspects = [],
   draftBoard,
+  selectedYear,
+  onSelectYear,
   onAddToDraftBoard,
   onRemoveFromDraftBoard,
   onShowComps,
@@ -150,7 +153,6 @@ export function DraftBoardTab({
   onBoardDragStart: _onBoardDragStart,
   onBoardDragOver: _onBoardDragOver,
   onBoardDrop: _onBoardDrop,
-  onClearDraftBoard,
   hasSavedBoard = false,
   savingBoard = false,
   hasUnsavedChanges = false,
@@ -169,7 +171,6 @@ export function DraftBoardTab({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [sortByMyGrade, setSortByMyGrade] = useState(false)
-  const seededYearRef = useRef<number | null>(null)
 
   const canGrade = isLoggedIn && Boolean(onSetGrade)
 
@@ -210,34 +211,24 @@ export function DraftBoardTab({
       .sort(sortByRankThenGrade)
   }, [allProspects])
 
-  // Seed with the nearest upcoming class; later classes stay available to add.
-  const currentDraftYear = useMemo(() => {
-    const years = allEligibleProspects
-      .map((p) => p.draft_year)
-      .filter((y): y is number => typeof y === 'number' && Number.isFinite(y))
-    return years.length ? Math.min(...years) : DRAFT_BOARD_MIN_YEAR
-  }, [allEligibleProspects])
-
-  const currentYearProspects = useMemo(
-    () => allEligibleProspects.filter((p) => p.draft_year === currentDraftYear),
-    [allEligibleProspects, currentDraftYear]
-  )
+  const availableYears = useMemo(() => [...new Set(allEligibleProspects.map((p) => p.draft_year).filter((year): year is number => typeof year === 'number'))].sort(), [allEligibleProspects])
+  const classProspects = useMemo(() => allEligibleProspects.filter((p) => p.draft_year === selectedYear), [allEligibleProspects, selectedYear])
 
   const consensusBoard = useMemo(() => {
     const pool =
       position === 'ALL'
-        ? allEligibleProspects
-        : allEligibleProspects.filter((p) => p.position === position)
+        ? classProspects
+        : classProspects.filter((p) => p.position === position)
     return pool.map(toBoardPlayer)
-  }, [allEligibleProspects, position])
+  }, [classProspects, position])
 
   const boardProspects = useMemo(() => {
     // Drop anything a saved board carries over from an already-drafted class.
     const scoped = draftBoard.filter(
-      (p) => BOARD_POSITIONS.includes(p.position) && (p.draft_year ?? 0) >= DRAFT_BOARD_MIN_YEAR
+      (p) => BOARD_POSITIONS.includes(p.position) && p.draft_year === selectedYear
     )
     return position === 'ALL' ? scoped : scoped.filter((p) => p.position === position)
-  }, [draftBoard, position])
+  }, [draftBoard, position, selectedYear])
 
   const boardSections = useMemo(() => {
     const grouped = new Map<number, Prospect[]>()
@@ -290,30 +281,13 @@ export function DraftBoardTab({
     return map
   }, [boardProspects])
 
-  // If the board holds nothing from an upcoming class, seed it once with the
-  // nearest one. A saved board full of already-drafted players gets replaced.
-  useEffect(() => {
-    const eligibleOnBoard = draftBoard.filter(
-      (p) => (p.draft_year ?? 0) >= DRAFT_BOARD_MIN_YEAR
-    ).length
-    if (seededYearRef.current === currentDraftYear) return
-    if (eligibleOnBoard > 0) {
-      seededYearRef.current = currentDraftYear
-      return
-    }
-    if (currentYearProspects.length === 0) return
-
-    onClearDraftBoard()
-    currentYearProspects.forEach((p) => onAddToDraftBoard(p))
-    seededYearRef.current = currentDraftYear
-  }, [draftBoard, currentDraftYear, currentYearProspects, onAddToDraftBoard, onClearDraftBoard])
   const userBoard = useMemo(() => boardProspects.map(toBoardPlayer), [boardProspects])
 
   /** Per-position stat arrays for heat-map percentile coloring across upcoming classes. */
   const positionalHeatStats = useMemo(() => {
     type StatSet = { grade: number[]; rank: number[]; height: number[]; weight: number[]; forty: number[]; physical: number[] }
     const map = new Map<string, StatSet>()
-    for (const p of allEligibleProspects) {
+    for (const p of classProspects) {
       const key = p.position
       if (!map.has(key)) map.set(key, { grade: [], rank: [], height: [], weight: [], forty: [], physical: [] })
       const set = map.get(key)!
@@ -331,15 +305,15 @@ export function DraftBoardTab({
       if (physical > 0) set.physical.push(physical)
     }
     return map
-  }, [allEligibleProspects])
+  }, [classProspects])
 
   // Per-class consensus ranks — so "vs consensus" compares within the same draft class
   const consensusRankByClassId = useMemo(() => {
     const byYear = new Map<number, Map<number, number>>()
     const pool =
       position === 'ALL'
-        ? allEligibleProspects
-        : allEligibleProspects.filter((p) => p.position === position)
+        ? classProspects
+        : classProspects.filter((p) => p.position === position)
 
     // Group by year, then rank within each year
     const grouped = new Map<number, Prospect[]>()
@@ -354,14 +328,14 @@ export function DraftBoardTab({
       byYear.set(year, rankMap)
     }
     return byYear
-  }, [allEligibleProspects, position])
+  }, [classProspects, position])
 
   const consensusRankByClassName = useMemo(() => {
     const byYear = new Map<number, Map<string, number>>()
     const pool =
       position === 'ALL'
-        ? allEligibleProspects
-        : allEligibleProspects.filter((p) => p.position === position)
+        ? classProspects
+        : classProspects.filter((p) => p.position === position)
 
     const grouped = new Map<number, Prospect[]>()
     for (const p of pool) {
@@ -375,7 +349,7 @@ export function DraftBoardTab({
       byYear.set(year, rankMap)
     }
     return byYear
-  }, [allEligibleProspects, position])
+  }, [classProspects, position])
 
 
   const addTopAvailable = () => {
@@ -388,7 +362,7 @@ export function DraftBoardTab({
   // Click a cell to edit, Enter or blur to commit, Escape to abandon. Tab
   // commits too, because leaving the field blurs it.
   const beginEdit = (prospectId: number, field: GradeField) => {
-    if (!canGrade || allEligibleProspects.find((p) => p.id === prospectId)?.is_fallback) return
+    if (!canGrade || classProspects.find((p) => p.id === prospectId)?.is_fallback) return
     const current = userGradeOf(gradesByProspectId?.get(prospectId), field)
     setEditingCell({ prospectId, field })
     setEditDraft(current === null ? '' : String(current))
@@ -462,9 +436,9 @@ export function DraftBoardTab({
   const availableProspects = useMemo(
     () =>
       position === 'ALL'
-        ? allEligibleProspects
-        : allEligibleProspects.filter((p) => p.position === position),
-    [allEligibleProspects, position]
+        ? classProspects
+        : classProspects.filter((p) => p.position === position),
+    [classProspects, position]
   )
 
   const offBoardProspects = useMemo(() => {
@@ -509,29 +483,32 @@ export function DraftBoardTab({
 
   return (
     <main className="min-h-[70vh] bg-background">
-      <ScoutingSectionHeader title="Draft Board" description={`${draftBoard.length} players · drag to set your order`}>
+      <ScoutingSectionHeader title="Draft Board" description={`${selectedYear} class · Your ranked prospects`}>
       <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
         <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1 rounded-md border border-border bg-background/50 p-1" aria-label="Draft class">
+            {availableYears.map((year) => <button key={year} type="button" onClick={() => onSelectYear(year)} aria-pressed={selectedYear === year} className={cn('min-h-9 rounded px-3 text-xs font-semibold tabular-nums', selectedYear === year ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{year}</button>)}
+          </div>
           {positionTabs.map((pos) => (
             <button
               key={pos}
               type="button"
               onClick={() => setPosition(pos)}
               className={cn(
-                'min-h-10 min-w-[2.5rem] px-3 sm:min-h-7 sm:min-w-0 text-xs font-semibold rounded-md transition-colors active:scale-[0.98]',
+                'min-h-9 px-2.5 text-xs font-semibold rounded-md transition-colors active:scale-[0.98]',
                 position === pos
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
               )}
             >
-              {pos}
+              {pos !== 'ALL' ? <>{pos} <span className="ml-1 tabular-nums opacity-70">{draftBoard.filter((p) => p.draft_year === selectedYear && p.position === pos).length}</span></> : 'All'}
             </button>
           ))}
           <span className="hidden sm:block w-px h-5 bg-border mx-1" />
           <button
             type="button"
             onClick={addTopAvailable}
-            className="min-h-10 px-3.5 sm:min-h-7 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors active:scale-[0.98]"
+            className="min-h-9 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors active:scale-[0.98]"
           >
             Add Next
           </button>
@@ -556,7 +533,7 @@ export function DraftBoardTab({
           )}
         </div>
 
-        {isLoggedIn && onSaveBoard && draftBoard.length > 0 && (
+        {isLoggedIn && onSaveBoard && (hasSavedBoard || draftBoard.some((p) => p.draft_year === selectedYear)) && (
           <DraftBoardControls
             hasSavedBoard={hasSavedBoard}
             saving={savingBoard}
@@ -614,6 +591,7 @@ export function DraftBoardTab({
               </div>
 
               <div className="xl:flex-1 xl:min-h-0 xl:overflow-y-auto">
+                {boardProspects.length === 0 && <div className="p-8 text-center"><h3 className="text-sm font-semibold">Your {selectedYear} board starts here</h3><p className="mt-2 text-xs text-muted-foreground">Add prospects from this class to shape your own rankings.</p></div>}
                 {boardSections.map((section) => (
                   <div key={`year-${section.year}`} className="border-b border-border/60 last:border-0">
                     <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 bg-slate-800/55 border-b border-slate-700/55">
@@ -736,7 +714,7 @@ export function DraftBoardTab({
                                           alt={player.name}
                                           width={88}
                                           height={88}
-                                          className="w-full h-full object-contain object-bottom scale-110"
+                                          className="w-full h-full object-contain object-bottom"
                                           onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                         />
                                       ) : (
@@ -991,7 +969,7 @@ export function DraftBoardTab({
                                   </div>
                                 </div>
                                 <div
-                                  className="hidden lg:grid items-stretch h-24 pl-2 pr-2"
+                                  className="hidden lg:grid items-stretch h-16 pl-2 pr-2"
                                   style={{ gridTemplateColumns: BOARD_GRID_TEMPLATE }}
                                 >
                                   {/* Drag handle */}
@@ -1003,7 +981,7 @@ export function DraftBoardTab({
                                   {/* Player: full-height cutout image + name */}
                                   <div className="flex items-center gap-3 min-w-0">
                                     {/* Cutout image — no circle, like ProspectCard */}
-                                    <div className="relative w-20 h-full flex-shrink-0 bg-slate-800/40 overflow-hidden rounded-sm">
+                                    <div className="relative w-10 h-14 self-end flex-shrink-0 bg-slate-800/40 overflow-hidden rounded-sm">
                                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent z-[1]" />
                                       {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                         <Image
@@ -1011,7 +989,7 @@ export function DraftBoardTab({
                                           alt={player.name}
                                           width={160}
                                           height={160}
-                                          className="w-full h-full object-contain object-bottom scale-110"
+                                          className="w-full h-full object-contain object-bottom"
                                           onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                         />
                                       ) : (
@@ -1021,7 +999,7 @@ export function DraftBoardTab({
                                       )}
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="text-base font-bold text-foreground truncate leading-tight">
+                                      <div className="text-sm font-semibold text-foreground leading-tight">
                                         {player.name}
                                       </div>
                                       <div className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
@@ -1223,12 +1201,12 @@ export function DraftBoardTab({
               offBoardProspects={offBoardProspects}
               onAddToDraftBoard={onAddToDraftBoard}
               onAddNext={addTopAvailable}
-              onClearBoard={onClearDraftBoard}
+              onClearBoard={() => onReorderDraftBoard(draftBoard.filter((p) => p.draft_year !== selectedYear))}
             />
             <BoardBreakdownPanel
               userBoard={userBoard}
               consensusBoard={consensusBoard}
-              allEligibleProspects={allEligibleProspects}
+              allEligibleProspects={classProspects}
               position={position}
               consensusRankByClassName={consensusRankByClassName}
             />

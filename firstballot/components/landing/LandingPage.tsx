@@ -38,7 +38,7 @@ const paths = [
   { href: '/league-buddy', title: 'Run your league', detail: 'Track standings, matchups, activity and playoff outlook.', icon: Users, action: 'View league' },
 ]
 
-const watchlistOrder = ['Jesse Legree', 'Chris Henry Jr.', 'Legend Bey', 'Brock Boyd']
+const watchlistOrder = ['Jesse Legree', 'Chris Henry Jr.', 'Legend Bey', 'Mark Bowman']
 
 export function LandingPage() {
   const { data, error, isLoading } = useSWR('/api/prospects?draft_year=all', loadProspects, {

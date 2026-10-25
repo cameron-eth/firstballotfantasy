@@ -181,36 +181,10 @@ export function RosterSection({
     'pl-0 odd:border-0 even:border-l even:border-white/10 even:pl-4 sm:border-l sm:border-white/10 sm:pl-4 sm:odd:border-l sm:first:border-0 sm:first:pl-0'
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-4 sm:space-y-6 font-sans">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-blue-300">
-            Your team · Week {projections?.currentWeek ?? '—'}
-          </p>
-          <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            {selectedTeam.teamName}
-          </h1>
-          <p className="mt-2 text-sm text-slate-400">
-            {selectedTeam.wins}–{selectedTeam.losses}
-            {selectedTeam.ties ? `–${selectedTeam.ties}` : ''} record{' '}
-            <span className="mx-2 text-slate-600">/</span> #
-            {sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1} in league{' '}
-            <span className="mx-2 text-slate-600">/</span> {selectedTeam.players.length} players
-          </p>
-        </div>
-        {isDynasty && (
-          <Link
-            href="/scouting-portal?tab=draftboard"
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
-          >
-            Draft board <ArrowUpRight className="h-4 w-4" />
-          </Link>
-        )}
-      </header>
-
+    <div className="space-y-6 font-sans">
       <section
         aria-label="Team snapshot"
-        className="grid grid-cols-2 gap-y-5 rounded-xl border border-white/10 bg-slate-800/40 p-5 sm:grid-cols-4"
+        className="grid grid-cols-2 gap-y-5 border-b border-white/10 pb-6 sm:grid-cols-4"
       >
         {[
           [
@@ -262,11 +236,8 @@ export function RosterSection({
         onActionComplete={onActionComplete}
       />
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_272px]">
-        <section
-          aria-label="Roster"
-          className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-slate-900"
-        >
+      <div className="space-y-8">
+        <section aria-label="Roster" className="min-w-0 overflow-hidden border-y border-white/10">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pt-4">
             <div
               role="group"
@@ -385,7 +356,12 @@ export function RosterSection({
               </MetricTip>
             </span>
           </div>
-          <div className="divide-y divide-white/5">
+          <div
+            role="region"
+            aria-label="Player records"
+            tabIndex={0}
+            className="max-h-[65vh] overflow-y-auto overscroll-y-contain divide-y divide-white/5 focus-visible:outline focus-visible:outline-blue-400"
+          >
             {filtered.map((player) => {
               const bye = byes.has(player.playerId)
               const weekly = projections?.week[player.playerId]
@@ -538,8 +514,8 @@ export function RosterSection({
           </div>
         </section>
 
-        <aside className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-          <section className="rounded-xl border border-blue-400/20 bg-blue-400/5 p-4">
+        <div className="divide-y divide-white/10 border-t border-white/10">
+          <section className="py-6">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300">
               Lineup check
             </p>
@@ -588,7 +564,7 @@ export function RosterSection({
             )}
           </section>
           {isDynasty && (
-            <section className="rounded-xl border border-white/10 bg-slate-800/30 p-4">
+            <section className="py-6">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-slate-400" />
                 <h2 className="text-sm font-semibold text-white">Build your next class</h2>
@@ -624,7 +600,7 @@ export function RosterSection({
               </Link>
             </section>
           )}
-        </aside>
+        </div>
       </div>
     </div>
   )

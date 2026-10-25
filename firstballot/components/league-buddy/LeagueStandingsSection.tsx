@@ -49,24 +49,29 @@ export function LeagueStandingsSection({
   // Calculate user ranks
   const overallRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
   const pointsRank =
-    sortedTeams
+    [...sortedTeams]
       .sort((a, b) => b.pointsFor - a.pointsFor)
       .findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
   const gradeRank =
-    sortedTeams
+    [...sortedTeams]
       .sort((a, b) => b.gradeScore - a.gradeScore)
       .findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
   return (
     <>
       {/* League Standings */}
-      <Card className="bg-slate-700 border-slate-600">
+      <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
         <CardHeader>
-          <CardTitle className="text-purple-400 font-mono text-lg">LEAGUE STANDINGS</CardTitle>
+          <CardTitle className="text-white font-semibold text-lg">LEAGUE STANDINGS</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {sortedTeams.slice(0, 10).map((team, idx) => {
+          <div
+            role="region"
+            aria-label="League records"
+            tabIndex={0}
+            className="max-h-[60vh] overflow-y-auto overscroll-y-contain space-y-2 focus-visible:outline focus-visible:outline-blue-400"
+          >
+            {sortedTeams.map((team, idx) => {
               const rank = idx + 1
               const teamRankings = leaguePositionRankings[team.rosterId] || {}
               return (
@@ -88,8 +93,8 @@ export function LeagueStandingsSection({
       </Card>
 
       {/* League Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-slate-700 border-slate-600">
+      <div className="divide-y divide-white/10">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader>
             <CardTitle className="text-green-400 text-sm">LEAGUE LEADERS</CardTitle>
           </CardHeader>
@@ -115,7 +120,7 @@ export function LeagueStandingsSection({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-700 border-slate-600">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader>
             <CardTitle className="text-blue-400 text-sm">YOUR RANK</CardTitle>
           </CardHeader>
@@ -137,7 +142,7 @@ export function LeagueStandingsSection({
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-700 border-slate-600">
+        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
           <CardHeader>
             <CardTitle className="text-orange-400 text-sm">LEAGUE AVG</CardTitle>
           </CardHeader>

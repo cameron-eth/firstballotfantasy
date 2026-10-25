@@ -9,16 +9,17 @@ export interface LeagueSectionNavItem {
   icon: LucideIcon
 }
 
-/** Single source of truth for the section tabs — the sidebar and mobile strip both read it. */
+/** Single source of truth for the section tabs — the shared dashboard navigation reads it. */
 export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: Target },
   { id: 'roster', label: 'My Team', shortLabel: 'Team', icon: Users },
+  { id: 'builder', label: 'Team Builder', shortLabel: 'Builder', icon: Users },
   { id: 'league', label: 'League', shortLabel: 'League', icon: Trophy },
   { id: 'audit', label: 'Audit', shortLabel: 'Audit', icon: ClipboardList },
 ]
 
 export function resolveLeagueSection(tab: string | null): LeagueSection {
-  if (tab === 'roster' || tab === 'league' || tab === 'audit') return tab
+  if (tab === 'builder' || tab === 'roster' || tab === 'league' || tab === 'audit') return tab
   if (tab === 'matchup') return 'league'
   return 'overview'
 }

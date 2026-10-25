@@ -169,7 +169,7 @@ export function OverviewHeader({
   const myPositionRanks = positionRankings[selectedTeam.rosterId] ?? {}
 
   return (
-    <Card className="bg-slate-800 border-slate-700 overflow-hidden">
+    <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none overflow-hidden">
       {/* State-colored accent strip — instant whole-header signal */}
       {stateMeta && (
         <div
@@ -179,7 +179,7 @@ export function OverviewHeader({
           }}
         />
       )}
-      <CardContent className="p-5">
+      <CardContent className="px-0 py-5">
         {/* ════ TIER 1 · IDENTITY + VERDICT ════ */}
         <div className="flex items-start justify-between gap-4 mb-5">
           <div className="flex items-start gap-3 min-w-0">

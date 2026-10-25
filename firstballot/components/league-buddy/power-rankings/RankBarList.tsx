@@ -47,11 +47,11 @@ export function RankBarList({
       {rows.map((row) => {
         const tone = toneForRank(row.rank, leagueSize)
         return (
-          <div key={row.key} className="flex items-center gap-3 py-1.5">
-            <div className="w-14 shrink-0">
+          <div key={row.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
+            <div className={row.sublabel ? "w-full flex items-baseline gap-2" : "w-14 shrink-0"}>
               <div className="text-xs font-mono font-bold text-slate-200">{row.label}</div>
               {row.sublabel && (
-                <div className="text-[10px] text-slate-500 truncate" title={row.sublabel}>
+                <div className="text-[10px] text-slate-400 break-words" title={row.sublabel}>
                   {row.sublabel}
                 </div>
               )}

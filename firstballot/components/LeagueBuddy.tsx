@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Users, AlertCircle, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { useSearchParams } from 'next/navigation'
 
 import { isOffSeason } from '@/lib/season-utils'
@@ -17,12 +18,10 @@ import type {
   OverviewActions,
   TeamData,
 } from './league-buddy/types'
-import { calculateLeaguePositionRankings, countRosterPositions } from './league-buddy/utils'
+import { calculateLeaguePositionRankings } from './league-buddy/utils'
 import { resolveLeagueSection } from './league-buddy/navigation'
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { RosterSection } from './league-buddy/RosterSection'
-import { StandingsPlayoffs } from './league-buddy/StandingsPlayoffs'
-import { DraftOrderPanel } from './league-buddy/draft-order/DraftOrderPanel'
 import { LeagueStandingsSection } from './league-buddy/LeagueStandingsSection'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
@@ -40,20 +39,20 @@ import { useProjections } from './league-buddy/projections/useProjections'
 export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const desktopBuilder = useDesktopBuilder()
   const [activeSection, setActiveSection] = useState<LeagueSection>(() =>
-    resolveLeagueSection(searchParams.get('tab'))
+    resolveLeagueSection(searchParams.get('tab'), desktopBuilder)
   )
 
   useEffect(() => {
-    setActiveSection(resolveLeagueSection(searchParams.get('tab')))
-  }, [searchParams])
+    setActiveSection(resolveLeagueSection(searchParams.get('tab'), desktopBuilder))
+  }, [searchParams, desktopBuilder])
 
   const changeSection = useCallback(
     (section: LeagueSection) => {
       setActiveSection(section)
       const params = new URLSearchParams(searchParams.toString())
-      if (section === 'builder') params.delete('tab')
-      else params.set('tab', section)
+      params.set('tab', section)
       router.replace(`/league-buddy${params.size ? `?${params.toString()}` : ''}`, {
         scroll: false,
       })
@@ -104,20 +103,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       return { placements: {}, nowMedian: 50, futureMedian: 50 }
     }
   }, [teams])
-
-  // Roster slot counts (QB/RB/WR/TE/FLEX/SUPER_FLEX), tallied from Sleeper's raw slot array
-  const rosterPositions = useMemo(
-    () => ({
-      QB: 1,
-      RB: 2,
-      WR: 2,
-      TE: 1,
-      FLEX: 1,
-      SUPER_FLEX: 1,
-      ...countRosterPositions(rosterPositionsRaw),
-    }),
-    [rosterPositionsRaw]
-  )
 
   // Memoized event handlers to prevent unnecessary re-renders
   const handleTeamSelect = useCallback((team: TeamData) => {
@@ -400,7 +385,18 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         </>
       )}
 
-      {selectedTeam && (
+      {activeSection === 'builder' && !desktopBuilder && (
+        <section className="rounded-xl border border-slate-700 p-6">
+          <h2 className="font-semibold text-white">Team Builder is available on desktop</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Open this league in a desktop browser to plan your roster on the map.
+          </p>
+          <Button className="mt-4" onClick={() => changeSection('overview')}>
+            Go to Overview
+          </Button>
+        </section>
+      )}
+      {selectedTeam && desktopBuilder && (
         <div hidden={activeSection !== 'builder'}>
           <TeamBuilder
             rosterPositions={rosterPositionsRaw}
@@ -429,36 +425,19 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       )}
 
       {activeSection === 'league' && selectedTeam && (
-        <div className="space-y-6">
-          <LeagueStandingsSection
-            teams={teams}
-            selectedTeam={selectedTeam}
-            leaguePositionRankings={leaguePositionRankings}
-            placements={leaguePlacements}
-            onTeamSelect={handleTeamSelect}
-          />
-          {leagueOverview?.isDynasty && (
-            <DraftOrderPanel
-              {...draftOrder}
-              teams={teams}
-              selectedRosterId={selectedTeam.rosterId}
-              initialMetric="maxpf"
-            />
-          )}
-          <StandingsPlayoffs leagueId={leagueId} teams={sortedTeams} />
-        </div>
+        <LeagueStandingsSection
+          teams={teams}
+          selectedTeam={selectedTeam}
+          onTeamSelect={handleTeamSelect}
+          leagueId={leagueId}
+          isDynasty={leagueOverview?.isDynasty === true}
+          draftOrder={draftOrder}
+        />
       )}
 
       {/* AUDIT SECTION */}
       {activeSection === 'audit' && selectedTeam && (
-        <AuditSection
-          selectedTeam={selectedTeam}
-          teams={teams}
-          rosterPositions={rosterPositions}
-          currentWeek={currentWeek}
-          placement={leaguePlacements.placements[selectedTeam.rosterId]}
-          placements={leaguePlacements}
-        />
+        <AuditSection placement={leaguePlacements.placements[selectedTeam.rosterId]} />
       )}
     </DashboardLayout>
   )

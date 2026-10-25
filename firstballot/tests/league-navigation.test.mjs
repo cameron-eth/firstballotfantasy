@@ -15,3 +15,9 @@ test('quick links retain their tab when league context is added', () => {
   assert.equal(withLeagueId('/scouting-portal?tab=draftboard', '123'), '/scouting-portal?tab=draftboard&leagueId=123')
   assert.equal(withLeagueId('/scouting-portal', null), '/scouting-portal')
 })
+
+test('mobile opens overview by default but preserves explicit builder links for desktop guidance', () => {
+  assert.equal(resolveLeagueSection(null, false), 'overview')
+  assert.equal(resolveLeagueSection('builder', false), 'builder')
+  assert.equal(resolveLeagueSection('league', false), 'league')
+})

@@ -24,20 +24,25 @@ export function PlayerTradeModal({
   onClose,
   initialOffer,
 }: {
-  player: PlayerData
+  player?: PlayerData
   team: TeamData
   teams: TeamData[]
   leagueId: string
   onClose: () => void
-  initialOffer?: { partnerId: number; playerId: string }
+  initialOffer?: { partnerId: number; playerId?: string; give?: OfferSide; receive?: OfferSide }
 }) {
   const { user } = useAuth()
   const [partner, setPartner] = useState<number | null>(initialOffer?.partnerId ?? null)
-  const [give, setGive] = useState<OfferSide>({ ...emptySide(), players: [player.playerId] })
-  const [receive, setReceive] = useState<OfferSide>(() => ({
-    ...emptySide(),
-    players: initialOffer ? [initialOffer.playerId] : [],
-  }))
+  const [give, setGive] = useState<OfferSide>(
+    initialOffer?.give ?? { ...emptySide(), players: player ? [player.playerId] : [] }
+  )
+  const [receive, setReceive] = useState<OfferSide>(
+    () =>
+      initialOffer?.receive ?? {
+        ...emptySide(),
+        players: initialOffer?.playerId ? [initialOffer.playerId] : [],
+      }
+  )
   const [query, setQuery] = useState('')
   const [assetType, setAssetType] = useState('players')
   const [review, setReview] = useState(Boolean(initialOffer))
@@ -74,13 +79,14 @@ export function PlayerTradeModal({
     { revalidateOnFocus: false }
   )
   const other = teams.find((t) => t.rosterId === partner)
-  const candidates = inventory
-    ? tradeOpportunities(player, team, teams, inventory.superflex).filter((c) =>
-        `${c.target.playerName} ${c.team.teamName} ${c.target.position}`
-          .toLowerCase()
-          .includes(query.toLowerCase())
-      )
-    : []
+  const candidates =
+    inventory && player
+      ? tradeOpportunities(player, team, teams, inventory.superflex).filter((c) =>
+          `${c.target.playerName} ${c.team.teamName} ${c.target.position}`
+            .toLowerCase()
+            .includes(query.toLowerCase())
+        )
+      : []
   const validSide = (side: OfferSide, budget: number | null | undefined) =>
     side.players.length + side.picks.length + (side.faab > 0 ? 1 : 0) > 0 &&
     Number.isInteger(side.faab) &&
@@ -148,7 +154,9 @@ export function PlayerTradeModal({
       <DialogContent className="max-h-[90vh] max-w-5xl sm:max-w-5xl overflow-y-auto border-slate-700 bg-slate-950 text-slate-200">
         <DialogHeader>
           <DialogTitle>
-            {review ? 'Confirm suggested trade' : `Trade opportunities · ${player.playerName}`}
+            {review
+              ? 'Confirm suggested trade'
+              : `Trade opportunities${player ? ` · ${player.playerName}` : ''}`}
           </DialogTitle>
           <DialogDescription>
             Explore players and owned picks, build an offer, then review before sending to Sleeper.

@@ -32,7 +32,7 @@ export function PositionStrengthRadar({ data }: PositionStrengthRadarProps) {
   }
 
   return (
-    <div className="h-[280px] w-full">
+    <div className="h-[240px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data}>
           <PolarGrid stroke="#ffffff18" />

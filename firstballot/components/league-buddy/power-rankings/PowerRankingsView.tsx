@@ -93,7 +93,7 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
 
   if (leagueSize === 0) {
     return (
-      <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
+      <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
         <CardContent className="py-12 text-center text-slate-400">
           No rosters available for this league yet.
         </CardContent>
@@ -118,14 +118,14 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
         </div>
       </div>
 
-      <div className="space-y-4">
-        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
-          <CardHeader className="pb-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+          <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Positional Rankings
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
             <RankBarList
               rows={positionalRows}
               leagueSize={leagueSize}
@@ -135,13 +135,13 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
           </CardContent>
         </Card>
 
-        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
-          <CardHeader className="pb-3">
+        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+          <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Starter Rankings
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
             <RankBarList
               rows={starterRows}
               leagueSize={leagueSize}
@@ -150,27 +150,24 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
             />
           </CardContent>
         </Card>
-      </div>
-
-      <div className="space-y-4">
-        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
-          <CardHeader className="pb-3">
+        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+          <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Position Strength
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
             <PositionStrengthRadar data={radarData} />
           </CardContent>
         </Card>
 
-        <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none">
-          <CardHeader className="pb-3">
+        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+          <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
               Starting Lineup
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
             {selectedEntry ? (
               <StartingLineupChart
                 slots={selectedEntry.valuation.slots}

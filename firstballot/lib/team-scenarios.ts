@@ -1,3 +1,4 @@
+import type { FundingPlan } from './draft-funding'
 export type Target = {
   id: string
   name: string
@@ -17,6 +18,7 @@ export type Scenario = {
   horizon?: number
   lineups?: Record<string, Record<string, string>>
   departureYears?: Record<string, number>
+  fundingPlans?: FundingPlan[]
 }
 export function validateScenarios(value: unknown): value is Scenario[] {
   if (!Array.isArray(value) || value.length > 12) return false
@@ -63,6 +65,30 @@ export function validateScenarios(value: unknown): value is Scenario[] {
                     typeof id === 'string' &&
                     /^(nfl|prospect):[a-zA-Z0-9_-]{1,64}$/.test(id)
                 )
+            ))) &&
+        (s.fundingPlans === undefined ||
+          (Array.isArray(s.fundingPlans) &&
+            s.fundingPlans.length <= 100 &&
+            new Set(s.fundingPlans.map((f: FundingPlan) => f.targetId)).size ===
+              s.fundingPlans.length &&
+            s.fundingPlans.every(
+              (f: FundingPlan) =>
+                f &&
+                /^prospect:[a-zA-Z0-9_-]{1,64}$/.test(f.targetId) &&
+                Number.isInteger(f.partnerId) &&
+                f.partnerId > 0 &&
+                /^20\d{2}:\d{1,2}:\d+$/.test(f.receivePickId) &&
+                Array.isArray(f.givePlayerIds) &&
+                f.givePlayerIds.length <= 10 &&
+                f.givePlayerIds.every(
+                  (id) => typeof id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(id)
+                ) &&
+                Array.isArray(f.givePickIds) &&
+                f.givePickIds.length <= 10 &&
+                f.givePickIds.every(
+                  (id) => typeof id === 'string' && /^20\d{2}:\d{1,2}:\d+$/.test(id)
+                ) &&
+                f.givePlayerIds.length + f.givePickIds.length > 0
             ))) &&
         Array.isArray(s.outgoing) &&
         s.outgoing.length <= 100 &&

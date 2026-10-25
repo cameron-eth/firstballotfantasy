@@ -1,5 +1,6 @@
 'use client'
 import useSWR from 'swr'
+import { applyFundingPlans } from '@/lib/draft-funding'
 import type { Scenario } from '@/lib/team-scenarios'
 import { assessDraftCapital, scenarioAtYear, type CapitalFit } from '@/lib/team-timeline'
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
@@ -58,15 +59,32 @@ export function useTeamTimeline({
       )
     : []
   const slots = Object.fromEntries(rows.map((r) => [r.rosterId, r.pick]))
-  const picks = (data?.picks ?? []).filter((p) => p.owner_id === team.rosterId)
+  const plans = (scenario?.fundingPlans ?? []).filter(
+    (f) =>
+      scenario?.targets.some((t) => t.id === f.targetId) &&
+      f.givePlayerIds.every((id) => team.players.some((p) => p.playerId === id))
+  )
+  const applied = applyFundingPlans(data?.picks ?? [], plans, team.rosterId)
+  const funding = {
+    ...applied,
+    rejected: [
+      ...applied.rejected,
+      ...(scenario?.fundingPlans ?? []).filter((f) => !plans.includes(f)),
+    ],
+  }
+  const picks = funding.picks.filter((p) => p.owner_id === team.rosterId)
   const fits =
     data && scenario
       ? assessDraftCapital(scenario.targets, prospects, picks, slots, teams.length, [
           ...new Set(data.picks.map((p) => Number(p.season))),
         ])
       : []
-  const view = scenario ? scenarioAtYear(scenario, horizon, baseYear) : undefined
+  const view = scenario
+    ? scenarioAtYear({ ...scenario, fundingPlans: funding.accepted }, horizon, baseYear)
+    : undefined
   return {
+    inventory: data,
+    funding,
     baseYear,
     horizon,
     view,

@@ -8,7 +8,12 @@ export function scenarioAtYear(scenario: Scenario, year: number, baseYear: numbe
   return {
     ...scenario,
     targets: scenario.targets.filter((t) => arrivalYear(t, baseYear) <= year),
-    outgoing: scenario.outgoing.filter((id) => (scenario.departureYears?.[id] ?? baseYear) <= year),
+    outgoing: [
+      ...new Set([
+        ...scenario.outgoing.filter((id) => (scenario.departureYears?.[id] ?? baseYear) <= year),
+        ...(year >= baseYear ? (scenario.fundingPlans ?? []).flatMap((f) => f.givePlayerIds) : []),
+      ]),
+    ],
   }
 }
 export interface CapitalFit {

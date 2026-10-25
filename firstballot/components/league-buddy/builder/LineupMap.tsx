@@ -29,6 +29,7 @@ export function LineupMap({
   update,
   onTrade,
   onAdd,
+  onFund,
   fits,
 }: {
   team: TeamData
@@ -43,6 +44,7 @@ export function LineupMap({
   update: (patch: Partial<Scenario>) => void
   onTrade: (p: PlayerData) => void
   onAdd: (t: Target) => void
+  onFund: (t: Target) => void
 }) {
   const [placingId, setPlacingId] = useState<string | null>(null)
   const superflex =
@@ -89,7 +91,11 @@ export function LineupMap({
     setPlacingId(null)
   }
   function remove(p: MapPlayer) {
-    if (p.target) update({ targets: scenario.targets.filter((t) => t.id !== p.id) })
+    if (p.target)
+      update({
+        targets: scenario.targets.filter((t) => t.id !== p.id),
+        fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== p.id),
+      })
     else if (p.roster)
       update({
         outgoing: [...new Set([...scenario.outgoing, p.roster.playerId])],
@@ -104,6 +110,13 @@ export function LineupMap({
         team={p.team}
         image={p.image}
         rookie={p.rookie}
+        badge={
+          p.target
+            ? p.target.kind === 'draft'
+              ? 'Rookie target · acquisition pending'
+              : 'Trade target · not acquired'
+            : undefined
+        }
         label={`${label} · ${p.ppg == null ? 'FPPG unavailable' : `${p.ppg.toFixed(1)} FPPG`}`}
         action={
           slot
@@ -126,11 +139,19 @@ export function LineupMap({
         )}
       </StrategyCard>
       {p.target?.kind === 'draft' && (
-        <DraftFitNote
-          fit={fits.find((f) => f.targetId === p.id)}
-          year={p.target.year}
-          baseYear={baseYear}
-        />
+        <div className="space-y-2">
+          <button
+            onClick={() => onFund(p.target!)}
+            className="w-full rounded-lg border border-violet-400/40 py-2 text-xs text-violet-200"
+          >
+            Draft access & trade ideas →
+          </button>
+          <DraftFitNote
+            fit={fits.find((f) => f.targetId === p.id)}
+            year={p.target.year}
+            baseYear={baseYear}
+          />
+        </div>
       )}
       {slot && (
         <div className="space-y-2">
@@ -213,10 +234,10 @@ export function LineupMap({
         })}
       </div>
       <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared bench">
-        <h3 className="mb-3 text-sm font-medium text-slate-300">Bench & planned arrivals</h3>
+        <h3 className="mb-3 text-sm font-medium text-slate-300">Bench</h3>
         <div className="flex flex-wrap justify-center gap-4">
           {players
-            .filter((p) => !slots.some((s) => s.starter?.id === p.id))
+            .filter((p) => !p.target && !slots.some((s) => s.starter?.id === p.id))
             .map((p) => (
               <div className="w-60" key={p.id}>
                 {card(
@@ -228,6 +249,29 @@ export function LineupMap({
             ))}
         </div>
       </section>
+      {players.some((p) => p.target && !slots.some((s) => s.starter?.id === p.id)) && (
+        <section
+          aria-label="Acquisition targets"
+          className="mt-6 border-t border-violet-400/30 pt-4"
+        >
+          <h3 className="mb-3 text-sm font-medium text-violet-200">
+            Acquisition targets · not on your roster yet
+          </h3>
+          <div className="flex justify-center gap-4">
+            {players
+              .filter((p) => p.target && !slots.some((s) => s.starter?.id === p.id))
+              .map((p) => (
+                <div className="w-60" key={p.id}>
+                  {card(
+                    p,
+                    'Planned arrival',
+                    slots.some((s) => fitsSlot(s.eligible, p)) ? 'target' : undefined
+                  )}
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
       {board.length > 0 && (
         <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared prospect board">
           <h3 className="mb-3 text-sm font-medium text-blue-200">Your board</h3>

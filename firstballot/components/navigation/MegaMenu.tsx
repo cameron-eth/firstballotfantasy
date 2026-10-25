@@ -68,6 +68,12 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
       label: 'RANKINGS',
       items: [
         {
+          name: 'Community Rankings',
+          href: '/community-rankings',
+          description: 'Pick players and shape the crowd board',
+          icon: Users,
+        },
+        {
           name: 'Dynasty Rankings',
           href: '/rankings',
           description: 'The definitive rookie & vet ranks',

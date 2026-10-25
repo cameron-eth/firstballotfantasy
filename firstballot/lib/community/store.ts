@@ -3,12 +3,14 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import { createHash } from 'node:crypto'
 import type { Ballot, Candidate } from './rating'
 const bucket = 'community-ballots'
-export const ballotPath = (userId: string, day: string) =>
-  `${day}-${createHash('sha256').update(userId).digest('hex')}.json`
+export const ballotPath = (userId: string, day: string, round = 0) =>
+  `${day}${round ? `-r${round}` : ''}-${createHash('sha256').update(userId).digest('hex')}.json`
 export const dailySeed = (userId: string, day: string) =>
   parseInt(createHash('sha256').update(`${day}:${userId}`).digest('hex').slice(0, 8), 16)
-export async function readToday(userId: string, day: string): Promise<Ballot | null> {
-  const { data, error } = await supabaseAdmin.storage.from(bucket).download(ballotPath(userId, day))
+export async function readToday(userId: string, day: string, round = 0): Promise<Ballot | null> {
+  const { data, error } = await supabaseAdmin.storage
+    .from(bucket)
+    .download(ballotPath(userId, day, round))
   if (error) {
     if (
       String((error as { statusCode?: string }).statusCode) === '404' ||
@@ -19,10 +21,10 @@ export async function readToday(userId: string, day: string): Promise<Ballot | n
   }
   return JSON.parse(await data.text())
 }
-export async function saveBallot(userId: string, ballot: Ballot) {
+export async function saveBallot(userId: string, ballot: Ballot, round = 0) {
   const { error } = await supabaseAdmin.storage
     .from(bucket)
-    .upload(ballotPath(userId, ballot.day), JSON.stringify(ballot), {
+    .upload(ballotPath(userId, ballot.day, round), JSON.stringify(ballot), {
       upsert: false,
       contentType: 'application/json',
       cacheControl: '0',

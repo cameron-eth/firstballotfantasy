@@ -5,7 +5,7 @@ import { useLeagueFormat } from '@/hooks/use-league-format'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { Trophy, Search, ClipboardList, Users, Home } from 'lucide-react'
+import { Vote, Search, ClipboardList, Users, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function BottomNavContent() {
@@ -18,7 +18,7 @@ function BottomNavContent() {
     { name: 'Scout', href: '/scouting-portal', icon: Search },
     { name: 'Board', href: '/scouting-portal?tab=draftboard', icon: ClipboardList },
     { name: 'Team', href: '/league-buddy', icon: Users },
-    { name: 'League', href: '/league-buddy', icon: Trophy },
+    { name: 'Rank', href: '/community-rankings', icon: Vote },
   ]
 
   return (

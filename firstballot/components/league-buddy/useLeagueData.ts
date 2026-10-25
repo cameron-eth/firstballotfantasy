@@ -345,6 +345,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             const tempPlayerForOpponent: PlayerData = {
               playerId,
               playerName,
+              fantasyPositions: allPlayersData[playerId]?.fantasy_positions,
               position: player.position,
               team: player.team,
               rank: 999,
@@ -358,6 +359,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             return {
               playerId,
               playerName,
+              fantasyPositions: allPlayersData[playerId]?.fantasy_positions,
               position: player.position,
               team: player.team,
               rank: ranking?.rank || player.search_rank || 999,

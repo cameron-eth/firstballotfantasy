@@ -72,6 +72,7 @@ export interface KtcHistoryPoint {
 }
 
 export interface PlayerData {
+  fantasyPositions?: string[]
   playerId: string
   playerName: string
   position: string

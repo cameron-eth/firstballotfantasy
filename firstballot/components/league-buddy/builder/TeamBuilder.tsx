@@ -2,16 +2,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
-import { plannedPositionCount, type Scenario, type Target } from '@/lib/team-scenarios'
+import { type Scenario, type Target } from '@/lib/team-scenarios'
 import { PlayerTradeModal } from '../trades/PlayerTradeModal'
 import type { PlayerData, TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
 import { StrategyCard } from './StrategyCard'
-import { RosterCardStack } from './RosterCardStack'
+import { LineupMap } from './LineupMap'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
 import type { TeamPlacement } from '../competitiveState'
-import { useBoardFit, BoardFitStack } from './BoardFit'
-import { useTeamTimeline, DraftFitNote, type TimelineDraftOrder } from './TeamTimeline'
+import { useBoardFit } from './BoardFit'
+import { useTeamTimeline, type TimelineDraftOrder } from './TeamTimeline'
 import { PlanMenu } from './PlanMenu'
 import { CompactSelect } from '@/components/ui/compact-select'
 import { useCanvasZoom } from './useCanvasZoom'
@@ -40,12 +40,14 @@ export function TeamBuilder({
   isDynasty,
   placement,
   draftOrder,
+  rosterPositions,
 }: {
   team: TeamData
   teams: TeamData[]
   leagueId: string
   isDynasty: boolean
   placement?: TeamPlacement
+  rosterPositions: string[]
   draftOrder?: TimelineDraftOrder
 }) {
   const { user, loading: authLoading } = useAuth()
@@ -309,93 +311,29 @@ export function TeamBuilder({
               leagueId={leagueId}
               isDynasty={isDynasty}
             />
-            <div className="flex gap-4 border-t border-slate-700 pt-5">
-              {positions.map((pos) => {
-                const current = team.players.filter((p) => p.position === pos)
-                return (
-                  <section key={pos} className="w-60 shrink-0 space-y-3">
-                    <header className="mb-4 flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900 px-3 py-3">
-                      <h3 className="font-semibold text-white">{pos}</h3>
-                      <span className="text-xs text-slate-400">
-                        {current.length} now →{' '}
-                        <strong className="text-blue-300">
-                          {plannedPositionCount(pos, team.players, view)} planned
-                        </strong>
-                      </span>
-                    </header>
-                    {view.targets
-                      .filter((t) => t.position === pos)
-                      .map((t) => (
-                        <div key={t.id} className="space-y-2">
-                          <StrategyCard
-                            {...t}
-                            rookie={
-                              t.kind === 'draft'
-                                ? t.year === timeline.horizon
-                                : rookies.has(t.id) && timeline.horizon === timeline.baseYear
-                            }
-                            label={
-                              t.kind === 'draft'
-                                ? `Planned arrival · ${t.year ?? 'Class TBD'}`
-                                : `Trade target · ${t.arrivalYear ?? timeline.baseYear}`
-                            }
-                            action="Remove"
-                            onAction={() =>
-                              update({ targets: scenario.targets.filter((p) => p.id !== t.id) })
-                            }
-                          />
-                          {t.kind === 'draft' && (
-                            <DraftFitNote
-                              fit={timeline.fits.find((f) => f.targetId === t.id)}
-                              year={t.year}
-                              baseYear={timeline.baseYear}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    <button
-                      className="w-full rounded-lg border border-dashed border-slate-600 p-3 text-xs text-blue-300 hover:bg-slate-800"
-                      onClick={() => {
-                        setPosition(pos)
-                        document.getElementById('builder-search')?.focus()
-                      }}
-                    >
-                      + Find {pos} targets
-                    </button>
-                    <RosterCardStack
-                      players={current}
-                      onTrade={setTradePlayer}
-                      position={pos}
-                      outgoing={view.outgoing}
-                      ageOffset={Math.max(0, timeline.horizon - timeline.baseYear)}
-                      onToggle={(id) =>
-                        update({
-                          outgoing: view.outgoing.includes(id)
-                            ? scenario.outgoing.filter((value) => value !== id)
-                            : [...new Set([...scenario.outgoing, id])],
-                          departureYears: { ...scenario.departureYears, [id]: timeline.horizon },
-                        })
-                      }
-                    />
-                    {isDynasty &&
-                      board.user &&
-                      !board.error &&
-                      !prospectError &&
-                      !board.isLoading &&
-                      !prospectsLoading &&
-                      board.players.length > 0 && (
-                        <BoardFitStack
-                          players={board.players}
-                          position={pos}
-                          targets={scenario.targets}
-                          full={scenario.targets.length >= 100}
-                          onAdd={add}
-                        />
-                      )}
-                  </section>
-                )
-              })}
-            </div>
+            <LineupMap
+              fits={timeline.fits}
+              team={team}
+              teams={teams}
+              rawSlots={rosterPositions}
+              scenario={scenario}
+              view={view}
+              horizon={timeline.horizon}
+              baseYear={timeline.baseYear}
+              board={
+                isDynasty &&
+                board.user &&
+                !board.error &&
+                !prospectError &&
+                !board.isLoading &&
+                !prospectsLoading
+                  ? board.players
+                  : []
+              }
+              update={update}
+              onTrade={setTradePlayer}
+              onAdd={add}
+            />
           </div>
         </div>
         <section aria-label="Find strategy targets" className="border-t border-white/10 pt-5">

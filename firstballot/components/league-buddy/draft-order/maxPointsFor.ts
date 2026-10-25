@@ -116,17 +116,20 @@ export interface OptimalLineup {
 export function optimalLineup(
   playersPoints: Record<string, number>,
   slots: string[][],
-  positionOf: (playerId: string) => string | undefined
+  positionOf: (playerId: string) => string | string[] | undefined
 ): OptimalLineup {
   if (slots.length === 0) return { seated: [], total: 0 }
 
   const candidates: Candidate[] = []
   for (const [playerId, points] of Object.entries(playersPoints)) {
-    const position = positionOf(playerId)?.toUpperCase()
-    if (!position) continue
+    const rawPositions = positionOf(playerId)
+    const positions = (
+      Array.isArray(rawPositions) ? rawPositions : rawPositions ? [rawPositions] : []
+    ).map((p) => p.toUpperCase())
+    if (!positions.length) continue
     const eligible: number[] = []
     for (let i = 0; i < slots.length; i++) {
-      if (slots[i].includes(position)) eligible.push(i)
+      if (positions.some((position) => slots[i].includes(position))) eligible.push(i)
     }
     if (eligible.length > 0) {
       candidates.push({ playerId, points: Number(points) || 0, slots: eligible })

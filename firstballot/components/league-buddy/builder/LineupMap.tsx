@@ -177,7 +177,7 @@ export function LineupMap({
           </button>
         )}
       </div>
-      <div className="flex gap-4 border-t border-slate-700 pt-5">
+      <div className="flex justify-center gap-4 border-t border-slate-700 pt-5">
         {slots.map((slot) => {
           const starter = slot.starter ? byId.get(slot.starter.id) : undefined
           return (
@@ -214,7 +214,7 @@ export function LineupMap({
       </div>
       <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared bench">
         <h3 className="mb-3 text-sm font-medium text-slate-300">Bench & planned arrivals</h3>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           {players
             .filter((p) => !slots.some((s) => s.starter?.id === p.id))
             .map((p) => (
@@ -231,7 +231,7 @@ export function LineupMap({
       {board.length > 0 && (
         <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared prospect board">
           <h3 className="mb-3 text-sm font-medium text-blue-200">Your board</h3>
-          <div className="flex gap-4">
+          <div className="flex justify-center gap-4">
             {[...new Set(board.map((p) => p.position))].map((position) => (
               <div key={position} className="w-60 shrink-0">
                 <BoardFitStack

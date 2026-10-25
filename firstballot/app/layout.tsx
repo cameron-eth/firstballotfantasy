@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth'
+import { CommunityRankingPrompt } from '@/components/landing/CommunityRankingPrompt'
 import { LeagueProvider } from '@/lib/league-context'
 import { Analytics } from '@vercel/analytics/next'
 
@@ -23,7 +24,8 @@ export const metadata: Metadata = {
     default: 'First Ballot Fantasy',
     template: '%s | First Ballot Fantasy',
   },
-  description: 'College football prospect scouting, dynasty projections, draft boards, and fantasy league management.',
+  description:
+    'College football prospect scouting, dynasty projections, draft boards, and fantasy league management.',
   generator: 'v0.dev',
 }
 
@@ -37,7 +39,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <script src="https://unpkg.com/react-scan/dist/auto.global.js" crossOrigin="anonymous" />
         )}
         <AuthProvider>
-          <LeagueProvider>{children}</LeagueProvider>
+          <LeagueProvider>
+            {children}
+            <CommunityRankingPrompt />
+          </LeagueProvider>
         </AuthProvider>
         <Analytics />
       </body>

@@ -1,0 +1,17 @@
+# Daily community rankings
+
+A signed-in account gets one daily invitation across app routes. The browser remembers that the invitation was shown for the UTC day, including Not today / Escape / outside-click dismissal. A recorded vote suppresses the invitation on other devices too. Login, billing and settings do not interrupt users with it. One ballot per account per UTC day is enforced by an atomic, non-overwriting storage insert.
+
+Dynasty comparisons always contain a college prospect. Most pairings compare the same position; one in five seed buckets permits cross-position bridges and one in four permits current NFL opponents. Redraft leagues receive only NFL comparisons. The question explicitly standardizes scoring: dynasty superflex PPR, NFL current-season 1QB PPR. These two pools never share ratings. Opponent and left/right order rotate deterministically with the account/day hash. The server reconstructs the pair and rejects changed or invented ballots.
+
+## Storage and scoring
+
+The old community_rank_votes table was absent in the live project. New ballots use the provisioned private `community-ballots` Supabase Storage bucket (4 KB JSON limit, no public access or client write policy). Service-role access exists only in server modules. Object names contain the UTC day and SHA-256 account ID; bodies contain version, day, pool, pair and winner, never account credentials. A ballot is immutable. A future database import can use the object name as an idempotency key.
+
+The regularized Bradley–Terry model fits pairwise preferences with simultaneous gradient updates, a neutral zero log-strength prior and L2 regularization. Display score = 1500 + 400 × fitted log-strength / ln(10). Ballot order does not change the model. Wins against stronger opponents affect the score more than easy wins. Scouting grades, KTC and class ranks are not overwritten. At least five comparisons are required for a provisional community rank; counts and early-sample uncertainty remain visible. Separate disconnected comparison groups are not reliably comparable until bridge votes arrive.
+
+The server reads all ballot objects in paginated lists and bounded batches, caches the history for 60 seconds per process, and invalidates the writer's cache after a vote. This provides immediate read-your-vote results; other instances may lag up to a minute. This is appropriate for the initial low-volume dataset. Move the same immutable records to an indexed relational vote table and scheduled model snapshots as participation grows; per-object downloads are not a high-volume analytics warehouse.
+
+## UX
+
+The app-wide modal reuses the position-colored portrait cards and college/NFL logos. It does not reveal existing preferences before the choice. After voting, the user can view the current prospect community board, scores and comparison counts. Dismissal never prevents access to the rest of the app. No guest ballots or automated test votes are included in the real model.

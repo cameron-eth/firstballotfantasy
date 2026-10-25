@@ -1,7 +1,7 @@
 'use client'
 import { useLayoutEffect, useRef, useState, useEffect, useCallback } from 'react'
 
-const clamp = (value: number) => Math.min(150, Math.max(50, Math.round(value)))
+const clamp = (value: number) => Math.min(150, Math.max(10, Math.round(value)))
 /** Zoom only this canvas; preserve the content point under the gesture. */
 export function useCanvasZoom() {
   const viewportRef = useRef<HTMLDivElement | null>(null)

@@ -52,7 +52,12 @@ export function tradeOpportunities(
 }
 
 /** Concrete one-for-one offers: neither manager's positional depth balance worsens. */
-export function suggestedTeamTrades(mine: TeamData, teams: TeamData[], superflex: boolean) {
+export function suggestedTeamTrades(
+  mine: TeamData,
+  teams: TeamData[],
+  superflex: boolean,
+  dismissed: string[] = []
+) {
   const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
   const counts = (team: TeamData, pos: string) =>
     team.players.filter((p) => p.position === pos).length
@@ -89,6 +94,7 @@ export function suggestedTeamTrades(mine: TeamData, teams: TeamData[], superflex
   return matches
     .filter((c) => {
       if (
+        dismissed.includes(`${c.give.playerId}:${c.target.playerId}:${c.team.rosterId}`) ||
         used.has(c.give.playerId) ||
         used.has(c.target.playerId) ||
         (partners.get(c.team.rosterId) ?? 0) >= 2

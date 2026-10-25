@@ -27,7 +27,7 @@ export function DashboardLayout({
   return (
     <section
       aria-label="League dashboard"
-      className="mx-auto w-full max-w-[1440px] min-w-0 bg-slate-900 px-4 py-6 font-sans sm:px-8"
+      className={`mx-auto w-full min-w-0 bg-slate-900 py-6 font-sans ${activeSection === 'builder' ? 'max-w-none px-2 sm:px-3' : 'max-w-[1440px] px-4 sm:px-8'}`}
     >
       <header className="flex flex-wrap items-center justify-between gap-4 pb-5">
         <div className="flex min-w-0 basis-full items-center gap-3 sm:basis-auto sm:flex-1">

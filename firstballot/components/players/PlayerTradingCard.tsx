@@ -21,6 +21,7 @@ export function PlayerTradingCard({
   badge,
   imageHeight = 'h-48',
   compact = false,
+  shoulderBadge,
 }: {
   name: string
   position: string
@@ -29,6 +30,7 @@ export function PlayerTradingCard({
   children?: ReactNode
   badge?: string
   imageHeight?: string
+  shoulderBadge?: { label: string; description: string }
   compact?: boolean
   label?: string
   action?: string
@@ -97,6 +99,16 @@ export function PlayerTradingCard({
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#090e18] to-transparent"
         />
+        {shoulderBadge && (
+          <span
+            tabIndex={0}
+            title={shoulderBadge.description}
+            aria-label={shoulderBadge.description}
+            className="absolute bottom-3 right-4 z-20 rounded-md border border-white/20 bg-slate-950/90 px-2 py-1 text-xs font-semibold tabular-nums text-white"
+          >
+            {shoulderBadge.label}
+          </span>
+        )}
       </div>
       <div className="relative z-20 flex flex-1 flex-col bg-[#090e18] px-4 pb-4">
         <p

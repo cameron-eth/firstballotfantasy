@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { PlanningSuggestions, type PlanningFocus, type PlanningOffer } from './PlanningSuggestions'
+import { parseScoringSlots } from '../draft-order/maxPointsFor'
 import { lineupBaseline } from '@/lib/draft-funding'
 import { DraftCapitalRail } from './DraftCapitalRail'
 import useSWR from 'swr'
@@ -68,7 +69,7 @@ export function TeamBuilder({
   const [source, setSource] = useState<'trade' | 'draft'>('trade')
   const [position, setPosition] = useState('ALL')
   const [year, setYear] = useState('ALL')
-  const { viewportRef, zoom, setZoom } = useCanvasZoom()
+  const { viewportRef, contentRef, spaceRef, zoom, setZoom } = useCanvasZoom()
   const endpoint = `/api/team-scenarios?league=${leagueId}&roster=${team.rosterId}`
   const {
     data: prospects = [],
@@ -254,7 +255,7 @@ export function TeamBuilder({
             aria-label="Zoom out map"
             className={button}
             disabled={zoom <= 10}
-            onClick={() => setZoom(zoom / 1.25)}
+            onClick={() => setZoom((value) => value / 1.25)}
           >
             −
           </button>
@@ -265,7 +266,7 @@ export function TeamBuilder({
             aria-label="Zoom in map"
             className={button}
             disabled={zoom >= 150}
-            onClick={() => setZoom(zoom * 1.25)}
+            onClick={() => setZoom((value) => value * 1.25)}
           >
             +
           </button>
@@ -315,23 +316,78 @@ export function TeamBuilder({
             backgroundSize: '20px 20px',
           }}
         >
-          <div style={{ zoom: zoom / 100 }} className="mx-auto w-max">
-            <BuilderTeamSummary
-              team={team}
-              placement={placement}
-              leagueId={leagueId}
-              isDynasty={isDynasty}
-            />
-            {isDynasty && timeline.horizon > timeline.baseYear && (
-              <DraftCapitalRail
-                picks={timeline.picks}
-                year={timeline.horizon}
-                teams={teams}
-                slots={timeline.slots}
+          <div ref={spaceRef} className="relative overflow-hidden">
+            <div
+              ref={contentRef}
+              className="absolute left-0 top-0 origin-top-left will-change-transform"
+              style={{ width: Math.max(4, parseScoringSlots(rosterPositions).length) * 256 - 16 }}
+            >
+              <BuilderTeamSummary
+                team={team}
+                placement={placement}
+                leagueId={leagueId}
+                isDynasty={isDynasty}
+              />
+              {isDynasty && timeline.horizon > timeline.baseYear && (
+                <DraftCapitalRail
+                  picks={timeline.picks}
+                  year={timeline.horizon}
+                  teams={teams}
+                  slots={timeline.slots}
+                  fits={timeline.fits}
+                  targets={scenario.targets}
+                  plans={scenario.fundingPlans ?? []}
+                  available={timeline.available}
+                  onFund={(target) =>
+                    setFocus({
+                      kind: 'draft',
+                      target,
+                      rank:
+                        prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
+                        undefined,
+                    })
+                  }
+                  onUndo={(id) =>
+                    update({
+                      fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id),
+                    })
+                  }
+                />
+              )}
+              {view.outgoing.length > 0 && (
+                <p className="mx-auto mb-4 w-fit rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200">
+                  Plan cost · {view.outgoing.length} outgoing players · {planLoss.toFixed(1)}{' '}
+                  starting FPPG removed from today’s baseline
+                  {baseline.missing || retained.missing ? ' · partial stats' : ''}. Rookie
+                  production and a new MaxPF order are not forecast.
+                </p>
+              )}
+              {timeline.funding.rejected.length > 0 && (
+                <p role="alert" className="mb-3 text-xs text-amber-300">
+                  A funding path no longer matches pick ownership. Undo it and choose a new path.
+                </p>
+              )}
+              <LineupMap
                 fits={timeline.fits}
-                targets={scenario.targets}
-                plans={scenario.fundingPlans ?? []}
-                available={timeline.available}
+                team={team}
+                teams={teams}
+                rawSlots={rosterPositions}
+                scenario={scenario}
+                view={view}
+                horizon={timeline.horizon}
+                baseYear={timeline.baseYear}
+                board={
+                  isDynasty &&
+                  board.user &&
+                  !board.error &&
+                  !prospectError &&
+                  !board.isLoading &&
+                  !prospectsLoading
+                    ? board.players
+                    : []
+                }
+                update={update}
+                onTrade={(player) => setFocus({ kind: 'player', player })}
                 onFund={(target) =>
                   setFocus({
                     kind: 'draft',
@@ -341,56 +397,9 @@ export function TeamBuilder({
                       undefined,
                   })
                 }
-                onUndo={(id) =>
-                  update({ fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id) })
-                }
+                onAdd={add}
               />
-            )}
-            {view.outgoing.length > 0 && (
-              <p className="mx-auto mb-4 w-fit rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200">
-                Plan cost · {view.outgoing.length} outgoing players · {planLoss.toFixed(1)} starting
-                FPPG removed from today’s baseline
-                {baseline.missing || retained.missing ? ' · partial stats' : ''}. Rookie production
-                and a new MaxPF order are not forecast.
-              </p>
-            )}
-            {timeline.funding.rejected.length > 0 && (
-              <p role="alert" className="mb-3 text-xs text-amber-300">
-                A funding path no longer matches pick ownership. Undo it and choose a new path.
-              </p>
-            )}
-            <LineupMap
-              fits={timeline.fits}
-              team={team}
-              teams={teams}
-              rawSlots={rosterPositions}
-              scenario={scenario}
-              view={view}
-              horizon={timeline.horizon}
-              baseYear={timeline.baseYear}
-              board={
-                isDynasty &&
-                board.user &&
-                !board.error &&
-                !prospectError &&
-                !board.isLoading &&
-                !prospectsLoading
-                  ? board.players
-                  : []
-              }
-              update={update}
-              onTrade={(player) => setFocus({ kind: 'player', player })}
-              onFund={(target) =>
-                setFocus({
-                  kind: 'draft',
-                  target,
-                  rank:
-                    prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
-                    undefined,
-                })
-              }
-              onAdd={add}
-            />
+            </div>
           </div>
         </div>
         <section aria-label="Find strategy targets" className="border-t border-white/10 pt-5">

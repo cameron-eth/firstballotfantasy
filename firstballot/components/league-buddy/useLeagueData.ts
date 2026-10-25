@@ -99,37 +99,37 @@ function getUserId(user: unknown): string | undefined {
 }
 
 async function fetchWeekSchedule(week: number): Promise<any[]> {
-              const endpoints = [
-                `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&season=${new Date().getFullYear()}`,
-                `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`,
-              ]
+  const endpoints = [
+    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?week=${week}&season=${new Date().getFullYear()}`,
+    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard`,
+  ]
 
-              for (const endpoint of endpoints) {
-                try {
-                  const response = await fetch(endpoint, { cache: 'no-store' })
-                  const data = await response.json()
-                  if (data.events && data.events.length > 0) {
-                    return data.events
-                      .map((event: any) => {
-                        const competition = event.competitions?.[0]
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { cache: 'no-store' })
+      const data = await response.json()
+      if (data.events && data.events.length > 0) {
+        return data.events
+          .map((event: any) => {
+            const competition = event.competitions?.[0]
             if (!competition?.competitors) return null
             const homeTeam = competition.competitors.find((c: any) => c.homeAway === 'home')
             const awayTeam = competition.competitors.find((c: any) => c.homeAway === 'away')
             if (!homeTeam || !awayTeam) return null
-                            return {
-                              home_team: homeTeam.team?.abbreviation,
-                              away_team: awayTeam.team?.abbreviation,
-                            }
-                      })
-                      .filter(Boolean)
-                  }
-                } catch {
-                  continue
-                }
-              }
-
-              return []
+            return {
+              home_team: homeTeam.team?.abbreviation,
+              away_team: awayTeam.team?.abbreviation,
             }
+          })
+          .filter(Boolean)
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return []
+}
 
 async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<LeagueDataBundle> {
   leagueCache.setLeagueId(leagueId)
@@ -150,8 +150,8 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`, {
         cache: 'no-store',
       }).then((r) => r.json()),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then((r) =>
-        r.json()
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
+        (r) => r.json()
       ),
       sleeperApi.getAllPlayers(),
       sleeperApi.getLeagueInfo(leagueId),
@@ -177,40 +177,52 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
   const validRosters = rosters.filter((r) => r && r.roster_id)
   const allSleeperPlayerIds = Array.from(new Set(rosters.flatMap((r) => r.players || [])))
 
-      const rosterStatsMap: Record<
-        string,
+  const rosterStatsMap: Record<
+    string,
+    {
+      fantasy_ppg: number
+      fppg_rank?: number | null
+      fppg_position?: string | null
+      stats_season?: number
+      total_fantasy_points: number
+      games_played: number
+      headshot_url?: string | null
+    }
+  > = {}
+
+  if (allSleeperPlayerIds.length > 0) {
+    try {
+      const response = await fetch(
+        `/api/roster-stats?player_ids=${allSleeperPlayerIds.join(',')}`,
         {
-          fantasy_ppg: number
-          total_fantasy_points: number
-          games_played: number
-          headshot_url?: string | null
+          cache: 'no-store',
         }
-      > = {}
+      )
 
-      if (allSleeperPlayerIds.length > 0) {
-        try {
-      const response = await fetch(`/api/roster-stats?player_ids=${allSleeperPlayerIds.join(',')}`, {
-            cache: 'no-store',
-          })
-
-          if (response.ok) {
-            const result = await response.json()
-            result.data.forEach(
-              (playerStats: {
-                sleeper_player_id: string
-                fantasy_ppg: number | string
-                total_fantasy_points: number | string
-                games_played: number
-                headshot_url?: string | null
-              }) => {
-                rosterStatsMap[playerStats.sleeper_player_id] = {
-                  fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,
-                  total_fantasy_points: parseFloat(String(playerStats.total_fantasy_points)) || 0,
-                  games_played: playerStats.games_played || 0,
-                  headshot_url: playerStats.headshot_url || null,
-                }
-              }
-            )
+      if (response.ok) {
+        const result = await response.json()
+        result.data.forEach(
+          (playerStats: {
+            sleeper_player_id: string
+            fantasy_ppg: number | string
+            fppg_rank?: number | null
+            fppg_position?: string | null
+            stats_season?: number
+            total_fantasy_points: number | string
+            games_played: number
+            headshot_url?: string | null
+          }) => {
+            rosterStatsMap[playerStats.sleeper_player_id] = {
+              fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,
+              fppg_rank: playerStats.fppg_rank,
+              fppg_position: playerStats.fppg_position,
+              stats_season: playerStats.stats_season,
+              total_fantasy_points: parseFloat(String(playerStats.total_fantasy_points)) || 0,
+              games_played: playerStats.games_played || 0,
+              headshot_url: playerStats.headshot_url || null,
+            }
+          }
+        )
       }
     } catch {
       // Non-fatal
@@ -224,104 +236,109 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
       : []
 
   const rankingsMap = rankingsArray.reduce((acc: Record<string, any>, player) => {
-          const playerName = player['PLAYER NAME']
-          const rank = player.RK
-          if (playerName && rank !== undefined) {
-            acc[playerName] = {
+    const playerName = player['PLAYER NAME']
+    const rank = player.RK
+    if (playerName && rank !== undefined) {
+      acc[playerName] = {
         rank,
-              position: player.POS || '',
-              team: player.TEAM || '',
-              name: playerName,
-              tier: rank <= 12 ? 1 : rank <= 36 ? 2 : rank <= 72 ? 3 : rank <= 120 ? 4 : 5,
-            }
-          }
-          return acc
-        }, {})
+        position: player.POS || '',
+        team: player.TEAM || '',
+        name: playerName,
+        tier: rank <= 12 ? 1 : rank <= 36 ? 2 : rank <= 72 ? 3 : rank <= 120 ? 4 : 5,
+      }
+    }
+    return acc
+  }, {})
 
-      const enhancedPlayers = { ...allPlayersData }
-      Object.entries(rosterStatsMap).forEach(([sleeperId, stats]) => {
+  const enhancedPlayers = { ...allPlayersData }
+  Object.entries(rosterStatsMap).forEach(([sleeperId, stats]) => {
     if (!enhancedPlayers[sleeperId]) return
-          enhancedPlayers[sleeperId] = {
+    enhancedPlayers[sleeperId] = {
       ...enhancedPlayers[sleeperId],
-            fantasy_ppg: stats.fantasy_ppg,
-            fantasy_points_ppr: stats.total_fantasy_points,
-            games_played: stats.games_played,
-            headshot_url: stats.headshot_url,
-        }
-      })
+      fantasy_ppg: stats.fantasy_ppg,
+      fppg_rank: stats.fppg_rank,
+      fppg_position: stats.fppg_position,
+      stats_season: stats.stats_season,
+      fantasy_points_ppr: stats.total_fantasy_points,
+      games_played: stats.games_played,
+      headshot_url: stats.headshot_url,
+    }
+  })
 
-      const trending = await sleeperApi.getTrendingPlayers().catch(() => [])
-      const trendingPlayers: TrendingPlayer[] = Array.isArray(trending)
-        ? trending
-            .map((item: TrendingItem) => {
-              const player = allPlayersData[item.player_id]
-              return {
-                playerId: item.player_id || '',
-                playerName: player ? `${player.first_name} ${player.last_name}` : 'Unknown Player',
-                position: player?.position || 'N/A',
-                team: player?.team || 'N/A',
-                addCount: item.count || 0,
-                dropCount: 0,
-                netChange: item.count || 0,
-                espn_id: player?.espn_id,
-              }
-            })
-            .filter((player: TrendingPlayer) => player.playerName !== 'Unknown Player')
-        : []
-
-      const matchupData: MatchupData[] = []
-      const matchupMap = new Map<number, SleeperMatchup[]>()
-
-      if (matchups && matchups.length > 0) {
-    matchups.forEach((matchup) => {
-          const matchupId = matchup.matchup_id
-          if (!matchupMap.has(matchupId)) {
-            matchupMap.set(matchupId, [])
+  const trending = await sleeperApi.getTrendingPlayers().catch(() => [])
+  const trendingPlayers: TrendingPlayer[] = Array.isArray(trending)
+    ? trending
+        .map((item: TrendingItem) => {
+          const player = allPlayersData[item.player_id]
+          return {
+            playerId: item.player_id || '',
+            playerName: player ? `${player.first_name} ${player.last_name}` : 'Unknown Player',
+            position: player?.position || 'N/A',
+            team: player?.team || 'N/A',
+            addCount: item.count || 0,
+            dropCount: 0,
+            netChange: item.count || 0,
+            espn_id: player?.espn_id,
           }
-          matchupMap.get(matchupId)!.push(matchup)
         })
+        .filter((player: TrendingPlayer) => player.playerName !== 'Unknown Player')
+    : []
+
+  const matchupData: MatchupData[] = []
+  const matchupMap = new Map<number, SleeperMatchup[]>()
+
+  if (matchups && matchups.length > 0) {
+    matchups.forEach((matchup) => {
+      const matchupId = matchup.matchup_id
+      if (!matchupMap.has(matchupId)) {
+        matchupMap.set(matchupId, [])
+      }
+      matchupMap.get(matchupId)!.push(matchup)
+    })
 
     matchupMap.forEach((matchupTeams, matchupId) => {
       if (matchupTeams.length !== 2) return
       const [team1, team2] = matchupTeams
 
-            const team1Owner = validUsers.find(
+      const team1Owner = validUsers.find(
         (u) => validRosters.find((r) => r.roster_id === team1.roster_id)?.owner_id === u.user_id
-            )
-            const team2Owner = validUsers.find(
+      )
+      const team2Owner = validUsers.find(
         (u) => validRosters.find((r) => r.roster_id === team2.roster_id)?.owner_id === u.user_id
       )
 
-            matchupData.push({
-              rosterId: team1.roster_id,
-        teamName: team1Owner?.metadata?.team_name || team1Owner?.display_name || `Team ${team1.roster_id}`,
-              projectedPoints: team1.points || 0,
-              actualPoints: team1.points || 0,
-              opponentRosterId: team2.roster_id,
-        opponentTeamName: team2Owner?.metadata?.team_name || team2Owner?.display_name || `Team ${team2.roster_id}`,
-              opponentProjectedPoints: team2.points || 0,
-              opponentActualPoints: team2.points || 0,
-              isHome: false,
+      matchupData.push({
+        rosterId: team1.roster_id,
+        teamName:
+          team1Owner?.metadata?.team_name || team1Owner?.display_name || `Team ${team1.roster_id}`,
+        projectedPoints: team1.points || 0,
+        actualPoints: team1.points || 0,
+        opponentRosterId: team2.roster_id,
+        opponentTeamName:
+          team2Owner?.metadata?.team_name || team2Owner?.display_name || `Team ${team2.roster_id}`,
+        opponentProjectedPoints: team2.points || 0,
+        opponentActualPoints: team2.points || 0,
+        isHome: false,
         matchupId,
-              starters: team1.starters || [],
-              players: team1.players || [],
-              startersPoints: team1.starters_points || [],
-              playersPoints: team1.players_points || {},
-              opponentAvatar: team2Owner?.avatar,
-              opponentUsername: team2Owner?.display_name || team2Owner?.metadata?.team_name,
-              opponentDisplayName: team2Owner?.display_name,
-            })
+        starters: team1.starters || [],
+        players: team1.players || [],
+        startersPoints: team1.starters_points || [],
+        playersPoints: team1.players_points || {},
+        opponentAvatar: team2Owner?.avatar,
+        opponentUsername: team2Owner?.display_name || team2Owner?.metadata?.team_name,
+        opponentDisplayName: team2Owner?.display_name,
+      })
     })
   }
 
   const nflGamesMap: Record<string, { opponent: string; isHome: boolean }> = {}
   if (Array.isArray(nflScheduleData) && nflScheduleData.length > 0) {
-        nflScheduleData.forEach((game: any) => {
-          if (game.home_team && game.away_team) {
-            nflGamesMap[game.home_team] = { opponent: game.away_team, isHome: true }
-            nflGamesMap[game.away_team] = { opponent: game.home_team, isHome: false }
-          }
-        })
+    nflScheduleData.forEach((game: any) => {
+      if (game.home_team && game.away_team) {
+        nflGamesMap[game.home_team] = { opponent: game.away_team, isHome: true }
+        nflGamesMap[game.away_team] = { opponent: game.home_team, isHome: false }
+      }
+    })
   }
 
   const teamsData = rosters
@@ -329,81 +346,84 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
       if (!roster?.roster_id) return null
 
       const owner = roster.owner_id ? validUsers.find((u) => u?.user_id === roster.owner_id) : null
-        const teamName =
-          owner?.metadata?.team_name ||
-          owner?.display_name ||
-          owner?.first_name ||
-          `Team ${roster.roster_id}`
+      const teamName =
+        owner?.metadata?.team_name ||
+        owner?.display_name ||
+        owner?.first_name ||
+        `Team ${roster.roster_id}`
 
-        const players = (roster.players || [])
+      const players = (roster.players || [])
         .map((playerId) => {
-            const player = enhancedPlayers[playerId]
+          const player = enhancedPlayers[playerId]
           if (!player) return null
 
           const playerName = `${player.first_name || ''} ${player.last_name || ''}`.trim()
-            const ranking = rankingsMap[playerName]
-            const tempPlayerForOpponent: PlayerData = {
-              playerId,
-              playerName,
-              fantasyPositions: allPlayersData[playerId]?.fantasy_positions,
-              position: player.position,
-              team: player.team,
-              rank: 999,
-              tier: '',
-              age: 0,
-              experience: 0,
-              status: 'Active',
-            }
-            const opponentInfo = getOpponentInfo(tempPlayerForOpponent, nflGamesMap)
+          const ranking = rankingsMap[playerName]
+          const tempPlayerForOpponent: PlayerData = {
+            playerId,
+            playerName,
+            fantasyPositions: allPlayersData[playerId]?.fantasy_positions,
+            position: player.position,
+            team: player.team,
+            rank: 999,
+            tier: '',
+            age: 0,
+            experience: 0,
+            status: 'Active',
+          }
+          const opponentInfo = getOpponentInfo(tempPlayerForOpponent, nflGamesMap)
 
-            return {
-              playerId,
-              playerName,
-              fantasyPositions: allPlayersData[playerId]?.fantasy_positions,
-              position: player.position,
-              team: player.team,
-              rank: ranking?.rank || player.search_rank || 999,
-              tier: ranking?.tier ? `Tier ${ranking.tier}` : getTierFromRank(player.search_rank),
-              age: player.age || 0,
-              experience: player.years_exp || 0,
-              isRookie: player.years_exp === 0,
-              status: player.status || 'Active',
+          return {
+            playerId,
+            playerName,
+            fantasyPositions: allPlayersData[playerId]?.fantasy_positions,
+            position: player.position,
+            team: player.team,
+            rank: ranking?.rank || player.search_rank || 999,
+            tier: ranking?.tier ? `Tier ${ranking.tier}` : getTierFromRank(player.search_rank),
+            age: player.age || 0,
+            experience: player.years_exp || 0,
+            isRookie: player.years_exp === 0,
+            status: player.status || 'Active',
             injury_status: player.injury_status || null,
             injury_start_date: player.injury_start_date || null,
             isOnBye: opponentInfo.opponentTeam === 'BYE' || opponentInfo.opponentTeam === 'TBD',
-              espn_id: player.espn_id,
-              headshot_url: player.headshot_url,
+            espn_id: player.espn_id,
+            headshot_url: player.headshot_url,
             fantasy_points_ppr: player.fantasy_points_ppr || 0,
-              fantasy_points_half_ppr: player.fantasy_points_half_ppr,
+            fantasy_points_half_ppr: player.fantasy_points_half_ppr,
             fantasy_points: player.fantasy_points_ppr || 0,
             games_played: player.games_played || 0,
             fantasy_ppg: player.fantasy_ppg || 0,
-              rankingData: ranking,
-            }
-          })
-          .filter(Boolean) as PlayerData[]
+            fppg_rank: player.fppg_rank,
+            fppg_position: player.fppg_position,
+            stats_season: player.stats_season,
+            rankingData: ranking,
+          }
+        })
+        .filter(Boolean) as PlayerData[]
 
-        const rawScore = calculateRawScore(players)
+      const rawScore = calculateRawScore(players)
 
-        return {
-          rosterId: roster.roster_id,
-          teamName,
-          ownerName: owner?.display_name || 'Unknown',
-          ownerAvatar: owner?.avatar || undefined,
-          ownerUsername: owner?.display_name || 'Unknown',
-          wins: roster.settings?.wins || 0,
-          losses: roster.settings?.losses || 0,
-          ties: roster.settings?.ties || 0,
-          pointsFor: roster.settings?.fpts || 0,
-          pointsAgainst: roster.settings?.fpts_against || 0,
-          rank: roster.rank || 0,
-          grade: '',
-          gradeScore: rawScore,
-          players,
-          starters: roster.starters || [],
+      return {
+        rosterId: roster.roster_id,
+        teamName,
+        ownerName: owner?.display_name || 'Unknown',
+        ownerAvatar: owner?.avatar || undefined,
+        ownerUsername: owner?.display_name || 'Unknown',
+        wins: roster.settings?.wins || 0,
+        losses: roster.settings?.losses || 0,
+        ties: roster.settings?.ties || 0,
+        pointsFor: roster.settings?.fpts || 0,
+        pointsAgainst: roster.settings?.fpts_against || 0,
+        rank: roster.rank || 0,
+        grade: '',
+        gradeScore: rawScore,
+        players,
+        starters: roster.starters || [],
         positionStrengths: calculatePositionStrengths(players),
-          waiverPosition: roster.settings?.waiver_position || 0,
-          totalMoves: roster.settings?.total_moves || 0,
+        waiverPosition: roster.settings?.waiver_position || 0,
+        totalMoves: roster.settings?.total_moves || 0,
         recentForm: calculateRecentForm(roster, matchups),
       }
     })
@@ -414,91 +434,93 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     team.grade = calculateGradeFromPercentile(team.gradeScore, allScores).letter
   })
 
-      try {
-        const allPlayerNames = Array.from(
-          new Set(
+  try {
+    const allPlayerNames = Array.from(
+      new Set(
         teamsData.flatMap((team) =>
-              team.players
-                .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-                .map((p) => p.playerName)
-            )
-          )
-        ).filter(Boolean)
+          team.players
+            .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+            .map((p) => p.playerName)
+        )
+      )
+    ).filter(Boolean)
 
-        if (allPlayerNames.length > 0) {
-          const chunkSize = 50
-          const ktcHistoryMap: Record<string, KtcHistoryPoint[]> = {}
-          const ktcLatestMap: Record<string, { value_sf: number; value_1qb: number }> = {}
+    if (allPlayerNames.length > 0) {
+      const chunkSize = 50
+      const ktcHistoryMap: Record<string, KtcHistoryPoint[]> = {}
+      const ktcLatestMap: Record<string, { value_sf: number; value_1qb: number }> = {}
 
-          for (let i = 0; i < allPlayerNames.length; i += chunkSize) {
-            const chunk = allPlayerNames.slice(i, i + chunkSize)
-            try {
-              const resp = await fetch(`/api/ktc-values?names=${encodeURIComponent(chunk.join(','))}`)
+      for (let i = 0; i < allPlayerNames.length; i += chunkSize) {
+        const chunk = allPlayerNames.slice(i, i + chunkSize)
+        try {
+          const resp = await fetch(`/api/ktc-values?names=${encodeURIComponent(chunk.join(','))}`)
           if (!resp.ok) continue
-                const json = await resp.json()
-                if (json.historyMap) {
-                  Object.entries(json.historyMap as Record<string, KtcHistoryPoint[]>).forEach(
-                    ([name, hist]) => {
-                      ktcHistoryMap[name] = hist
-                    }
-                  )
-                }
-                if (Array.isArray(json.data)) {
-                  json.data.forEach((row: { player_name: string; value_sf: number; value_1qb: number }) => {
-                    ktcLatestMap[row.player_name] = {
-                      value_sf: row.value_sf,
-                      value_1qb: row.value_1qb,
-                    }
-                  })
+          const json = await resp.json()
+          if (json.historyMap) {
+            Object.entries(json.historyMap as Record<string, KtcHistoryPoint[]>).forEach(
+              ([name, hist]) => {
+                ktcHistoryMap[name] = hist
               }
-            } catch {
-          // Non-fatal
-            }
+            )
           }
-
-      teamsData.forEach((team) => {
-            team.players = team.players.map((player) => {
-              const hist = ktcHistoryMap[player.playerName]
-              const latest = ktcLatestMap[player.playerName]
-              const delta =
-            hist && hist.length >= 2 ? hist[hist.length - 1].value_sf - hist[0].value_sf : undefined
-
-              return {
-                ...player,
-                ktcHistory: hist ?? undefined,
-                ktcValueSf: latest?.value_sf ?? undefined,
-                ktcValue1qb: latest?.value_1qb ?? undefined,
-                ktcTrendDelta: delta,
+          if (Array.isArray(json.data)) {
+            json.data.forEach(
+              (row: { player_name: string; value_sf: number; value_1qb: number }) => {
+                ktcLatestMap[row.player_name] = {
+                  value_sf: row.value_sf,
+                  value_1qb: row.value_1qb,
+                }
               }
-            })
-          })
+            )
+          }
+        } catch {
+          // Non-fatal
         }
-      } catch {
-    // Non-fatal
       }
 
-      let leagueTransactions: SleeperTransaction[] = []
-      try {
+      teamsData.forEach((team) => {
+        team.players = team.players.map((player) => {
+          const hist = ktcHistoryMap[player.playerName]
+          const latest = ktcLatestMap[player.playerName]
+          const delta =
+            hist && hist.length >= 2 ? hist[hist.length - 1].value_sf - hist[0].value_sf : undefined
+
+          return {
+            ...player,
+            ktcHistory: hist ?? undefined,
+            ktcValueSf: latest?.value_sf ?? undefined,
+            ktcValue1qb: latest?.value_1qb ?? undefined,
+            ktcTrendDelta: delta,
+          }
+        })
+      })
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  let leagueTransactions: SleeperTransaction[] = []
+  try {
     const weekNums = Array.from({ length: week }, (_, i) => i + 1)
-        const txResults = await Promise.all(
-          weekNums.map((w) =>
-            fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${w}`, {
-              cache: 'no-store',
-            })
+    const txResults = await Promise.all(
+      weekNums.map((w) =>
+        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${w}`, {
+          cache: 'no-store',
+        })
           .then((r) => (r.ok ? r.json() : []))
-              .catch(() => [])
-          )
-        )
-        const allTx: SleeperTransaction[] = txResults
-          .flat()
-          .filter((tx: SleeperTransaction) => tx.status === 'complete')
+          .catch(() => [])
+      )
+    )
+    const allTx: SleeperTransaction[] = txResults
+      .flat()
+      .filter((tx: SleeperTransaction) => tx.status === 'complete')
 
     teamsData.forEach((team) => {
       team.transactions = allTx.filter((tx) => tx.roster_ids.includes(team.rosterId))
-        })
+    })
 
-        leagueTransactions = [...allTx].sort((a, b) => b.created - a.created)
-      } catch {
+    leagueTransactions = [...allTx].sort((a, b) => b.created - a.created)
+  } catch {
     // Non-fatal
   }
 
@@ -511,7 +533,9 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
   )
   const lowestScoring = validRosters.reduce(
     (lowest: SleeperRoster | null, roster) =>
-      lowest === null || (roster.settings?.fpts || 0) < (lowest.settings?.fpts || 0) ? roster : lowest,
+      lowest === null || (roster.settings?.fpts || 0) < (lowest.settings?.fpts || 0)
+        ? roster
+        : lowest,
     null
   )
 
@@ -523,9 +547,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     : null
 
   const userId = getUserId(user)
-  const userRoster = userId
-    ? validRosters.find((r) => r.owner_id === userId)
-    : null
+  const userRoster = userId ? validRosters.find((r) => r.owner_id === userId) : null
 
   return {
     teams: teamsData,
@@ -571,9 +593,9 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
   const [selectedRosterId, setSelectedRosterId] = useState<number | null>(null)
 
   const { data, error, isLoading, mutate } = useSWR(
-    leagueId ? ['league-buddy', leagueId, getUserId(user) ?? 'anon'] : null,
+    leagueId ? ['league-buddy-v2-season-stats', leagueId, getUserId(user) ?? 'anon'] : null,
     ([, id]) => fetchLeagueDataBundle(id as string, user),
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: true, refreshInterval: 900_000 }
   )
 
   const teams = data?.teams ?? []

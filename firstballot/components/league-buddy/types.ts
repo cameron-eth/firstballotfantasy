@@ -92,7 +92,10 @@ export interface PlayerData {
   fantasy_points_half_ppr?: number
   fantasy_points?: number
   games_played?: number
-  fantasy_ppg?: number // Fantasy points per game from NGS
+  fantasy_ppg?: number // Current-season ESPN actual PPR points per game
+  fppg_rank?: number | null
+  fppg_position?: string | null
+  stats_season?: number
   rankingData?: {
     rank: number
     position: string

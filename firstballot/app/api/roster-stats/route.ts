@@ -1,107 +1,98 @@
+import identities from '@/data/nfl-player-identities.json'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
-
+import { unstable_cache } from 'next/cache'
+import { currentSeasonStats, type EspnFantasyPlayer } from '@/lib/current-season-stats'
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
-/**
- * Simple endpoint: Give me Sleeper player IDs, I give you their stats
- */
+const TTL = 900
+// Cache the small normalized result, not ESPN's multi-megabyte raw payload.
+const loadStats = unstable_cache(
+  async (season: number) => {
+    const filter = {
+      players: {
+        limit: 3000,
+        sortPercOwned: { sortPriority: 1, sortAsc: false },
+        filterStatsForTopScoringPeriodIds: { value: 1, additionalValue: [`00${season}`] },
+      },
+    }
+    const response = await fetch(
+      `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leaguedefaults/3?view=kona_player_info`,
+      { headers: { 'X-Fantasy-Filter': JSON.stringify(filter) }, cache: 'no-store' }
+    )
+    if (!response.ok) throw new Error('Current-season stats source unavailable')
+    const payload = await response.json()
+    if (
+      !Array.isArray(payload.players) ||
+      !payload.players.length ||
+      payload.players.length >= 3000
+    )
+      throw new Error('Incomplete NFL stats coverage')
+    return {
+      stats: currentSeasonStats(
+        payload.players.map((p: { player: EspnFantasyPlayer }) => p.player),
+        season
+      ),
+      updatedAt: new Date().toISOString(),
+    }
+  },
+  ['espn-current-season-ppr-v1'],
+  { revalidate: TTL }
+)
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const sleeperPlayerIds =
-      searchParams
-        .get('player_ids')
-        ?.split(',')
-        .map((id) => id.trim()) || []
-
-    if (sleeperPlayerIds.length === 0) {
-      return NextResponse.json({ error: 'No player_ids provided' }, { status: 400 })
-    }
-
-    // 1. Get all Sleeper players to map Sleeper ID -> GSIS ID
-    const sleeperPlayersResponse = await fetch('https://api.sleeper.app/v1/players/nfl')
-    const allSleeperPlayers = await sleeperPlayersResponse.json()
-
-    // 2. Build map of Sleeper ID -> GSIS ID
-    const sleeperToGsis: Record<string, string> = {}
-    sleeperPlayerIds.forEach((sleeperId) => {
-      const player = allSleeperPlayers[sleeperId]
-      if (player?.gsis_id) {
-        sleeperToGsis[sleeperId] = player.gsis_id
-      }
+    const ids = [
+      ...new Set((request.nextUrl.searchParams.get('player_ids') ?? '').split(',').filter(Boolean)),
+    ]
+    if (!ids.length || ids.length > 1000 || ids.some((id) => !/^\w+$/.test(id)))
+      return NextResponse.json({ error: 'Invalid player_ids' }, { status: 400 })
+    const stateResponse = await fetch('https://api.sleeper.app/v1/state/nfl', {
+      next: { revalidate: 600 },
     })
-
-    const gsisIds = Object.values(sleeperToGsis)
-
-    if (gsisIds.length === 0) {
-      return NextResponse.json({
-        data: sleeperPlayerIds.map((id) => ({
-          sleeper_player_id: id,
-          fantasy_ppg: 0,
-          total_fantasy_points: 0,
-          games_played: 0,
-        })),
-      })
-    }
-
-    // 3. Get stats from master_player_stats by GSIS ID
-    const { data: stats, error } = await supabaseServer
-      .from('master_player_stats')
-      .select(
-        'player_gsis_id, player_display_name, fantasy_ppg, total_fantasy_points, games_played, headshot_url'
-      )
-      .in('player_gsis_id', gsisIds)
-
-    if (error) {
-      console.error('DB error:', error)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
-    }
-
-    // 4. For players without GSIS ID, try name matching
-    const playersWithoutGsis = sleeperPlayerIds.filter((id) => !sleeperToGsis[id])
-    let nameMatchedStats: any[] = []
-
-    if (playersWithoutGsis.length > 0) {
-      const playerNames = playersWithoutGsis
-        .map((id) => allSleeperPlayers[id]?.full_name)
-        .filter(Boolean)
-
-      const { data: nameStats } = await supabaseServer
-        .from('master_player_stats')
-        .select(
-          'player_gsis_id, player_display_name, fantasy_ppg, total_fantasy_points, games_played, headshot_url'
-        )
-        .in('player_display_name', playerNames)
-
-      nameMatchedStats = nameStats || []
-    }
-
-    // 5. Map back to Sleeper IDs
-    const result = sleeperPlayerIds.map((sleeperId) => {
-      const gsisId = sleeperToGsis[sleeperId]
-      const playerName = allSleeperPlayers[sleeperId]?.full_name
-
-      // Try GSIS match first, then name match
-      let playerStats = stats?.find((s) => s.player_gsis_id === gsisId)
-      if (!playerStats && playerName) {
-        playerStats = nameMatchedStats.find((s) => s.player_display_name === playerName)
-      }
-
+    if (!stateResponse.ok) throw new Error('Current NFL season unavailable')
+    const state = await stateResponse.json(),
+      season = Number(state.season)
+    if (!Number.isInteger(season) || season < 2020)
+      throw new Error('Current NFL season unavailable')
+    const { stats, updatedAt } = await loadStats(season)
+    const data = ids.map((id) => {
+      const identity = (identities as Record<string, { espnId: string; name: string }>)[id]
+      const espnId = identity?.espnId,
+        s = stats[String(espnId)]
       return {
-        sleeper_player_id: sleeperId,
-        player_name: playerStats?.player_display_name || playerName || 'Unknown',
-        fantasy_ppg: playerStats?.fantasy_ppg || 0,
-        total_fantasy_points: playerStats?.total_fantasy_points || 0,
-        games_played: playerStats?.games_played || 0,
-        headshot_url: playerStats?.headshot_url || null,
+        sleeper_player_id: id,
+        player_name: identity?.name ?? 'Unknown',
+        fantasy_ppg: s?.ppg ?? null,
+        total_fantasy_points: s?.points ?? null,
+        games_played: s?.games ?? 0,
+        fppg_rank: s?.rank ?? null,
+        fppg_position: s?.position ?? null,
+        stats_season: season,
+        stats_source: 'ESPN',
+        stats_scoring: 'PPR',
+        headshot_url: espnId
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${espnId}.png`
+          : null,
       }
     })
-
-    return NextResponse.json({ data: result, count: result.length })
-  } catch (error: any) {
-    console.error('API error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(
+      {
+        data,
+        count: data.length,
+        season,
+        source: 'ESPN',
+        scoring: 'PPR',
+        rankPopulation: 'All NFL players with at least one game; ties share rank',
+        updatedAt,
+      },
+      { headers: { 'Cache-Control': `public, s-maxage=${TTL}, stale-while-revalidate=300` } }
+    )
+  } catch (error) {
+    console.error(
+      'Current-season roster stats unavailable',
+      error instanceof Error ? error.message : 'Unknown error'
+    )
+    return NextResponse.json(
+      { error: 'Current-season stats temporarily unavailable' },
+      { status: 502 }
+    )
   }
 }

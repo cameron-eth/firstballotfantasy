@@ -110,6 +110,14 @@ export function LineupMap({
         team={p.team}
         image={p.image}
         rookie={p.rookie}
+        shoulderBadge={
+          p.roster?.fppg_rank
+            ? {
+                label: `${p.roster.fppg_position ?? p.position}${p.roster.fppg_rank}`,
+                description: `${p.roster.stats_season} PPR FPPG rank among all NFL ${p.roster.fppg_position ?? p.position}s with at least one game. ${p.roster.games_played} games played. ESPN actual season totals; ties share rank.`,
+              }
+            : undefined
+        }
         badge={
           p.target
             ? p.target.kind === 'draft'
@@ -117,7 +125,7 @@ export function LineupMap({
               : 'Trade target · not acquired'
             : undefined
         }
-        label={`${label} · ${p.ppg == null ? 'FPPG unavailable' : `${p.ppg.toFixed(1)} FPPG`}`}
+        label={`${label} · ${p.ppg == null ? 'FPPG unavailable' : `${p.ppg.toFixed(1)} FPPG · ${p.roster?.stats_season ?? baseYear} PPR`}`}
         action={
           slot
             ? placingId === p.id
@@ -257,7 +265,7 @@ export function LineupMap({
           <h3 className="mb-3 text-sm font-medium text-violet-200">
             Acquisition targets · not on your roster yet
           </h3>
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             {players
               .filter((p) => p.target && !slots.some((s) => s.starter?.id === p.id))
               .map((p) => (
@@ -275,7 +283,7 @@ export function LineupMap({
       {board.length > 0 && (
         <section className="mt-6 border-t border-slate-700 pt-4" aria-label="Shared prospect board">
           <h3 className="mb-3 text-sm font-medium text-blue-200">Your board</h3>
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             {[...new Set(board.map((p) => p.position))].map((position) => (
               <div key={position} className="w-60 shrink-0">
                 <BoardFitStack

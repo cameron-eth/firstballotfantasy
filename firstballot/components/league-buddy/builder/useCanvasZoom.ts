@@ -1,50 +1,78 @@
 'use client'
-import { useLayoutEffect, useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 
-const clamp = (value: number) => Math.min(150, Math.max(10, Math.round(value)))
-/** Zoom only this canvas; preserve the content point under the gesture. */
+const clamp = (value: number) => Math.min(150, Math.max(10, value))
+/** Gesture frames update one compositor transform, never the React card tree. */
 export function useCanvasZoom() {
-  const viewportRef = useRef<HTMLDivElement | null>(null)
-  const [viewportNode, setViewportNode] = useState<HTMLDivElement | null>(null)
-  const attachViewport = useCallback((node: HTMLDivElement | null) => {
-    viewportRef.current = node
-    setViewportNode(node)
-  }, [])
-  const [zoom, setZoom] = useState(100)
+  const [viewportNode, attachViewport] = useState<HTMLDivElement | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const spaceRef = useRef<HTMLDivElement>(null)
+  const [zoom, publishZoom] = useState(100)
   const current = useRef(100)
-  const anchor = useRef<{ x: number; y: number; contentX: number; contentY: number } | null>(null)
-  const zoomAt = (next: number, clientX?: number, clientY?: number) => {
-    const node = viewportRef.current
-    if (!node) return
-    const value = clamp(next)
-    if (value === current.current) return
-    const rect = node.getBoundingClientRect()
-    const x = clientX === undefined ? node.clientWidth / 2 : clientX - rect.left
-    const y = clientY === undefined ? node.clientHeight / 2 : clientY - rect.top
-    anchor.current = {
-      x,
-      y,
-      contentX: (node.scrollLeft + x) / (current.current / 100),
-      contentY: (node.scrollTop + y) / (current.current / 100),
-    }
-    current.current = value
-    setZoom(value)
-  }
-  useLayoutEffect(() => {
-    const node = viewportRef.current
-    const point = anchor.current
-    if (node && point) {
-      node.scrollLeft = (point.contentX * zoom) / 100 - point.x
-      node.scrollTop = (point.contentY * zoom) / 100 - point.y
-      anchor.current = null
-    }
-  }, [zoom])
+  const request = useRef<(next: number, x?: number, y?: number) => void>(() => {})
+  const setZoom = useCallback(
+    (next: number | ((value: number) => number)) =>
+      request.current(typeof next === 'function' ? next(current.current) : next),
+    []
+  )
   useEffect(() => {
-    const node = viewportRef.current
-    if (!node) return
+    const node = viewportNode,
+      content = contentRef.current,
+      space = spaceRef.current
+    if (!node || !content || !space) return
+    let frame = 0
+    let idle: ReturnType<typeof setTimeout> | undefined
+    let applied = current.current
+    let left = 0
+    let width = content.offsetWidth,
+      height = content.offsetHeight
+    let pending: { value: number; x: number; y: number } | null = null
+    const layout = (value: number) => {
+      const scale = value / 100
+      const available = node.clientWidth - 40 // viewport p-5 on both sides
+      left = Math.max(0, (available - width * scale) / 2)
+      space.style.width = `${Math.max(available, width * scale)}px`
+      space.style.height = `${height * scale}px`
+      content.style.transform = `translate3d(${left}px,0,0) scale(${scale})`
+    }
+    const paint = () => {
+      frame = 0
+      if (!pending) return
+      const { value, x, y } = pending
+      pending = null
+      const pointX = (node.scrollLeft + x - 20 - left) / (applied / 100)
+      const pointY = (node.scrollTop + y - 20) / (applied / 100)
+      layout(value)
+      node.scrollLeft = (pointX * value) / 100 + 20 + left - x
+      node.scrollTop = (pointY * value) / 100 + 20 - y
+      applied = value
+    }
+    const zoomAt = (next: number, clientX?: number, clientY?: number) => {
+      const value = clamp(next)
+      if (value === current.current) return
+      const rect = node.getBoundingClientRect()
+      current.current = value
+      pending = {
+        value,
+        x: clientX === undefined ? node.clientWidth / 2 : clientX - rect.left,
+        y: clientY === undefined ? node.clientHeight / 2 : clientY - rect.top,
+      }
+      if (!frame) frame = requestAnimationFrame(paint)
+      clearTimeout(idle)
+      idle = setTimeout(() => publishZoom(Math.round(current.current)), 150)
+    }
+    request.current = zoomAt
+    layout(applied)
+    const observer = new ResizeObserver(() => {
+      width = content.offsetWidth
+      height = content.offsetHeight
+      // Content and viewport changes are rare; zoom never changes observed layout dimensions.
+      layout(applied)
+    })
+    observer.observe(content)
+    observer.observe(node)
     let pinch: { distance: number; zoom: number } | null = null
     const wheel = (event: WheelEvent) => {
-      // Trackpad pinches arrive as ctrl+wheel; ordinary wheel scrolling stays native.
       if (!event.ctrlKey && !event.metaKey) return
       event.preventDefault()
       const delta =
@@ -62,7 +90,7 @@ export function useCanvasZoom() {
       pinch = { distance: distance(event.touches), zoom: current.current }
     }
     const move = (event: TouchEvent) => {
-      if (event.touches.length !== 2 || !pinch || !pinch.distance) return
+      if (event.touches.length !== 2 || !pinch?.distance) return
       event.preventDefault()
       zoomAt(
         (pinch.zoom * distance(event.touches)) / pinch.distance,
@@ -79,6 +107,10 @@ export function useCanvasZoom() {
     node.addEventListener('touchend', end)
     node.addEventListener('touchcancel', end)
     return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(idle)
+      observer.disconnect()
+      request.current = () => {}
       node.removeEventListener('wheel', wheel)
       node.removeEventListener('touchstart', start)
       node.removeEventListener('touchmove', move)
@@ -86,5 +118,5 @@ export function useCanvasZoom() {
       node.removeEventListener('touchcancel', end)
     }
   }, [viewportNode])
-  return { viewportRef: attachViewport, zoom, setZoom: (next: number) => zoomAt(next) }
+  return { viewportRef: attachViewport, contentRef, spaceRef, zoom, setZoom }
 }

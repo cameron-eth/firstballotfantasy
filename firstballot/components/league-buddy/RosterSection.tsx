@@ -343,7 +343,7 @@ export function RosterSection({
             <span>
               <MetricTip label={view === 'week' ? 'FPPG' : 'KTC SF'}>
                 {view === 'week'
-                  ? 'Actual fantasy points per game from the roster stats feed, using its scoring baseline. Not the league-scored forecast.'
+                  ? 'Current-season actual PPR points divided by games played, from ESPN. The weekly forecast uses your league scoring settings.'
                   : 'KeepTradeCut superflex dynasty market value.'}
               </MetricTip>
             </span>
@@ -444,7 +444,7 @@ export function RosterSection({
                       </div>
                       <p className="mt-1 text-[11px] text-slate-500 sm:hidden">
                         {view === 'week'
-                          ? `${projections?.entries?.[player.playerId]?.opponent ? `vs ${projections.entries[player.playerId].opponent} · ` : ''}Actual ${player.games_played ? points(player.fantasy_ppg) : '—'} FPPG`
+                          ? `${projections?.entries?.[player.playerId]?.opponent ? `vs ${projections.entries[player.playerId].opponent} · ` : ''}${player.stats_season ?? 'Current season'} PPR ${player.games_played ? points(player.fantasy_ppg) : '—'} FPPG`
                           : `Rank ${player.rank || '—'} · Age ${player.age || '—'} · KTC ${player.ktcValueSf?.toLocaleString() ?? '—'}`}
                       </p>
                     </div>

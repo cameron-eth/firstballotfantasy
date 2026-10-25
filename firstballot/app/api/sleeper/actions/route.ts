@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     const result = await gql(
       lineupOperation(body.leagueId, mine.roster_id, state.week, body.starters)
     )
-    if (!result.update_matchup_leg?.starters)
+    if (!sameLineup(result.update_matchup_leg?.starters, body.starters))
       return reply(
         { error: 'No lineup confirmation returned. Check Sleeper before retrying.' },
         502

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { optimalLineup, parseScoringSlots } from './draft-order/maxPointsFor'
 import type { TeamData } from './types'
@@ -27,9 +28,8 @@ export function SleeperActions({
   onConnect: (data: SleeperConnection | null) => void
 }) {
   const { user, loading: authLoading } = useAuth()
-  const [token, setToken] = useState('')
   const [connected, setConnected] = useState<SleeperConnection | null>(null)
-  const [open, setOpen] = useState(false)
+  const [hasSaved, setHasSaved] = useState(false)
   const [restoring, setRestoring] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -73,7 +73,6 @@ export function SleeperActions({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action,
-        ...(action === 'connect' ? { token } : {}),
         leagueId,
         ...extra,
       }),
@@ -85,8 +84,9 @@ export function SleeperActions({
   useEffect(() => {
     if (authLoading) return
     setConnected(null)
+    setHasSaved(false)
+    setMessage('')
     onConnect(null)
-    setToken('')
     setMode(null)
     if (!user) {
       setRestoring(false)
@@ -94,7 +94,13 @@ export function SleeperActions({
     }
     setRestoring(true)
     let active = true
-    request('restore')
+    request('status')
+      .then((status) => {
+        if (active) setHasSaved(status.saved)
+        if (!status.saved) return { connected: false }
+        if (status.expired) throw new Error('Sleeper connection expired. Replace it in Settings.')
+        return request('restore')
+      })
       .then((result) => {
         if (!active || !result.connected) return
         setConnected(result)
@@ -112,37 +118,6 @@ export function SleeperActions({
     // The parent remounts this view when the team or league changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leagueId, user?.id, authLoading])
-  async function disconnect() {
-    setBusy(true)
-    try {
-      await request('disconnect')
-      setToken('')
-      setConnected(null)
-      onConnect(null)
-      setMode(null)
-      setOpen(true)
-      setMessage('Saved Sleeper connection deleted.')
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Disconnect failed.')
-    } finally {
-      setBusy(false)
-    }
-  }
-  async function connect() {
-    setBusy(true)
-    setMessage('')
-    try {
-      const result = await request('connect')
-      setConnected(result)
-      onConnect(result)
-      setOpen(false)
-      setToken('')
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Connection failed.')
-    } finally {
-      setBusy(false)
-    }
-  }
   async function submit() {
     setBusy(true)
     setMessage('')
@@ -180,13 +155,10 @@ export function SleeperActions({
       className="rounded-xl border border-white/10 bg-slate-800/30 p-4 text-sm"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {!connected && (
-          <div>
-            <h2 className="font-semibold text-white">Connect Sleeper</h2>
-            <p className="mt-1 text-xs text-slate-400">
-              Save your connection to manage trades and lineups.
-            </p>
-          </div>
+        {!connected && !hasSaved && !message && (
+          <p className="text-xs text-slate-400">
+            Connect Sleeper in Settings to manage trades and lineups.
+          </p>
         )}
         <div className="flex flex-wrap gap-2">
           {connected ? (
@@ -218,79 +190,18 @@ export function SleeperActions({
               >
                 Review optimized lineup
               </button>
-              <button
-                disabled={busy}
-                className={button}
-                aria-expanded={open}
-                onClick={() => {
-                  setOpen(!open)
-                  setToken('')
-                  setMessage('')
-                }}
-              >
+              <Link className={button} href="/settings">
                 Settings
-              </button>
+              </Link>
             </>
           ) : (
-            <button className={button} onClick={() => setOpen(!open)}>
-              Connect Sleeper token
-            </button>
+            <Link className={button} href="/settings">
+              Connection settings
+            </Link>
           )}
         </div>
       </div>
-      {!connected && user && message && (
-        <button disabled={busy} className={`${button} mt-3`} onClick={disconnect}>
-          Delete saved connection
-        </button>
-      )}
-      {open && (
-        <section
-          aria-label="Sleeper connection settings"
-          className="mt-4 space-y-3 border-t border-white/10 pt-4"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-semibold text-white">Connection settings</h3>
-            <button
-              className={button}
-              onClick={() => {
-                setOpen(false)
-                setToken('')
-              }}
-            >
-              Close settings
-            </button>
-          </div>
-          {connected && (
-            <p className="text-xs text-emerald-300">
-              Connection saved. Paste a new token below to replace it.
-            </p>
-          )}
-          <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
-            In Sleeper web, open DevTools → Network, choose a GraphQL request, and copy its
-            authorization header. Your token is encrypted and saved to your First Ballot account so
-            it survives refresh. Disconnect deletes the saved token; it does not revoke it at
-            Sleeper. Never post it in chat.
-          </p>
-          <label className="block text-xs text-slate-300">
-            Sleeper authorization token
-            <input
-              type="password"
-              autoComplete="off"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="mt-2 block w-full rounded-lg border border-slate-600 bg-slate-950 p-2"
-            />
-          </label>
-          <button disabled={!token.trim() || busy} className={button} onClick={connect}>
-            {busy ? 'Saving…' : connected ? 'Replace saved token' : 'Save connection'}
-          </button>
-          {connected && (
-            <button disabled={busy} className={`${button} ml-2`} onClick={disconnect}>
-              Disconnect
-            </button>
-          )}
-        </section>
-      )}
+
       {connected && !ownTeam && (
         <p className="mt-3 text-xs text-amber-300">
           Select the team managed by this Sleeper account to take action.

@@ -5,7 +5,16 @@ import Image from 'next/image'
 import useSWR from 'swr'
 import { playerMomentum } from '@/lib/player-momentum'
 import Link from 'next/link'
-import { ArrowUpRight, Search, Users, ArrowRight, Layers } from 'lucide-react'
+import {
+  ArrowUpRight,
+  Search,
+  Users,
+  ArrowRight,
+  Layers,
+  Flame,
+  Snowflake,
+  Minus,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TeamData, PlayerData } from './types'
 import { MetricTip } from './MetricTip'
@@ -413,16 +422,41 @@ export function RosterSection({
                         {bye && <span className="text-amber-300">Bye</span>}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
-                        <MetricTip label={`Heat ${momentum.score ?? '—'}`}>
-                          Momentum index, 0–100; 50 is neutral. Equal weight to seven-day KTC SF
-                          change (10% saturates) and recent PPR scoring change (50% saturates). Last
-                          two played games versus previous played games in six completed weeks.
-                          Requires both histories and at least four played games.
-                          {momentum.ktc != null &&
-                            ` KTC ${(momentum.ktc * 100).toFixed(1)}% (${momentum.from}–${momentum.to}).`}
-                          {momentum.recent != null &&
-                            ` Recent ${momentum.recent.toFixed(1)} vs prior ${momentum.prior?.toFixed(1)} PPR FPPG.`}
-                        </MetricTip>
+                        <span
+                          className={cn(
+                            'inline-flex rounded-md px-2 py-1 font-semibold tabular-nums',
+                            momentum.score == null
+                              ? 'bg-slate-800 text-slate-500'
+                              : momentum.score >= 65
+                                ? 'bg-orange-500/10 text-orange-300'
+                                : momentum.score <= 35
+                                  ? 'bg-sky-500/10 text-sky-300'
+                                  : 'bg-slate-800 text-slate-300'
+                          )}
+                        >
+                          <MetricTip
+                            label={`Heat ${momentum.score ?? '—'}`}
+                            icon={
+                              momentum.score != null && momentum.score >= 65 ? (
+                                <Flame className="h-3.5 w-3.5" aria-hidden="true" />
+                              ) : momentum.score != null && momentum.score <= 35 ? (
+                                <Snowflake className="h-3.5 w-3.5" aria-hidden="true" />
+                              ) : (
+                                <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+                              )
+                            }
+                          >
+                            Hot: 65–100. Cold: 0–35. Neutral: 36–64. Momentum index, 0–100; 50 is
+                            neutral. Equal weight to seven-day KTC SF change (10% saturates) and
+                            recent PPR scoring change (50% saturates). Last two played games versus
+                            previous played games in six completed weeks. Requires both histories
+                            and at least four played games.
+                            {momentum.ktc != null &&
+                              ` KTC ${(momentum.ktc * 100).toFixed(1)}% (${momentum.from}–${momentum.to}).`}
+                            {momentum.recent != null &&
+                              ` Recent ${momentum.recent.toFixed(1)} vs prior ${momentum.prior?.toFixed(1)} PPR FPPG.`}
+                          </MetricTip>
+                        </span>
                         {connection && (
                           <MetricTip label={`Requests ${connection.heat[player.playerId] ?? 0}`}>
                             Unique requesting managers in {connection.historyCount} visible trades

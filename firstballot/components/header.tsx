@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Shield, User, LogOut, Menu, X, Lock, Crown, Sparkles, Zap } from 'lucide-react'
+import { Shield, User, LogOut, Menu, X, Lock, Crown, Sparkles, Zap, Settings } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useMembership } from '@/hooks/use-membership'
 import { useState } from 'react'
@@ -61,6 +61,13 @@ export function Header() {
                 <MegaMenu isLoggedIn={!!user} />
               </div>
 
+              <Link
+                href="/settings"
+                aria-label="Settings"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white"
+              >
+                <Settings className="h-4 w-4" />
+              </Link>
               {user ? (
                 <div className="flex items-center space-x-2 animate-in fade-in duration-200">
                   {/* PRO User - Premium Design */}

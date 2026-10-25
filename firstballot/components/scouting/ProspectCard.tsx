@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { COLLEGE_LOGOS } from '@/lib/college-logos'
 import {
   normalizeScoutingGradeTier,
   SCOUTING_TIER_STYLES,
@@ -155,6 +156,8 @@ function UnifiedProspectCard({
   imageHeightClass?: string
 }) {
   const [imageError, setImageError] = useState(false)
+  const [failedLogo, setFailedLogo] = useState<string | null>(null)
+  const logo = COLLEGE_LOGOS[player.school]
   const tierColor = getTierColor(player.tier)
 
   return (
@@ -201,6 +204,18 @@ function UnifiedProspectCard({
           imageHeightClass
         )}
       >
+        {logo && failedLogo !== logo && (
+          <div aria-hidden="true" className="pointer-events-none absolute right-[6%] top-14 aspect-square w-[28%] max-w-[80px] opacity-40">
+            <Image
+              src={logo}
+              alt=""
+              fill
+              sizes="80px"
+              className="object-contain"
+              onError={() => setFailedLogo(logo)}
+            />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent z-[1]" />
         {!imageError && getPlayerImageUrl(player) ? (
           <Image
@@ -208,7 +223,7 @@ function UnifiedProspectCard({
             alt={player.name}
             width={480}
             height={480}
-            className="h-full w-full object-contain object-bottom transition-transform duration-500 group-hover:scale-105"
+            className="relative h-full w-full object-contain object-bottom transition-transform duration-500 group-hover:scale-105"
             onError={() => setImageError(true)}
           />
         ) : (

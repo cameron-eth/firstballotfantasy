@@ -1,0 +1,46 @@
+name: Refresh KTC history
+on:
+  schedule:
+    - cron: '30 10 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: cameron-eth/sleeper-sdk
+          path: sdk-source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e ./sdk-source/python
+      - name: Scrape today's board with SDK validation
+        run: python sdk-source/python/scripts/snapshot_ktc.py --out-dir sdk-source/data/ktc
+      - name: Import full archive
+        run: python firstballot/scripts/import-ktc-history.py sdk-source/data/ktc firstballot/data/ktc-history.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Persist all snapshots
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node firstballot/scripts/sync-ktc-values.mjs
+      - name: Propose refreshed dataset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add firstballot/data/ktc-history.json
+          if git diff --cached --quiet; then exit 0; fi
+          BRANCH="codex/ktc-history-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+          git commit -m 'Refresh KTC history'
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title 'Refresh KTC history' --body 'Daily validated SDK scrape and complete history import. Empty snapshots are rejected.'

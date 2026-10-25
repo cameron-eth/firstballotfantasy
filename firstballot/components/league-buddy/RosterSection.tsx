@@ -2,130 +2,110 @@
 
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
+import useSWR from 'swr'
+import { playerMomentum } from '@/lib/player-momentum'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { KtcSparkline } from '@/components/scouting/KtcSparkline'
-import { TradeIntelligencePanel } from './TradeIntelligencePanel'
-import { BarChart3, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, Search, Users, ArrowRight, Layers } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { TeamData, PlayerData } from './types'
+import { MetricTip } from './MetricTip'
+import { KtcTrend } from './KtcTrend'
+import { SleeperActions, type SleeperConnection } from './SleeperActions'
 import { computeStartSit } from './projections/startSit'
-import { StartSitPanel } from './projections/StartSitPanel'
+import type { ProjectionMap } from './projections/useProjections'
 
-function PlayerCutout({ player }: { player: PlayerData }) {
-  const [imgErr, setImgErr] = useState(false)
-  const src = !imgErr
-    ? (player.headshot_url ??
-      (player.espn_id
-        ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
-        : null))
-    : player.espn_id
-      ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
-      : null
+export interface RosterProjections {
+  ppg: Record<string, number>
+  week: Record<string, number>
+  entries?: ProjectionMap
+  byes?: string[]
+  updatedAt?: string
+  error?: string | null
+  rosterPositions: string[]
+  currentWeek: number
+  approximate: boolean
+  loading: boolean
+}
 
-  const initials = player.playerName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+const POSITION_COLOR: Record<string, string> = {
+  QB: 'text-blue-300 bg-blue-400/10',
+  RB: 'text-emerald-300 bg-emerald-400/10',
+  WR: 'text-amber-300 bg-amber-400/10',
+  TE: 'text-violet-300 bg-violet-400/10',
+}
 
+function Portrait({ player }: { player: PlayerData }) {
+  const [attempt, setAttempt] = useState(0)
+  const sources = [
+    ...new Set(
+      [
+        player.headshot_url,
+        player.espn_id
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${player.espn_id}.png`
+          : null,
+        `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`,
+      ].filter(Boolean)
+    ),
+  ]
+  const src = sources[attempt]
   return (
-    <div className="relative w-28 flex-shrink-0 overflow-hidden bg-secondary/30">
-      <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent z-[1]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/30 z-[1]" />
+    <div
+      className={cn(
+        'relative flex h-12 w-12 shrink-0 items-end justify-center overflow-hidden rounded-xl',
+        POSITION_COLOR[player.position] || 'bg-slate-800'
+      )}
+    >
       {src ? (
         <Image
           src={src}
-          alt={player.playerName}
-          width={120}
-          height={120}
-          className="w-full h-full object-contain object-bottom scale-110 relative z-0"
-          onError={() => setImgErr(true)}
-          unoptimized
+          alt=""
+          width={96}
+          height={96}
+          className="h-full w-full object-cover object-top"
+          onError={() => setAttempt((value) => value + 1)}
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground/40">
-          {initials}
-        </div>
+        <Users className="m-auto h-5 w-5 opacity-50" />
       )}
     </div>
   )
 }
 
-const POSITION_BADGE: Record<string, string> = {
-  QB: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-  RB: 'bg-green-500/20 text-green-400 border-green-500/40',
-  WR: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-  TE: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-  K: 'bg-pink-500/20 text-pink-400 border-pink-500/40',
-  DEF: 'bg-gray-500/20 text-gray-400 border-gray-500/40',
-}
-
-const GRADE_COLORS: Record<string, string> = {
-  'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400/50',
-  A: 'bg-yellow-400/20 text-yellow-400 border-yellow-400/50',
-  'A-': 'bg-yellow-400/20 text-yellow-400 border-yellow-400/50',
-  'B+': 'bg-green-400/20 text-green-400 border-green-400/50',
-  B: 'bg-green-400/20 text-green-400 border-green-400/50',
-  'B-': 'bg-green-400/20 text-green-400 border-green-400/50',
-  'C+': 'bg-blue-400/20 text-blue-400 border-blue-400/50',
-  C: 'bg-blue-400/20 text-blue-400 border-blue-400/50',
-  'C-': 'bg-blue-400/20 text-blue-400 border-blue-400/50',
-  D: 'bg-orange-400/20 text-orange-400 border-orange-400/50',
-  F: 'bg-red-500/20 text-red-500 border-red-500/50',
-}
-
-function getDynastyWindow(age: number, position: string): { label: string; color: string } {
-  const peakAgeMap: Record<string, [number, number]> = {
-    QB: [26, 34],
-    RB: [22, 27],
-    WR: [23, 30],
-    TE: [24, 31],
-  }
-  const [peakStart, peakEnd] = peakAgeMap[position] ?? [24, 30]
-
-  if (age < peakStart - 2) return { label: 'Rising', color: 'text-emerald-400' }
-  if (age < peakStart) return { label: 'Prime', color: 'text-green-400' }
-  if (age <= peakEnd) return { label: 'Peak', color: 'text-yellow-400' }
-  if (age <= peakEnd + 2) return { label: 'Declining', color: 'text-orange-400' }
-  return { label: 'Depth', color: 'text-red-400' }
-}
-
-function getRankTier(rank: number): string {
-  if (rank <= 12) return 'Elite'
-  if (rank <= 36) return 'Blue Chip'
-  if (rank <= 72) return 'Starter'
-  if (rank <= 150) return 'Rotational'
-  return 'Depth'
-}
-
-/** Everything the roster view needs from the projections layer, grouped. */
-export interface RosterProjections {
-  /** playerId → projected points per game, from season totals. */
-  ppg: Record<string, number>
-  /** playerId → this week's projected points. */
-  week: Record<string, number>
-  rosterPositions: string[]
-  currentWeek: number
-  /** A paying scoring rule isn't projected — K/DEF leagues only. */
-  approximate: boolean
-  loading: boolean
-}
-
-interface RosterSectionProps {
-  projections?: RosterProjections
-  selectedTeam: TeamData
-  sortedTeams: TeamData[]
-  teams: TeamData[]
-}
+const points = (value: number | undefined) => (value == null ? '—' : value.toFixed(1))
 
 export function RosterSection({
+  leagueId,
+  isDynasty,
+  onActionComplete,
   selectedTeam,
   sortedTeams,
   teams,
   projections,
-}: RosterSectionProps) {
+}: {
+  leagueId: string
+  onActionComplete?: () => Promise<void>
+  isDynasty: boolean
+  selectedTeam: TeamData
+  sortedTeams: TeamData[]
+  teams: TeamData[]
+  projections?: RosterProjections
+}) {
+  const { data: momentumData } = useSWR(
+    '/api/player-momentum',
+    async (url) => {
+      const r = await fetch(url)
+      if (!r.ok) throw new Error('Scoring history unavailable')
+      return r.json()
+    },
+    { revalidateOnFocus: false, dedupingInterval: 3600000 }
+  )
+  const [connection, setConnection] = useState<SleeperConnection | null>(null)
+  const [view, setView] = useState<'week' | 'dynasty'>('week')
+  const [position, setPosition] = useState('All')
+  const [search, setSearch] = useState('')
+  const [lineup, setLineup] = useState('All players')
+  const starters = new Set(selectedTeam.starters)
+  const byes = new Set(projections?.byes ?? [])
   const startSit = useMemo(
     () =>
       projections
@@ -136,297 +116,481 @@ export function RosterSection({
             projections.rosterPositions
           )
         : null,
-    [projections, selectedTeam.players, selectedTeam.starters]
+    [selectedTeam, projections]
   )
-
-  // Sort players by rank (best first), then non-skill positions at the end
-  const sortedPlayers = useMemo(() => {
-    const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-    const other = selectedTeam.players.filter((p) => !['QB', 'RB', 'WR', 'TE'].includes(p.position))
-    return [
-      ...skill.sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)),
-      ...other.sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999)),
-    ]
-  }, [selectedTeam.players])
-
-  // Compute roster-level metrics
-  const metrics = useMemo(() => {
-    const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-    const totalKtcSf = skill.reduce((sum, p) => sum + (p.ktcValueSf ?? 0), 0)
-    const avgAge =
-      skill.length > 0 ? skill.reduce((sum, p) => sum + (p.age ?? 0), 0) / skill.length : 0
-    const tier1Count = skill.filter((p) => p.rank <= 12).length
-    const tier2Count = skill.filter((p) => p.rank > 12 && p.rank <= 36).length
-
-    // Rank all teams by total KTC SF (skill positions only)
-    const teamTotals = teams.map((t) => ({
-      rosterId: t.rosterId,
-      total: t.players
-        .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-        .reduce((sum, p) => sum + (p.ktcValueSf ?? 0), 0),
-    }))
-    teamTotals.sort((a, b) => b.total - a.total)
-    const ktcLeagueRank = teamTotals.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
-
-    return { totalKtcSf, avgAge, tier1Count, tier2Count, ktcLeagueRank, leagueSize: teams.length }
-  }, [selectedTeam.players, selectedTeam.rosterId, teams])
-
-  const hasKtcData = selectedTeam.players.some((p) => p.ktcValueSf != null)
-  const hasTrendData = selectedTeam.players.some((p) => (p.ktcHistory?.length ?? 0) >= 2)
-  const rosterCounts = ['QB', 'RB', 'WR', 'TE'].map((position) => ({
-    position, count: selectedTeam.players.filter((player) => player.position === position).length,
-  })).sort((a, b) => a.count - b.count)
+  const missing = selectedTeam.players.filter(
+    (p) => projections?.week[p.playerId] == null && !byes.has(p.playerId)
+  )
+  const lineupComplete = selectedTeam.starters
+    .filter((id) => id && id !== '0')
+    .every((id) => projections?.week[id] != null || byes.has(id))
+  const complete =
+    !!projections && !projections.loading && !projections.error && missing.length === 0
+  const filtered = selectedTeam.players
+    .filter(
+      (p) =>
+        (position === 'All' || p.position === position) &&
+        p.playerName.toLowerCase().includes(search.toLowerCase()) &&
+        (lineup === 'All players' ||
+          (lineup === 'Starters' ? starters.has(p.playerId) : !starters.has(p.playerId)))
+    )
+    .sort((a, b) =>
+      view === 'week'
+        ? Number(starters.has(b.playerId)) - Number(starters.has(a.playerId)) ||
+          (projections?.week[b.playerId] ?? -Infinity) -
+            (projections?.week[a.playerId] ?? -Infinity) ||
+          a.playerName.localeCompare(b.playerName)
+        : (a.rank || 999) - (b.rank || 999)
+    )
+  const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+  const ages = skill.filter((p) => p.age > 0)
+  const value = skill.reduce((sum, p) => sum + (p.ktcValueSf ?? 0), 0)
+  const valueRank =
+    [...teams]
+      .sort(
+        (a, b) =>
+          b.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0) -
+          a.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0)
+      )
+      .findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+  const counts = ['QB', 'RB', 'WR', 'TE'].map((pos) => ({
+    pos,
+    count: skill.filter((p) => p.position === pos).length,
+  }))
+  const maxCount = Math.max(1, ...counts.map((p) => p.count))
+  const metricHelp: Record<string, string> = {
+    'Lineup projection':
+      'Sum of available weekly Sleeper forecasts for your current starters, scored with this league’s rules. Partial coverage is labeled.',
+    'Dynasty value':
+      'Sum of KTC superflex values for skill-position players. This reference uses superflex values even if your league uses another format.',
+    'Average age':
+      'Average known age of quarterbacks, running backs, receivers and tight ends on this roster.',
+    'Roster grade':
+      'Relative roster strength from the app’s player rankings, not a prediction of this week’s score.',
+  }
+  const metricClass =
+    'pl-0 odd:border-0 even:border-l even:border-white/10 even:pl-4 sm:border-l sm:border-white/10 sm:pl-4 sm:odd:border-l sm:first:border-0 sm:first:pl-0'
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-400/20 bg-blue-400/5 px-4 py-3" aria-label="College pipeline">
-        <div><h2 className="text-sm font-semibold text-foreground">College pipeline</h2><p className="mt-0.5 text-xs text-muted-foreground">Your thinnest position by roster count is {rosterCounts[0].position} ({rosterCounts[0].count}). Scout the next classes while this season unfolds.</p></div>
-        <div className="flex flex-wrap gap-2"><Link href={`/scouting-portal?year=${new Date().getFullYear() + 1}&position=${rosterCounts[0].position}`} className="rounded-md bg-blue-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-blue-300">Scout {rosterCounts[0].position}</Link><Link href="/scouting-portal?tab=draftboard" className="rounded-md border border-border px-3 py-2 text-xs font-semibold text-foreground hover:border-blue-400">My draft board</Link></div>
+    <div className="mx-auto max-w-[1440px] space-y-4 sm:space-y-6 font-sans">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 text-xs font-medium uppercase tracking-[0.16em] text-blue-300">
+            Your team · Week {projections?.currentWeek ?? '—'}
+          </p>
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            {selectedTeam.teamName}
+          </h1>
+          <p className="mt-2 text-sm text-slate-400">
+            {selectedTeam.wins}–{selectedTeam.losses}
+            {selectedTeam.ties ? `–${selectedTeam.ties}` : ''} record{' '}
+            <span className="mx-2 text-slate-600">/</span> #
+            {sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1} in league{' '}
+            <span className="mx-2 text-slate-600">/</span> {selectedTeam.players.length} players
+          </p>
+        </div>
+        {isDynasty && (
+          <Link
+            href="/scouting-portal?tab=draftboard"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
+          >
+            Draft board <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        )}
+      </header>
+
+      <section
+        aria-label="Team snapshot"
+        className="grid grid-cols-2 gap-y-5 rounded-xl border border-white/10 bg-slate-800/40 p-5 sm:grid-cols-4"
+      >
+        {[
+          [
+            'Lineup projection',
+            projections?.loading
+              ? '…'
+              : projections?.error ||
+                  !startSit ||
+                  startSit.noLineupSet ||
+                  !Object.keys(projections?.week ?? {}).length
+                ? '—'
+                : points(startSit.startersProjected),
+            `Week ${projections?.currentWeek ?? '—'}${!lineupComplete ? ' · partial coverage' : ' · league scoring'}`,
+          ],
+          [
+            'Dynasty value',
+            value ? value.toLocaleString() : '—',
+            value ? `KTC superflex · #${valueRank}` : 'KTC superflex',
+          ],
+          [
+            'Average age',
+            ages.length ? (ages.reduce((s, p) => s + p.age, 0) / ages.length).toFixed(1) : '—',
+            'Skill-position players',
+          ],
+          [
+            'Roster grade',
+            selectedTeam.grade || '—',
+            `${skill.filter((p) => p.rank > 0 && p.rank <= 36).length} top-36 players`,
+          ],
+        ].map(([label, val, detail]) => (
+          <div key={label} className={metricClass}>
+            <p className="text-xs text-slate-400">
+              <MetricTip label={label}>{metricHelp[label]}</MetricTip>
+            </p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-white">
+              {val}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-500">{detail}</p>
+          </div>
+        ))}
       </section>
-      {/* Team Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-card border-border">
-          <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">Avg Age</div>
-            <div className="text-foreground text-2xl font-bold font-mono">
-              {metrics.avgAge > 0 ? metrics.avgAge.toFixed(1) : '—'}
+
+      <SleeperActions
+        leagueId={leagueId}
+        team={selectedTeam}
+        teams={teams}
+        projections={projections}
+        onConnect={setConnection}
+        onActionComplete={onActionComplete}
+      />
+
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_272px]">
+        <section
+          aria-label="Roster"
+          className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-slate-900"
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pt-4">
+            <div
+              role="group"
+              aria-label="Roster view"
+              className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:flex sm:gap-5"
+            >
+              {(['week', 'dynasty'] as const).map((key) => (
+                <button
+                  key={key}
+                  aria-pressed={view === key}
+                  onClick={() => setView(key)}
+                  className={cn(
+                    'whitespace-nowrap border-b-2 pb-3 text-xs font-semibold sm:text-sm',
+                    view === key
+                      ? 'border-blue-400 text-white'
+                      : 'border-transparent text-slate-500 hover:text-slate-200'
+                  )}
+                >
+                  {key === 'week' ? 'This week' : 'Dynasty outlook'}
+                </button>
+              ))}
             </div>
-            <div className="text-muted-foreground/60 text-[10px] mt-0.5">skill positions</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">
-              Tier Density
-            </div>
-            <div className="text-foreground text-2xl font-bold font-mono">
-              {metrics.tier1Count}
-              <span className="text-muted-foreground text-base font-normal">
-                +{metrics.tier2Count}
-              </span>
-            </div>
-            <div className="text-muted-foreground/60 text-[10px] mt-0.5">T1 + T2 assets</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">
-              KTC Total SF
-            </div>
-            <div className="text-foreground text-2xl font-bold font-mono">
-              {metrics.totalKtcSf > 0 ? metrics.totalKtcSf.toLocaleString() : '—'}
-            </div>
-            <div className="text-muted-foreground/60 text-[10px] mt-0.5">dynasty value</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">KTC Rank</div>
-            <div className="flex items-baseline gap-1">
-              <div
-                className={`text-2xl font-bold font-mono ${
-                  metrics.ktcLeagueRank === 0
-                    ? 'text-muted-foreground'
-                    : metrics.ktcLeagueRank <= Math.ceil(metrics.leagueSize / 4)
-                      ? 'text-emerald-400'
-                      : metrics.ktcLeagueRank <= Math.ceil(metrics.leagueSize / 2)
-                        ? 'text-yellow-400'
-                        : 'text-orange-400'
-                }`}
+            <span className="hidden shrink-0 pb-3 text-xs text-slate-500 sm:block">
+              {filtered.length} players
+            </span>
+          </div>
+          <div className="space-y-3 border-b border-white/10 p-4">
+            <div className="flex flex-wrap gap-2">
+              <label className="relative min-w-[150px] flex-1">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  aria-label="Search roster"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Find a player"
+                  className="h-9 w-full rounded-lg border border-slate-700 bg-slate-800/50 pl-9 pr-3 text-sm text-white placeholder:text-slate-500"
+                />
+              </label>
+              <select
+                aria-label="Lineup filter"
+                value={lineup}
+                onChange={(e) => setLineup(e.target.value)}
+                className="h-9 rounded-lg border border-slate-700 bg-slate-800 px-3 text-xs text-slate-300"
               >
-                {metrics.ktcLeagueRank > 0 ? `#${metrics.ktcLeagueRank}` : '—'}
-              </div>
-              {metrics.ktcLeagueRank > 0 && (
-                <span className="text-muted-foreground text-sm font-mono">
-                  of {metrics.leagueSize}
-                </span>
+                {['All players', 'Starters', 'Bench'].map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div
+              role="group"
+              aria-label="Position filter"
+              className="grid grid-cols-4 gap-1 sm:flex sm:flex-wrap"
+            >
+              {[
+                'All',
+                ...['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].filter((pos) =>
+                  selectedTeam.players.some((p) => p.position === pos)
+                ),
+                ...Array.from(new Set(selectedTeam.players.map((p) => p.position))).filter(
+                  (pos) => !['QB', 'RB', 'WR', 'TE', 'K', 'DEF'].includes(pos)
+                ),
+              ].map((pos) => (
+                <button
+                  key={pos}
+                  aria-pressed={position === pos}
+                  onClick={() => setPosition(pos)}
+                  className={cn(
+                    'whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium sm:py-1',
+                    position === pos
+                      ? 'bg-blue-400/15 text-blue-300'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  )}
+                >
+                  {pos}{' '}
+                  <span className="ml-1 opacity-60">
+                    {pos === 'All'
+                      ? selectedTeam.players.length
+                      : selectedTeam.players.filter((p) => p.position === pos).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {view === 'week' && (
+            <div
+              role="status"
+              className="border-b border-white/5 px-4 py-2 text-[11px] text-slate-400"
+            >
+              {projections?.loading ? (
+                'Updating forecasts…'
+              ) : projections?.error ? (
+                'Forecasts unavailable'
+              ) : (
+                <MetricTip label="Sleeper projections">
+                  {`${projections?.approximate ? 'Some scoring rules are not projected.' : 'Uses league scoring.'} ${projections?.updatedAt ? `Updated ${new Date(projections.updatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.` : ''} — means no published forecast.`}
+                </MetricTip>
               )}
             </div>
-            <div className="text-muted-foreground/60 text-[10px] mt-0.5">by total KTC SF</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-4">
-            <div className="text-muted-foreground text-xs font-mono uppercase mb-1">Team Grade</div>
-            <div
-              className={`text-2xl font-bold font-mono ${
-                GRADE_COLORS[selectedTeam.grade]
-                  ? GRADE_COLORS[selectedTeam.grade].split(' ')[1]
-                  : 'text-slate-300'
-              }`}
-            >
-              {selectedTeam.grade || '—'}
-            </div>
-            <div className="text-muted-foreground/60 text-[10px] mt-0.5">
-              #{sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1} in league
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Trade Intelligence */}
-      <div className="bg-card border border-border rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-4 w-4 text-yellow-400" />
-          <h3 className="text-yellow-400 font-mono text-sm font-bold uppercase">
-            Trade Intelligence
-          </h3>
-          {!hasTrendData && (
-            <Badge
-              variant="outline"
-              className="text-[10px] text-muted-foreground border-border ml-auto"
-            >
-              Signals based on production value (P/E) and age — accumulate daily KTC data for trend
-              signals too
-            </Badge>
           )}
-        </div>
-        <TradeIntelligencePanel
-          players={selectedTeam.players}
-          leaguePlayerPool={teams.flatMap((t) => t.players)}
-        />
-      </div>
+          <div className="hidden grid-cols-[minmax(0,1fr)_76px_76px_80px] gap-3 border-b border-white/5 bg-slate-800/30 px-4 py-2 text-right text-[10px] uppercase tracking-wider text-slate-500 sm:grid">
+            <span className="text-left">Player</span>
+            <span>{view === 'week' ? 'Opponent' : 'Rank / Age'}</span>
+            <span>
+              <MetricTip label={view === 'week' ? 'FPPG' : 'KTC SF'}>
+                {view === 'week'
+                  ? 'Actual fantasy points per game from the roster stats feed, using its scoring baseline. Not the league-scored forecast.'
+                  : 'KeepTradeCut superflex dynasty market value.'}
+              </MetricTip>
+            </span>
+            <span>
+              <MetricTip label={view === 'week' ? 'Week proj.' : 'KTC trend'}>
+                {view === 'week'
+                  ? 'Sleeper weekly projection scored with this league’s rules. Not guaranteed points. Missing forecasts show —.'
+                  : 'Change across available daily KTC superflex snapshots. Hover or focus the change for dates.'}
+              </MetricTip>
+            </span>
+          </div>
+          <div className="divide-y divide-white/5">
+            {filtered.map((player) => {
+              const bye = byes.has(player.playerId)
+              const weekly = projections?.week[player.playerId]
+              const trend = player.ktcTrendDelta
+              const momentum = playerMomentum(
+                player.ktcHistory,
+                momentumData?.history?.[player.playerId]
+              )
+              return (
+                <article
+                  key={player.playerId}
+                  className="grid grid-cols-[minmax(0,1fr)_76px] items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-800/40 sm:grid-cols-[minmax(0,1fr)_76px_76px_80px]"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Portrait key={player.playerId} player={player} />
+                    <div className="min-w-0">
+                      <h3 className="break-words text-sm font-semibold leading-snug text-slate-100">
+                        {player.playerName}
+                      </h3>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                        <span
+                          className={cn(
+                            'rounded px-1.5 py-0.5 font-medium',
+                            POSITION_COLOR[player.position]
+                          )}
+                        >
+                          {player.position}
+                        </span>
+                        <span>{player.team || 'FA'}</span>
+                        <span>{starters.has(player.playerId) ? 'Starter' : 'Bench'}</span>
+                        {player.injury_status && (
+                          <span className="text-rose-300">{player.injury_status}</span>
+                        )}
+                        {bye && <span className="text-amber-300">Bye</span>}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
+                        <MetricTip label={`Heat ${momentum.score ?? '—'}`}>
+                          Momentum index, 0–100; 50 is neutral. Equal weight to seven-day KTC SF
+                          change (10% saturates) and recent PPR scoring change (50% saturates). Last
+                          two played games versus previous played games in six completed weeks.
+                          Requires both histories and at least four played games.
+                          {momentum.ktc != null &&
+                            ` KTC ${(momentum.ktc * 100).toFixed(1)}% (${momentum.from}–${momentum.to}).`}
+                          {momentum.recent != null &&
+                            ` Recent ${momentum.recent.toFixed(1)} vs prior ${momentum.prior?.toFixed(1)} PPR FPPG.`}
+                        </MetricTip>
+                        {connection && (
+                          <MetricTip label={`Requests ${connection.heat[player.playerId] ?? 0}`}>
+                            Unique requesting managers in {connection.historyCount} visible trades
+                            {connection.limited ? ' (capped at 200)' : ''}. Separate from momentum.
+                          </MetricTip>
+                        )}
+                        <span className="hidden sm:inline">
+                          Season proj. {points(projections?.ppg[player.playerId])} PPG
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500 sm:hidden">
+                        {view === 'week'
+                          ? `${projections?.entries?.[player.playerId]?.opponent ? `vs ${projections.entries[player.playerId].opponent} · ` : ''}Actual ${player.games_played ? points(player.fantasy_ppg) : '—'} FPPG`
+                          : `Rank ${player.rank || '—'} · Age ${player.age || '—'} · KTC ${player.ktcValueSf?.toLocaleString() ?? '—'}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden text-right text-xs text-slate-400 sm:block">
+                    {view === 'week'
+                      ? bye
+                        ? 'Bye'
+                        : projections?.entries?.[player.playerId]?.opponent || '—'
+                      : `#${player.rank || '—'} / ${player.age || '—'}`}
+                  </div>
+                  <div className="hidden text-right text-sm tabular-nums text-slate-300 sm:block">
+                    {view === 'week'
+                      ? player.games_played
+                        ? points(player.fantasy_ppg)
+                        : '—'
+                      : (player.ktcValueSf?.toLocaleString() ?? '—')}
+                  </div>
+                  <div className="text-right">
+                    <div
+                      className={cn(
+                        'text-base font-semibold tabular-nums',
+                        view === 'week'
+                          ? 'text-blue-200'
+                          : trend != null && trend > 0
+                            ? 'text-emerald-300'
+                            : trend != null && trend < 0
+                              ? 'text-rose-300'
+                              : 'text-slate-400'
+                      )}
+                    >
+                      {view === 'week' ? (
+                        projections?.loading ? (
+                          '…'
+                        ) : bye ? (
+                          'Bye'
+                        ) : (
+                          points(weekly)
+                        )
+                      ) : (
+                        <KtcTrend history={player.ktcHistory} />
+                      )}
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500 sm:hidden">
+                      {view === 'week' ? `Week ${projections?.currentWeek ?? '—'}` : 'KTC change'}
+                    </p>
+                  </div>
+                </article>
+              )
+            })}
+            {!filtered.length && (
+              <div className="p-10 text-center text-sm text-slate-400">
+                No players match these filters.
+                <button
+                  onClick={() => {
+                    setSearch('')
+                    setPosition('All')
+                    setLineup('All players')
+                  }}
+                  className="mx-auto mt-3 block text-blue-300"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
 
-      {startSit && projections && (
-        <StartSitPanel
-          result={startSit}
-          week={projections.currentWeek}
-          approximate={projections.approximate}
-          loading={projections.loading}
-        />
-      )}
-
-      {/* Roster Scorecard */}
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-          <BarChart3 className="h-4 w-4 text-blue-400" />
-          <h3 className="text-blue-400 font-mono text-sm font-bold uppercase">Roster Scorecard</h3>
-        </div>
-
-        {/* Column header — desktop only */}
-        <div className="hidden md:grid grid-cols-[112px_1fr_52px_64px_52px_72px_60px_88px] gap-0 px-0 py-2 border-b border-border/60 bg-secondary/5">
-          <div />
-          <span className="text-[10px] font-mono text-muted-foreground uppercase px-3">Player</span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
-            Rank
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
-            Tier
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
-            Age
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
-            Window
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center">
-            Proj PPG
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase text-center pr-3">
-            KTC SF
-          </span>
-        </div>
-
-        {/* Rows */}
-        {sortedPlayers.map((player, idx) => {
-          const posColor =
-            POSITION_BADGE[player.position] ?? 'bg-slate-500/20 text-slate-400 border-slate-500/40'
-          const tierLabel = getRankTier(player.rank)
-          const { label: windowLabel, color: windowColor } = getDynastyWindow(
-            player.age ?? 0,
-            player.position
-          )
-          const isEven = idx % 2 === 0
-
-          return (
-            <div
-              key={`scorecard-${player.playerId}`}
-              className={`flex md:grid md:grid-cols-[112px_1fr_52px_64px_52px_72px_60px_88px] items-stretch h-24 border-b border-border/40 last:border-0 transition-colors hover:bg-secondary/20 ${
-                isEven ? 'bg-secondary/10' : 'bg-card'
-              }`}
-            >
-              {/* Full-height cutout image */}
-              <PlayerCutout player={player} />
-
-              {/* Name + position — flex-1 */}
-              <div className="flex-1 md:flex-none flex flex-col justify-center px-3 gap-1 min-w-0">
-                <div className="text-base font-bold text-foreground truncate leading-tight">
-                  {player.playerName}
+        <aside className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+          <section className="rounded-xl border border-blue-400/20 bg-blue-400/5 p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-300">
+              Lineup check
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-white">Make this week count.</h2>
+            {projections?.loading ? (
+              <p className="mt-3 text-sm text-slate-400">Loading forecasts…</p>
+            ) : !complete ? (
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">
+                {projections?.error ||
+                  `${missing.length} players have no published weekly forecast. Review availability before comparing lineups.`}
+              </p>
+            ) : startSit?.noLineupSet ? (
+              <p className="mt-3 text-sm text-slate-400">
+                Set your starters in Sleeper to compare your lineup.
+              </p>
+            ) : startSit && startSit.pointsLeft > 0.1 ? (
+              <>
+                <p className="mt-3 text-3xl font-semibold tabular-nums text-blue-200">
+                  +{startSit.pointsLeft.toFixed(1)}{' '}
+                  <span className="text-xs font-normal text-slate-400">potential points</span>
+                </p>
+                <div className="mt-4 space-y-3">
+                  {startSit.swaps
+                    .filter((s) => s.start)
+                    .slice(0, 3)
+                    .map((swap) => (
+                      <div
+                        key={swap.start!.playerId}
+                        className="border-t border-white/10 pt-3 text-xs"
+                      >
+                        <p className="font-medium text-slate-100">Consider {swap.start!.name}</p>
+                        <p className="mt-1 text-slate-400">
+                          For {swap.sit?.name ?? 'an empty slot'} · +{swap.gain.toFixed(1)}
+                        </p>
+                      </div>
+                    ))}
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] px-1.5 py-0 border font-mono ${posColor}`}
-                  >
-                    {player.position}
-                  </Badge>
-                  <span className="text-muted-foreground/60 text-xs">{player.team}</span>
-                  {/* Mobile condensed */}
-                  <span className="md:hidden text-muted-foreground text-xs font-mono">
-                    · #{player.rank} · <span className={windowColor}>{windowLabel}</span>
-                  </span>
-                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+                  Projection comparison only. Check injuries and game locks in Sleeper.
+                </p>
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-slate-300">
+                Your current starters match the highest projected lineup.
+              </p>
+            )}
+          </section>
+          {isDynasty && (
+            <section className="rounded-xl border border-white/10 bg-slate-800/30 p-4">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-slate-400" />
+                <h2 className="text-sm font-semibold text-white">Build your next class</h2>
               </div>
-
-              {/* Rank */}
-              <div className="hidden md:flex items-center justify-center">
-                <span className="text-foreground font-mono text-sm font-semibold tabular-nums">
-                  #{player.rank}
-                </span>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                Explore college prospects alongside your roster depth.
+              </p>
+              <div className="mt-4 space-y-4">
+                {counts.map(({ pos, count }) => (
+                  <Link key={pos} href={`/scouting-portal?position=${pos}`} className="group block">
+                    <div className="mb-1.5 flex items-center justify-between text-xs">
+                      <span className="text-slate-300">
+                        {pos} <span className="ml-1 text-slate-500">{count} rostered</span>
+                      </span>
+                      <span className="flex items-center gap-1 text-blue-300">
+                        Scout <ArrowUpRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded bg-slate-700/50">
+                      <div
+                        className="h-full rounded bg-blue-400/60 group-hover:bg-blue-300"
+                        style={{ width: `${(count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                  </Link>
+                ))}
               </div>
-
-              {/* Tier */}
-              <div className="hidden md:flex items-center justify-center">
-                <span className="text-muted-foreground text-xs font-mono">{tierLabel}</span>
-              </div>
-
-              {/* Age */}
-              <div className="hidden md:flex items-center justify-center">
-                <span className="text-foreground font-mono text-sm tabular-nums">
-                  {player.age ?? '—'}
-                </span>
-              </div>
-
-              {/* Dynasty Window */}
-              <div className="hidden md:flex items-center justify-center">
-                <span className={`text-xs font-mono font-semibold ${windowColor}`}>
-                  {windowLabel}
-                </span>
-              </div>
-
-              {/* Projected points per game (rotowire, scored with this league's settings) */}
-              <div className="hidden md:flex items-center justify-center">
-                {projections?.ppg[player.playerId] ? (
-                  <span className="text-foreground font-mono text-sm font-semibold tabular-nums">
-                    {projections!.ppg[player.playerId].toFixed(1)}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground/40 text-xs">—</span>
-                )}
-              </div>
-
-              {/* KTC SF value / sparkline */}
-              <div className="hidden md:flex items-center justify-center pr-3">
-                {player.ktcHistory && player.ktcHistory.length >= 2 ? (
-                  <KtcSparkline
-                    playerName={player.playerName}
-                    history={player.ktcHistory}
-                    useSf
-                    width={76}
-                    height={36}
-                  />
-                ) : player.ktcValueSf != null ? (
-                  <span className="text-foreground font-mono text-sm font-semibold tabular-nums">
-                    {player.ktcValueSf.toLocaleString()}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground/40 text-xs">—</span>
-                )}
-              </div>
-            </div>
-          )
-        })}
+              <Link
+                href="/scouting-portal?tab=draftboard"
+                className="mt-5 flex items-center justify-between border-t border-white/10 pt-3 text-xs font-medium text-slate-300"
+              >
+                Open your draft board <ArrowRight className="h-3 w-3" />
+              </Link>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   )

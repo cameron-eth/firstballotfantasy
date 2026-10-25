@@ -527,6 +527,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
   return {
     teams: teamsData,
     leagueOverview: {
+      isDynasty: league?.settings?.type === 2,
       totalTeams: rosters.length,
       currentWeek: week,
       seasonType: nflState.season_type || 'regular',

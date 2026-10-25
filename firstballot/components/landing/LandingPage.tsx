@@ -1,12 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
-import { useState } from 'react'
 import useSWR from 'swr'
 import { ArrowRight, BookOpen, ClipboardList, Shield, Users } from 'lucide-react'
 import { CommunityRankingPrompt } from './CommunityRankingPrompt'
 import { ScoutingExperience, ScrollReveal } from './ScoutingExperience'
+import { ProspectTradingCard } from './ProspectTradingCard'
 
 type Prospect = {
   id: number
@@ -41,16 +40,6 @@ const paths = [
 
 const watchlistOrder = ['Jesse Legree', 'Chris Henry Jr.', 'Legend Bey', 'Brock Boyd']
 
-function ProspectPortrait({ player }: { player: Prospect }) {
-  const [failed, setFailed] = useState(false)
-  return <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-500/15 via-slate-800 to-slate-950">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(96,165,250,0.15),transparent_65%)]" />
-    <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-5xl font-bold text-blue-300/30">{player.name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
-    {player.headshot_url && !failed && <Image src={player.headshot_url} alt={player.name} width={480} height={480} loading="eager" className="relative mx-auto h-full w-full object-contain object-bottom transition-transform duration-300 group-hover:scale-105" onError={() => setFailed(true)} />}
-    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-900 to-transparent" />
-  </div>
-}
-
 export function LandingPage() {
   const { data, error, isLoading } = useSWR('/api/prospects?draft_year=all', loadProspects, {
     refreshInterval: 5 * 60 * 1000,
@@ -79,10 +68,7 @@ export function LandingPage() {
           <Link href="/scouting-portal?year=2029" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200">Scout the 2029 class <ArrowRight className="h-4 w-4" /></Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {watchlist.map((player) => <Link href="/scouting-portal?year=2029" key={player.id} className="group overflow-hidden rounded-2xl border border-white/10 bg-slate-900 transition hover:-translate-y-1 hover:border-blue-400/60 hover:shadow-[0_18px_50px_rgba(37,99,235,0.12)]">
-            <ProspectPortrait player={player} />
-            <div className="p-5"><div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-blue-300"><span>{player.position} · 2029 projection</span><span>↗</span></div><h3 className="mt-3 text-xl font-bold">{player.name}</h3><p className="mt-1 text-sm text-slate-400">{player.school}</p><div className="mt-4 border-t border-white/10 pt-3 text-xs text-slate-400">{player.overall_grade == null ? 'Freshman watchlist · grade pending' : `Scouting grade · ${player.overall_grade.toFixed(1)}`}</div></div>
-          </Link>)}
+          {watchlist.map((player, index) => <Link href="/scouting-portal?year=2029" key={player.id} aria-label={`Scout ${player.name}`} className="block rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300" style={{ perspective: 1000 }}><ProspectTradingCard player={player} index={index} /></Link>)}
         </div>
       </section>}</ScrollReveal>
 
@@ -112,18 +98,7 @@ export function LandingPage() {
         {isLoading && <p className="rounded-xl border border-white/10 p-5 text-slate-400">Loading prospect profiles…</p>}
         {!isLoading && !error && upcoming.length === 0 && <p className="rounded-xl border border-white/10 p-5 text-slate-400">No upcoming class profiles are available yet.</p>}
         {upcoming.length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {upcoming.map((player) => <Link href="/scouting-portal" key={player.id} className="group overflow-hidden rounded-xl border border-white/10 bg-slate-900/70 hover:border-blue-400/50">
-            <ProspectPortrait player={player} />
-            <div className="p-5">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400"><span>{player.draft_year} class · {player.position}</span><span>#{player.overall_rank ?? '—'}</span></div>
-            <h3 className="mt-4 text-xl font-bold">{player.name}</h3><p className="mt-1 text-sm text-slate-400">{player.school}</p>
-            <div className="mt-5 space-y-2 border-t border-white/10 pt-3 text-sm">
-              <div className="flex items-center justify-between"><span className="text-slate-400">Scouting grade</span><strong className="text-blue-300">{player.overall_grade?.toFixed(1) ?? '—'}</strong></div>
-              <div className="flex items-center justify-between"><span className="text-slate-400">College production</span><strong>{player.college_production_score?.toFixed(1) ?? '—'}</strong></div>
-              <div className="flex items-center justify-between"><span className="text-slate-400">Draft projection</span><strong>{player.draft_projection_score?.toFixed(1) ?? '—'}</strong></div>
-            </div>
-            </div>
-          </Link>)}
+          {upcoming.map((player, index) => <ScrollReveal key={player.id}><Link href={`/scouting-portal?year=${player.draft_year}`} aria-label={`Scout ${player.name}`} className="block rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300" style={{ perspective: 1000 }}><ProspectTradingCard player={player} index={index} /></Link></ScrollReveal>)}
         </div>}
         <p className="mt-4 text-xs text-slate-500">Grades and projections are model estimates based on the latest available catalog. Class eligibility is projected; ungraded players remain on the watchlist.</p>
       </section>

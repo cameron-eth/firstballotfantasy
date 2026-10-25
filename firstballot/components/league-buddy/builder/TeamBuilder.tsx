@@ -2,16 +2,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
-import { plannedPositionCount, type Scenario, type Target } from '@/lib/team-scenarios'
+import { type Scenario, type Target } from '@/lib/team-scenarios'
 import { PlayerTradeModal } from '../trades/PlayerTradeModal'
 import type { PlayerData, TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
 import { StrategyCard } from './StrategyCard'
-import { RosterCardStack } from './RosterCardStack'
+import { LineupMap } from './LineupMap'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
 import type { TeamPlacement } from '../competitiveState'
-import { useBoardFit, BoardFitStack } from './BoardFit'
-import { useTeamTimeline, DraftFitNote, type TimelineDraftOrder } from './TeamTimeline'
+import { useBoardFit } from './BoardFit'
+import { useTeamTimeline, type TimelineDraftOrder } from './TeamTimeline'
+import { PlanMenu } from './PlanMenu'
+import { CompactSelect } from '@/components/ui/compact-select'
 import { useCanvasZoom } from './useCanvasZoom'
 
 const fresh = (): Scenario => ({
@@ -38,12 +40,14 @@ export function TeamBuilder({
   isDynasty,
   placement,
   draftOrder,
+  rosterPositions,
 }: {
   team: TeamData
   teams: TeamData[]
   leagueId: string
   isDynasty: boolean
   placement?: TeamPlacement
+  rosterPositions: string[]
   draftOrder?: TimelineDraftOrder
 }) {
   const { user, loading: authLoading } = useAuth()
@@ -210,23 +214,29 @@ export function TeamBuilder({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         {isDynasty && (
-          <select
+          <div
+            role="group"
             aria-label="Roster year"
-            className={input}
-            value={timeline.horizon}
-            disabled={busy}
-            onChange={(e) => {
-              const horizon = Number(e.target.value)
-              update({ horizon })
-              setYear(horizon > timeline.baseYear ? String(horizon) : 'ALL')
-            }}
+            className="inline-flex rounded-lg border border-slate-700/50 bg-slate-800/40 p-1"
           >
-            {[0, 1, 2, 3].map((offset) => (
-              <option key={offset} value={timeline.baseYear + offset}>
-                {offset === 0 ? 'Now' : `${timeline.baseYear + offset} · +${offset}y`}
-              </option>
-            ))}
-          </select>
+            {[0, 1, 2, 3].map((offset) => {
+              const horizon = timeline.baseYear + offset
+              return (
+                <button
+                  key={horizon}
+                  disabled={busy}
+                  aria-pressed={timeline.horizon === horizon}
+                  onClick={() => {
+                    update({ horizon })
+                    setYear(offset ? String(horizon) : 'ALL')
+                  }}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${timeline.horizon === horizon ? 'bg-blue-400/15 text-blue-200 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                >
+                  {offset ? horizon : 'Now'}
+                </button>
+              )
+            })}
+          </div>
         )}
         <div className="ml-auto flex items-center gap-2 text-xs text-slate-400">
           <button
@@ -249,71 +259,27 @@ export function TeamBuilder({
             +
           </button>
         </div>
-        <details className="relative">
-          <summary className={`${button} cursor-pointer`}>Plans{dirty ? ' •' : ''}</summary>
-          <div className="absolute right-0 z-20 mt-2 w-[min(28rem,85vw)] space-y-3 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-xl">
-            {!user && <p className="text-xs text-slate-400">Sign in to save this plan.</p>}
-            <div className="flex flex-wrap gap-2">
-              <select
-                aria-label="Saved scenario"
-                className={input}
-                value={active}
-                disabled={busy}
-                onChange={(e) => setActive(e.target.value)}
-              >
-                {scenarios.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                className={button}
-                disabled={scenarios.length >= 12 || busy}
-                onClick={() => {
-                  const copy = {
-                    ...scenario,
-                    id: crypto.randomUUID(),
-                    name: `Plan ${scenarios.length + 1}`,
-                  }
-                  setScenarios([...scenarios, copy])
-                  setActive(copy.id)
-                  setDirty(true)
-                }}
-              >
-                Duplicate plan
-              </button>
-              <button
-                disabled={!user || busy || !dirty}
-                onClick={save}
-                className={`${button} border-blue-400/40 bg-blue-400/10 text-blue-200`}
-              >
-                {busy ? 'Saving…' : 'Save plans'}
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <label className="w-full text-xs text-slate-400 sm:w-auto sm:flex-1">
-                Scenario name
-                <input
-                  maxLength={80}
-                  className={`${input} mt-1 w-full`}
-                  value={scenario.name}
-                  onChange={(e) => update({ name: e.target.value })}
-                />
-              </label>
-              <label className="w-full text-xs text-slate-400 sm:w-auto sm:flex-[2]">
-                Strategy notes
-                <input
-                  maxLength={2000}
-                  className={`${input} mt-1 w-full`}
-                  placeholder="Win now, add young receivers, draft a quarterback…"
-                  value={scenario.notes}
-                  onChange={(e) => update({ notes: e.target.value })}
-                />
-              </label>
-            </div>
-          </div>
-        </details>
+        <PlanMenu
+          scenarios={scenarios}
+          scenario={scenario}
+          select={setActive}
+          update={update}
+          busy={busy}
+          dirty={dirty}
+          signedIn={!!user}
+          message={message}
+          save={save}
+          duplicate={() => {
+            const copy = {
+              ...scenario,
+              id: crypto.randomUUID(),
+              name: `Plan ${scenarios.length + 1}`,
+            }
+            setScenarios([...scenarios, copy])
+            setActive(copy.id)
+            setDirty(true)
+          }}
+        />
       </div>
       {message && (
         <p role="status" className="text-xs text-slate-400">
@@ -345,134 +311,67 @@ export function TeamBuilder({
               leagueId={leagueId}
               isDynasty={isDynasty}
             />
-            <div className="flex gap-4 border-t border-slate-700 pt-5">
-              {positions.map((pos) => {
-                const current = team.players.filter((p) => p.position === pos)
-                return (
-                  <section key={pos} className="w-60 shrink-0 space-y-3">
-                    <header className="mb-4 flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900 px-3 py-3">
-                      <h3 className="font-semibold text-white">{pos}</h3>
-                      <span className="text-xs text-slate-400">
-                        {current.length} now →{' '}
-                        <strong className="text-blue-300">
-                          {plannedPositionCount(pos, team.players, view)} planned
-                        </strong>
-                      </span>
-                    </header>
-                    {view.targets
-                      .filter((t) => t.position === pos)
-                      .map((t) => (
-                        <div key={t.id} className="space-y-2">
-                          <StrategyCard
-                            {...t}
-                            rookie={
-                              t.kind === 'draft'
-                                ? t.year === timeline.horizon
-                                : rookies.has(t.id) && timeline.horizon === timeline.baseYear
-                            }
-                            label={
-                              t.kind === 'draft'
-                                ? `Planned arrival · ${t.year ?? 'Class TBD'}`
-                                : `Trade target · ${t.arrivalYear ?? timeline.baseYear}`
-                            }
-                            action="Remove"
-                            onAction={() =>
-                              update({ targets: scenario.targets.filter((p) => p.id !== t.id) })
-                            }
-                          />
-                          {t.kind === 'draft' && (
-                            <DraftFitNote
-                              fit={timeline.fits.find((f) => f.targetId === t.id)}
-                              year={t.year}
-                              baseYear={timeline.baseYear}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    <button
-                      className="w-full rounded-lg border border-dashed border-slate-600 p-3 text-xs text-blue-300 hover:bg-slate-800"
-                      onClick={() => {
-                        setPosition(pos)
-                        document.getElementById('builder-search')?.focus()
-                      }}
-                    >
-                      + Find {pos} targets
-                    </button>
-                    <RosterCardStack
-                      players={current}
-                      onTrade={setTradePlayer}
-                      position={pos}
-                      outgoing={view.outgoing}
-                      ageOffset={Math.max(0, timeline.horizon - timeline.baseYear)}
-                      onToggle={(id) =>
-                        update({
-                          outgoing: view.outgoing.includes(id)
-                            ? scenario.outgoing.filter((value) => value !== id)
-                            : [...new Set([...scenario.outgoing, id])],
-                          departureYears: { ...scenario.departureYears, [id]: timeline.horizon },
-                        })
-                      }
-                    />
-                    {isDynasty &&
-                      board.user &&
-                      !board.error &&
-                      !prospectError &&
-                      !board.isLoading &&
-                      !prospectsLoading &&
-                      board.players.length > 0 && (
-                        <BoardFitStack
-                          players={board.players}
-                          position={pos}
-                          targets={scenario.targets}
-                          full={scenario.targets.length >= 100}
-                          onAdd={add}
-                        />
-                      )}
-                  </section>
-                )
-              })}
-            </div>
+            <LineupMap
+              fits={timeline.fits}
+              team={team}
+              teams={teams}
+              rawSlots={rosterPositions}
+              scenario={scenario}
+              view={view}
+              horizon={timeline.horizon}
+              baseYear={timeline.baseYear}
+              board={
+                isDynasty &&
+                board.user &&
+                !board.error &&
+                !prospectError &&
+                !board.isLoading &&
+                !prospectsLoading
+                  ? board.players
+                  : []
+              }
+              update={update}
+              onTrade={setTradePlayer}
+              onAdd={add}
+            />
           </div>
         </div>
         <section aria-label="Find strategy targets" className="border-t border-white/10 pt-5">
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <h3 className="mr-auto font-semibold text-white">Find your next player</h3>
-            <select
-              aria-label="Target source"
+            <CompactSelect
+              label="Target source"
               value={source}
-              onChange={(e) => setSource(e.target.value as 'trade' | 'draft')}
-              className={input}
-            >
-              <option value="trade">Trade targets · league rosters</option>
-              {isDynasty && <option value="draft">College draft targets</option>}
-            </select>
-            <select
-              aria-label="Target position"
+              onChange={(value) => setSource(value as 'trade' | 'draft')}
+              disabled={busy}
+              options={[
+                { value: 'trade', label: 'Trade targets' },
+                ...(isDynasty ? [{ value: 'draft', label: 'College prospects' }] : []),
+              ]}
+            />
+            <CompactSelect
+              label="Target position"
               value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              className={input}
-            >
-              <option value="ALL">All positions</option>
-              {positions.map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+              onChange={setPosition}
+              disabled={busy}
+              options={[
+                { value: 'ALL', label: 'All positions' },
+                ...positions.map((p) => ({ value: p, label: p })),
+              ]}
+            />
             {source === 'draft' && (
-              <select
-                aria-label="Draft class"
+              <CompactSelect
+                label="Draft class"
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className={input}
-              >
-                <option value="ALL">All classes</option>
-                {Array.from(new Set(prospects.map((p) => p.draft_year).filter(Boolean)))
-                  .sort()
-                  .map((y) => (
-                    <option key={y} value={String(y)}>
-                      {y}
-                    </option>
-                  ))}
-              </select>
+                onChange={setYear}
+                disabled={busy}
+                options={[
+                  { value: 'ALL', label: 'All classes' },
+                  ...Array.from(new Set(prospects.map((p) => p.draft_year).filter(Boolean)))
+                    .sort()
+                    .map((y) => ({ value: String(y), label: String(y) })),
+                ]}
+              />
             )}
           </div>
           <input

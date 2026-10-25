@@ -19,6 +19,7 @@ export function DailyRankingDialog({
   data,
   onVote,
   saving,
+  pendingWinner,
   error,
 }: {
   open: boolean
@@ -26,9 +27,11 @@ export function DailyRankingDialog({
   data: DailyBallot
   onVote: (key: string) => void
   saving: boolean
+  pendingWinner?: string | null
   error: string
 }) {
   const [showBoard, setShowBoard] = useState(false)
+  const selected = data.voted ? data.winner : pendingWinner
   return (
     <Dialog
       open={open}
@@ -44,11 +47,13 @@ export function DailyRankingDialog({
           <DialogTitle className="text-xl text-white">
             {showBoard
               ? 'Community rankings'
-              : data.voted
-                ? 'Your pick is in.'
-                : data.pool === 'dynasty'
-                  ? 'Who would you build around?'
-                  : 'Who would you roster this season?'}
+              : saving
+                ? 'Saving your pick…'
+                : data.voted
+                  ? 'Your pick is in.'
+                  : data.pool === 'dynasty'
+                    ? 'Who would you build around?'
+                    : 'Who would you roster this season?'}
           </DialogTitle>
           <DialogDescription className="mt-2 text-xs leading-relaxed text-slate-400">
             {data.pool === 'dynasty'
@@ -97,26 +102,48 @@ export function DailyRankingDialog({
           <>
             <div className="grid grid-cols-2 gap-3">
               {data.choices.map((p) => (
-                <StrategyCard
+                <div
                   key={p.key}
-                  name={p.name}
-                  position={p.position}
-                  team={p.team}
-                  image={p.image}
-                  label={p.kind === 'prospect' ? `${p.year} prospect` : 'Current NFL'}
-                  action={
-                    data.voted ? (data.winner === p.key ? 'Your pick ✓' : 'Not selected') : 'Pick'
-                  }
-                  disabled={saving || data.voted}
-                  onAction={() => onVote(p.key)}
-                />
+                  className={`transition-opacity duration-200 ${selected && selected !== p.key ? 'opacity-45' : 'opacity-100'}`}
+                >
+                  <StrategyCard
+                    name={p.name}
+                    position={p.position}
+                    team={p.team}
+                    image={p.image}
+                    label={p.kind === 'prospect' ? `${p.year} prospect` : 'Current NFL'}
+                    action={
+                      saving && selected === p.key
+                        ? 'Saving…'
+                        : data.voted
+                          ? data.winner === p.key
+                            ? 'Your pick ✓'
+                            : 'Not selected'
+                          : error && selected === p.key
+                            ? 'Retry pick'
+                            : 'Pick'
+                    }
+                    selected={selected === p.key}
+                    busy={saving && selected === p.key}
+                    disabled={saving || data.voted}
+                    onAction={() => onVote(p.key)}
+                  />
+                </div>
               ))}
             </div>
-            {data.voted && (
-              <p role="status" className="text-sm text-emerald-300">
-                Saved. Your vote now contributes to the community model.
-              </p>
-            )}
+            <p
+              role="status"
+              aria-live="polite"
+              className={`min-h-5 text-sm ${data.voted ? 'text-emerald-300' : 'text-slate-400'}`}
+            >
+              {saving
+                ? 'Saving your selection…'
+                : data.voted
+                  ? 'Saved. Thanks for making your pick.'
+                  : error
+                    ? 'Your selection is kept here while you retry.'
+                    : 'Pick the player you value more.'}
+            </p>
           </>
         )}
         {error && (
@@ -126,7 +153,7 @@ export function DailyRankingDialog({
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs">
           <button className="text-slate-400 hover:text-white" onClick={onClose}>
-            {data.voted ? 'Done' : 'Not today'}
+            {saving ? 'Close · saving continues' : data.voted ? 'Done' : 'Not today'}
           </button>
           <button
             className="text-blue-300 hover:text-white"

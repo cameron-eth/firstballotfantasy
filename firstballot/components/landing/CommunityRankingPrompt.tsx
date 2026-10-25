@@ -12,6 +12,7 @@ export function CommunityRankingPrompt() {
   const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10))
   const [openScope, setOpenScope] = useState('')
   const [saving, setSaving] = useState(false)
+  const [pendingWinner, setPendingWinner] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [seen, setSeen] = useState('')
   const eligible =
@@ -47,10 +48,12 @@ export function CommunityRankingPrompt() {
     } catch {}
     setSeen(`${key}:${day}`)
     setOpenScope(`${key}:${day}`)
+    setPendingWinner(null)
     setMessage('')
   }, [eligible, data, day, key, seen])
   async function vote(winner: string) {
     if (!data || saving) return
+    setPendingWinner(winner)
     setSaving(true)
     setMessage('')
     try {
@@ -61,12 +64,21 @@ export function CommunityRankingPrompt() {
       })
       const result = await response.json()
       if (!response.ok) {
-        if (response.status === 409) await mutate()
+        if (response.status === 409) {
+          const restored = await mutate()
+          if (restored?.voted) return
+        }
         throw new Error(result.error || 'Could not save your pick')
       }
       await mutate(result, false)
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Could not save your pick')
+      try {
+        const restored = await mutate()
+        if (restored?.voted) return
+      } catch {
+        /* Keep the selected card available for a safe retry. */
+      }
+      setMessage('Could not confirm your pick. Please retry; you will not be counted twice.')
     } finally {
       setSaving(false)
     }
@@ -79,6 +91,7 @@ export function CommunityRankingPrompt() {
       onClose={() => setOpenScope('')}
       data={data}
       saving={saving}
+      pendingWinner={pendingWinner}
       error={message}
       onVote={vote}
     />

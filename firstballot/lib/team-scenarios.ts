@@ -15,6 +15,7 @@ export type Scenario = {
   outgoing: string[]
   targets: Target[]
   horizon?: number
+  lineups?: Record<string, Record<string, string>>
   departureYears?: Record<string, number>
 }
 export function validateScenarios(value: unknown): value is Scenario[] {
@@ -43,6 +44,25 @@ export function validateScenarios(value: unknown): value is Scenario[] {
                 Number.isInteger(year) &&
                 year >= 2020 &&
                 year <= 2100
+            ))) &&
+        (s.lineups === undefined ||
+          (s.lineups &&
+            typeof s.lineups === 'object' &&
+            !Array.isArray(s.lineups) &&
+            Object.keys(s.lineups).length <= 10 &&
+            Object.entries(s.lineups).every(
+              ([year, slots]) =>
+                /^20\d{2}$/.test(year) &&
+                slots &&
+                typeof slots === 'object' &&
+                !Array.isArray(slots) &&
+                Object.keys(slots).length <= 40 &&
+                Object.entries(slots).every(
+                  ([slot, id]) =>
+                    /^[A-Z0-9_\/]{1,32}$/.test(slot) &&
+                    typeof id === 'string' &&
+                    /^(nfl|prospect):[a-zA-Z0-9_-]{1,64}$/.test(id)
+                )
             ))) &&
         Array.isArray(s.outgoing) &&
         s.outgoing.length <= 100 &&

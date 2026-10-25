@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
 import { boardsToProspects } from '@/lib/draftboard-classes'
@@ -40,82 +39,26 @@ export function useBoardFit(enabled: boolean, prospects: Prospect[], horizon?: n
   }
 }
 
-export function BoardFitControls({
-  board,
-  loading,
-  failed,
-  retry,
-  onYearChange,
-}: {
-  board: ReturnType<typeof useBoardFit>
-  loading: boolean
-  failed: boolean
-  retry: () => void
-  onYearChange?: (year: number) => void
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-      <span className="font-medium text-white">Your board → roster fit</span>
-      {board.user && (board.isLoading || loading) ? (
-        <span>Loading your board…</span>
-      ) : board.error || failed ? (
-        <button onClick={retry} className="text-red-300">
-          Board unavailable · Retry
-        </button>
-      ) : !board.user ? (
-        <span>Sign in to see your saved board here.</span>
-      ) : !board.years.length ? (
-        <span>No saved prospects yet.</span>
-      ) : (
-        <>
-          <select
-            aria-label="Board draft class"
-            value={board.activeYear}
-            onChange={(e) =>
-              onYearChange ? onYearChange(Number(e.target.value)) : board.setYear(e.target.value)
-            }
-            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
-          >
-            {!board.years.includes(board.activeYear) && (
-              <option value={board.activeYear}>{board.activeYear} · no saved prospects</option>
-            )}
-            {board.years.map((year) => (
-              <option key={year} value={year}>
-                {year} board
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-slate-400">
-            Preview by position · add a player to include them in planned depth
-          </span>
-        </>
-      )}
-      <Link
-        href="/scouting-portal?tab=draftboard"
-        className="ml-auto text-blue-300 hover:underline"
-      >
-        Edit board ↗
-      </Link>
-    </div>
-  )
-}
-
 export function BoardFitStack({
   players,
   position,
+  eligible,
   targets,
   full,
   onAdd,
 }: {
   players: Prospect[]
   position: string
+  eligible?: string[]
   targets: Target[]
   full: boolean
   onAdd: (target: Target) => void
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const matches = players.filter(
-    (p) => p.position === position && !targets.some((t) => t.id === `prospect:${p.id}`)
+    (p) =>
+      (eligible ?? [position]).includes(p.position) &&
+      !targets.some((t) => t.id === `prospect:${p.id}`)
   )
   const index = Math.max(
     0,

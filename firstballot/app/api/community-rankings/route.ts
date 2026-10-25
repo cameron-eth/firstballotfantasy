@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { candidates, dailySeed, readBallots, readToday, saveBallot } from '@/lib/community/store'
+import { parseBallotRound, MAX_DAILY_BALLOTS } from '@/lib/community/rounds'
 import { communityRatings, dailyPair, type Ballot } from '@/lib/community/rating'
 export const dynamic = 'force-dynamic'
 const reply = (body: unknown, status = 200) =>
@@ -13,6 +14,8 @@ async function handle(request: NextRequest) {
     error,
   } = await supabaseServer.auth.getUser(jwt)
   if (error || !user) return reply({ error: 'Sign in again.' }, 401)
+  const round = parseBallotRound(request.nextUrl.searchParams.get('round'))
+  if (round === null) return reply({ error: 'Invalid comparison number.' }, 400)
   try {
     let pool: 'dynasty' | 'nfl' = 'dynasty'
     const league = request.nextUrl.searchParams.get('leagueId')
@@ -26,13 +29,18 @@ async function handle(request: NextRequest) {
       pool = Number(settings.settings?.type) === 2 ? 'dynasty' : 'nfl'
     }
     const day = new Date().toISOString().slice(0, 10)
-    const [players, existing] = await Promise.all([candidates(), readToday(user.id, day)])
-    const choices = dailyPair(players, dailySeed(user.id, day), pool)
-    if (!choices) throw new Error('No comparison available')
+    const [players, existing] = await Promise.all([candidates(), readToday(user.id, day, round)])
+    if (existing) pool = existing.pool
+    const choices = existing
+      ? existing.pair
+          .map((key) => players.find((p) => p.key === key))
+          .filter((p): p is (typeof players)[number] => Boolean(p))
+      : dailyPair(players, dailySeed(user.id, round ? `${day}:round:${round}` : day), pool)
+    if (!choices || choices.length !== 2) throw new Error('No comparison available')
     let voted = Boolean(existing)
     let winner = existing?.winner
     if (request.method === 'POST') {
-      if (existing) return reply({ error: 'Today’s pick is already saved.', voted: true }, 409)
+      if (existing) return reply({ error: 'This pick is already saved.', voted: true }, 409)
       const raw = await request.text()
       if (raw.length > 2000) return reply({ error: 'Invalid ballot' }, 400)
       let body
@@ -55,7 +63,7 @@ async function handle(request: NextRequest) {
         pair: [choices[0].key, choices[1].key],
         winner: body.winner,
       }
-      await saveBallot(user.id, ballot)
+      await saveBallot(user.id, ballot, round)
       voted = true
       winner = ballot.winner
     }
@@ -73,6 +81,8 @@ async function handle(request: NextRequest) {
       .slice(0, 30)
     return reply({
       day,
+      round,
+      maxRounds: MAX_DAILY_BALLOTS,
       pool,
       voted,
       winner,

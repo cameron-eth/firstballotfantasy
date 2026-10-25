@@ -19,7 +19,7 @@ export function CommunityRankingPrompt() {
     !!user &&
     !loading &&
     !isLoading &&
-    !['/login', '/billing', '/settings'].some((p) => pathname.startsWith(p))
+    !['/login', '/billing', '/settings', '/community-rankings'].some((p) => pathname.startsWith(p))
   const endpoint = `/api/community-rankings${selectedLeagueId ? `?leagueId=${selectedLeagueId}` : ''}`
   const { data, mutate } = useSWR(
     eligible ? [endpoint, user.id, day] : null,

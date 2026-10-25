@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { StrategyCard } from '@/components/league-buddy/builder/StrategyCard'
 import type { Candidate, CommunityRating } from '@/lib/community/rating'
@@ -59,7 +60,7 @@ export function DailyRankingDialog({
             {data.pool === 'dynasty'
               ? 'Long-term dynasty value · superflex · PPR. Prospects and pros share the same comparison pool.'
               : 'Current-season value · 1QB · PPR.'}{' '}
-            One pick per account each day.
+            Your daily pick. Keep ranking in the Community Rankings section.
           </DialogDescription>
         </div>
         {showBoard ? (
@@ -155,6 +156,13 @@ export function DailyRankingDialog({
           <button className="text-slate-400 hover:text-white" onClick={onClose}>
             {saving ? 'Close · saving continues' : data.voted ? 'Done' : 'Not today'}
           </button>
+          <Link
+            href="/community-rankings"
+            onClick={onClose}
+            className="text-blue-300 hover:text-white"
+          >
+            Keep ranking →
+          </Link>
           <button
             className="text-blue-300 hover:text-white"
             onClick={() => setShowBoard(!showBoard)}

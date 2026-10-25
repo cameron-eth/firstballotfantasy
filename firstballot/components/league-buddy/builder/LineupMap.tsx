@@ -45,6 +45,13 @@ export function LineupMap({
   onAdd: (t: Target) => void
 }) {
   const [peek, setPeek] = useState<Record<string, number>>({})
+  const superflex =
+    rawSlots.some((slot) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE') ||
+    rawSlots.filter((slot) => slot === 'QB').length > 1
+  const ktcValue = (p: MapPlayer) => {
+    const value = superflex ? p.roster?.ktcValueSf : p.roster?.ktcValue1qb
+    return value != null && Number.isFinite(value) ? value.toLocaleString('en-US') : '—'
+  }
   const describe = (p: PlayerData): MapPlayer => ({
     id: `nfl:${p.playerId}`,
     name: p.playerName,
@@ -100,7 +107,16 @@ export function LineupMap({
         label={`${label} · ${p.ppg == null ? 'FPPG unavailable' : `${p.ppg.toFixed(1)} FPPG`}`}
         action={slot ? 'Start here' : p.target ? 'Remove target' : 'Move out'}
         onAction={() => (slot ? start(slot, p.id) : remove(p))}
-      />
+      >
+        {p.roster && (
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+              KTC · {superflex ? 'SF' : '1QB'}
+            </span>
+            <span className="text-base font-semibold tabular-nums text-white">{ktcValue(p)}</span>
+          </div>
+        )}
+      </StrategyCard>
       {p.target?.kind === 'draft' && (
         <DraftFitNote
           fit={fits.find((f) => f.targetId === p.id)}

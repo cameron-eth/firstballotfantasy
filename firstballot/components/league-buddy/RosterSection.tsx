@@ -6,6 +6,9 @@ import Link from 'next/link'
 import { ArrowUpRight, Search, Users, ArrowRight, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TeamData, PlayerData } from './types'
+import { MetricTip } from './MetricTip'
+import { KtcTrend } from './KtcTrend'
+import { SleeperActions, type SleeperConnection } from './SleeperActions'
 import { computeStartSit } from './projections/startSit'
 import type { ProjectionMap } from './projections/useProjections'
 
@@ -62,16 +65,23 @@ function Portrait({ player }: { player: PlayerData }) {
 const points = (value: number | undefined) => (value == null ? '—' : value.toFixed(1))
 
 export function RosterSection({
+  leagueId,
+  isDynasty,
+  onActionComplete,
   selectedTeam,
   sortedTeams,
   teams,
   projections,
 }: {
+  leagueId: string
+  onActionComplete?: () => Promise<void>
+  isDynasty: boolean
   selectedTeam: TeamData
   sortedTeams: TeamData[]
   teams: TeamData[]
   projections?: RosterProjections
 }) {
+  const [connection, setConnection] = useState<SleeperConnection | null>(null)
   const [view, setView] = useState<'week' | 'dynasty'>('week')
   const [position, setPosition] = useState('All')
   const [search, setSearch] = useState('')
@@ -130,6 +140,16 @@ export function RosterSection({
     count: skill.filter((p) => p.position === pos).length,
   }))
   const maxCount = Math.max(1, ...counts.map((p) => p.count))
+  const metricHelp: Record<string, string> = {
+    'Lineup projection':
+      'Sum of available weekly Sleeper forecasts for your current starters, scored with this league’s rules. Partial coverage is labeled.',
+    'Dynasty value':
+      'Sum of KTC superflex values for skill-position players. This reference uses superflex values even if your league uses another format.',
+    'Average age':
+      'Average known age of quarterbacks, running backs, receivers and tight ends on this roster.',
+    'Roster grade':
+      'Relative roster strength from the app’s player rankings, not a prediction of this week’s score.',
+  }
   const metricClass =
     'pl-0 odd:border-0 even:border-l even:border-white/10 even:pl-4 sm:border-l sm:border-white/10 sm:pl-4 sm:odd:border-l sm:first:border-0 sm:first:pl-0'
 
@@ -151,12 +171,14 @@ export function RosterSection({
             <span className="mx-2 text-slate-600">/</span> {selectedTeam.players.length} players
           </p>
         </div>
-        <Link
-          href="/scouting-portal?tab=draftboard"
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
-        >
-          Draft board <ArrowUpRight className="h-4 w-4" />
-        </Link>
+        {isDynasty && (
+          <Link
+            href="/scouting-portal?tab=draftboard"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
+          >
+            Draft board <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        )}
       </header>
 
       <section
@@ -193,7 +215,9 @@ export function RosterSection({
           ],
         ].map(([label, val, detail]) => (
           <div key={label} className={metricClass}>
-            <p className="text-xs text-slate-400">{label}</p>
+            <p className="text-xs text-slate-400">
+              <MetricTip label={label}>{metricHelp[label]}</MetricTip>
+            </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-white">
               {val}
             </p>
@@ -201,6 +225,15 @@ export function RosterSection({
           </div>
         ))}
       </section>
+
+      <SleeperActions
+        leagueId={leagueId}
+        team={selectedTeam}
+        teams={teams}
+        projections={projections}
+        onConnect={setConnection}
+        onActionComplete={onActionComplete}
+      />
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_272px]">
         <section
@@ -295,8 +328,20 @@ export function RosterSection({
           <div className="hidden grid-cols-[minmax(0,1fr)_76px_76px_80px] gap-3 border-b border-white/5 bg-slate-800/30 px-4 py-2 text-right text-[10px] uppercase tracking-wider text-slate-500 sm:grid">
             <span className="text-left">Player</span>
             <span>{view === 'week' ? 'Opponent' : 'Rank / Age'}</span>
-            <span>{view === 'week' ? 'Season PPG' : 'KTC SF'}</span>
-            <span>{view === 'week' ? 'Week proj.' : 'Value trend'}</span>
+            <span>
+              <MetricTip label={view === 'week' ? 'FPPG' : 'KTC SF'}>
+                {view === 'week'
+                  ? 'Actual fantasy points per game from the roster stats feed, using its scoring baseline. Not the league-scored forecast.'
+                  : 'KeepTradeCut superflex dynasty market value.'}
+              </MetricTip>
+            </span>
+            <span>
+              <MetricTip label={view === 'week' ? 'Week proj.' : 'KTC trend'}>
+                {view === 'week'
+                  ? 'Sleeper weekly projection scored with this league’s rules. Not guaranteed points. Missing forecasts show —.'
+                  : 'Change across available daily KTC superflex snapshots. Hover or focus the change for dates.'}
+              </MetricTip>
+            </span>
           </div>
           <div className="divide-y divide-white/5">
             {filtered.map((player) => {
@@ -330,9 +375,19 @@ export function RosterSection({
                         )}
                         {bye && <span className="text-amber-300">Bye</span>}
                       </div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-400">
+                        <MetricTip
+                          label={`Heat ${connection ? (connection.heat[player.playerId] ?? 0) : '—'}`}
+                        >
+                          {connection
+                            ? `Unique managers who requested this player in ${connection.historyCount} trades visible to your Sleeper account${connection.limited ? ' (history capped at 200)' : ''}. Includes proposed, rejected, cancelled and completed trades; not a global count.`
+                            : 'Connect your Sleeper token to count unique managers who requested this player. Public completed trades cannot measure attempted offers.'}
+                        </MetricTip>
+                        <span>Proj. season {points(projections?.ppg[player.playerId])} PPG</span>
+                      </div>
                       <p className="mt-1 text-[11px] text-slate-500 sm:hidden">
                         {view === 'week'
-                          ? `${projections?.entries?.[player.playerId]?.opponent ? `vs ${projections.entries[player.playerId].opponent} · ` : ''}Season ${points(projections?.ppg[player.playerId])} PPG`
+                          ? `${projections?.entries?.[player.playerId]?.opponent ? `vs ${projections.entries[player.playerId].opponent} · ` : ''}Actual ${player.games_played ? points(player.fantasy_ppg) : '—'} FPPG`
                           : `Rank ${player.rank || '—'} · Age ${player.age || '—'} · KTC ${player.ktcValueSf?.toLocaleString() ?? '—'}`}
                       </p>
                     </div>
@@ -346,11 +401,13 @@ export function RosterSection({
                   </div>
                   <div className="hidden text-right text-sm tabular-nums text-slate-300 sm:block">
                     {view === 'week'
-                      ? points(projections?.ppg[player.playerId])
+                      ? player.games_played
+                        ? points(player.fantasy_ppg)
+                        : '—'
                       : (player.ktcValueSf?.toLocaleString() ?? '—')}
                   </div>
                   <div className="text-right">
-                    <p
+                    <div
                       className={cn(
                         'text-base font-semibold tabular-nums',
                         view === 'week'
@@ -362,16 +419,18 @@ export function RosterSection({
                               : 'text-slate-400'
                       )}
                     >
-                      {view === 'week'
-                        ? projections?.loading
-                          ? '…'
-                          : bye
-                            ? 'Bye'
-                            : points(weekly)
-                        : trend == null
-                          ? '—'
-                          : `${trend > 0 ? '+' : ''}${trend.toLocaleString()}`}
-                    </p>
+                      {view === 'week' ? (
+                        projections?.loading ? (
+                          '…'
+                        ) : bye ? (
+                          'Bye'
+                        ) : (
+                          points(weekly)
+                        )
+                      ) : (
+                        <KtcTrend history={player.ktcHistory} />
+                      )}
+                    </div>
                     <p className="mt-1 text-[10px] text-slate-500 sm:hidden">
                       {view === 'week' ? `Week ${projections?.currentWeek ?? '—'}` : 'KTC change'}
                     </p>
@@ -446,41 +505,43 @@ export function RosterSection({
               </p>
             )}
           </section>
-          <section className="rounded-xl border border-white/10 bg-slate-800/30 p-4">
-            <div className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-slate-400" />
-              <h2 className="text-sm font-semibold text-white">Build your next class</h2>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Explore college prospects alongside your roster depth.
-            </p>
-            <div className="mt-4 space-y-4">
-              {counts.map(({ pos, count }) => (
-                <Link key={pos} href={`/scouting-portal?position=${pos}`} className="group block">
-                  <div className="mb-1.5 flex items-center justify-between text-xs">
-                    <span className="text-slate-300">
-                      {pos} <span className="ml-1 text-slate-500">{count} rostered</span>
-                    </span>
-                    <span className="flex items-center gap-1 text-blue-300">
-                      Scout <ArrowUpRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                  <div className="h-1 overflow-hidden rounded bg-slate-700/50">
-                    <div
-                      className="h-full rounded bg-blue-400/60 group-hover:bg-blue-300"
-                      style={{ width: `${(count / maxCount) * 100}%` }}
-                    />
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <Link
-              href="/scouting-portal?tab=draftboard"
-              className="mt-5 flex items-center justify-between border-t border-white/10 pt-3 text-xs font-medium text-slate-300"
-            >
-              Open your draft board <ArrowRight className="h-3 w-3" />
-            </Link>
-          </section>
+          {isDynasty && (
+            <section className="rounded-xl border border-white/10 bg-slate-800/30 p-4">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-slate-400" />
+                <h2 className="text-sm font-semibold text-white">Build your next class</h2>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                Explore college prospects alongside your roster depth.
+              </p>
+              <div className="mt-4 space-y-4">
+                {counts.map(({ pos, count }) => (
+                  <Link key={pos} href={`/scouting-portal?position=${pos}`} className="group block">
+                    <div className="mb-1.5 flex items-center justify-between text-xs">
+                      <span className="text-slate-300">
+                        {pos} <span className="ml-1 text-slate-500">{count} rostered</span>
+                      </span>
+                      <span className="flex items-center gap-1 text-blue-300">
+                        Scout <ArrowUpRight className="h-3 w-3" />
+                      </span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded bg-slate-700/50">
+                      <div
+                        className="h-full rounded bg-blue-400/60 group-hover:bg-blue-300"
+                        style={{ width: `${(count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <Link
+                href="/scouting-portal?tab=draftboard"
+                className="mt-5 flex items-center justify-between border-t border-white/10 pt-3 text-xs font-medium text-slate-300"
+              >
+                Open your draft board <ArrowRight className="h-3 w-3" />
+              </Link>
+            </section>
+          )}
         </aside>
       </div>
     </div>

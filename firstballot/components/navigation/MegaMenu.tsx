@@ -1,16 +1,10 @@
 'use client'
 
+import { useLeagueFormat } from '@/hooks/use-league-format'
+
 import * as React from 'react'
 import { usePathname } from 'next/navigation'
-import {
-  Trophy,
-  BarChart3,
-  Target,
-  LayoutDashboard,
-  Users,
-  Search,
-  History,
-} from 'lucide-react'
+import { Trophy, BarChart3, Target, LayoutDashboard, Users, Search, History } from 'lucide-react'
 import { NavGroup } from './NavGroup'
 
 interface MegaMenuProps {
@@ -18,6 +12,7 @@ interface MegaMenuProps {
 }
 
 export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
+  const { showScouting } = useLeagueFormat()
   const pathname = usePathname()
 
   const navGroups = [
@@ -92,19 +87,21 @@ export function MegaMenu({ isLoggedIn }: MegaMenuProps) {
 
   return (
     <nav className="hidden lg:flex items-center space-x-1">
-      {navGroups.map((group) => {
-        const isGroupActive = group.items.some((item) => pathname === item.href.split('?')[0])
-        return (
-          <NavGroup
-            key={group.label}
-            label={group.label}
-            items={group.items}
-            isActive={isGroupActive}
-            isLoggedIn={isLoggedIn}
-            align={group.label === 'RANKINGS' ? 'right' : 'left'}
-          />
-        )
-      })}
+      {navGroups
+        .filter((group) => showScouting || group.label !== 'SCOUTING')
+        .map((group) => {
+          const isGroupActive = group.items.some((item) => pathname === item.href.split('?')[0])
+          return (
+            <NavGroup
+              key={group.label}
+              label={group.label}
+              items={group.items}
+              isActive={isGroupActive}
+              isLoggedIn={isLoggedIn}
+              align={group.label === 'RANKINGS' ? 'right' : 'left'}
+            />
+          )
+        })}
     </nav>
   )
 }

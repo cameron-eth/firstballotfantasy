@@ -629,6 +629,10 @@ export default function LeagueBuddy({
           {/* ROSTER SECTION */}
           {activeSection === 'roster' && selectedTeam && (
             <RosterSection
+              key={`${leagueId}:${selectedTeam.rosterId}`}
+              leagueId={leagueId}
+              onActionComplete={fetchLeagueData}
+              isDynasty={leagueOverview?.isDynasty === true}
               selectedTeam={selectedTeam}
               sortedTeams={sortedTeams}
               teams={teams}

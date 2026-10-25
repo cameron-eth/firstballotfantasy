@@ -23,6 +23,7 @@ export function LeagueBuddySidebar({
   activeSection,
   setActiveSection,
   currentWeek,
+  leagueOverview,
 }: LeagueBuddySidebarProps) {
   return (
     <Sidebar collapsible="none" className="hidden border-r border-white/5 !bg-slate-950/40 md:flex">
@@ -69,24 +70,26 @@ export function LeagueBuddySidebar({
             </button>
           ))}
         </nav>
-        <div className="border-t border-white/5 px-3 pt-5">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Next generation
-          </p>
-          {[
-            { href: '/scouting-portal', label: 'College scouting' },
-            { href: '/scouting-portal?tab=draftboard', label: 'Draft board' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center justify-between py-2 text-xs text-slate-400 hover:text-blue-300"
-            >
-              {item.label}
-              <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          ))}
-        </div>
+        {leagueOverview?.isDynasty && (
+          <div className="border-t border-white/5 px-3 pt-5">
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+              Next generation
+            </p>
+            {[
+              { href: '/scouting-portal', label: 'College scouting' },
+              { href: '/scouting-portal?tab=draftboard', label: 'Draft board' },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center justify-between py-2 text-xs text-slate-400 hover:text-blue-300"
+              >
+                {item.label}
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            ))}
+          </div>
+        )}
       </SidebarContent>
       <SidebarFooter className="border-t border-white/5 px-6 py-4 text-xs text-slate-500">
         Week {currentWeek} <span className="float-right">Sleeper connected</span>

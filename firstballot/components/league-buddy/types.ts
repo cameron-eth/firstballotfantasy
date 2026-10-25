@@ -146,6 +146,7 @@ export interface MatchupData {
 }
 
 export interface LeagueOverview {
+  isDynasty?: boolean
   totalTeams: number
   currentWeek: number
   seasonType: string

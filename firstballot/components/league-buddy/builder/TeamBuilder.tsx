@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
 import { plannedPositionCount, type Scenario, type Target } from '@/lib/team-scenarios'
-import type { TeamData } from '../types'
+import { PlayerTradeModal } from '../trades/PlayerTradeModal'
+import type { PlayerData, TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
 import { StrategyCard } from './StrategyCard'
 import { RosterCardStack } from './RosterCardStack'
@@ -43,6 +44,7 @@ export function TeamBuilder({
   placement?: TeamPlacement
 }) {
   const { user, loading: authLoading } = useAuth()
+  const [tradePlayer, setTradePlayer] = useState<PlayerData | null>(null)
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [active, setActive] = useState('')
   const [ready, setReady] = useState(false)
@@ -193,7 +195,8 @@ export function TeamBuilder({
         <div>
           <h2 className="text-xl font-semibold text-white">Team Builder</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Map the team you want to build. Plans never submit trades or change your lineup.
+            Map the team you want to build. Plans are what-if scenarios. Trade targets open a
+            separate offer review.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -380,6 +383,7 @@ export function TeamBuilder({
                     </button>
                     <RosterCardStack
                       players={current}
+                      onTrade={setTradePlayer}
                       position={pos}
                       outgoing={scenario.outgoing}
                       onToggle={(id) =>
@@ -491,6 +495,16 @@ export function TeamBuilder({
           )}
         </section>
       </fieldset>
+      {tradePlayer && (
+        <PlayerTradeModal
+          key={`${leagueId}:${team.rosterId}:${tradePlayer.playerId}`}
+          player={tradePlayer}
+          team={team}
+          teams={teams}
+          leagueId={leagueId}
+          onClose={() => setTradePlayer(null)}
+        />
+      )}
     </div>
   )
 }

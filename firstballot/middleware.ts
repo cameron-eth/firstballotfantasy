@@ -16,11 +16,13 @@ async function middleware(request: NextRequest) {
     '/api/ktc-values',
     '/api/projections',
     '/api/draft-capital',
+    '/api/trade-inventory',
     '/api/player-momentum',
   ]
 
   // Check if this is an API route that needs auth
-  const isPublicRoute = publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route)) ||
+  const isPublicRoute =
+    publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route)) ||
     (request.nextUrl.pathname === '/api/community-rankings' && request.method === 'GET')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
 

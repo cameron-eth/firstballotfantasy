@@ -1,3 +1,4 @@
+import { pickInventory } from './pick-inventory'
 import type { SleeperTradedPick } from './types'
 export function draftCapital(
   rosterIds: number[],
@@ -6,14 +7,12 @@ export function draftCapital(
   rounds: number,
   traded: SleeperTradedPick[]
 ) {
-  const holders = new Map(traded.map((p) => [`${p.season}:${p.round}:${p.roster_id}`, p.owner_id]))
+  const picks = pickInventory(rosterIds, years, rounds, traded).filter((p) => p.owner_id === owner)
   return years.map((year) => {
-    const byRound = Array.from({ length: rounds }, (_, i) => ({ round: i + 1, count: 0 }))
-    for (const original of rosterIds)
-      for (const entry of byRound) {
-        const holder = holders.get(`${year}:${entry.round}:${original}`) ?? original
-        if (holder === owner) entry.count++
-      }
+    const byRound = Array.from({ length: rounds }, (_, i) => ({
+      round: i + 1,
+      count: picks.filter((p) => Number(p.season) === year && p.round === i + 1).length,
+    }))
     return { year, total: byRound.reduce((sum, r) => sum + r.count, 0), byRound }
   })
 }

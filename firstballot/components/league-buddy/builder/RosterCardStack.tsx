@@ -9,11 +9,13 @@ export function RosterCardStack({
   position,
   outgoing,
   onToggle,
+  onTrade,
 }: {
   players: PlayerData[]
   position: string
   outgoing: string[]
   onToggle: (id: string) => void
+  onTrade?: (player: PlayerData) => void
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const index = Math.max(
@@ -57,6 +59,15 @@ export function RosterCardStack({
           onAction={() => onToggle(player.playerId)}
         />
       </div>
+      {onTrade && (
+        <button
+          type="button"
+          className="mb-3 w-full rounded-lg border border-blue-400/30 px-3 py-2 text-xs text-blue-200 hover:bg-blue-400/10"
+          onClick={() => onTrade(player)}
+        >
+          Show trade targets
+        </button>
+      )}
       <div className="flex items-center justify-between gap-2 pt-1">
         <button
           type="button"

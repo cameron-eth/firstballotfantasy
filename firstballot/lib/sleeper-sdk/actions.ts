@@ -47,25 +47,33 @@ export function tradeOperation(
   mine: number,
   theirs: number,
   give: string[],
-  receive: string[]
+  receive: string[],
+  assets: {
+    draftPicks: string[]
+    waiverBudget: string[]
+    giveCount: number
+    receiveCount: number
+  } = { draftPicks: [], waiverBudget: [], giveCount: 0, receiveCount: 0 }
 ) {
   const ids = [...give, ...receive]
   if (
     mine === theirs ||
-    !give.length ||
-    !receive.length ||
+    !(give.length + assets.giveCount) ||
+    !(receive.length + assets.receiveCount) ||
     new Set(ids).size !== ids.length ||
     ids.length > 40 ||
     ids.some((id) => !/^[a-z0-9]+$/i.test(id))
   )
-    throw new Error('Choose different teams and at least one player on each side.')
+    throw new Error('Choose different teams and at least one asset on each side.')
   return {
     operationName: 'propose_trade',
-    query: `mutation propose_trade($league_id: Snowflake!, $k_adds: [String], $v_adds: [Int], $k_drops: [String], $v_drops: [Int]) {
-    propose_trade(league_id: $league_id, k_adds: $k_adds, v_adds: $v_adds, k_drops: $k_drops, v_drops: $v_drops, draft_picks: [], waiver_budget: []) { transaction_id status }
+    query: `mutation propose_trade($league_id: Snowflake!, $k_adds: [String], $v_adds: [Int], $k_drops: [String], $v_drops: [Int], $draft_picks: [String], $waiver_budget: [String]) {
+    propose_trade(league_id: $league_id, k_adds: $k_adds, v_adds: $v_adds, k_drops: $k_drops, v_drops: $v_drops, draft_picks: $draft_picks, waiver_budget: $waiver_budget) { transaction_id status }
   }`,
     variables: {
       league_id: leagueId,
+      draft_picks: assets.draftPicks,
+      waiver_budget: assets.waiverBudget,
       k_adds: ids,
       v_adds: [...give.map(() => theirs), ...receive.map(() => mine)],
       k_drops: ids,

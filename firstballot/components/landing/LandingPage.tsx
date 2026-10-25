@@ -68,7 +68,7 @@ export function LandingPage() {
           <Link href="/scouting-portal?year=2029" className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 hover:text-blue-200">Scout the 2029 class <ArrowRight className="h-4 w-4" /></Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {watchlist.map((player, index) => <Link href="/scouting-portal?year=2029" key={player.id} aria-label={`Scout ${player.name}`} className="block rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300" style={{ perspective: 1000 }}><ProspectTradingCard player={player} index={index} /></Link>)}
+          {watchlist.map((player) => <Link href="/scouting-portal?year=2029" key={player.id} aria-label={`Scout ${player.name}`} className="block rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300" style={{ perspective: 1000 }}><ProspectTradingCard player={player} /></Link>)}
         </div>
       </section>}</ScrollReveal>
 
@@ -98,7 +98,7 @@ export function LandingPage() {
         {isLoading && <p className="rounded-xl border border-white/10 p-5 text-slate-400">Loading prospect profiles…</p>}
         {!isLoading && !error && upcoming.length === 0 && <p className="rounded-xl border border-white/10 p-5 text-slate-400">No upcoming class profiles are available yet.</p>}
         {upcoming.length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {upcoming.map((player, index) => <ScrollReveal key={player.id}><Link href={`/scouting-portal?year=${player.draft_year}`} aria-label={`Scout ${player.name}`} className="block rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300" style={{ perspective: 1000 }}><ProspectTradingCard player={player} index={index} /></Link></ScrollReveal>)}
+          {upcoming.map((player) => <ScrollReveal key={player.id}><Link href={`/scouting-portal?year=${player.draft_year}`} aria-label={`Scout ${player.name}`} className="block rounded-[20px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300" style={{ perspective: 1000 }}><ProspectTradingCard player={player} /></Link></ScrollReveal>)}
         </div>}
         <p className="mt-4 text-xs text-slate-500">Grades and projections are model estimates based on the latest available catalog. Class eligibility is projected; ungraded players remain on the watchlist.</p>
       </section>

@@ -1,0 +1,24 @@
+name: Refresh college prospect production
+on:
+  schedule:
+    - cron: "45 11 * * 1,3,5"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check ESPN parser safeguards
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s firstballot/scripts/tests -p 'test_*.py'
+      - name: Update the 2027 class from ESPN
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Supabase service credentials are required."
+            exit 1
+          fi
+          python3 firstballot/scripts/refresh-college-prospects.py --apply

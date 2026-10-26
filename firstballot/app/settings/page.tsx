@@ -5,6 +5,7 @@ import { ApiAccess } from '@/components/settings/ApiAccess'
 import Link from 'next/link'
 import { ShieldCheck, KeyRound, CheckCircle2, CircleAlert, Loader2 } from 'lucide-react'
 import { Header } from '@/components/header'
+import { TourReplayButton } from '@/components/onboarding/ProductTour'
 import { useAuth } from '@/lib/auth'
 import { useLeagueContext } from '@/lib/league-context'
 
@@ -88,6 +89,9 @@ export default function SettingsPage() {
         <p className="mt-2 text-sm text-slate-400">
           Manage the services connected to First Ballot.
         </p>
+        <div className="mt-5">
+          <TourReplayButton />
+        </div>
         <section
           aria-label="Sleeper connection"
           className="mt-7 overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900"

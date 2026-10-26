@@ -9,6 +9,7 @@ export interface League {
   name: string
   season: string
   total_rosters: number
+  settings?: { type?: number }
   roster_positions?: string[]
   scoring_settings?: Record<string, number>
   status?: 'pre_draft' | 'drafting' | 'in_season' | 'complete'
@@ -57,6 +58,7 @@ export interface AddLeagueModalProps {
 
 // Sleeper user leagues API response
 export interface SleeperLeagueResponse {
+  settings?: { type?: number }
   league_id: string
   name: string
   season: string

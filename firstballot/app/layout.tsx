@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth'
+import { ProductTourProvider } from '@/components/onboarding/ProductTour'
 import { CommunityRankingPrompt } from '@/components/landing/CommunityRankingPrompt'
 import { LeagueProvider } from '@/lib/league-context'
 import { Analytics } from '@vercel/analytics/next'
@@ -40,8 +41,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
         <AuthProvider>
           <LeagueProvider>
-            {children}
-            <CommunityRankingPrompt />
+            <ProductTourProvider>
+              {children}
+              <CommunityRankingPrompt />
+            </ProductTourProvider>
           </LeagueProvider>
         </AuthProvider>
         <Analytics />

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { TourReplayButton } from '@/components/onboarding/ProductTour'
 import { AnimatePresence } from 'framer-motion'
 import { PlanningSuggestions, type PlanningFocus, type PlanningOffer } from './PlanningSuggestions'
 import { parseScoringSlots } from '../draft-order/maxPointsFor'
@@ -271,6 +272,7 @@ export function TeamBuilder({
             +
           </button>
         </div>
+        <TourReplayButton label="Map guide" />
         <PlanMenu
           scenarios={scenarios}
           scenario={scenario}

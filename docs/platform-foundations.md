@@ -1,6 +1,6 @@
 # Platform foundation and launch runbook
 
-Status: implementation in review; **not a production launch**. The production Supabase project is `aanoqbjauukcczrlnxka`. Do not apply this migration to a different project just because it is accessible in the dashboard.
+Status: foundations merged and deployed; **paid launch remains blocked on live billing configuration and acceptance**. The production Supabase project is `aanoqbjauukcczrlnxka`. Do not apply this migration to a different project just because it is accessible in the dashboard.
 
 ## Membership and user flow
 
@@ -67,3 +67,11 @@ Real sandbox Checkout, signed CLI webhook delivery, renewal, failed payment, dow
 ## Test billing configuration
 
 `node --env-file=.env.local scripts/billing/configure-test.mjs` provisions/reuses only test-mode Unlimited prices, a product-scoped $6.01 repeating discount for three months, and a dedicated portal configuration. It writes non-secret configuration IDs to ignored `.env.billing-test.local`; load that file explicitly for test scripts. Never deploy test configuration as live billing. Production needs equivalent live objects and a live webhook signing secret, after migration and staging acceptance.
+
+## Welcome-back and onboarding
+
+The versioned `team-map-v1` tour appears after sign-in and league discovery. Existing connected users get a welcome-back introduction. The four steps explain free connection, lineup/depth cards and zoom, dynasty horizons and draft capital (or current-season redraft strategy), and saved scenarios versus confirmed Sleeper actions. Mobile guidance explicitly directs map planning to desktop.
+
+Skip, Escape, Close and completion dismiss the tour. The version is persisted in Supabase Auth user metadata (`product_tour_version`) with an account-scoped local fallback. This is a presentation preference, never an access-control input. If synchronization fails, the UI explains that dismissal may not carry to other devices. Settings and the map offer replay. Billing, login and OAuth flows are not interrupted; the daily ballot is suppressed while the tour is pending/open and for the rest of a session in which the tour was shown.
+
+See [production release verification](testing/release-readiness.md) for the latest observed boundaries and remaining launch gates.

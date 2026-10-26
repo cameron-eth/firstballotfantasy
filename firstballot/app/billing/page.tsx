@@ -1,6 +1,9 @@
 'use client'
 import { Suspense, useState } from 'react'
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
+import { useRouter } from 'next/navigation'
+import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
+import { accountTeamCache, teamWorkspaceUrl } from '@/lib/team-navigation'
 import Link from 'next/link'
 import { MembershipHero } from '@/components/billing/MembershipHero'
 import { CheckoutReturn } from '@/components/billing/CheckoutReturn'
@@ -20,13 +23,18 @@ async function loadTeams() {
 }
 export default function BillingPage() {
   const { user, loading: authLoading } = useAuth(),
-    { leagues } = useLeagueContext()
+    { leagues, selectLeague } = useLeagueContext()
+  const router = useRouter()
+  const desktop = useDesktopBuilder()
+  const { mutate: refreshCache } = useSWRConfig()
   const billing = useSubscription(),
     { data, error, mutate } = useSWR(user ? ['teams', user.id] : null, loadTeams)
   const [interval, setInterval] = useState('month'),
     [busy, setBusy] = useState(''),
     [notice, setNotice] = useState('')
-  async function act(action: string, extra: object) {
+  async function act(action: string, extra: { teamId?: string; leagueId?: string }) {
+    const destinationLeague =
+      extra.leagueId ?? data?.teams.find((t) => t.id === extra.teamId)?.league_id
     setBusy(action)
     setNotice('')
     try {
@@ -36,6 +44,8 @@ export default function BillingPage() {
         body: JSON.stringify({ action, ...extra }),
       })
       const b = await r.json()
+      if ((b.needsUpgrade || r.status === 409) && destinationLeague)
+        router.replace(`/billing?leagueId=${encodeURIComponent(destinationLeague)}#membership`)
       if (!r.ok) throw new Error(b.error)
       setNotice(
         b.needsUpgrade
@@ -43,6 +53,15 @@ export default function BillingPage() {
           : 'Team updated. Your saved plans are preserved.'
       )
       await mutate()
+      if (user) await refreshCache((key) => accountTeamCache(key, user.id))
+      const leagueId =
+        b.team?.league_id ??
+        extra.leagueId ??
+        data?.teams.find((t) => t.id === extra.teamId)?.league_id
+      if (action !== 'archive' && !b.needsUpgrade && leagueId) {
+        selectLeague(leagueId)
+        router.push(teamWorkspaceUrl(leagueId, desktop))
+      }
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Could not update team.')
     } finally {
@@ -98,7 +117,16 @@ export default function BillingPage() {
                 </li>
               ))}
             </ul>
-            <Link href={user ? '/league-buddy' : '/login'} className={`${button} mt-7 w-full`}>
+            <Link
+              href={
+                user
+                  ? data?.teams.find((t) => t.active)
+                    ? teamWorkspaceUrl(data.teams.find((t) => t.active)!.league_id, desktop)
+                    : '#teams'
+                  : '/login'
+              }
+              className={`${button} mt-7 w-full`}
+            >
               {user ? 'Open my team' : 'Start free'}
             </Link>
           </div>
@@ -215,7 +243,10 @@ export default function BillingPage() {
           </p>
         ) : (
           <>
-            <section className="mt-8 rounded-2xl border border-slate-700 bg-slate-900 p-6">
+            <section
+              id="teams"
+              className="scroll-mt-24 mt-8 rounded-2xl border border-slate-700 bg-slate-900 p-6"
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="font-semibold">Your teams</h2>
@@ -249,18 +280,31 @@ export default function BillingPage() {
                         {team.season} · {team.active ? 'Active' : 'Archived · plans preserved'}
                       </p>
                     </div>
-                    <button
-                      className={button}
-                      disabled={!!busy}
-                      onClick={() => act(team.active ? 'archive' : 'activate', { teamId: team.id })}
-                    >
-                      {team.active ? <Archive size={15} /> : <Check size={15} />}
-                      {busy === (team.active ? 'archive' : 'activate')
-                        ? 'Updating…'
-                        : team.active
-                          ? 'Archive'
-                          : 'Activate'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {team.active && (
+                        <Link
+                          className={`${button} border-blue-400 text-blue-200`}
+                          href={teamWorkspaceUrl(team.league_id, desktop)}
+                          onClick={() => selectLeague(team.league_id)}
+                        >
+                          {desktop ? 'Open Team Builder' : 'Open team'} <ArrowUpRight size={15} />
+                        </Link>
+                      )}
+                      <button
+                        className={button}
+                        disabled={!!busy}
+                        onClick={() =>
+                          act(team.active ? 'archive' : 'activate', { teamId: team.id })
+                        }
+                      >
+                        {team.active ? <Archive size={15} /> : <Check size={15} />}
+                        {busy === (team.active ? 'archive' : 'activate')
+                          ? 'Updating…'
+                          : team.active
+                            ? 'Archive'
+                            : 'Activate & open'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -277,7 +321,7 @@ export default function BillingPage() {
                       disabled={!!busy || !data}
                       onClick={() => act('connect', { leagueId: l.league_id })}
                     >
-                      <Plus size={15} /> Connect team
+                      <Plus size={15} /> Connect & open
                     </button>
                   </div>
                 ))}

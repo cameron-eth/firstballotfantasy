@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       })
       if (error && !error.message.includes('TEAM_LIMIT'))
         throw new PlatformError(503, 'ACTIVATION_FAILED', 'Could not activate team.')
-      return json({ team, needsUpgrade: !!error })
+      return json({ team: { ...team, active: !error }, needsUpgrade: !!error })
     }
     if (
       !['activate', 'archive'].includes(input.action) ||
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         error.message.includes('TEAM_LIMIT') ? 409 : 400,
         'TEAM_LIMIT',
         error.message.includes('TEAM_LIMIT')
-          ? 'Your active team slots are full. Archive a team or add a slot.'
+          ? 'Your active team slots are full. Archive a team or upgrade to Unlimited.'
           : 'Could not update this team.'
       )
     return json({ saved: true })

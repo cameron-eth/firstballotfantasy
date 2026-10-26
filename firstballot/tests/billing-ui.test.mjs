@@ -15,7 +15,7 @@ const React = await import('react'),
   { CheckoutConfirmation } = await import('../components/billing/CheckoutConfirmation.tsx')
 const { act } = React
 const user = { id: 'account-test' }
-async function render(response) {
+async function render(response, props = {}) {
   globalThis.billingTestUser = user
   let calls = 0
   globalThis.fetch = async () => {
@@ -29,6 +29,7 @@ async function render(response) {
         SWRConfig,
         { value: { provider: () => new Map(), dedupingInterval: 0 } },
         React.createElement(CheckoutConfirmation, {
+          ...props,
           session: 'cs_test_fixture',
           accountId: globalThis.billingTestUser?.id ?? null,
         })
@@ -58,8 +59,23 @@ test('checkout return waits for verified activation and Check again reveals unlo
   })
   assert.match(document.body.textContent, /Your membership is ready/)
   assert.match(document.body.textContent, /3 team slots/)
-  assert.equal(document.querySelector('a').getAttribute('href'), '/league-buddy')
+  assert.equal(document.querySelector('a').getAttribute('href'), '#teams')
   assert.ok(view.calls >= 2)
+  await close(view.root)
+})
+test('selected team action appears only after payment is verified', async () => {
+  let state = { state: 'processing', capacity: 1 }
+  let opened = 0
+  const view = await render(() => state, { onOpenTeam: () => opened++ })
+  assert.doesNotMatch(document.body.textContent, /Activate & open my team/)
+  state = { state: 'active', capacity: null }
+  await act(async () => {
+    document.querySelector('button').click()
+    await new Promise((resolve) => setTimeout(resolve, 30))
+  })
+  assert.match(document.body.textContent, /Unlimited teams are unlocked/)
+  await act(async () => document.querySelector('button').click())
+  assert.equal(opened, 1)
   await close(view.root)
 })
 test('incomplete checkout offers resume without claiming features unlocked', async () => {
@@ -108,6 +124,9 @@ require.cache[authPath] = {
   loaded: true,
   exports: { useAuth: () => ({ user }) },
 }
+const { AppRouterContext } = require('next/dist/shared/lib/app-router-context.shared-runtime')
+const destinations = []
+dom.window.matchMedia = () => ({ matches: true, addEventListener() {}, removeEventListener() {} })
 const { TeamActivation } = await import('../components/league-buddy/TeamActivation.tsx')
 async function activationView(full) {
   let active = false,
@@ -137,7 +156,11 @@ async function activationView(full) {
       React.createElement(
         SWRConfig,
         { value: { provider: () => new Map(), dedupingInterval: 0 } },
-        React.createElement(TeamActivation, { leagueId: 'league' }, 'TEAM_WORKSPACE')
+        React.createElement(
+          AppRouterContext.Provider,
+          { value: { replace: (url) => destinations.push(url) } },
+          React.createElement(TeamActivation, { leagueId: 'league' }, 'TEAM_WORKSPACE')
+        )
       )
     )
     await new Promise((r) => setTimeout(r, 30))
@@ -155,6 +178,7 @@ test('Activate button disables during write and reveals team workspace only afte
     await new Promise((r) => setTimeout(r, 30))
   })
   assert.match(document.body.textContent, /TEAM_WORKSPACE/)
+  assert.equal(destinations.at(-1), '/league-buddy?tab=builder&leagueId=league')
   assert.equal(
     JSON.parse(view.requests.find((r) => r.options?.method === 'POST').options.body).action,
     'activate'
@@ -170,7 +194,7 @@ test('Full-slot activation leaves workspace locked and offers Manage team slots'
   })
   assert.match(document.body.textContent, /Upgrade to Unlimited or archive another team/)
   assert.doesNotMatch(document.body.textContent, /TEAM_WORKSPACE/)
-  assert.equal(document.querySelector('a').getAttribute('href'), '/billing')
+  assert.equal(document.querySelector('a').getAttribute('href'), '/billing?leagueId=league#teams')
   await close(view.root)
 })
 

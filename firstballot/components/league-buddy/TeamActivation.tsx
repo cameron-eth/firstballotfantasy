@@ -1,9 +1,15 @@
 'use client'
 import { useState, type ReactNode } from 'react'
-import useSWR from 'swr'
+import useSWR, { useSWRConfig } from 'swr'
+import { useRouter } from 'next/navigation'
+import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
+import { accountTeamCache, teamWorkspaceUrl } from '@/lib/team-navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 export function TeamActivation({ leagueId, children }: { leagueId: string; children: ReactNode }) {
+  const router = useRouter()
+  const desktop = useDesktopBuilder()
+  const { mutate: refreshCache } = useSWRConfig()
   const { user } = useAuth(),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('')
@@ -31,8 +37,12 @@ export function TeamActivation({ leagueId, children }: { leagueId: string; child
       const b = await r.json()
       if (!r.ok) throw new Error(b.error)
       if (b.needsUpgrade)
-        setNotice('Your team is connected. Upgrade to Unlimited or archive another team to activate it.')
+        setNotice(
+          'Your team is connected. Upgrade to Unlimited or archive another team to activate it.'
+        )
       await mutate()
+      if (user) await refreshCache((key) => accountTeamCache(key, user.id))
+      if (!b.needsUpgrade) router.replace(teamWorkspaceUrl(leagueId, desktop))
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Unable to activate team.')
     } finally {
@@ -61,10 +71,10 @@ export function TeamActivation({ leagueId, children }: { leagueId: string; child
             className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
             onClick={activate}
           >
-            {busy ? 'Connecting…' : 'Activate this team'}
+            {busy ? 'Connecting…' : 'Activate & open team'}
           </button>
           <Link
-            href="/billing"
+            href={`/billing?leagueId=${encodeURIComponent(leagueId)}#teams`}
             className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-200"
           >
             Manage team slots

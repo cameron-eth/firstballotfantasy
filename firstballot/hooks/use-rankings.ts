@@ -69,7 +69,7 @@ export function useRankings(): UseRankingsReturn {
       const matchesSearch =
         searchTerm === '' || player.player_name.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesPosition = positionFilter === 'all' || player.position === positionFilter
-      const matchesTier = tierFilter === 'all' || player.tier === tierFilter
+      const matchesTier = tierFilter === 'all' || String(extractTierNumber(player.tier)) === tierFilter
       return matchesSearch && matchesPosition && matchesTier
     })
 

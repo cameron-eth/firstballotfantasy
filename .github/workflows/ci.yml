@@ -28,10 +28,14 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: firstballot/pnpm-lock.yaml
-      # Not --frozen-lockfile: pnpm-lock.yaml currently trails package.json.
-      # Switch to frozen once the lockfile is regenerated.
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - run: pnpm type-check
+      - name: Build production app with non-secret placeholders
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://build-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: build-placeholder-service-role-key
+        run: pnpm build
 
   react-doctor:
     name: React doctor

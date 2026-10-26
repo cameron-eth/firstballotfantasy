@@ -35,7 +35,7 @@ See `stripe-test-results.json`. The recorded signature failure is the deliberate
 
 ## What this does not prove yet
 
-This is **not** a production or fully authenticated staging UI→Next route→Supabase→Stripe acceptance test. Correct-project Supabase migration access is still missing. The isolated receiver verifies signatures and exercises production reconciliation/database logic but does not run the Next middleware or Supabase transport. JSDOM requests are controlled test fixtures. Persistent deployment webhook registration, actual account login/checkout/return navigation and production feature gates still require staging verification. Keep the PR draft until those boundaries are tested.
+This is **not** a production or fully authenticated staging UI→Next route→Supabase→Stripe acceptance test. The migration was applied to the correct production Supabase project on 2026-10-25, with live table/RLS/RPC grant verification; authenticated application acceptance is still pending. The isolated receiver verifies signatures and exercises production reconciliation/database logic but does not run the Next middleware or Supabase transport. JSDOM requests are controlled test fixtures. Persistent deployment webhook registration, actual account login/checkout/return navigation and production feature gates still require staging verification. Keep the PR draft until those boundaries are tested.
 
 ## Re-run
 

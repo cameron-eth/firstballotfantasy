@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useLeagueContext } from '@/lib/league-context'
 import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { TourDialog } from './TourDialog'
+import { MapWalkthrough } from './MapWalkthrough'
 import { TOUR_VERSION, hasSeenTour, tourStorageKey } from '@/lib/onboarding'
 
 const TourContext = createContext({ replay: () => {}, suppressBallot: true })
@@ -45,8 +46,9 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
     setOpen(true)
     setShownThisSession(true)
   }, [loading, isLoading, user, scope, seen, excluded])
+  const guided = desktop && !!selectedLeague
   const { data: prospects } = useSWR<CardProspect[]>(
-    open ? '/api/prospects?draft_year=all' : null,
+    open && !guided ? '/api/prospects?draft_year=all' : null,
     async (url: string) => {
       const response = await fetch(url)
       if (!response.ok) throw new Error('Preview unavailable')
@@ -54,6 +56,10 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
     },
     { revalidateOnFocus: false, shouldRetryOnError: false }
   )
+  useEffect(() => {
+    if (!open || !guided) return
+    router.push(`/league-buddy?tab=builder&leagueId=${encodeURIComponent(selectedLeagueId ?? '')}`)
+  }, [open, guided, selectedLeagueId, router])
   const prospect = prospects?.find((p) => p.name === 'Jeremiah Smith')
   const dynasty = !selectedLeague || selectedLeague.settings?.type === 2
   function replay() {
@@ -95,21 +101,25 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
           </button>
         </div>
       )}
-      <TourDialog
-        open={open && !!user}
-        step={step}
-        setStep={setStep}
-        desktop={desktop}
-        dynasty={dynasty}
-        returning={!!selectedLeague}
-        prospect={prospect}
-        onDismiss={() => void dismiss()}
-        onFinish={() =>
-          router.push(
-            `/league-buddy?tab=${desktop ? 'builder' : 'roster'}${selectedLeagueId ? `&leagueId=${encodeURIComponent(selectedLeagueId)}` : ''}`
-          )
-        }
-      />
+      {open && !!user && guided ? (
+        <MapWalkthrough dynasty={dynasty} onDismiss={() => void dismiss()} />
+      ) : (
+        <TourDialog
+          open={open && !!user}
+          step={step}
+          setStep={setStep}
+          desktop={desktop}
+          dynasty={dynasty}
+          returning={!!selectedLeague}
+          prospect={prospect}
+          onDismiss={() => void dismiss()}
+          onFinish={() =>
+            router.push(
+              `/league-buddy?tab=${desktop ? 'builder' : 'roster'}${selectedLeagueId ? `&leagueId=${encodeURIComponent(selectedLeagueId)}` : ''}`
+            )
+          }
+        />
+      )}
     </TourContext.Provider>
   )
 }

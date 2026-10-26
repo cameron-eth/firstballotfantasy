@@ -45,3 +45,11 @@ Required acceptance: configure verified live Unlimited prices ($12 monthly / $70
 - Real local dashboard session: tour appears, desktop/mobile content adapts, Skip dismisses, refresh does not reopen it, Settings replay opens it again. No daily ballot stacks over the tour.
 - Screenshots in `docs/screenshots/welcome-map-desktop.png` and `welcome-map-mobile.png` show the actual local app, not a design mockup.
 - New-account signup and cross-device preference synchronization are not claimed as independently exercised browser flows in this pass.
+
+### Interactive map guide follow-up
+
+The desktop walkthrough now navigates to the connected team's live map and anchors a compact dialog to the lineup canvas, zoom controls, dynasty year selector, player finder and Plans menu. Four backdrop panels blur the surrounding page while leaving the current feature sharp. Next/Back moves the spotlight and scrolls the feature into view; Escape, Close and Skip dismiss it. The guide does not mutate the scenario or send Sleeper actions. Mobile and unconnected accounts retain introductory guidance. Version `team-map-v2` offers the improved tour once to users who saw v1.
+
+Geometry observers and animation-frame updates live inside the tour component, not the player-card tree. Missing/loading anchors allow dismissal and show an actionable fallback. The tour avoids fetching preview prospects on the desktop guided path.
+
+Verified in the actual signed-in local dashboard: replay, all five anchors, Next/Back, skip, completion and persistence. CI passes 135 tests, including redraft omission of future years and single completion. Screenshots: `interactive-map-lineup.png`, `interactive-map-years.png`.

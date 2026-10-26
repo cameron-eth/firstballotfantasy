@@ -230,6 +230,7 @@ export function TeamBuilder({
           <div
             role="group"
             aria-label="Roster year"
+            data-map-tour="years"
             className="inline-flex rounded-lg border border-slate-700/50 bg-slate-800/40 p-1"
           >
             {[0, 1, 2, 3].map((offset) => {
@@ -251,7 +252,10 @@ export function TeamBuilder({
             })}
           </div>
         )}
-        <div className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+        <div
+          data-map-tour="zoom"
+          className="ml-auto flex items-center gap-2 text-xs text-slate-400"
+        >
           <button
             aria-label="Zoom out map"
             className={button}
@@ -273,27 +277,29 @@ export function TeamBuilder({
           </button>
         </div>
         <TourReplayButton label="Map guide" />
-        <PlanMenu
-          scenarios={scenarios}
-          scenario={scenario}
-          select={setActive}
-          update={update}
-          busy={busy}
-          dirty={dirty}
-          signedIn={!!user}
-          message={message}
-          save={save}
-          duplicate={() => {
-            const copy = {
-              ...scenario,
-              id: crypto.randomUUID(),
-              name: `Plan ${scenarios.length + 1}`,
-            }
-            setScenarios([...scenarios, copy])
-            setActive(copy.id)
-            setDirty(true)
-          }}
-        />
+        <div data-map-tour="plans">
+          <PlanMenu
+            scenarios={scenarios}
+            scenario={scenario}
+            select={setActive}
+            update={update}
+            busy={busy}
+            dirty={dirty}
+            signedIn={!!user}
+            message={message}
+            save={save}
+            duplicate={() => {
+              const copy = {
+                ...scenario,
+                id: crypto.randomUUID(),
+                name: `Plan ${scenarios.length + 1}`,
+              }
+              setScenarios([...scenarios, copy])
+              setActive(copy.id)
+              setDirty(true)
+            }}
+          />
+        </div>
       </div>
       {message && (
         <p role="status" className="text-xs text-slate-400">
@@ -310,6 +316,7 @@ export function TeamBuilder({
           role="region"
           ref={viewportRef}
           aria-label="Team strategy map"
+          data-map-tour="lineup"
           tabIndex={0}
           className="h-[calc(100dvh-260px)] min-h-[520px] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 focus-visible:outline focus-visible:outline-blue-400"
           style={{
@@ -405,51 +412,53 @@ export function TeamBuilder({
           </div>
         </div>
         <section aria-label="Find strategy targets" className="border-t border-white/10 pt-5">
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <h3 className="mr-auto font-semibold text-white">Find your next player</h3>
-            <CompactSelect
-              label="Target source"
-              value={source}
-              onChange={(value) => setSource(value as 'trade' | 'draft')}
-              disabled={busy}
-              options={[
-                { value: 'trade', label: 'Trade targets' },
-                ...(isDynasty ? [{ value: 'draft', label: 'College prospects' }] : []),
-              ]}
-            />
-            <CompactSelect
-              label="Target position"
-              value={position}
-              onChange={setPosition}
-              disabled={busy}
-              options={[
-                { value: 'ALL', label: 'All positions' },
-                ...positions.map((p) => ({ value: p, label: p })),
-              ]}
-            />
-            {source === 'draft' && (
+          <div data-map-tour="targets">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <h3 className="mr-auto font-semibold text-white">Find your next player</h3>
               <CompactSelect
-                label="Draft class"
-                value={year}
-                onChange={setYear}
+                label="Target source"
+                value={source}
+                onChange={(value) => setSource(value as 'trade' | 'draft')}
                 disabled={busy}
                 options={[
-                  { value: 'ALL', label: 'All classes' },
-                  ...Array.from(new Set(prospects.map((p) => p.draft_year).filter(Boolean)))
-                    .sort()
-                    .map((y) => ({ value: String(y), label: String(y) })),
+                  { value: 'trade', label: 'Trade targets' },
+                  ...(isDynasty ? [{ value: 'draft', label: 'College prospects' }] : []),
                 ]}
               />
-            )}
+              <CompactSelect
+                label="Target position"
+                value={position}
+                onChange={setPosition}
+                disabled={busy}
+                options={[
+                  { value: 'ALL', label: 'All positions' },
+                  ...positions.map((p) => ({ value: p, label: p })),
+                ]}
+              />
+              {source === 'draft' && (
+                <CompactSelect
+                  label="Draft class"
+                  value={year}
+                  onChange={setYear}
+                  disabled={busy}
+                  options={[
+                    { value: 'ALL', label: 'All classes' },
+                    ...Array.from(new Set(prospects.map((p) => p.draft_year).filter(Boolean)))
+                      .sort()
+                      .map((y) => ({ value: String(y), label: String(y) })),
+                  ]}
+                />
+              )}
+            </div>
+            <input
+              id="builder-search"
+              aria-label="Find a target player"
+              className={`${input} mb-4 w-full`}
+              placeholder="Search players, schools or league teams"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
           </div>
-          <input
-            id="builder-search"
-            aria-label="Find a target player"
-            className={`${input} mb-4 w-full`}
-            placeholder="Search players, schools or league teams"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
           {prospectError && source === 'draft' ? (
             <p role="alert" className="text-sm text-red-300">
               Could not load college players. <button onClick={() => mutate()}>Retry</button>

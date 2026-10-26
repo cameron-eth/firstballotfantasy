@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import archive from '@/data/ktc-history.json'
+import {sourceWithinBudget} from '@/lib/platform/policy'
 const normalize = (name: string) =>
   name
     .toLowerCase()
@@ -62,6 +63,13 @@ export async function GET(request: NextRequest) {
   } catch {
     for (const id of Object.keys(byId)) delete byId[id]
   }
+  // Per-source and per-player freshness apply equally to archive and database records.
+  if (!sourceWithinBudget(latestDate,48*3600000)) {
+    return NextResponse.json(
+      { error: 'Current KTC values are unavailable.', code: 'STALE_SOURCE', latestDate, source },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } }
+    )
+  }
   const historyMap: Record<string, Point[]> = {}
   const rows: object[] = []
   for (const { name, asset: p } of selected) {
@@ -78,6 +86,7 @@ export async function GET(request: NextRequest) {
         : [])
     if (!history.length) continue
     historyMap[name] = history
+    if(!sourceWithinBudget(history.at(-1)?.scraped_date,48*3600000))continue
     rows.push({
       ktc_player_id: p.id,
       player_name: name,
@@ -90,6 +99,6 @@ export async function GET(request: NextRequest) {
     params.get('player')
       ? { player: params.get('player'), history: historyMap[params.get('player')!] ?? [], source }
       : { data: rows, historyMap: names ? historyMap : undefined, latestDate, source },
-    { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=86400' } }
+    { headers: { 'Cache-Control': 'no-store' } }
   )
 }

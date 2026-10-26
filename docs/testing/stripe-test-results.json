@@ -1,0 +1,27 @@
+{
+  "results": [
+    "Stripe CLI listener connected (secret kept in memory)",
+    "Invalid signature rejected",
+    "Free account cannot activate second team",
+    "Real test subscription -> signed CLI webhook -> entitlement (3 teams)",
+    "Purchased team slots unlock activation",
+    "Duplicate webhook does not duplicate entitlement",
+    "Successful renewal advances entitlement period",
+    "Quantity downgrade archives excess team and preserves records",
+    "Scheduled cancellation retains access until period end",
+    "Failed renewal removes paid access via signed webhook",
+    "Cancellation preserves connections and leaves one free slot",
+    "Old checkout replay cannot restore canceled subscription",
+    "Resubscription restores paid team capacity",
+    "Explicit cancellation of active subscription revokes paid slots",
+    "Expired checkout never grants paid capacity"
+  ],
+  "eventCount": 14,
+  "failedDeliveries": [
+    {
+      "type": "StripeSignatureVerificationError"
+    }
+  ],
+  "mode": "test",
+  "database": "isolated PGlite; production migration"
+}

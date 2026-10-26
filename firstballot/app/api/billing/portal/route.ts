@@ -1,19 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { SubscriptionService } from '@/lib/subscription-service'
-
-export async function POST(req: NextRequest) {
+import { webAccount } from '@/lib/platform/auth'
+import { body, failure, json } from '@/lib/platform/http'
+export async function POST(request: Request) {
   try {
-    const { authId } = await req.json()
-
-    if (!authId) {
-      return NextResponse.json({ error: 'Auth ID is required' }, { status: 400 })
-    }
-
-    const session = await SubscriptionService.createPortalSession(authId)
-
-    return NextResponse.json({ url: session.url })
-  } catch (error) {
-    console.error('Error creating portal session:', error)
-    return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 })
+    const p = await webAccount(request)
+    const session = await SubscriptionService.createPortalSession(p.accountId, (await body(request)).cancel === true)
+    return json({ url: session.url })
+  } catch (e) {
+    return failure(e)
   }
 }

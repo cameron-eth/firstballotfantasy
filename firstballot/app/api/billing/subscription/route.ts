@@ -1,20 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { SubscriptionService } from '@/lib/subscription-service'
-
-export async function GET(req: NextRequest) {
+import { webAccount } from '@/lib/platform/auth'
+import { billingFor } from '@/lib/platform/teams'
+import { teamCapacity } from '@/lib/platform/policy'
+import { failure, json } from '@/lib/platform/http'
+import { getStripe } from '@/lib/stripe'
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(req.url)
-    const authId = searchParams.get('authId')
-
-    if (!authId) {
-      return NextResponse.json({ error: 'Auth ID is required' }, { status: 400 })
-    }
-
-    const subscription = await SubscriptionService.getSubscription(authId)
-
-    return NextResponse.json(subscription)
-  } catch (error) {
-    console.error('Error fetching subscription:', error)
-    return NextResponse.json({ error: 'Failed to fetch subscription' }, { status: 500 })
+    const p = await webAccount(request),
+      billing = await billingFor(p.accountId)
+    const prices = await Promise.all(
+      (['month', 'year'] as const).map(async (interval) => {
+        const id =
+          interval === 'month'
+            ? process.env.STRIPE_TEAM_MONTHLY_PRICE_ID
+            : process.env.STRIPE_TEAM_YEARLY_PRICE_ID
+        if (!id) return null
+        const price = await getStripe().prices.retrieve(id)
+        if (
+          !price.active ||
+          price.recurring?.interval !== interval ||
+          price.metadata.plan !== 'unlimited' ||
+          price.currency !== 'usd' ||
+          price.unit_amount !== (interval === 'month' ? 1200 : 7000)
+        )
+          return null
+        return { interval, currency: price.currency, unitAmount: price.unit_amount }
+      })
+    )
+    return json({
+      subscription: billing,
+      capacity: teamCapacity(billing),
+      prices: prices.filter(Boolean),
+      dailyApiLimit: teamCapacity(billing) !== 1 ? 1000 : 100,
+    })
+  } catch (e) {
+    return failure(e)
   }
 }

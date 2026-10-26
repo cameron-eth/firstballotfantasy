@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
+import { webAccount } from '@/lib/platform/auth'
+import { teamsFor } from '@/lib/platform/teams'
+import { failure } from '@/lib/platform/http'
 import { validateScenarios } from '@/lib/team-scenarios'
 export const dynamic = 'force-dynamic'
 const reply = (data: unknown, status = 200) =>
@@ -36,6 +39,11 @@ async function handle(request: NextRequest) {
       return reply({ error: 'Saved scenarios could not be read.' }, 503)
     }
   }
+  try {
+    const principal = await webAccount(request)
+    const teams = await teamsFor(principal)
+    if (!teams.some(t=>t.league_id===league && String(t.roster_id)===roster && t.active)) return reply({error:'Activate this team to edit its plans.'},403)
+  } catch(e) {return failure(e)}
   const raw = await request.text()
   if (raw.length > 150000) return reply({ error: 'Scenario collection is too large.' }, 413)
   let scenarios

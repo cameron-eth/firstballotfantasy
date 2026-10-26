@@ -1,5 +1,5 @@
 """Reproducible public-data snapshot. Never substitutes ranks/KTC for missing ADP."""
-import csv, datetime, io, json, os, re, subprocess, concurrent.futures
+import csv, datetime, io, json, os, re, subprocess, concurrent.futures, collections
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = Path(os.environ.get('OUTCOME_CACHE_DIR', '/tmp/firstballot-outcomes'))
@@ -23,16 +23,19 @@ else:
     season = int(state.get('previous_season') or season - 1)
     week = 18
 ids = list(csv.DictReader(io.StringIO(fetch('https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv','playerids.csv',True))))
-identity_output = {r['sleeper_id']: {'espnId':r['espn_id'],'name':r['name'],'position':r['position']} for r in ids if r['sleeper_id'] and r['espn_id']}
+identity_candidates = {r['sleeper_id']: {'espnId':r['espn_id'],'name':r['name'],'position':r['position']} for r in ids if r['sleeper_id'].isdigit() and r['espn_id'].isdigit()}
+alias_counts = collections.Counter(r['espnId'] for r in identity_candidates.values())
+identity_output = {k:v for k,v in identity_candidates.items() if alias_counts[v['espnId']]==1}
+
 players = {}
 identity = {}
 for row in ids:
     try: year = int(row['draft_year'])
     except (ValueError, TypeError): continue
-    if not 2010 <= year <= season or row['position'] not in ['QB','RB','WR','TE'] or not row['gsis_id']: continue
+    if not 2010 <= year <= season or row['position'] not in ['QB','RB','WR','TE'] or not re.fullmatch(r'00-\d+',row['gsis_id']): continue
     key = (norm(row['name']), row['position'], year)
     identity.setdefault(key, set()).add(row['gsis_id'])
-    players[row['gsis_id']] = dict(id=row['gsis_id'], espnId=row['espn_id'] or None, name=row['name'], position=row['position'], year=year, adp=None, adpCount=0, adpWindow=None, seasons={})
+    players[row['gsis_id']] = dict(id=row['gsis_id'], espnId=row['espn_id'] if row['espn_id'].isdigit() else None, name=row['name'], position=row['position'], year=year, adp=None, adpCount=0, adpWindow=None, seasons={})
 coverage=[];unmatched=[]
 def adp(y):
     url=f'https://fantasyfootballcalculator.com/api/v1/adp/rookie?teams=12&year={y}'

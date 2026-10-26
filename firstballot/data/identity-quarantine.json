@@ -1,0 +1,36 @@
+{
+  "reason": "Conflicting provider aliases; excluded until independently verified.",
+  "invalidIdentifierRowsRemoved": 154,
+  "conflicts": {
+    "3481": {
+      "espnId": "2582138",
+      "name": "Kyle Carter",
+      "position": "TE"
+    },
+    "3344": {
+      "espnId": "2582138",
+      "name": "David Morgan",
+      "position": "TE"
+    },
+    "2507": {
+      "espnId": "2574010",
+      "name": "Aaron Ripkowski",
+      "position": "RB"
+    },
+    "2766": {
+      "espnId": "2574010",
+      "name": "Alonzo Harris",
+      "position": "RB"
+    },
+    "2645": {
+      "espnId": "2516049",
+      "name": "Quinton Dunbar",
+      "position": "CB"
+    },
+    "2642": {
+      "espnId": "2516049",
+      "name": "Houston Bates",
+      "position": "LB"
+    }
+  }
+}

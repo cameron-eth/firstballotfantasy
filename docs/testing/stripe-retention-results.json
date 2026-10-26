@@ -1,0 +1,14 @@
+{
+  "testedAt": "2026-10-26T01:43:01.740Z",
+  "mode": "Stripe test + hosted portal browser",
+  "monthlyCents": 1200,
+  "annualCents": 7000,
+  "renewalAmounts": [
+    599,
+    599,
+    599,
+    1200
+  ],
+  "feedback": "too_expensive",
+  "cancelAtPeriodEnd": true
+}

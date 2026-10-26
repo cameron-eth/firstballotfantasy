@@ -2,6 +2,9 @@ import { loadTradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import { validateTradeExtras } from '@/lib/sleeper-sdk/trade-assets'
 import { sleeperTokenIdentity, sleeperConnectionStatus } from '@/lib/sleeper-sdk/token-identity'
 import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
+import { webAccount } from '@/lib/platform/auth'
+import { teamsFor } from '@/lib/platform/teams'
+import { failure } from '@/lib/platform/http'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import {
@@ -35,6 +38,12 @@ export async function POST(request: NextRequest) {
     !['status', 'connect', 'restore', 'disconnect', 'trade', 'lineup'].includes(body.action)
   )
     return reply({ error: 'Invalid Sleeper request.' }, 400)
+  if (['trade','lineup'].includes(body.action)) {
+    try {
+      const teams = await teamsFor(await webAccount(request))
+      if (!teams.some(t=>t.league_id===body.leagueId && t.active)) return reply({error:'Activate this team before sending an action.'},403)
+    } catch(e) {return failure(e)}
+  }
   let token: string
   try {
     if (body.action === 'disconnect') {

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import LeagueBuddy from '@/components/LeagueBuddy'
+import { TeamActivation } from './TeamActivation'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useMembershipCheck } from '@/hooks/use-membership'
@@ -160,12 +161,12 @@ export function LeagueBuddyView() {
 
           {/* League Dashboard - Reacts to global selection */}
           {selectedLeagueId && (
-            <LeagueBuddy
+            <TeamActivation leagueId={selectedLeagueId}><LeagueBuddy
               leagueId={selectedLeagueId}
               user={sleeperUser}
               leagues={leagues}
               onLeagueChange={selectLeague}
-            />
+            /></TeamActivation>
           )}
 
           {/* Loading States */}

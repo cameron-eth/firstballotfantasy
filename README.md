@@ -28,3 +28,8 @@ College scouting and future draft planning are dynasty features. Redraft experie
 Actual FPPG is **current-season standard PPR from ESPN**. Weekly projections use **the selected Sleeper league's scoring rules**. A projected pick slot is a MaxPF-based planning assumption, not a guaranteed draft result. KTC is a market-value reference, not an acceptance probability. Scenario changes do not modify a live roster or pick owner.
 
 The Next.js app hosts its own server API. There is no separate FastAPI service. Selected Sleeper SDK pick/trade logic is ported to TypeScript; the KTC refresh workflow uses the Python SDK scraper.
+
+## Platform foundation
+
+See [membership, API/MCP, data boundaries and deployment runbook](docs/platform-foundations.md).
+This work requires a database migration before deployment; paid billing and OAuth MCP must be verified in staging before launch.

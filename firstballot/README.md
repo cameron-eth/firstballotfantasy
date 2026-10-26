@@ -90,3 +90,7 @@ Not every public-data read is proxied through Next.js. `useLeagueData.ts` still 
 See [`data/README.md`](data/README.md) for authoritative sources, cache intervals, snapshot refresh commands and GitHub Actions dependencies. Scheduled workflows run from the default branch; refresh PRs must be merged/deployed before bundled snapshots change in production.
 
 For UI changes, include desktop/mobile evidence as applicable and screenshots in the PR body. Verify API identity/season/scoring alongside screenshots; a plausible number is not sufficient evidence that the data is correct.
+
+## Membership, API and MCP
+
+The [platform runbook](../docs/platform-foundations.md) documents free/paid team slots, server-side snapshots, strict data expiration, hashed personal API tokens, OAuth setup, metering and deployment prerequisites. Run `pnpm run ci` locally; apply the platform migration before deploying code that depends on it.

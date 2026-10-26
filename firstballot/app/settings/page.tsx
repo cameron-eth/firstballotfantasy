@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { OAuthAccess } from '@/components/settings/OAuthAccess'
+import { ApiAccess } from '@/components/settings/ApiAccess'
 import Link from 'next/link'
 import { ShieldCheck, KeyRound, CheckCircle2, CircleAlert, Loader2 } from 'lucide-react'
 import { Header } from '@/components/header'
@@ -252,6 +254,15 @@ export default function SettingsPage() {
         <Link href="/league-buddy?tab=roster" className="mt-6 inline-block text-sm text-blue-300">
           Back to my team →
         </Link>
+        {user && (
+          <>
+            <Link href="/billing" className="mt-6 inline-block text-sm text-blue-300 underline">
+              Membership & connected teams
+            </Link>
+            <ApiAccess key={user.id} />
+            <OAuthAccess key={`oauth-${user.id}`} />
+          </>
+        )}
       </main>
     </>
   )

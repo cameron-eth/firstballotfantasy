@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { snapshot, snapshotMetadata } from '@/lib/platform/snapshots'
 import { analyzeCoverage, type ScoringSettings } from '@/lib/projections/scoring'
 
 import { normalizeProjection, type SleeperProjectionRow } from '@/lib/projections/normalize'
@@ -27,8 +28,6 @@ const UA =
 const FANTASY_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF']
 
 /** Weekly numbers move with injury news; season totals barely move. */
-const WEEKLY_REVALIDATE = 900 // 15 min
-const SEASON_REVALIDATE = 21600 // 6 hours
 
 export interface ProjectionEntry {
   /** League-scored projected points. */
@@ -59,35 +58,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Could not resolve the current season' }, { status: 502 })
     }
 
+    if (!/^20\d{2}$/.test(season) || (leagueId && !/^\d{10,25}$/.test(leagueId)))
+      return NextResponse.json({ error: 'Invalid season or league' }, { status: 400 })
     const positionQuery = FANTASY_POSITIONS.map((p) => `position[]=${p}`).join('&')
     const path = week ? `${season}/${week}` : season
     const url = `${PROJECTIONS_HOST}/projections/nfl/${path}?season_type=regular&${positionQuery}&order_by=pts_ppr`
 
     const [projectionResponse, league] = await Promise.all([
-      fetch(url, {
-        headers: { 'User-Agent': UA, Accept: 'application/json' },
-        next: { revalidate: week ? WEEKLY_REVALIDATE : SEASON_REVALIDATE },
-      }),
+      snapshot(
+        `sleeper:projections:${season}:${week ?? 'season'}`,
+        'Sleeper',
+        week ? 900 : 21600,
+        async () => {
+          const r = await fetch(url, {
+            headers: { 'User-Agent': UA, Accept: 'application/json' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(15000),
+          })
+          if (!r.ok) throw new Error('PROJECTIONS_UNAVAILABLE')
+          return {
+            payload: (await r.json()) as SleeperProjectionRow[],
+            season: Number(season),
+            week: week ? Number(week) : undefined,
+          }
+        },
+        (p) => Array.isArray(p) && p.length > 0
+      ),
       leagueId
         ? fetch(`https://api.sleeper.app/v1/league/${leagueId}`, {
-            next: { revalidate: SEASON_REVALIDATE },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(10000),
           })
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null)
         : Promise.resolve(null),
     ])
 
-    if (!projectionResponse.ok) {
-      return NextResponse.json(
-        { error: `Sleeper projections returned ${projectionResponse.status}` },
-        { status: 502 }
-      )
-    }
-
-    const rows = (await projectionResponse.json()) as SleeperProjectionRow[]
-    if (!Array.isArray(rows)) {
-      return NextResponse.json({ error: 'Unexpected projections payload' }, { status: 502 })
-    }
+    const rows = projectionResponse.payload
 
     if (leagueId && !league?.scoring_settings) {
       return NextResponse.json({ error: 'League scoring unavailable' }, { status: 502 })
@@ -119,7 +126,8 @@ export async function GET(request: NextRequest) {
         exact: coverage.exact,
         unmatchedKeys: coverage.unmatchedKeys,
         count: Object.keys(points).length,
-        generatedAt: new Date().toISOString(),
+        generatedAt: projectionResponse.fetched_at,
+        freshness: snapshotMetadata(projectionResponse),
         byes: week
           ? rows
               .filter(
@@ -132,7 +140,7 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          'Cache-Control': `public, s-maxage=${week ? WEEKLY_REVALIDATE : SEASON_REVALIDATE}, stale-while-revalidate=3600`,
+          'Cache-Control': 'no-store',
         },
       }
     )

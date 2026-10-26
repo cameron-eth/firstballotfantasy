@@ -2,6 +2,7 @@ export interface EspnFantasyPlayer {
   id: number
   fullName: string
   defaultPositionId: number
+  ownership?: { averageDraftPosition?: number | null }
   stats?: {
     seasonId: number
     statSourceId: number
@@ -20,6 +21,7 @@ export interface CurrentSeasonStat {
   points: number
   ppg: number
   rank: number
+  adp: number | null
 }
 const positions: Record<number, string> = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DEF' }
 /** ESPN default league 3 uses PPR. Never consume projected or weekly rows as season actuals. */
@@ -57,6 +59,9 @@ export function currentSeasonStats(
       points,
       ppg: points / gp,
       rank: 0,
+      adp: Number.isFinite(p.ownership?.averageDraftPosition)
+        ? Number(p.ownership?.averageDraftPosition)
+        : null,
     })
   }
   for (const pos of Object.values(positions)) {

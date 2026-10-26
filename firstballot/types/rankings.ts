@@ -4,9 +4,10 @@ export interface PlayerRanking {
   player_name: string
   position: string
   team: string
-  age: number
+  age: number | null
   total_score: number
   tier: string
+  factors?: { market: number; production: number | null; adp: number | null; age: number | null; draft: number | null }
   draft_year?: number | null
   draft_class?: number | null
   espn_id?: string | null

@@ -31,6 +31,14 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node firstballot/scripts/sync-ktc-values.mjs
+      - name: Publish global dynasty tiers
+        env:
+          REFRESH_SECRET: ${{ secrets.DATA_REFRESH_SECRET }}
+        run: |
+          test -n "$REFRESH_SECRET"
+          curl --fail --silent --show-error --max-time 300 \
+            -X POST -H "Authorization: Bearer $REFRESH_SECRET" \
+            https://www.firstballotff.com/api/dynasty-tiers
       - name: Propose refreshed dataset
         env:
           GH_TOKEN: ${{ github.token }}

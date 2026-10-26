@@ -312,6 +312,29 @@ export function TeamBuilder({
         </button>
       )}
       <fieldset disabled={busy} className="space-y-3 min-w-0">
+        <BuilderTeamSummary
+          team={team}
+          placement={placement}
+          leagueId={leagueId}
+          isDynasty={isDynasty}
+        />
+        {isDynasty && timeline.horizon > timeline.baseYear && (
+          <DraftCapitalRail
+            picks={timeline.picks}
+            year={timeline.horizon}
+            teams={teams}
+            slots={timeline.slots}
+            fits={timeline.fits}
+            targets={scenario.targets}
+            plans={scenario.fundingPlans ?? []}
+            available={timeline.available}
+            onFund={(target) => setFocus({
+              kind: 'draft', target,
+              rank: prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ?? undefined,
+            })}
+            onUndo={(id) => update({ fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id) })}
+          />
+        )}
         <div
           role="region"
           ref={viewportRef}
@@ -331,38 +354,6 @@ export function TeamBuilder({
               className="absolute left-0 top-0 origin-top-left will-change-transform"
               style={{ width: Math.max(4, parseScoringSlots(rosterPositions).length) * 256 - 16 }}
             >
-              <BuilderTeamSummary
-                team={team}
-                placement={placement}
-                leagueId={leagueId}
-                isDynasty={isDynasty}
-              />
-              {isDynasty && timeline.horizon > timeline.baseYear && (
-                <DraftCapitalRail
-                  picks={timeline.picks}
-                  year={timeline.horizon}
-                  teams={teams}
-                  slots={timeline.slots}
-                  fits={timeline.fits}
-                  targets={scenario.targets}
-                  plans={scenario.fundingPlans ?? []}
-                  available={timeline.available}
-                  onFund={(target) =>
-                    setFocus({
-                      kind: 'draft',
-                      target,
-                      rank:
-                        prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
-                        undefined,
-                    })
-                  }
-                  onUndo={(id) =>
-                    update({
-                      fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id),
-                    })
-                  }
-                />
-              )}
               {view.outgoing.length > 0 && (
                 <p className="mx-auto mb-4 w-fit rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200">
                   Plan cost · {view.outgoing.length} outgoing players · {planLoss.toFixed(1)}{' '}

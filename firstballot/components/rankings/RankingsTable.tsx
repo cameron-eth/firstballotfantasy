@@ -147,14 +147,14 @@ export function RankingsTable({
               Team
             </th>
             <th className="pb-4 font-mono text-[10px] uppercase tracking-widest text-slate-500 hidden lg:table-cell">
-              Metrics Breakdown
+              Tier factors
             </th>
             <th className="pb-4 font-mono text-[10px] uppercase tracking-widest text-slate-500 text-right">
               <button
                 onClick={() => sort.handleSort('total_score')}
                 className="flex items-center justify-end gap-1 hover:text-white transition-colors ml-auto"
               >
-                Value <ArrowUpDown className="h-2 w-2" />
+                Score <ArrowUpDown className="h-2 w-2" />
               </button>
             </th>
             <th className="pb-4 pr-4 font-mono text-[10px] uppercase tracking-widest text-slate-500 text-right">
@@ -209,6 +209,16 @@ export function RankingsTable({
                     hoverBg: 'group-hover:bg-slate-800/55',
                     rankBg: 'bg-blue-500/8',
                   }
+                case 7:
+                case 8:
+                  return {
+                    accent: 'text-rose-300',
+                    bar: 'bg-rose-400',
+                    border: 'border-rose-400/10',
+                    bg: 'bg-slate-800/30',
+                    hoverBg: 'group-hover:bg-slate-800/50',
+                    rankBg: 'bg-rose-400/10',
+                  }
                 default:
                   return {
                     accent: 'text-slate-400',
@@ -259,7 +269,7 @@ export function RankingsTable({
                         {player.player_name}
                       </span>
                       <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
-                        Age {player.age} <span className="opacity-30">•</span> {player.team}
+                        Age {player.age ?? '—'} <span className="opacity-30">•</span> {player.team}
                       </span>
                     </div>
                   </div>
@@ -289,20 +299,21 @@ export function RankingsTable({
                 >
                   <div className="flex items-center gap-4">
                     {[
-                      { label: 'F', val: player.recent_form_score || 75 },
-                      { label: 'V', val: player.volume_score || 82 },
-                      { label: 'E', val: player.epa_efficiency_score || 68 },
-                      { label: 'D', val: player.draft_capital_score || 90 },
+                      { label: 'KTC', val: player.factors?.market, title: 'Dynasty market value' },
+                      { label: 'PPG', val: player.factors?.production, title: 'Current PPR production rank' },
+                      { label: 'ADP', val: player.factors?.adp, title: 'Current-season ESPN fantasy draft position' },
+                      { label: 'AGE', val: player.factors?.age, title: 'Position-adjusted age' },
+                      { label: 'NFL', val: player.factors?.draft, title: 'Real NFL draft selection' },
                     ].map((stat) => (
                       <div key={stat.label} className="flex-1">
                         <div className="flex justify-between items-center mb-0.5">
-                          <span className="text-[8px] text-slate-500 font-mono">{stat.label}</span>
+                          <span className="text-[8px] text-slate-500 font-mono" title={stat.title}>{stat.label}</span>
                         </div>
                         <div className="h-1.5 w-full bg-slate-950/60 rounded-full overflow-hidden">
-                          <div
+                          {stat.val != null && <div
                             className={`h-full ${styles.bar} ${isDiamond || tierNum <= 2 ? 'opacity-70' : 'opacity-40'}`}
-                            style={{ width: `${stat.val}%` }}
-                          />
+                            style={{ width: `${Math.round(stat.val * 100)}%` }}
+                          />}
                         </div>
                       </div>
                     ))}
@@ -320,7 +331,7 @@ export function RankingsTable({
                       {player.total_score.toLocaleString()}
                     </span>
                     <span className={`text-[9px] font-mono ${styles.accent} font-bold mt-1`}>
-                      TOP {Math.round((player.rank / 300) * 100)}%
+                      MODEL · 0–100
                     </span>
                   </div>
                 </td>

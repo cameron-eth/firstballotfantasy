@@ -110,6 +110,13 @@ export function LineupMap({
         team={p.team}
         image={p.image}
         rookie={p.rookie}
+        tier={p.roster?.tierNumber && p.roster.tierEmphasis ? {
+          number: p.roster.tierNumber,
+          name: p.roster.tier,
+          emphasis: p.roster.tierEmphasis,
+          score: p.roster.tierScore ?? undefined,
+          rank: p.roster.tierRank ?? undefined,
+        } : undefined}
         shoulderBadge={
           p.roster?.fppg_rank
             ? {

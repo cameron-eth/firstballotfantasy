@@ -32,10 +32,10 @@ export function DraftCapitalRail({
   return (
     <section
       aria-label="Draft access and funding"
-      className="mx-auto mb-5 max-w-5xl rounded-xl border border-violet-400/20 bg-slate-900/80 p-4"
+      className="mx-auto w-full rounded-xl border border-violet-400/20 bg-slate-900/80 p-5"
     >
       <div className="mb-3 flex items-center justify-between gap-4">
-        <h3 className="text-sm font-semibold text-white">{year} draft access</h3>
+        <h3 className="text-lg font-semibold text-white">{year} draft access</h3>
         <span className="text-xs text-slate-400">
           {goals.length} targets · {current.length} picks in plan
         </span>
@@ -55,7 +55,7 @@ export function DraftCapitalRail({
             return (
               <div
                 key={p.id}
-                className={`rounded-lg border px-3 py-2 ${planned ? 'border-dashed border-amber-400/40' : 'border-violet-400/30'} text-xs`}
+                className={`rounded-lg border px-3 py-2 ${planned ? 'border-dashed border-amber-400/40' : 'border-violet-400/30'} text-sm`}
               >
                 <p className="font-semibold text-violet-200">
                   {slots[p.roster_id]

@@ -24,6 +24,7 @@ export function isPublicApi(path: string) {
     '/api/overview',
     '/api/ngs-stats',
     '/api/rankings',
+    '/api/dynasty-tiers',
     '/api/roster-stats',
     '/api/trade-market',
     '/api/prospects',

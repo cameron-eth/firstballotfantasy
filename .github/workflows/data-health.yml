@@ -68,7 +68,7 @@ jobs:
           data=json.load(open('/tmp/data-health.json'))
           season=open('/tmp/current-season.txt').read().strip()
           keys={d['key']:d for d in data['datasets']}
-          expected=[f'espn:ppr:{season}', f'sleeper:projections:{season}:season', 'ktc:player-values']
+          expected=[f'espn:ppr:{season}', f'sleeper:projections:{season}:season', 'ktc:player-values', 'dynasty:tiers:v1']
           week=open('/tmp/current-week.txt').read().strip()
           if week:
               expected.append(f'sleeper:projections:{season}:{week}')

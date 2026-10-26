@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
+import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import { getCachedPlayers } from '@/lib/players-cache'
 
@@ -61,20 +61,25 @@ export async function GET(request: NextRequest) {
       getCachedPlayers(),
       (async () => {
         try {
-          const result = await supabaseServer
-            .from('dynasty_player_tiers')
-            .select('*')
-            .order('total_score', { ascending: false })
-          console.log(
-            `✅ Fetched ${result.data?.length || 0} players from dynasty_player_tiers table`
-          )
-          if (result.data && result.data.length > 0) {
-            const samplePlayer = result.data[0]
-            console.log(
-              `   Sample player: ${samplePlayer.player_name} (total_score: ${samplePlayer.total_score}, tier: ${samplePlayer.tier})`
-            )
+          const result = await supabaseAdmin.from('data_snapshots')
+            .select('payload,expires_at').eq('key', 'dynasty:tiers:v1').maybeSingle()
+          if (result.error || !result.data || Date.parse(result.data.expires_at) <= Date.now())
+            return { data: [], error: new Error('Current tiers unavailable') }
+          const payload = result.data.payload as {
+            players: { sf: Record<string, { rank: number; number: number; name: string }> }
+            identity: Record<string, { name: string; position: string; team: string; espnId: string }>
           }
-          return result
+          const data = Object.entries(payload.players.sf).flatMap(([id, tier]) => {
+            const person = payload.identity[id]
+            return person ? [{ player_name: person.name, position: person.position,
+              // Trade valuation uses raw KTC; its older 13k-point model scale is incompatible
+              // with the new 0–100 tier score.
+              team: person.team, espn_id: person.espnId, total_score: null,
+              tier: `${tier.name} (Tier ${tier.number})`, rank: tier.rank,
+              headshot_url: person.espnId ? `https://a.espncdn.com/i/headshots/nfl/players/full/${person.espnId}.png` : null,
+            }] : []
+          }).sort((a, b) => a.rank - b.rank)
+          return { data, error: null }
         } catch (err) {
           console.error('❌ Rankings fetch error:', err)
           return { data: [], error: err }
@@ -170,10 +175,10 @@ export async function GET(request: NextRequest) {
         const playerName = player.player_name
         if (playerName) {
           // Calculate rank from position in sorted list
-          const rank = index + 1
+          const rank = player.rank ?? index + 1
 
           // Extract tier number from tier string (e.g., "Elite (Tier 1)" -> 1)
-          let tierNum = 5 // Default
+          let tierNum: number | null = null
           if (player.tier) {
             const tierMatch = player.tier.match(/Tier (\d+)/)
             if (tierMatch) {
@@ -224,8 +229,8 @@ export async function GET(request: NextRequest) {
           headshot_url: null,
           espn_id: null,
           total_score: null,
-          tier: 5,
-          tier_name: 'KTC',
+          tier: null,
+          tier_name: 'Unranked',
           ktc_value_sf: ktc.value_sf,
           ktc_rank_sf: ktc.rank_sf,
         }

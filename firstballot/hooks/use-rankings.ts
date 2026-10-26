@@ -10,8 +10,12 @@ import type {
 } from '@/types/rankings'
 
 interface UseRankingsReturn {
+  format: 'sf' | 'one_qb'
+  setFormat: (format: 'sf' | 'one_qb') => void
   rankings: PlayerRanking[]
   loading: boolean
+  error: string | null
+  fetchedAt: string | null
   filters: RankingsFilters & {
     setSearchTerm: (value: string) => void
     setPositionFilter: (value: string) => void
@@ -37,6 +41,7 @@ interface UseRankingsReturn {
 }
 
 export function useRankings(): UseRankingsReturn {
+  const [format, setFormat] = useState<'sf' | 'one_qb'>('sf')
   const [searchTerm, setSearchTerm] = useState('')
   const [positionFilter, setPositionFilter] = useState<string>('all')
   const [tierFilter, setTierFilter] = useState<string>('all')
@@ -45,12 +50,12 @@ export function useRankings(): UseRankingsReturn {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(50)
 
-  const { data, isLoading } = useSWR('/api/rankings', async (url: string) => {
+  const { data, error, isLoading } = useSWR(`/api/rankings?format=${format}`, async (url: string) => {
     const response = await fetch(url)
     if (!response.ok) {
       throw new Error('Failed to fetch rankings')
     }
-    return response.json() as Promise<{ data?: PlayerRanking[] }>
+    return response.json() as Promise<{ data?: PlayerRanking[]; fetchedAt?: string }>
   })
   const rankings = data?.data || []
 
@@ -82,8 +87,8 @@ export function useRankings(): UseRankingsReturn {
           bValue = b.total_score
           break
         case 'age':
-          aValue = a.age
-          bValue = b.age
+          aValue = a.age ?? -1
+          bValue = b.age ?? -1
           break
         case 'player_name':
           aValue = a.player_name.toLowerCase()
@@ -116,13 +121,8 @@ export function useRankings(): UseRankingsReturn {
     return Array.from(tiers).sort((a, b) => parseInt(a) - parseInt(b))
   }, [rankings])
 
-  // Diamond tier logic: Top 3 players at each position
-  const isDiamondTier = (player: PlayerRanking): boolean => {
-    const positionPlayers = rankings.filter((p) => p.position === player.position)
-    const sortedByRank = positionPlayers.sort((a, b) => a.rank - b.rank)
-    const topThree = sortedByRank.slice(0, 3)
-    return topThree.some((p) => p.rank === player.rank)
-  }
+  // The server publishes eight tiers; the old client-only "Diamond" label is not a tier.
+  const isDiamondTier = (_player: PlayerRanking): boolean => false
 
   const getRowBgColor = (player: PlayerRanking): string => {
     if (isDiamondTier(player)) {
@@ -134,8 +134,8 @@ export function useRankings(): UseRankingsReturn {
       1: 'bg-yellow-900/20 border-l-4 border-l-yellow-500/80',
       2: 'bg-purple-950/15 border-l-4 border-l-purple-500/60',
       3: 'bg-blue-950/15 border-l-4 border-l-blue-500/60',
-      4: 'bg-green-950/15 border-l-4 border-l-green-500/60',
-      5: 'bg-orange-950/15 border-l-4 border-l-orange-500/60',
+      4: 'bg-slate-800/10',
+      5: 'bg-slate-800/10',
       6: 'bg-slate-800/10',
       7: 'bg-gray-800/10',
       8: 'bg-red-950/10',
@@ -153,15 +153,15 @@ export function useRankings(): UseRankingsReturn {
       1: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/50',
       2: 'bg-purple-500/20 text-purple-300 border-purple-400/50',
       3: 'bg-blue-500/20 text-blue-300 border-blue-400/50',
-      4: 'bg-green-500/20 text-green-300 border-green-400/50',
-      5: 'bg-orange-500/20 text-orange-300 border-orange-400/50',
+      4: 'bg-slate-500/15 text-slate-300 border-slate-400/30',
+      5: 'bg-slate-500/15 text-slate-300 border-slate-400/30',
+      7: 'bg-rose-500/10 text-rose-300 border-rose-400/30',
+      8: 'bg-rose-500/10 text-rose-300 border-rose-400/30',
     }
     return colors[tierNum] || 'bg-gray-500/20 text-gray-300 border-gray-400/50'
   }
 
-  const getTierDisplayName = (tier: string, isDiamond: boolean): string => {
-    if (isDiamond) return 'Diamond Tier'
-    if (tier.includes('Elite')) return 'Elite (Tier 1)'
+  const getTierDisplayName = (tier: string, _isDiamond: boolean): string => {
     return tier
   }
 
@@ -177,8 +177,12 @@ export function useRankings(): UseRankingsReturn {
   }
 
   return {
+    format,
+    setFormat,
     rankings,
     loading: isLoading,
+    error: error instanceof Error ? error.message : null,
+    fetchedAt: data?.fetchedAt ?? null,
     filters: {
       searchTerm,
       positionFilter,

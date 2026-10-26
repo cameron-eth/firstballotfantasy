@@ -13,7 +13,6 @@ import type {
   SleeperTransaction,
 } from './types'
 import {
-  getTierFromRank,
   calculateRawScore,
   calculateGradeFromPercentile,
   calculatePositionStrengths,
@@ -66,12 +65,9 @@ interface SleeperUser {
   avatar?: string
 }
 
-interface RankingPlayer {
-  'PLAYER NAME'?: string
-  RK?: number
-  POS?: string
-  TEAM?: string
-  [key: string]: unknown
+interface TierResponse {
+  players?: { sf?: Record<string, { rank: number; number: number; name: string; emphasis: string; score: number }>;
+    one_qb?: Record<string, { rank: number; number: number; name: string; emphasis: string; score: number }> }
 }
 
 interface TrendingItem {
@@ -163,7 +159,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
           return r.json()
         })
         .catch(() => []),
-      fetch('/api/rankings')
+      fetch('/api/dynasty-tiers')
         .then((res) => (res.ok ? res.json() : []))
         .catch(() => []),
       fetchWeekSchedule(week),
@@ -230,26 +226,10 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     }
   }
 
-  const rankingsArray: RankingPlayer[] = Array.isArray(rankingsResult?.data)
-    ? rankingsResult.data
-    : Array.isArray(rankingsResult)
-      ? rankingsResult
-      : []
-
-  const rankingsMap = rankingsArray.reduce((acc: Record<string, any>, player) => {
-    const playerName = player['PLAYER NAME']
-    const rank = player.RK
-    if (playerName && rank !== undefined) {
-      acc[playerName] = {
-        rank,
-        position: player.POS || '',
-        team: player.TEAM || '',
-        name: playerName,
-        tier: rank <= 12 ? 1 : rank <= 36 ? 2 : rank <= 72 ? 3 : rank <= 120 ? 4 : 5,
-      }
-    }
-    return acc
-  }, {})
+  const isSuperflex = Array.isArray(league?.roster_positions) &&
+    (league.roster_positions.some((slot: string) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE') ||
+      league.roster_positions.filter((slot: string) => slot === 'QB').length > 1)
+  const rankingsMap = ((rankingsResult as TierResponse)?.players?.[isSuperflex ? 'sf' : 'one_qb'] ?? {})
 
   const enhancedPlayers = { ...allPlayersData }
   Object.entries(rosterStatsMap).forEach(([sleeperId, stats]) => {
@@ -359,7 +339,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
           if (!player) return null
 
           const playerName = `${player.first_name || ''} ${player.last_name || ''}`.trim()
-          const ranking = rankingsMap[playerName]
+          const ranking = rankingsMap[playerId]
           const tempPlayerForOpponent: PlayerData = {
             playerId,
             playerName,
@@ -381,7 +361,11 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             position: player.position,
             team: player.team,
             rank: ranking?.rank || player.search_rank || 999,
-            tier: ranking?.tier ? `Tier ${ranking.tier}` : getTierFromRank(player.search_rank),
+            tier: ranking ? `${ranking.name} (Tier ${ranking.number})` : 'Unranked',
+            tierNumber: ranking?.number ?? null,
+            tierEmphasis: ranking?.emphasis ?? null,
+            tierScore: ranking?.score ?? null,
+            tierRank: ranking?.rank ?? null,
             age: player.age || 0,
             experience: player.years_exp || 0,
             isRookie: player.years_exp === 0,
@@ -399,7 +383,10 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             fppg_rank: player.fppg_rank,
             fppg_position: player.fppg_position,
             stats_season: player.stats_season,
-            rankingData: ranking,
+            rankingData: ranking ? {
+              rank: ranking.rank, position: player.position, team: player.team,
+              name: playerName, tier: ranking.number,
+            } : undefined,
           }
         })
         .filter(Boolean) as PlayerData[]

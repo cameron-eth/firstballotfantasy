@@ -12,7 +12,7 @@ export async function GET() {
         .from('data_snapshots')
         .select('key,source,fetched_at,source_observed_at,expires_at,quality,season,week')
         // Only publish shared provider datasets. Per-league roster cache keys are private.
-        .or('key.like.espn:%,key.like.sleeper:projections:%')
+        .or('key.like.espn:%,key.like.sleeper:projections:%,key.eq.dynasty:tiers:v1')
         .order('key')
         .limit(100),
       fetch('https://api.sleeper.app/v1/state/nfl', {
@@ -148,6 +148,7 @@ export async function GET() {
       ...snapshots.filter(
         (dataset) =>
           dataset.key === `espn:ppr:${currentSeason}` ||
+          dataset.key === 'dynasty:tiers:v1' ||
           dataset.key === `sleeper:projections:${currentSeason}:season` ||
           (currentWeek !== null &&
             dataset.key === `sleeper:projections:${currentSeason}:${currentWeek}`)

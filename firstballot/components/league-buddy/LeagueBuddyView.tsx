@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Header } from '@/components/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,12 @@ export function LeagueBuddyView() {
     error: leaguesError,
     refreshLeagues,
   } = useLeagueContext()
+
+  const requestedLeague = useSearchParams().get('leagueId')
+  useEffect(() => {
+    if (requestedLeague && leagues.some((l) => l.league_id === requestedLeague))
+      selectLeague(requestedLeague)
+  }, [requestedLeague, leagues, selectLeague])
 
   const [username, setUsername] = useState('')
   const [sleeperUser, setSleeperUser] = useState<SleeperUser | null>(null)
@@ -128,11 +135,19 @@ export function LeagueBuddyView() {
             </Card>
           )}
 
-          {leaguesError && <div role="alert" className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">Your leagues could not be refreshed. Check your Sleeper connection and try again.</div>}
+          {leaguesError && (
+            <div
+              role="alert"
+              className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100"
+            >
+              Your leagues could not be refreshed. Check your Sleeper connection and try again.
+            </div>
+          )}
 
           {selectedLeagueId && !sleeperUser && !leaguesLoading && (
             <div className="rounded-xl border border-blue-400/25 bg-blue-400/10 p-4 text-sm text-slate-200">
-              League data is available. Connect your Sleeper username to identify your own roster in the team view.
+              League data is available. Connect your Sleeper username to identify your own roster in
+              the team view.
             </div>
           )}
 
@@ -161,12 +176,14 @@ export function LeagueBuddyView() {
 
           {/* League Dashboard - Reacts to global selection */}
           {selectedLeagueId && (
-            <TeamActivation leagueId={selectedLeagueId}><LeagueBuddy
-              leagueId={selectedLeagueId}
-              user={sleeperUser}
-              leagues={leagues}
-              onLeagueChange={selectLeague}
-            /></TeamActivation>
+            <TeamActivation leagueId={selectedLeagueId}>
+              <LeagueBuddy
+                leagueId={selectedLeagueId}
+                user={sleeperUser}
+                leagues={leagues}
+                onLeagueChange={selectLeague}
+              />
+            </TeamActivation>
           )}
 
           {/* Loading States */}

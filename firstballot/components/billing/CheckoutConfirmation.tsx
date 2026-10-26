@@ -5,9 +5,15 @@ import { CheckCircle2, Loader2 } from 'lucide-react'
 export function CheckoutConfirmation({
   session,
   accountId,
+  onOpenTeam,
+  openingTeam = false,
+  activationError,
 }: {
   session: string | null
   accountId: string | null
+  onOpenTeam?: () => void
+  openingTeam?: boolean
+  activationError?: string
 }) {
   const { mutate } = useSWRConfig()
   const [startedAt] = useState(Date.now)
@@ -75,8 +81,8 @@ export function CheckoutConfirmation({
       <p className="mt-2 text-sm text-slate-300">
         {active
           ? data.capacity === null
-            ? 'Unlimited teams are unlocked. Activate your next team below, then open your dashboard.'
-            : `You now have ${data.capacity} team slots. Activate your next team below, then open your dashboard.`
+            ? 'Unlimited teams are unlocked. Open the team you selected, or choose a team below.'
+            : `You now have ${data.capacity} team slots. Choose a team below to activate and open it.`
           : error
             ? error.message
             : data?.state === 'inactive'
@@ -85,11 +91,26 @@ export function CheckoutConfirmation({
                 ? 'Your checkout is complete. We’re waiting for payment confirmation. You do not need to pay again. If this takes longer, use Check again.'
                 : 'Your existing teams and saved plans are safe.'}
       </p>
+      {activationError && (
+        <p role="alert" className="mt-3 text-sm text-amber-200">
+          {activationError}
+        </p>
+      )}
       <div className="mt-3 flex gap-4 text-sm text-blue-200">
         {active ? (
-          <a href="/league-buddy" className="underline">
-            Open dashboard
-          </a>
+          onOpenTeam ? (
+            <button
+              disabled={openingTeam}
+              onClick={onOpenTeam}
+              className="rounded-lg bg-blue-300 px-4 py-2 font-semibold text-slate-950 disabled:opacity-50"
+            >
+              {openingTeam ? 'Opening your team…' : 'Activate & open my team'}
+            </button>
+          ) : (
+            <a href="#teams" className="underline">
+              Choose a team
+            </a>
+          )
         ) : (
           <button onClick={() => void retry()} className="underline">
             Check again

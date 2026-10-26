@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { type ReactNode } from 'react'
 import type { CardProspect } from './ProspectTradingCard'
+import { TeamMapPreview } from './TeamMapPreview'
 
 type Player = CardProspect
 
@@ -26,30 +26,39 @@ export function ScoutingExperience({ players }: { players: Player[] }) {
     <section className="relative isolate overflow-hidden border-b border-white/10">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_80%_30%,rgba(59,130,246,0.22),transparent_55%),radial-gradient(ellipse_at_0%_90%,rgba(16,185,129,0.1),transparent_45%)]" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 opacity-[0.06] bg-[linear-gradient(to_right,#93c5fd_1px,transparent_1px),linear-gradient(to_bottom,#93c5fd_1px,transparent_1px)] bg-[size:64px_64px]" />
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
-        <ScrollReveal>
-          <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300"><span className="h-2 w-2 rounded-full bg-emerald-400" /> The future is already playing</p>
-          <h1 className="font-[family-name:var(--font-space-grotesk)] text-[clamp(3rem,5vw,5rem)] font-bold leading-[0.97] tracking-[-0.055em]">Your next dynasty starts<br /><span className="text-blue-300">on Saturday.</span></h1>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">Saturday’s breakout. Your next cornerstone. Follow college talent, shape your draft board, and build a dynasty that stays ahead.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/scouting-portal" className="group inline-flex min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300">Find your next player <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
-            <Link href="/league-buddy" className="inline-flex min-h-12 items-center rounded-lg border border-white/20 bg-white/5 px-5 text-sm font-semibold transition hover:border-blue-300">Connect your league</Link>
+      <div className="mx-auto max-w-7xl px-5 pb-10 pt-7 sm:px-8 sm:pb-14 sm:pt-10">
+        <div>
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div>
+              <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300"><span className="h-2 w-2 rounded-full bg-emerald-400" /> College scouting meets dynasty strategy</p>
+              <h1 className="font-[family-name:var(--font-space-grotesk)] text-[clamp(2.7rem,5vw,4.75rem)] font-bold leading-[0.98] tracking-[-0.055em]">See the player.<br /><span className="text-blue-300">Plan the team.</span></h1>
+            </div>
+            <div className="lg:pb-1">
+              <p className="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">Scout college prospects, shape your own rookie boards, and see how today’s roster and tomorrow’s picks fit together.</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link href="/scouting-portal" className="group inline-flex min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300">Explore prospects <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
+                <Link href="/league-buddy" className="inline-flex min-h-12 items-center rounded-lg border border-white/20 bg-white/5 px-5 text-sm font-semibold transition hover:border-blue-300">Connect a league</Link>
+              </div>
+            </div>
           </div>
-        </ScrollReveal>
-        <ScrollReveal>
-          <figure className="mt-6 overflow-hidden rounded-2xl border border-blue-300/20 bg-[#0b1224] shadow-[0_24px_100px_-30px_rgba(59,130,246,0.3)]">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-5 py-3 text-xs text-slate-400">
-              <span className="font-semibold text-white">A plan you can see.</span>
-              <span>Inside the Team Builder</span>
+        </div>
+        <div>
+          <figure className="mt-7 overflow-hidden rounded-2xl border border-blue-300/25 bg-[#0b1224] shadow-[0_24px_100px_-30px_rgba(59,130,246,0.36)] ring-1 ring-white/5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-slate-950/50 px-5 py-3 text-xs">
+              <span className="font-semibold text-white">The Team Builder · plan across three seasons</span>
+              <span className="text-slate-400">Built from the player-card system</span>
             </div>
-            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Team map preview; scroll horizontally to explore the lineup">
-              <Image src="/images/product/team-map-lineup.png" alt="Team Builder map showing nine starting lineup slots, position-colored player cards, fantasy points per game, KTC values and trade-target actions." width={968} height={235} sizes="(max-width: 1200px) 100vw, 1152px" className="h-auto w-full min-w-[760px] sm:min-w-0" priority />
-            </div>
+            <TeamMapPreview />
+            <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-5 py-3 text-xs text-slate-400">
+              <span>Illustrative roster · your connected league supplies your own team and data</span>
+              <span>Team Builder works in desktop browsers</span>
+            </figcaption>
           </figure>
-        </ScrollReveal>
-        <div className="mt-7 flex flex-wrap items-center gap-3">
-          <Link href="/league-buddy?tab=builder" className="hidden min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300 lg:inline-flex">Build my team map <ArrowRight className="h-4 w-4" /></Link>
-          <span className="text-xs text-slate-400">One team free · Team Builder is a desktop browser feature</span>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <Link href="/league-buddy?tab=builder" className="hidden min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300 lg:inline-flex">Open Team Builder <ArrowRight className="h-4 w-4" /></Link>
+          <Link href="/scouting-portal" className="inline-flex min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 lg:hidden">Start scouting <ArrowRight className="h-4 w-4" /></Link>
+          <span className="text-xs text-slate-400">One connected team is free</span>
         </div>
       </div>
     </section>
@@ -69,9 +78,9 @@ export function ScoutingExperience({ players }: { players: Player[] }) {
         </div>
         <ol className="mt-8 grid gap-6 sm:grid-cols-3">
           {[
-            ['01', 'Start with your team', 'Connect Sleeper and see your lineup, depth and draft capital together.'],
-            ['02', 'Explore the next chapter', 'Move through future seasons and place prospects into your roster plan.'],
-            ['03', 'Find your next move', 'Explore trade ideas and the picks you would need. Review every offer before sending.'],
+            ['01', 'Start with your real roster', 'Connect Sleeper to lay out your starters and backups by league lineup slot.'],
+            ['02', 'Place a rookie in the right year', 'Switch to a future class and add a player from your board to see where they could join your roster.'],
+            ['03', 'Work out the cost', 'Compare your draft capital with a prospect’s projected range. If the pick does not fit, review trade ideas before taking action.'],
           ].map(([number, title, description]) => <li key={number} className="border-t border-white/10 pt-4"><span className="text-xs font-semibold text-blue-300">{number}</span><h3 className="mt-2 text-base font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p></li>)}
         </ol>
       </ScrollReveal>

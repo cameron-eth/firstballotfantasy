@@ -29,10 +29,10 @@ async function loadProspects(): Promise<Prospect[]> {
 }
 
 const paths = [
-  { href: '/scouting-portal', title: 'Scout prospects', detail: 'Explore college production, player grades, comps and draft projections.', icon: BookOpen, action: 'Open scouting' },
-  { href: '/scouting-portal?tab=draftboard', title: 'Build your board', detail: 'Rank the next classes and save your own draft order.', icon: ClipboardList, action: 'Open draft board' },
-  { href: '/league-buddy?tab=roster', title: 'Manage your team', detail: 'See roster strengths, positional needs and lineup decisions.', icon: Shield, action: 'View my team' },
-  { href: '/league-buddy', title: 'Run your league', detail: 'Track standings, draft order and playoff outlook.', icon: Users, action: 'View league' },
+  { href: '/scouting-portal', title: 'Scout the player', detail: 'Compare college production, scouting grades, player profiles and pro projections across upcoming classes.', icon: BookOpen, action: 'Explore prospects', signal: 'COLLEGE → PRO' },
+  { href: '/community-rankings', title: 'Add your voice', detail: 'Choose between two players in a quick daily matchup. Each vote helps shape the shared dynasty rankings.', icon: Users, action: 'See community rankings', signal: 'ONE PICK A DAY' },
+  { href: '/scouting-portal?tab=draftboard', title: 'Make your own board', detail: 'Keep a separate draft board for each class and rank prospects in the order you believe in.', icon: ClipboardList, action: 'Build a draft board', signal: '2027 · 2028 · 2029' },
+  { href: '/league-buddy', title: 'Read your league', detail: 'See weekly lineup projections, standings, playoff odds and the MaxPF race for draft position.', icon: Shield, action: 'Open league view', signal: 'ROSTER → SEASON' },
 ]
 
 const watchlistOrder = ['Jesse Legree', 'Chris Henry Jr.', 'Legend Bey', 'Mark Bowman']
@@ -68,18 +68,20 @@ export function LandingPage() {
         </div>
       </section>}</ScrollReveal>
 
-      <ScrollReveal><section className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+      <ScrollReveal><section id="feature-breakdown" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-14 sm:px-8 sm:py-16">
         <div className="mb-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">Your workflow</p>
-          <h2 className="mt-2 text-3xl font-bold">From the scouting room to your roster</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-400">Four connected tools</p>
+          <h2 className="mt-2 text-3xl font-bold sm:text-4xl">A clearer path from prospect to plan</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">Start with the player you like. Build your class rankings, fit them into a team timeline, then use your league’s real roster and picks to decide what comes next.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {paths.map(({ href, title, detail, icon: Icon, action }, index) => (
-            <Link key={href} href={href} className="group flex min-h-60 flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-5 transition hover:border-blue-400/50 hover:bg-slate-800/80">
-              <div className="flex items-center justify-between"><Icon className="h-6 w-6 text-blue-400" /><span className="font-mono text-xs text-slate-500">0{index + 1}</span></div>
-              <h3 className="mt-8 text-xl font-bold">{title}</h3>
+          {paths.map(({ href, title, detail, icon: Icon, action, signal }, index) => (
+            <Link key={href} href={href} className="group flex min-h-56 flex-col rounded-2xl border border-white/10 bg-slate-900/70 p-5 transition duration-300 hover:-translate-y-1 hover:border-blue-400/50 hover:bg-slate-800/80">
+              <div className="flex items-center justify-between"><span className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-300/20 bg-blue-300/10"><Icon className="h-5 w-5 text-blue-300" /></span><span className="font-mono text-xs text-slate-500">0{index + 1}</span></div>
+              <p className="mt-5 font-mono text-[10px] font-semibold tracking-[0.16em] text-blue-300/80">{signal}</p>
+              <h3 className="mt-2 text-lg font-bold">{title}</h3>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-400">{detail}</p>
-              <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-blue-300 group-hover:gap-2">{action} <ArrowRight className="h-4 w-4" /></span>
+              <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-blue-300 transition-all group-hover:gap-2">{action} <ArrowRight className="h-4 w-4" /></span>
             </Link>
           ))}
         </div>

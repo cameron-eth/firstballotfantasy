@@ -32,7 +32,7 @@ const paths = [
   { href: '/scouting-portal', title: 'Scout prospects', detail: 'Explore college production, player grades, comps and draft projections.', icon: BookOpen, action: 'Open scouting' },
   { href: '/scouting-portal?tab=draftboard', title: 'Build your board', detail: 'Rank the next classes and save your own draft order.', icon: ClipboardList, action: 'Open draft board' },
   { href: '/league-buddy?tab=roster', title: 'Manage your team', detail: 'See roster strengths, positional needs and lineup decisions.', icon: Shield, action: 'View my team' },
-  { href: '/league-buddy', title: 'Run your league', detail: 'Track standings, matchups, activity and playoff outlook.', icon: Users, action: 'View league' },
+  { href: '/league-buddy', title: 'Run your league', detail: 'Track standings, draft order and playoff outlook.', icon: Users, action: 'View league' },
 ]
 
 const watchlistOrder = ['Jesse Legree', 'Chris Henry Jr.', 'Legend Bey', 'Mark Bowman']

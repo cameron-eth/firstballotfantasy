@@ -66,6 +66,7 @@ export default function BillingPage() {
   const hasLiveSubscription =
     !!billing.subscription?.stripe_subscription_id &&
     !['canceled', 'incomplete_expired', 'free'].includes(billing.subscription.status)
+  const activeTeams = data?.teams.filter((t) => t.active).length ?? 0
   const price = billing.prices.find((p: { interval: string }) => p.interval === interval)
   return (
     <>
@@ -220,7 +221,7 @@ export default function BillingPage() {
                   <h2 className="font-semibold">Your teams</h2>
                   <p className="mt-1 text-sm text-slate-400">
                     {data
-                      ? `${data.teams.filter((t) => t.active).length} active teams${data.capacity === null ? ' · Unlimited' : ` · ${data.capacity} available`}`
+                      ? `${activeTeams} active team${activeTeams === 1 ? '' : 's'}${data.capacity === null ? ' · Unlimited' : ` · ${Math.max(0, data.capacity - activeTeams)} slots available`}`
                       : 'Loading teams…'}{' '}
                     · First slot is always free
                   </p>

@@ -2,10 +2,12 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import useSWR from 'swr'
+import { useProductTour } from '@/components/onboarding/ProductTour'
 import { useAuth } from '@/lib/auth'
 import { useLeagueContext } from '@/lib/league-context'
 import { DailyRankingDialog, type DailyBallot } from './DailyRankingDialog'
 export function CommunityRankingPrompt() {
+  const { suppressBallot } = useProductTour()
   const { user, loading } = useAuth()
   const { selectedLeagueId, isLoading } = useLeagueContext()
   const pathname = usePathname()
@@ -16,6 +18,7 @@ export function CommunityRankingPrompt() {
   const [message, setMessage] = useState('')
   const [seen, setSeen] = useState('')
   const eligible =
+    !suppressBallot &&
     !!user &&
     !loading &&
     !isLoading &&

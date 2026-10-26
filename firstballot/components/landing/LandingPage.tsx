@@ -22,12 +22,10 @@ type Prospect = {
   source_url?: string
 }
 
-type ProspectSnapshot = { prospects: Prospect[]; fetchedAt: string }
-
-async function loadProspects(): Promise<ProspectSnapshot> {
+async function loadProspects(): Promise<Prospect[]> {
   const response = await fetch('/api/prospects?draft_year=all')
   if (!response.ok) throw new Error('Prospects are unavailable right now')
-  return { prospects: await response.json(), fetchedAt: new Date().toISOString() }
+  return response.json()
 }
 
 const paths = [
@@ -44,7 +42,7 @@ export function LandingPage() {
     refreshInterval: 5 * 60 * 1000,
     revalidateOnFocus: true,
   })
-  const prospects = data?.prospects ?? []
+  const prospects = data ?? []
   const currentYear = new Date().getFullYear()
   const watchlist = watchlistOrder
     .map((name) => prospects.find((player) => player.draft_year === 2029 && player.name === name))

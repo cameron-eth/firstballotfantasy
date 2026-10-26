@@ -61,7 +61,7 @@ export function CheckoutConfirmation({
           <Loader2 className="animate-spin" size={20} />
         ) : null}
         {active
-          ? 'Your team slots are ready'
+          ? 'Your membership is ready'
           : error
             ? 'Payment confirmation unavailable'
             : data?.state === 'inactive'
@@ -74,7 +74,9 @@ export function CheckoutConfirmation({
       </div>
       <p className="mt-2 text-sm text-slate-300">
         {active
-          ? `You now have ${data.capacity} team slots. Activate your next team below, then open your dashboard.`
+          ? data.capacity === null
+            ? 'Unlimited teams are unlocked. Activate your next team below, then open your dashboard.'
+            : `You now have ${data.capacity} team slots. Activate your next team below, then open your dashboard.`
           : error
             ? error.message
             : data?.state === 'inactive'

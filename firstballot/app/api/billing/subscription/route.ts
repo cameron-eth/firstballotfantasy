@@ -15,7 +15,13 @@ export async function GET(request: Request) {
             : process.env.STRIPE_TEAM_YEARLY_PRICE_ID
         if (!id) return null
         const price = await getStripe().prices.retrieve(id)
-        if (!price.active || price.recurring?.interval !== interval || price.unit_amount === null)
+        if (
+          !price.active ||
+          price.recurring?.interval !== interval ||
+          price.metadata.plan !== 'unlimited' ||
+          price.currency !== 'usd' ||
+          price.unit_amount !== (interval === 'month' ? 1200 : 7000)
+        )
           return null
         return { interval, currency: price.currency, unitAmount: price.unit_amount }
       })
@@ -24,7 +30,7 @@ export async function GET(request: Request) {
       subscription: billing,
       capacity: teamCapacity(billing),
       prices: prices.filter(Boolean),
-      dailyApiLimit: teamCapacity(billing) > 1 ? 1000 : 100,
+      dailyApiLimit: teamCapacity(billing) !== 1 ? 1000 : 100,
     })
   } catch (e) {
     return failure(e)

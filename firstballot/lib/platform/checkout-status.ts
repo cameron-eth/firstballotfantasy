@@ -23,7 +23,7 @@ export function checkoutStatus(
     session.status === 'complete' && session.subscription === billing.stripe_subscription_id
   return {
     state: matched
-      ? capacity > 1
+      ? capacity !== 1
         ? 'active'
         : 'inactive'
       : session.status === 'expired'

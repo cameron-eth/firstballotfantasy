@@ -3,15 +3,14 @@ export function teamCapacity(
   billing: { status: string; paid_slots: number; period_end: string | null } | null,
   now = Date.now()
 ) {
-  return (
-    1 +
-    (billing &&
+  const active =
+    billing &&
     ['active', 'trialing'].includes(billing.status) &&
     Date.parse(billing.period_end ?? '') > now
-      ? billing.paid_slots
-      : 0)
-  )
+  // null is an explicit unlimited entitlement, including over JSON.
+  return active ? (billing.paid_slots === -1 ? null : 1 + billing.paid_slots) : 1
 }
+
 export function freshness(expiresAt: string, observedAt: string | null, now = Date.now()) {
   if (!Number.isFinite(Date.parse(expiresAt)) || Date.parse(expiresAt) <= now)
     return 'expired' as const

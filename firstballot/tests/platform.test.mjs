@@ -7,6 +7,8 @@ const a = '00000000-0000-4000-8000-000000000001',
   b = '00000000-0000-4000-8000-000000000002'
 test('expired entitlement and exact public routes fail closed', () => {
   assert.equal(teamCapacity(null), 1)
+  assert.equal(teamCapacity({ status: 'active', paid_slots: -1, period_end: '2099-01-01' }), null)
+  assert.equal(teamCapacity({ status: 'past_due', paid_slots: -1, period_end: '2099-01-01' }), 1)
   assert.equal(teamCapacity({ status: 'active', paid_slots: 3, period_end: '2099-01-01' }), 4)
   assert.equal(teamCapacity({ status: 'active', paid_slots: 3, period_end: '2020-01-01' }), 1)
   assert.equal(teamCapacity({ status: 'past_due', paid_slots: 3, period_end: '2099-01-01' }), 1)
@@ -105,15 +107,41 @@ test('Postgres enforces account isolation, capacity, webhook idempotency and dai
       (await db.query('select price_id from billing_checkout_attempts')).rows[0].price_id,
       'price_first'
     )
+    await db.query(
+      `select apply_platform_billing('unlimited',$1,'cus_test','sub_test','active',-1,'2099-01-01',false)`,
+      [a]
+    )
+    await db.query('select activate_connected_team($1,$2,true)', [a, ids[1]])
+    // More than the prior five-team bundle must still activate.
+    for (let n = 3; n <= 8; n++) {
+      const row = await db.query(
+        `insert into connected_teams(account_id,lineage_id,league_id,roster_id,sleeper_user_id,name,season) values($1,$2,$2,1,'owner','Team',2026) returning id`,
+        [a, String(n)]
+      )
+      await db.query('select activate_connected_team($1,$2,true)', [a, row.rows[0].id])
+    }
+    assert.equal(
+      (await db.query('select count(*)::int n from connected_teams where active')).rows[0].n,
+      8
+    )
+    await db.query(
+      `select apply_platform_billing('unlimited-cancel',$1,'cus_test','sub_test','canceled',-1,'2099-01-01',false)`,
+      [a]
+    )
+    assert.equal(
+      (await db.query('select count(*)::int n from connected_teams where active')).rows[0].n,
+      1
+    )
     await db.exec(`set role authenticated; set request.jwt.claim.sub='${b}'`)
     assert.equal((await db.query('select * from connected_teams')).rows.length, 0)
     await assert.rejects(db.query('select * from api_access_tokens'), /permission denied/)
+    await assert.rejects(db.query('select * from billing_feedback'), /permission denied/)
     await assert.rejects(
       db.query('select activate_connected_team($1,$2,true)', [a, ids[1]]),
       /permission denied/
     )
     await db.exec(`set request.jwt.claim.sub='${a}'`)
-    assert.equal((await db.query('select * from connected_teams')).rows.length, 2)
+    assert.equal((await db.query('select * from connected_teams')).rows.length, 8)
     await assert.rejects(db.query('update account_billing set paid_slots=99'), /permission denied/)
   } finally {
     await db.close()

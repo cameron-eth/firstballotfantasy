@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     if (error) throw error
     return json({
       used: count ?? 0,
-      limit: teamCapacity(billing) > 1 ? 1000 : 100,
+      limit: teamCapacity(billing) !== 1 ? 1000 : 100,
       resetsAt: new Date(start.getTime() + 86400000).toISOString(),
       overageCharges: false,
     })

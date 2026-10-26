@@ -16,7 +16,8 @@ export function useAuthForm() {
 
     try {
       await signIn(email, password)
-      router.push('/')
+      const destination = new URLSearchParams(window.location.search).get('redirect')
+      router.push(destination === '/billing' ? '/billing' : '/')
     } catch (err) {
       setError('Failed to log in. Please check your credentials.')
       console.error(err)

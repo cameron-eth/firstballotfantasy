@@ -31,7 +31,7 @@ export function TeamActivation({ leagueId, children }: { leagueId: string; child
       const b = await r.json()
       if (!r.ok) throw new Error(b.error)
       if (b.needsUpgrade)
-        setNotice('Your team is connected. Add a slot or archive another team to activate it.')
+        setNotice('Your team is connected. Upgrade to Unlimited or archive another team to activate it.')
       await mutate()
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Unable to activate team.')

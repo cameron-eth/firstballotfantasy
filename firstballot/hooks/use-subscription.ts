@@ -25,15 +25,15 @@ export function useSubscription() {
   return {
     subscription: data?.subscription,
     prices: data?.prices ?? [],
-    capacity: data?.capacity ?? 1,
+    capacity: data ? data.capacity : 1,
     dailyApiLimit: data?.dailyApiLimit ?? 100,
     loading: !!user && isLoading,
     error: error?.message,
-    isSubscribed: (data?.capacity ?? 1) > 1,
-    isPro: (data?.capacity ?? 1) > 1,
+    isSubscribed: !!data && data.capacity !== 1,
+    isPro: !!data && data.capacity !== 1,
     refetch: mutate,
     createCheckoutSession: (interval: string, quantity: number) =>
       post('/api/billing/create-checkout-session', { interval, quantity }),
-    openCustomerPortal: () => post('/api/billing/portal'),
+    openCustomerPortal: (cancel = false) => post('/api/billing/portal', { cancel }),
   }
 }

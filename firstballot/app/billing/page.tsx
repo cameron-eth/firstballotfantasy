@@ -2,6 +2,7 @@
 import { Suspense, useState } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
+import { MembershipHero } from '@/components/billing/MembershipHero'
 import { CheckoutReturn } from '@/components/billing/CheckoutReturn'
 import { Header } from '@/components/header'
 import { useAuth } from '@/lib/auth'
@@ -15,15 +16,14 @@ async function loadTeams() {
   const r = await fetch('/api/account/teams')
   const b = await r.json()
   if (!r.ok) throw new Error(b.error)
-  return b as { teams: Team[]; capacity: number }
+  return b as { teams: Team[]; capacity: number | null }
 }
 export default function BillingPage() {
   const { user, loading: authLoading } = useAuth(),
     { leagues } = useLeagueContext()
   const billing = useSubscription(),
     { data, error, mutate } = useSWR(user ? ['teams', user.id] : null, loadTeams)
-  const [quantity, setQuantity] = useState(1),
-    [interval, setInterval] = useState('month'),
+  const [interval, setInterval] = useState('month'),
     [busy, setBusy] = useState(''),
     [notice, setNotice] = useState('')
   async function act(action: string, extra: object) {
@@ -39,7 +39,7 @@ export default function BillingPage() {
       if (!r.ok) throw new Error(b.error)
       setNotice(
         b.needsUpgrade
-          ? 'Team connected. Add a slot or archive another team to activate it.'
+          ? 'Team connected. Upgrade to Unlimited or archive another team to activate it.'
           : 'Team updated. Your saved plans are preserved.'
       )
       await mutate()
@@ -49,14 +49,14 @@ export default function BillingPage() {
       setBusy('')
     }
   }
-  async function checkout(portal = false) {
+  async function checkout(portal = false, cancel = false) {
     setBusy('billing')
     setNotice('')
     try {
       window.location.assign(
         portal
-          ? await billing.openCustomerPortal()
-          : await billing.createCheckoutSession(interval, quantity)
+          ? await billing.openCustomerPortal(cancel)
+          : await billing.createCheckoutSession(interval, 1)
       )
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Billing unavailable.')
@@ -67,21 +67,138 @@ export default function BillingPage() {
     !!billing.subscription?.stripe_subscription_id &&
     !['canceled', 'incomplete_expired', 'free'].includes(billing.subscription.status)
   const price = billing.prices.find((p: { interval: string }) => p.interval === interval)
-  const amount = price
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: price.currency }).format(
-        (price.unitAmount * quantity) / 100
-      )
-    : null
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-4xl px-4 py-10 text-slate-100">
-        <p className="text-xs uppercase tracking-widest text-blue-300">Your membership</p>
-        <h1 className="mt-2 text-3xl font-semibold">One team free. Room to grow.</h1>
-        <p className="mt-3 max-w-2xl text-slate-400">
-          Scout, rank and plan with your first team. Add more active teams when you’re ready. Every
-          membership gets the same data quality.
-        </p>
+      <main className="mx-auto max-w-7xl px-5 pb-16 text-slate-100 sm:px-8">
+        <MembershipHero />
+        <section
+          id="membership"
+          aria-label="Membership plans"
+          className="grid scroll-mt-24 gap-5 md:grid-cols-[0.85fr_1.15fr]"
+        >
+          <div className="rounded-3xl border border-slate-700 bg-slate-900/50 p-7 sm:p-9">
+            <p className="text-sm font-semibold text-blue-300">THE FIRST TEAM</p>
+            <h2 className="mt-3 text-4xl font-semibold">
+              Free
+              <span className="ml-2 text-base font-normal text-slate-400">to get in the game</span>
+            </h2>
+            <p className="mt-4 text-slate-300">One active team. A whole new way to see it.</p>
+            <ul className="mt-6 space-y-3 text-sm text-slate-300">
+              {[
+                'Your roster, standings and player trends',
+                'College scouting and your own draft board',
+                'Visual team planning on desktop',
+                'Community rankings: make your voice count',
+              ].map((item) => (
+                <li key={item} className="flex gap-3">
+                  <Check size={17} className="shrink-0 text-blue-300" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link href={user ? '/league-buddy' : '/login'} className={`${button} mt-7 w-full`}>
+              {user ? 'Open my team' : 'Start free'}
+            </Link>
+          </div>
+          <div className="relative overflow-hidden rounded-3xl border border-amber-300/50 bg-[#171b24] p-7 sm:p-9">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-amber-300">FIRST BALLOT UNLIMITED</p>
+              <span className="rounded-full bg-amber-300/10 px-3 py-1 text-xs text-amber-200">
+                Every league. One membership.
+              </span>
+            </div>
+            <div
+              className="mt-5 inline-flex rounded-xl bg-slate-950 p-1"
+              aria-label="Billing interval"
+            >
+              {['month', 'year'].map((value) => (
+                <button
+                  key={value}
+                  aria-pressed={interval === value}
+                  onClick={() => setInterval(value)}
+                  className={`rounded-lg px-4 py-2 text-sm font-medium ${interval === value ? 'bg-amber-300 text-slate-950' : 'text-slate-300 hover:text-white'}`}
+                >
+                  {value === 'month' ? 'Monthly' : 'Annual · save $74'}
+                </button>
+              ))}
+            </div>
+            <p className="mt-5 text-5xl font-semibold tracking-tight">
+              {interval === 'month' ? '$12' : '$70'}
+              <span className="text-base font-normal tracking-normal text-slate-400">
+                {' '}
+                / {interval === 'month' ? 'month' : 'year'}
+              </span>
+            </p>
+            <p className="mt-2 text-sm text-slate-400">
+              {interval === 'year'
+                ? '$5.83/month equivalent, billed $70 annually.'
+                : 'Billed monthly. Cancel before your next renewal.'}
+            </p>
+            <ul className="mt-6 space-y-3 text-sm text-slate-200">
+              {[
+                'Unlimited active teams under one account',
+                'Every Free feature, across all your leagues',
+                'Keep separate boards and plans for each team',
+                '1,000 API requests/day · scoped access controls',
+              ].map((item) => (
+                <li key={item} className="flex gap-3">
+                  <Check size={17} className="shrink-0 text-amber-300" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            {!user ? (
+              <Link
+                href="/login?redirect=/billing"
+                className={`${button} mt-7 w-full border-amber-300 bg-amber-300 !text-slate-950`}
+              >
+                Sign in to upgrade <ArrowUpRight size={16} />
+              </Link>
+            ) : (
+              <button
+                disabled={
+                  !!busy || billing.loading || !!billing.error || (!hasLiveSubscription && !price)
+                }
+                onClick={() => checkout(hasLiveSubscription)}
+                className={`${button} mt-7 w-full border-amber-300 bg-amber-300 !text-slate-950`}
+              >
+                {busy === 'billing' ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <ArrowUpRight size={16} />
+                )}
+                {hasLiveSubscription
+                  ? 'Manage my membership'
+                  : price
+                    ? 'Go Unlimited'
+                    : 'Paid membership opens soon'}
+              </button>
+            )}
+            <p className="mt-3 text-xs text-slate-400">
+              Secure checkout with Stripe. Review your total before paying. No charge for
+              discovering teams.
+            </p>
+          </div>
+        </section>
+        <div className="my-8 grid gap-6 border-y border-slate-800 py-6 text-sm sm:grid-cols-3">
+          {[
+            [
+              'Scout ahead',
+              'Follow college prospects before they become everyone else’s draft target.',
+            ],
+            ['Plan the next move', 'Explore roster fits and trade ideas on your desktop team map.'],
+            [
+              'Keep your work',
+              'Canceling keeps your boards and plans. Your first team stays free.',
+            ],
+          ].map(([title, text]) => (
+            <div key={title}>
+              <h3 className="font-semibold text-white">{title}</h3>
+              <p className="mt-2 leading-relaxed text-slate-400">{text}</p>
+            </div>
+          ))}
+        </div>
         <Suspense fallback={null}>
           <CheckoutReturn />
         </Suspense>
@@ -103,7 +220,7 @@ export default function BillingPage() {
                   <h2 className="font-semibold">Your teams</h2>
                   <p className="mt-1 text-sm text-slate-400">
                     {data
-                      ? `${data.teams.filter((t) => t.active).length} of ${data.capacity} slots active`
+                      ? `${data.teams.filter((t) => t.active).length} active teams${data.capacity === null ? ' · Unlimited' : ` · ${data.capacity} available`}`
                       : 'Loading teams…'}{' '}
                     · First slot is always free
                   </p>
@@ -173,65 +290,18 @@ export default function BillingPage() {
                 </p>
               )}
             </section>
-            <section className="mt-5 rounded-2xl border border-slate-700 p-6">
-              <h2 className="font-semibold">Add team slots</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                One subscription covers your extra teams. Discovering leagues never adds a charge.
-              </p>
-              {billing.prices.length ? (
-                <>
-                  <div className="mt-5 flex flex-wrap items-end gap-4">
-                    <label className="text-sm text-slate-400">
-                      Additional slots
-                      <input
-                        aria-label="Additional team slots"
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={quantity}
-                        onChange={(e) =>
-                          setQuantity(Math.max(1, Math.min(100, Number(e.target.value) || 1)))
-                        }
-                        className="mt-2 block w-24 rounded-lg border border-slate-700 bg-slate-900 p-2 text-white"
-                      />
-                    </label>
-                    <div className="flex gap-2">
-                      {billing.prices.map((p: { interval: string }) => (
-                        <button
-                          key={p.interval}
-                          className={`${button} ${interval === p.interval ? 'border-blue-400 bg-blue-400/10' : ''}`}
-                          onClick={() => setInterval(p.interval)}
-                        >
-                          {p.interval === 'month' ? 'Monthly' : 'Yearly'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="mt-4 text-xl font-semibold">
-                    {amount} / {interval}{' '}
-                    <span className="text-sm font-normal text-slate-400">
-                      for {quantity + 1} total teams
-                    </span>
-                  </p>
-                  <button
-                    disabled={!!busy || !price || billing.loading || !!billing.error}
-                    onClick={() => checkout(hasLiveSubscription)}
-                    className={`${button} mt-4 border-blue-400 bg-blue-500/20`}
-                  >
-                    {busy === 'billing' && <Loader2 className="animate-spin" size={16} />}Review{' '}
-                    {hasLiveSubscription ? 'subscription' : 'checkout'}
-                  </button>
-                  <p className="mt-3 text-xs text-slate-500">
-                    Review the full total before paying. On downgrade, keep your chosen teams active
-                    by archiving the others first.
-                  </p>
-                </>
-              ) : (
-                <p className="mt-4 text-sm text-blue-200">
-                  Paid slots are not open yet. Your first team is free.
-                </p>
-              )}
-            </section>
+            {hasLiveSubscription && (
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
+                <p>Update payment details, change billing interval or cancel your membership.</p>
+                <button
+                  disabled={!!busy}
+                  onClick={() => checkout(true, true)}
+                  className="underline underline-offset-4 hover:text-white disabled:opacity-40"
+                >
+                  Cancel membership
+                </button>
+              </div>
+            )}
             <Link href="/settings" className={`${button} mt-5`}>
               Settings & API access <ArrowUpRight size={15} />
             </Link>

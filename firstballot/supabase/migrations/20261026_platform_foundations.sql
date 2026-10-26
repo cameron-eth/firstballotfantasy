@@ -2,7 +2,7 @@ begin;
 create table public.account_billing (
  account_id uuid primary key references auth.users(id) on delete cascade,
  stripe_customer_id text unique, stripe_subscription_id text unique,
- status text not null default 'free', paid_slots integer not null default 0 check(paid_slots between 0 and 100),
+ status text not null default 'free', paid_slots integer not null default 0 check(paid_slots between -1 and 100),
  period_end timestamptz, cancel_at_period_end boolean not null default false,
  updated_at timestamptz not null default now()
 );
@@ -66,7 +66,7 @@ declare capacity integer; used integer;
 begin
  perform pg_advisory_xact_lock(hashtextextended(p_account::text,0));
  if not exists(select 1 from connected_teams where id=p_team and account_id=p_account) then raise exception 'TEAM_NOT_FOUND'; end if;
- select 1 + coalesce((select case when status in ('active','trialing') and period_end > now() then paid_slots else 0 end from account_billing where account_id=p_account),0) into capacity;
+ select case when exists(select 1 from account_billing where account_id=p_account and status in ('active','trialing') and period_end>now() and paid_slots=-1) then null else 1 + coalesce((select case when status in ('active','trialing') and period_end>now() then paid_slots else 0 end from account_billing where account_id=p_account),0) end into capacity;
  select count(*) into used from connected_teams where account_id=p_account and active and id<>p_team;
  if p_active and used>=capacity then raise exception 'TEAM_LIMIT'; end if;
  update connected_teams set active=p_active,activated_at=case when p_active then coalesce(activated_at,now()) else activated_at end where id=p_team;
@@ -99,10 +99,12 @@ begin
  values(p_account,p_customer,p_subscription,p_status,p_slots,p_end,p_cancel,p_observed)
  on conflict(account_id) do update set stripe_customer_id=excluded.stripe_customer_id,stripe_subscription_id=excluded.stripe_subscription_id,status=excluded.status,paid_slots=excluded.paid_slots,period_end=excluded.period_end,cancel_at_period_end=excluded.cancel_at_period_end,updated_at=p_observed;
  -- Preserve plans and archived connections on downgrade. Oldest active teams keep available slots.
+ if not (p_status in ('active','trialing') and p_end>now() and p_slots=-1) then
  update connected_teams set active=false where id in (
   select id from connected_teams where account_id=p_account and active order by activated_at,id
   offset (case when p_status in ('active','trialing') and p_end>now() then 1+p_slots else 1 end)
  );
+ end if;
  insert into billing_events(event_id) values(p_event);
 end $$;
 revoke all on function public.activate_connected_team(uuid,uuid,boolean),public.consume_platform_usage(uuid,uuid,text,text),public.apply_platform_billing(text,uuid,text,text,text,integer,timestamptz,boolean,timestamptz) from public,anon,authenticated;
@@ -130,4 +132,13 @@ alter table public.billing_checkout_attempts enable row level security;
 revoke all on public.billing_checkout_attempts from anon, authenticated;
 grant all on public.billing_checkout_attempts to service_role;
 
+-- Private cancellation feedback and retention history; written before billing event acknowledgement.
+create table public.billing_feedback (
+ event_id text primary key, account_id uuid not null references auth.users(id) on delete cascade,
+ subscription_id text not null, feedback text, comment text, reason text,
+ retention_redeemed boolean not null default false, created_at timestamptz not null default now()
+);
+alter table public.billing_feedback enable row level security;
+revoke all on public.billing_feedback from anon, authenticated;
+grant all on public.billing_feedback to service_role;
 commit;

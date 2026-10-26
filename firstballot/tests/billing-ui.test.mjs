@@ -7,7 +7,7 @@ const dom = new JSDOM('<div id="app"></div>', { url: 'http://localhost/billing' 
 globalThis.self = dom.window
 globalThis.window = dom.window
 globalThis.document = dom.window.document
-globalThis.navigator = dom.window.navigator
+Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true })
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 const React = await import('react'),
   { createRoot } = await import('react-dom/client'),
@@ -50,13 +50,13 @@ test('checkout return waits for verified activation and Check again reveals unlo
   let state = { state: 'processing', capacity: 1 }
   const view = await render(() => state)
   assert.match(document.body.textContent, /waiting for payment confirmation/)
-  assert.doesNotMatch(document.body.textContent, /Your team slots are ready/)
+  assert.doesNotMatch(document.body.textContent, /Your membership is ready/)
   state = { state: 'active', capacity: 3 }
   await act(async () => {
     document.querySelector('button').click()
     await new Promise((r) => setTimeout(r, 30))
   })
-  assert.match(document.body.textContent, /Your team slots are ready/)
+  assert.match(document.body.textContent, /Your membership is ready/)
   assert.match(document.body.textContent, /3 team slots/)
   assert.equal(document.querySelector('a').getAttribute('href'), '/league-buddy')
   assert.ok(view.calls >= 2)
@@ -168,8 +168,15 @@ test('Full-slot activation leaves workspace locked and offers Manage team slots'
     view.finish()
     await new Promise((r) => setTimeout(r, 30))
   })
-  assert.match(document.body.textContent, /Add a slot or archive another team/)
+  assert.match(document.body.textContent, /Upgrade to Unlimited or archive another team/)
   assert.doesNotMatch(document.body.textContent, /TEAM_WORKSPACE/)
   assert.equal(document.querySelector('a').getAttribute('href'), '/billing')
+  await close(view.root)
+})
+
+test('unlimited checkout confirmation names the entitlement instead of displaying null slots', async () => {
+  const view = await render(() => ({ state: 'active', capacity: null }))
+  assert.match(document.body.textContent, /Unlimited teams are unlocked/)
+  assert.doesNotMatch(document.body.textContent, /null team slots/)
   await close(view.root)
 })

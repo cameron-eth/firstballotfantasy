@@ -28,7 +28,7 @@ export async function teamsFor(principal: Principal) {
   const capacity = teamCapacity(await billingFor(principal.accountId))
   let count = 0
   return (data ?? [])
-    .map((t) => ({ ...t, active: t.active && ++count <= capacity }))
+    .map((t) => ({ ...t, active: t.active && (capacity === null || ++count <= capacity) }))
     .filter((t) => principal.teamIds === null || principal.teamIds.includes(t.id))
 }
 export async function requireTeam(principal: Principal, id: string) {

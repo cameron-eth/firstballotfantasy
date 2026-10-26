@@ -4,6 +4,7 @@ export type BillingStore = {
   findCustomer(
     id: string
   ): Promise<{ account_id: string; stripe_subscription_id: string | null } | null>
+  feedback?(values: Record<string, unknown>): Promise<void>
   apply(values: Record<string, unknown>): Promise<void>
 }
 export async function reconcileBilling(
@@ -35,7 +36,9 @@ export async function reconcileBilling(
   if (!subscriptionId) return
   // Fetch current state rather than applying an old webhook's payload after a newer one.
   const observedAt = new Date().toISOString()
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ['discounts'],
+  })
   const customerId =
     typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
   const account = await store.findCustomer(customerId)
@@ -54,9 +57,26 @@ export async function reconcileBilling(
   if (items.length !== 1)
     throw new PlatformError(503, 'UNKNOWN_PRODUCT', 'Subscription product is not configured.')
   const item = items[0],
-    slots = item.quantity ?? 0
-  if (slots < 1 || slots > 100)
+    quantity = item.quantity ?? 0,
+    slots = item.price.metadata?.plan === 'unlimited' ? -1 : quantity
+  if (quantity < 1 || quantity > 100 || (slots === -1 && quantity !== 1))
     throw new PlatformError(503, 'INVALID_QUANTITY', 'Invalid team-slot quantity.')
+  const details = subscription.cancellation_details
+  const retained =
+    subscription.discounts?.some(
+      (d) => typeof d !== 'string' && d.coupon?.id === process.env.STRIPE_RETENTION_COUPON_ID
+    ) ?? false
+  if (store.feedback && (details?.feedback || details?.comment || details?.reason || retained)) {
+    await store.feedback({
+      event_id: event.id,
+      account_id: account.account_id,
+      subscription_id: subscription.id,
+      feedback: details?.feedback ?? null,
+      comment: details?.comment ?? null,
+      reason: details?.reason ?? null,
+      retention_redeemed: retained,
+    })
+  }
   await store.apply({
     p_event: event.id,
     p_account: account.account_id,

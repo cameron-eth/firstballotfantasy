@@ -34,6 +34,10 @@ export async function POST(request: Request) {
           if (error) throw error
           return data
         },
+        async feedback(values) {
+          const { error } = await supabaseAdmin.from('billing_feedback').upsert(values, { onConflict: 'event_id' })
+          if (error) throw error
+        },
         async apply(values) {
           const { error } = await supabaseAdmin.rpc('apply_platform_billing', values)
           if (error) throw error

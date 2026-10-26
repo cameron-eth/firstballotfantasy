@@ -1,4 +1,5 @@
 import 'server-only'
+import { retentionEligible } from './platform/retention'
 import { getStripe, billingPrice, siteUrl } from './stripe'
 import { supabaseAdmin } from './supabase-server'
 import { billingFor } from './platform/teams'
@@ -9,6 +10,12 @@ export class SubscriptionService {
     return billingFor(accountId)
   }
   static async createCheckoutSession(p: Principal, interval: 'month' | 'year', quantity: number) {
+    if (quantity !== 1)
+      throw new PlatformError(
+        400,
+        'INVALID_PLAN',
+        'Unlimited membership has one subscription per account.'
+      )
     const stripe = getStripe(),
       priceId = billingPrice(interval)
     const account = await billingFor(p.accountId)
@@ -19,14 +26,17 @@ export class SubscriptionService {
       throw new PlatformError(
         409,
         'EXISTING_SUBSCRIPTION',
-        'Manage your existing subscription to change team slots.'
+        'Manage your existing subscription to manage your membership.'
       )
     const price = await stripe.prices.retrieve(priceId)
     if (
       !price.active ||
       price.type !== 'recurring' ||
       price.recurring?.interval !== interval ||
-      price.recurring?.usage_type !== 'licensed'
+      price.recurring?.usage_type !== 'licensed' ||
+      price.currency !== 'usd' ||
+      price.unit_amount !== (interval === 'month' ? 1200 : 7000) ||
+      price.metadata.plan !== 'unlimited'
     )
       throw new PlatformError(503, 'INVALID_PRICE', 'Billing price configuration needs attention.')
     let customerId = account?.stripe_customer_id
@@ -56,7 +66,10 @@ export class SubscriptionService {
     if (readError) throw readError
     if (attempt.session_id) {
       const existing = await stripe.checkout.sessions.retrieve(attempt.session_id)
-      if (existing.status === 'open') return existing
+      if (existing.status === 'open') {
+        if (attempt.price_id === priceId && attempt.quantity === 1) return existing
+        await stripe.checkout.sessions.expire(existing.id)
+      }
       if (
         existing.status === 'complete' &&
         !(
@@ -77,7 +90,7 @@ export class SubscriptionService {
       throw new PlatformError(
         409,
         'CHECKOUT_EXPIRED',
-        'The previous checkout expired. Please retry with your chosen slots.'
+        'The previous checkout expired. Please retry with your chosen membership.'
       )
     }
     // Stripe keeps idempotency results for at least 24h. Never replay an unresolved
@@ -112,13 +125,66 @@ export class SubscriptionService {
     if (saveError) throw saveError
     return session
   }
-  static async createPortalSession(accountId: string) {
+  static async createPortalSession(accountId: string, cancel = false) {
     const account = await billingFor(accountId)
     if (!account?.stripe_customer_id)
       throw new PlatformError(409, 'NO_CUSTOMER', 'No billing account yet.')
-    return getStripe().billingPortal.sessions.create({
+    const stripe = getStripe()
+    const configuration = process.env.STRIPE_PORTAL_CONFIGURATION_ID
+    if (!configuration)
+      throw new PlatformError(
+        503,
+        'PORTAL_NOT_CONFIGURED',
+        'Billing management is being prepared. Please retry shortly.'
+      )
+    let flow_data: import('stripe').default.BillingPortal.SessionCreateParams.FlowData | undefined
+    if (cancel) {
+      if (!account.stripe_subscription_id)
+        throw new PlatformError(409, 'NO_SUBSCRIPTION', 'No subscription to cancel.')
+      const sub = await stripe.subscriptions.retrieve(account.stripe_subscription_id)
+      const customer = typeof sub.customer === 'string' ? sub.customer : sub.customer.id
+      if (customer !== account.stripe_customer_id)
+        throw new PlatformError(
+          403,
+          'CUSTOMER_MISMATCH',
+          'Subscription does not belong to this account.'
+        )
+      const { data: used, error } = await supabaseAdmin
+        .from('billing_feedback')
+        .select('event_id')
+        .eq('account_id', accountId)
+        .eq('retention_redeemed', true)
+        .limit(1)
+      if (error) throw error
+      const couponId = process.env.STRIPE_RETENTION_COUPON_ID
+      const eligible =
+        couponId && retentionEligible(sub, process.env.STRIPE_TEAM_MONTHLY_PRICE_ID, !!used?.length)
+      let retention:
+        | import('stripe').default.BillingPortal.SessionCreateParams.FlowData.SubscriptionCancel.Retention
+        | undefined
+      if (eligible) {
+        const coupon = await stripe.coupons.retrieve(couponId)
+        if (
+          coupon.valid &&
+          coupon.amount_off === 601 &&
+          coupon.currency === 'usd' &&
+          coupon.duration === 'repeating' &&
+          coupon.duration_in_months === 3
+        ) {
+          retention = { type: 'coupon_offer', coupon_offer: { coupon: coupon.id } }
+        }
+      }
+      flow_data = {
+        type: 'subscription_cancel',
+        subscription_cancel: { subscription: sub.id, ...(retention ? { retention } : {}) },
+        after_completion: { type: 'redirect', redirect: { return_url: `${siteUrl()}/billing` } },
+      }
+    }
+    return stripe.billingPortal.sessions.create({
+      configuration,
       customer: account.stripe_customer_id,
       return_url: `${siteUrl()}/billing`,
+      ...(flow_data ? { flow_data } : {}),
     })
   }
 }

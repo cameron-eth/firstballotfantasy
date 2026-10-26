@@ -7,20 +7,10 @@ export async function POST(request: Request) {
       input = await body(request)
     if (
       !['month', 'year'].includes(input.interval) ||
-      !Number.isInteger(input.quantity) ||
-      input.quantity < 1 ||
-      input.quantity > 100
+      (input.quantity !== undefined && input.quantity !== 1)
     )
-      throw new PlatformError(
-        400,
-        'INVALID_PLAN',
-        'Choose a billing interval and 1–100 additional team slots.'
-      )
-    const session = await SubscriptionService.createCheckoutSession(
-      p,
-      input.interval,
-      input.quantity
-    )
+      throw new PlatformError(400, 'INVALID_PLAN', 'Choose monthly or annual Unlimited membership.')
+    const session = await SubscriptionService.createCheckoutSession(p, input.interval, 1)
     return json({ url: session.url })
   } catch (e) {
     return failure(e)

@@ -1,211 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-server'
+import type { DynastyTier, TierFormat } from '@/lib/dynasty-tiers'
 
-// Force dynamic to always get fresh data
 export const dynamic = 'force-dynamic'
-
-/**
- * Calculate where a given score would rank in the overall rankings
- */
-function calculateRankForScore(score: number, sortedRankings: any[]): number {
-  // Find the first player with a score less than or equal to the given score
-  for (let i = 0; i < sortedRankings.length; i++) {
-    if (sortedRankings[i].total_score <= score) {
-      return i + 1
-    }
-  }
-  // If score is higher than all players, it's rank 1
-  return 1
-}
-
-/**
- * Get rank for a specific player by name
- */
-function getPlayerRank(playerName: string, rankings: any[]): number | null {
-  const player = rankings.find((p) => p.player_name === playerName)
-  return player ? player.rank : null
-}
+type Identity = { name: string; position: string; team: string | null; age: number | null; espnId: string; draftYear: number | null }
+type Payload = { players: Record<TierFormat, Record<string, DynastyTier>>; identity: Record<string, Identity> }
 
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const playerName = searchParams.get('player')
-    const score = searchParams.get('score')
-    const search = searchParams.get('search') // For autocomplete
-
-    // Get rankings data (headshot_url and espn_id should now be in the table)
-    const { data, error } = await supabaseServer
-      .from('dynasty_player_tiers')
-      .select('*')
-      .order('total_score', { ascending: false })
-
-    if (error) {
-      throw error
-    }
-
-    // Handle search/autocomplete query. If search is blank, return top-ranked players.
-    if (search !== null) {
-      const searchLower = search.trim().toLowerCase()
-      const source = data || []
-      const matches =
-        searchLower.length === 0
-          ? source.slice(0, 20).map((player: any, index: number) => ({
-              player_name: player.player_name,
-              position: player.position,
-              team: player.team,
-              headshot_url: player.headshot_url || null,
-              espn_id: player.espn_id || null,
-              rank: index + 1,
-            }))
-          : source
-              .map((player: any, index: number) => {
-                const name = player.player_name?.toLowerCase() || ''
-                if (name.includes(searchLower)) {
-                  return {
-                    player_name: player.player_name,
-                    position: player.position,
-                    team: player.team,
-                    headshot_url: player.headshot_url || null,
-                    espn_id: player.espn_id || null,
-                    rank: index + 1,
-                  }
-                }
-                return null
-              })
-              .filter((player): player is NonNullable<typeof player> => player !== null)
-              .slice(0, 20)
-
-      return NextResponse.json(
-        { players: matches },
-        {
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
-        }
-      )
-    }
-
-    // Transform data to create a player lookup map with backward compatibility
-    const playerRankings = (data || []).map((player: any, index: number) => {
-      // Convert total_score from string to number if needed
-      const totalScore =
-        typeof player.total_score === 'string' ? parseFloat(player.total_score) : player.total_score
-      const draftYearRaw = player.draft_year ?? player.draft_class ?? null
-      const draftYear =
-        draftYearRaw === null || draftYearRaw === undefined || draftYearRaw === ''
-          ? null
-          : Number(draftYearRaw)
-
-      return {
-        player_id: player.player_id,
-        player_name: player.player_name,
-        position: player.position,
-        team: player.team,
-        age: player.age,
-        total_score: totalScore,
-        tier: player.tier,
-        draft_year: Number.isFinite(draftYear) ? draftYear : null,
-        draft_class: Number.isFinite(draftYear) ? draftYear : null,
-        headshot_url: player.headshot_url || null,
-        espn_id: player.espn_id || null,
-        // Backward compatibility fields
-        rank: index + 1,
-        RK: index + 1,
-        'PLAYER NAME': player.player_name,
-        POS: player.position,
-        TEAM: player.team,
-        // Score components
-        age_score: player.age_score,
-        draft_capital_score: player.draft_capital_score,
-        recent_form_score: player.recent_form_score,
-        volume_score: player.volume_score,
-        td_efficiency_score: player.td_efficiency_score,
-        versatility_score: player.versatility_score,
-        epa_efficiency_score: player.epa_efficiency_score,
-      }
-    })
-
-    // Handle specific queries
-    if (playerName) {
-      const rank = getPlayerRank(playerName, playerRankings)
-      if (rank === null) {
-        return NextResponse.json({ error: 'Player not found' }, { status: 404 })
-      }
-      const player = playerRankings[rank - 1]
-      const { player_name, rank: playerRank, ...rest } = player
-      return NextResponse.json(
-        {
-          player_name: playerName,
-          rank,
-          ...rest,
-        },
-        {
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
-        }
-      )
-    }
-
-    if (score) {
-      const scoreNum = parseFloat(score)
-      if (isNaN(scoreNum)) {
-        return NextResponse.json({ error: 'Invalid score' }, { status: 400 })
-      }
-      const rank = calculateRankForScore(scoreNum, playerRankings)
-      return NextResponse.json(
-        {
-          score: scoreNum,
-          rank,
-        },
-        {
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
-        }
-      )
-    }
-
-    // Also create lookup map for easy access
-    const rankingsMap = playerRankings.reduce((acc: any, player: any) => {
-      const playerName = player.player_name
-      if (playerName) {
-        acc[playerName] = {
-          rank: player.rank,
-          position: player.position,
-          team: player.team,
-          name: playerName,
-          total_score: player.total_score,
-          tier: player.tier,
-          headshot_url: player.headshot_url || null,
-          espn_id: player.espn_id || null,
-        }
-      }
-      return acc
-    }, {})
-
-    // Return with no-cache headers to ensure fresh data
-    return NextResponse.json(
-      {
-        data: playerRankings,
-        rankingsMap,
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          Pragma: 'no-cache',
-          Expires: '0',
-        },
-      }
-    )
-  } catch (error) {
-    console.error('Error fetching rankings:', error)
-    return NextResponse.json({ error: 'Failed to fetch rankings' }, { status: 500 })
+  const { data, error } = await supabaseAdmin.from('data_snapshots')
+    .select('payload,expires_at,fetched_at').eq('key', 'dynasty:tiers:v1').maybeSingle()
+  if (error || !data || Date.parse(data.expires_at) <= Date.now())
+    return NextResponse.json({ error: 'Current rankings are unavailable' }, { status: 503,
+      headers: { 'Cache-Control': 'no-store' } })
+  const payload = data.payload as Payload
+  const maxAge = Math.max(0, Math.min(300, Math.floor((Date.parse(data.expires_at) - Date.now()) / 1000)))
+  const format: TierFormat = request.nextUrl.searchParams.get('format') === 'one_qb' ? 'one_qb' : 'sf'
+  const rankings = Object.entries(payload.players[format] ?? {}).flatMap(([id, tier]) => {
+    const person = payload.identity[id]
+    if (!person) return []
+    return [{
+      player_id: id, player_name: person.name, position: person.position, team: person.team ?? '',
+      age: person.age, espn_id: person.espnId || null,
+      headshot_url: person.espnId ? `https://a.espncdn.com/i/headshots/nfl/players/full/${person.espnId}.png` : null,
+      draft_year: person.draftYear, draft_class: person.draftYear,
+      rank: tier.rank, RK: tier.rank, 'PLAYER NAME': person.name, POS: person.position, TEAM: person.team ?? '',
+      total_score: tier.score, tier: `${tier.name} (Tier ${tier.number})`, factors: tier.factors,
+    }]
+  }).sort((a, b) => a.rank - b.rank)
+  const search = request.nextUrl.searchParams.get('search')
+  if (search !== null) return NextResponse.json({ players: rankings.filter((p) =>
+    p.player_name.toLowerCase().includes(search.toLowerCase())).slice(0, 20) },
+  { headers: { 'Cache-Control': `public, max-age=${maxAge}` } })
+  const playerName = request.nextUrl.searchParams.get('player')
+  if (playerName) {
+    const found = rankings.find((p) => p.player_name.toLowerCase() === playerName.toLowerCase())
+    return found ? NextResponse.json(found) : NextResponse.json({ error: 'Player not found' }, { status: 404 })
   }
+  const scoreQuery = request.nextUrl.searchParams.get('score')
+  if (scoreQuery !== null) {
+    const score = Number(scoreQuery)
+    if (!Number.isFinite(score) || score < 0 || score > 100)
+      return NextResponse.json({ error: 'Score must be between 0 and 100' }, { status: 400 })
+    return NextResponse.json({ score, rank: rankings.find((p) => p.total_score <= score)?.rank ?? rankings.length + 1 })
+  }
+  return NextResponse.json({ data: rankings, fetchedAt: data.fetched_at,
+    rankingsMap: Object.fromEntries(rankings.map((p) => [p.player_name, {
+      rank: p.rank, position: p.position, team: p.team, name: p.player_name,
+      total_score: p.total_score, tier: p.tier, headshot_url: p.headshot_url, espn_id: p.espn_id,
+    }])) }, { headers: { 'Cache-Control': `public, max-age=${maxAge}` } })
 }

@@ -22,6 +22,7 @@ export function PlayerTradingCard({
   imageHeight = 'h-48',
   compact = false,
   shoulderBadge,
+  tier,
 }: {
   name: string
   position: string
@@ -31,6 +32,7 @@ export function PlayerTradingCard({
   badge?: string
   imageHeight?: string
   shoulderBadge?: { label: string; description: string }
+  tier?: { number: number; name: string; emphasis: string; score?: number; rank?: number }
   compact?: boolean
   label?: string
   action?: string
@@ -52,7 +54,7 @@ export function PlayerTradingCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : tier?.emphasis === 'strong' ? 'border-amber-300/80 ring-1 ring-amber-300/50' : tier?.emphasis === 'positive' ? 'border-emerald-400/50' : tier?.emphasis === 'negative' ? 'border-rose-400/35' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -74,6 +76,13 @@ export function PlayerTradingCard({
         {rookie && <span className="ml-2 border-l border-white/20 pl-2 text-lime-300">Rookie</span>}
       </span>
       <div className={`relative ${imageHeight} shrink-0`}>
+        {tier && (
+          <span title={`${tier.name}${tier.score == null ? '' : ` · model score ${tier.score}`}${tier.rank == null ? '' : ` · global rank #${tier.rank}`}`}
+            aria-label={`Dynasty tier ${tier.number}: ${tier.name}`}
+            className={`absolute right-3 top-20 z-20 rounded border bg-slate-950/90 px-2 py-1 text-[10px] font-semibold ${tier.emphasis === 'strong' ? 'border-amber-300/60 text-amber-200' : tier.emphasis === 'positive' ? 'border-emerald-300/50 text-emerald-200' : tier.emphasis === 'negative' ? 'border-rose-300/40 text-rose-200' : 'border-white/15 text-slate-400'}`}>
+            T{tier.number}
+          </span>
+        )}
         {logo && failedLogo !== logo && (
           <img
             src={logo}

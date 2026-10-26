@@ -29,47 +29,47 @@ export function BuilderTeamSummary({
     { refreshInterval: 300000 }
   )
   return (
-    <div className="mx-auto mb-6 w-fit max-w-3xl rounded-xl border border-slate-600 bg-slate-900 px-5 py-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm font-semibold text-white">{team.teamName}</p>
-        <span className="text-[10px] text-slate-500">Current team · live roster baseline</span>
+    <div className="mx-auto w-full rounded-xl border border-slate-600 bg-slate-900 px-5 py-4 md:px-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <p className="text-xl font-semibold text-white">{team.teamName}</p>
+        <span className="text-xs text-slate-400">Current team · live roster baseline</span>
       </div>
-      <div className="flex flex-wrap gap-x-7 gap-y-3">
+      <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
         {isDynasty && (
           <div>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-xs text-slate-400">
               <MetricTip label="Team state">
                 {state?.description ?? 'Not enough roster data to determine state.'} Uses the same
                 league-relative model as Overview and Audit; scenario targets do not change this
                 baseline.
               </MetricTip>
             </p>
-            <p className={`mt-1 text-lg font-semibold ${state?.text ?? 'text-slate-400'}`}>
+            <p className={`mt-1 text-2xl font-semibold ${state?.text ?? 'text-slate-400'}`}>
               {state?.label ?? '—'}
             </p>
           </div>
         )}
         <div>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-xs text-slate-400">
             <MetricTip label="Core age">
               Average known age of the top 12 QB/RB/WR/TE assets by dynasty value, from the shared
               competitive-state model.
             </MetricTip>
           </p>
-          <p className="mt-1 text-lg font-semibold text-white">
+          <p className="mt-1 text-2xl font-semibold text-white">
             {placement?.avgAge ? placement.avgAge.toFixed(1) : '—'}
           </p>
         </div>
         <div>
-          <p className="text-[10px] text-slate-400">Record</p>
-          <p className="mt-1 text-lg font-semibold text-white">
+          <p className="text-xs text-slate-400">Record</p>
+          <p className="mt-1 text-2xl font-semibold text-white">
             {team.wins}–{team.losses}
             {team.ties ? `–${team.ties}` : ''}
           </p>
         </div>
         {isDynasty && (
           <div>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-xs text-slate-400">
               <MetricTip label="Draft capital">
                 Owned picks across the next three drafts, using league draft rounds and Sleeper
                 traded-pick ownership. No projected pick slots or scenario trades are assumed.
@@ -80,13 +80,13 @@ export function BuilderTeamSummary({
             ) : isLoading || !data ? (
               <p className="mt-1 text-slate-400">…</p>
             ) : (
-              <div className="mt-1 flex gap-5">
+              <div className="mt-1 flex flex-wrap gap-5">
                 {data.years.map((y) => (
                   <div key={y.year}>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-base font-semibold text-white">
                       {y.year} · {y.total} picks
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-400">
+                    <p className="mt-1 text-xs text-slate-400">
                       {y.byRound.map((r) => `R${r.round}: ${r.count}`).join(' · ')}
                     </p>
                   </div>

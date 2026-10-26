@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  issues: write
 jobs:
   refresh-and-check:
     runs-on: ubuntu-latest
@@ -60,6 +61,43 @@ jobs:
           assert data.get('count', 0) > 0, 'Weekly projection response has no player rows'
           PY
           fi
+      - name: Repair missing or lagging tier publication
+        env:
+          REFRESH_SECRET: ${{ secrets.DATA_REFRESH_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 30 \
+            https://www.firstballotff.com/api/data-health > /tmp/tier-health-before.json
+          NEEDS_REFRESH=$(python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          data=json.load(open('/tmp/tier-health-before.json'))
+          keys={row['key']:row for row in data['datasets']}
+          tier=keys.get('dynasty:tiers:v1')
+          ktc=keys.get('ktc:player-values')
+          if not ktc or ktc.get('status') == 'expired':
+              print('no')
+          elif not tier or tier.get('status') == 'expired':
+              print('yes')
+          else:
+              source=(tier.get('source_observed_at') or '')[:10]
+              observed=ktc.get('sourceObservedAt') or ''
+              fetched=tier.get('fetched_at') or ''
+              age=(datetime.now(timezone.utc)-datetime.fromisoformat(fetched.replace('Z','+00:00'))).total_seconds() if fetched else float('inf')
+              print('yes' if source < observed or age > 26*3600 else 'no')
+          PY
+          )
+          if [ "$NEEDS_REFRESH" = yes ]; then
+            test -n "$REFRESH_SECRET"
+            curl --fail-with-body --silent --show-error --max-time 300 \
+              --retry 3 --retry-all-errors --retry-delay 20 --retry-max-time 1200 \
+              --request POST --header "Authorization: Bearer $REFRESH_SECRET" \
+              https://www.firstballotff.com/api/dynasty-tiers > /tmp/tier-repair.json
+            python3 - <<'PY'
+          import json
+          result=json.load(open('/tmp/tier-repair.json'))
+          assert result.get('refreshed') is True or result.get('reason') == 'SUPERSEDED_BY_NEWER_PUBLICATION', result
+          PY
+          fi
       - name: Verify data health
         run: |
           curl --fail --silent --show-error --max-time 30 https://www.firstballotff.com/api/data-health > /tmp/data-health.json
@@ -91,3 +129,26 @@ jobs:
           if old_records:
               print('Review prospect records with old edit timestamps; these do not prove source age: ' + ', '.join(old_records))
           PY
+      - name: Alert on freshness failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search 'Data freshness incident in:title' --json number --jq '.[0].number // empty')
+          if [ -z "$ISSUE" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title 'Data freshness incident' \
+              --body "The hourly refresh or publication check failed. Review the [workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) and restore fresh data before serving rankings."
+          fi
+      - name: Resolve freshness alert after recovery
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search 'Data freshness incident in:title' --json number --jq '.[0].number // empty')
+          if [ -n "$ISSUE" ]; then
+            gh issue close "$ISSUE" --repo "$GITHUB_REPOSITORY" \
+              --comment "The hourly data freshness check passed in [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+          fi

@@ -1,7 +1,7 @@
 name: Refresh KTC history
 on:
   schedule:
-    - cron: '30 10 * * *'
+    - cron: "30 10 * * *"
   workflow_dispatch:
 permissions:
   contents: write
@@ -17,7 +17,7 @@ jobs:
           path: sdk-source
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - run: pip install -e ./sdk-source/python
       - name: Scrape today's board with SDK validation
         run: python sdk-source/python/scripts/snapshot_ktc.py --out-dir sdk-source/data/ktc
@@ -25,7 +25,7 @@ jobs:
         run: python firstballot/scripts/import-ktc-history.py sdk-source/data/ktc firstballot/data/ktc-history.json
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
       - name: Persist all snapshots
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -36,9 +36,15 @@ jobs:
           REFRESH_SECRET: ${{ secrets.DATA_REFRESH_SECRET }}
         run: |
           test -n "$REFRESH_SECRET"
-          curl --fail --silent --show-error --max-time 300 \
+          curl --fail-with-body --silent --show-error --max-time 300 \
+            --retry 3 --retry-all-errors --retry-delay 20 --retry-max-time 1200 \
             -X POST -H "Authorization: Bearer $REFRESH_SECRET" \
-            https://www.firstballotff.com/api/dynasty-tiers
+            https://www.firstballotff.com/api/dynasty-tiers > /tmp/tier-publish.json
+          python3 - <<'PY'
+          import json
+          result=json.load(open('/tmp/tier-publish.json'))
+          assert result.get('refreshed') is True or result.get('reason') == 'SUPERSEDED_BY_NEWER_PUBLICATION', result
+          PY
       - name: Propose refreshed dataset
         env:
           GH_TOKEN: ${{ github.token }}

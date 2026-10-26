@@ -1,298 +1,97 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
-import { SubscriptionService } from '@/lib/subscription-service'
-import { UserProfileService } from '@/lib/user-profile-service'
-import Stripe from 'stripe'
-
-export async function POST(req: NextRequest) {
-  const body = await req.text()
-  const signature = req.headers.get('stripe-signature')
-
-  if (!signature) {
-    console.error('❌ No webhook signature provided')
-    return NextResponse.json({ error: 'No signature provided' }, { status: 400 })
-  }
-
-  // Validate webhook secret
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  if (!webhookSecret) {
-    console.error('❌ STRIPE_WEBHOOK_SECRET not configured')
-    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
-  }
-
+import type Stripe from 'stripe'
+import { getStripe } from '@/lib/stripe'
+import { supabaseAdmin } from '@/lib/supabase-server'
+import { failure, json, PlatformError } from '@/lib/platform/http'
+export async function POST(request: Request) {
+  const signature = request.headers.get('stripe-signature'),
+    secret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!signature || !secret) return json({ error: 'Webhook verification unavailable' }, 400)
   let event: Stripe.Event
-
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-    console.log(`✅ Webhook signature verified for event: ${event.type}`)
-  } catch (err) {
-    console.error('❌ Webhook signature verification failed:', err)
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    event = getStripe().webhooks.constructEvent(await request.text(), signature, secret)
+  } catch {
+    return json({ error: 'Invalid signature' }, 400)
   }
-
   try {
-    console.log(`🔄 Processing webhook event: ${event.type}`)
-
-    switch (event.type) {
-      // Payment Links Events
-      case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent)
-        break
-
-      case 'payment_intent.payment_failed':
-        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent)
-        break
-
-      // Checkout Session Events
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
-        break
-
-      // Invoice Events
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
-        break
-
-      case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
-        break
-
-      // Subscription Events
-      case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
-        break
-
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
-        break
-
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
-        break
-
-      case 'customer.subscription.trial_will_end':
-        await handleSubscriptionTrialWillEnd(event.data.object as Stripe.Subscription)
-        break
-
-      // Customer Events
-      case 'customer.created':
-        await handleCustomerCreated(event.data.object as Stripe.Customer)
-        break
-
-      default:
-        console.log(`⚠️ Unhandled event type: ${event.type}`)
-    }
-
-    console.log(`✅ Successfully processed webhook event: ${event.type}`)
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error(`❌ Error handling webhook event ${event.type}:`, error)
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
-  }
-}
-
-// ===== PAYMENT LINKS EVENT HANDLERS =====
-
-async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  console.log('💳 Payment intent succeeded:', paymentIntent.id)
-
-  try {
-    // Extract customer email from payment intent
-    const paymentIntentAny = paymentIntent as any
-    const customerEmail =
-      paymentIntent.receipt_email ||
-      paymentIntentAny.billing_details?.email ||
-      paymentIntentAny.customer_details?.email
-
-    if (!customerEmail) {
-      console.error('❌ No customer email found in payment intent')
-      return
-    }
-
-    console.log(`📧 Processing payment for email: ${customerEmail}`)
-
-    // Process successful payment - update user profile
-    const success = await UserProfileService.processSuccessfulPayment(
-      customerEmail,
-      (paymentIntent.customer as string) || paymentIntent.id
+    const { data: processed, error: readError } = await supabaseAdmin
+      .from('billing_events')
+      .select('event_id')
+      .eq('event_id', event.id)
+      .maybeSingle()
+    if (readError) throw readError
+    if (processed) return json({ received: true })
+    if (
+      ![
+        'customer.subscription.created',
+        'customer.subscription.updated',
+        'customer.subscription.deleted',
+        'checkout.session.completed',
+        'invoice.paid',
+        'invoice.payment_failed',
+      ].includes(event.type)
     )
-
-    if (success) {
-      console.log(`✅ Successfully processed payment intent for ${customerEmail}`)
-    } else {
-      console.error(`❌ Failed to process payment intent for ${customerEmail}`)
+      return json({ received: true })
+    const object = event.data.object as unknown as {
+      id: string
+      customer: string | null
+      subscription?: string | null
+      parent?: { subscription_details?: { subscription?: string } }
     }
-  } catch (error) {
-    console.error('Error processing payment intent:', error)
-  }
-}
-
-async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-  console.log('❌ Payment intent failed:', paymentIntent.id)
-
-  try {
-    const paymentIntentAny = paymentIntent as any
-    const customerEmail =
-      paymentIntent.receipt_email ||
-      paymentIntentAny.billing_details?.email ||
-      paymentIntentAny.customer_details?.email
-
-    if (customerEmail) {
-      // Deactivate membership on payment failure
-      await UserProfileService.updateUserMembershipStatus(customerEmail, false)
-      console.log(`🔒 Deactivated membership for ${customerEmail} due to payment failure`)
+    let subscriptionId = event.type.startsWith('customer.subscription.')
+      ? object.id
+      : (object.subscription ?? object.parent?.subscription_details?.subscription)
+    if (!subscriptionId) return json({ received: true })
+    // Fetch current state rather than applying an old webhook's payload after a newer one.
+    const observedAt = new Date().toISOString()
+    const subscription = await getStripe().subscriptions.retrieve(subscriptionId)
+    const customerId =
+      typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+    const { data: account, error } = await supabaseAdmin
+      .from('account_billing')
+      .select('account_id,stripe_subscription_id')
+      .eq('stripe_customer_id', customerId)
+      .maybeSingle()
+    if (error) throw error
+    if (!account)
+      throw new PlatformError(
+        503,
+        'CUSTOMER_UNMAPPED',
+        'Customer mapping not available; retry webhook.'
+      )
+    if (account.stripe_subscription_id && account.stripe_subscription_id !== subscription.id) {
+      const current = await getStripe().subscriptions.retrieve(account.stripe_subscription_id)
+      if (!['canceled', 'incomplete_expired'].includes(current.status))
+        throw new PlatformError(
+          409,
+          'DUPLICATE_SUBSCRIPTION',
+          'Account already has a subscription.'
+        )
     }
-  } catch (error) {
-    console.error('Error processing failed payment intent:', error)
-  }
-}
-
-// ===== CHECKOUT SESSION EVENT HANDLERS =====
-
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  console.log('💳 Checkout session completed:', session.id)
-
-  const customerEmail = session.customer_details?.email
-  const customerId = session.customer as string
-
-  if (!customerEmail) {
-    console.error('❌ No customer email in checkout session')
-    return
-  }
-
-  try {
-    console.log(`📧 Processing checkout for email: ${customerEmail}`)
-
-    // Process successful payment - update user profile
-    const success = await UserProfileService.processSuccessfulPayment(customerEmail, customerId)
-
-    if (success) {
-      console.log(`✅ Successfully processed checkout for ${customerEmail}`)
-    } else {
-      console.error(`❌ Failed to process checkout for ${customerEmail}`)
-    }
-  } catch (error) {
-    console.error('Error processing checkout session:', error)
-  }
-}
-
-// ===== INVOICE EVENT HANDLERS =====
-
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log('💰 Invoice payment succeeded:', invoice.id)
-
-  const customerEmail = invoice.customer_email
-  const customerId = invoice.customer as string
-
-  if (!customerEmail) {
-    console.error('❌ No customer email in invoice')
-    return
-  }
-
-  try {
-    console.log(`📧 Processing invoice payment for email: ${customerEmail}`)
-
-    // Process successful payment - update user profile
-    const success = await UserProfileService.processSuccessfulPayment(customerEmail, customerId)
-
-    if (success) {
-      console.log(`✅ Successfully processed invoice payment for ${customerEmail}`)
-    } else {
-      console.error(`❌ Failed to process invoice payment for ${customerEmail}`)
-    }
-  } catch (error) {
-    console.error('Error processing invoice payment:', error)
-  }
-}
-
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  console.log('❌ Invoice payment failed:', invoice.id)
-
-  const customerEmail = invoice.customer_email
-
-  if (customerEmail) {
-    try {
-      // Deactivate membership on payment failure
-      await UserProfileService.updateUserMembershipStatus(customerEmail, false)
-      console.log(`🔒 Deactivated membership for ${customerEmail} due to invoice payment failure`)
-    } catch (error) {
-      console.error('Error processing failed invoice payment:', error)
-    }
-  }
-}
-
-// ===== SUBSCRIPTION EVENT HANDLERS =====
-
-async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  console.log('📅 Subscription created:', subscription.id)
-
-  try {
-    // Update our database with the subscription details
-    const subscriptionAny = subscription as any
-    await SubscriptionService.updateSubscriptionStatus(
-      subscription.id,
-      subscription.status,
-      subscription.items.data[0]?.price.recurring?.interval === 'year' ? 'yearly' : 'monthly',
-      subscriptionAny.current_period_start,
-      subscriptionAny.current_period_end
-    )
-    console.log(`✅ Successfully updated subscription status for ${subscription.id}`)
-  } catch (error: any) {
-    console.error('Error handling subscription created:', error)
-  }
-}
-
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('📅 Subscription updated:', subscription.id)
-
-  try {
-    const subscriptionAny = subscription as any
-    await SubscriptionService.updateSubscriptionStatus(
-      subscription.id,
-      subscription.status,
-      subscription.items.data[0]?.price.recurring?.interval === 'year' ? 'yearly' : 'monthly',
-      subscriptionAny.current_period_start,
-      subscriptionAny.current_period_end
-    )
-    console.log(`✅ Successfully updated subscription ${subscription.id}`)
-  } catch (error) {
-    console.error('Error handling subscription updated:', error)
-  }
-}
-
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('📅 Subscription deleted:', subscription.id)
-
-  try {
-    const subscriptionAny = subscription as any
-    await SubscriptionService.updateSubscriptionStatus(
-      subscription.id,
-      subscription.status,
-      subscription.items.data[0]?.price.recurring?.interval === 'year' ? 'yearly' : 'monthly',
-      subscriptionAny.current_period_start,
-      subscriptionAny.current_period_end
-    )
-    console.log(`✅ Successfully processed subscription deletion for ${subscription.id}`)
-  } catch (error) {
-    console.error('Error handling subscription deleted:', error)
-  }
-}
-
-async function handleSubscriptionTrialWillEnd(subscription: Stripe.Subscription) {
-  console.log('📅 Subscription trial will end:', subscription.id)
-
-  // You could send an email notification here
-  // await sendTrialEndingEmail(subscription.customer as string);
-}
-
-// ===== CUSTOMER EVENT HANDLERS =====
-
-async function handleCustomerCreated(customer: Stripe.Customer) {
-  console.log('👤 Customer created:', customer.id)
-
-  if (customer.email) {
-    console.log(`📧 New customer created with email: ${customer.email}`)
-    // You could send a welcome email here
-    // await sendWelcomeEmail(customer.email);
+    const allowed = [
+      process.env.STRIPE_TEAM_MONTHLY_PRICE_ID,
+      process.env.STRIPE_TEAM_YEARLY_PRICE_ID,
+    ].filter(Boolean)
+    const items = subscription.items.data.filter((i) => allowed.includes(i.price.id))
+    if (items.length !== 1)
+      throw new PlatformError(503, 'UNKNOWN_PRODUCT', 'Subscription product is not configured.')
+    const item = items[0],
+      slots = item.quantity ?? 0
+    if (slots < 1 || slots > 100)
+      throw new PlatformError(503, 'INVALID_QUANTITY', 'Invalid team-slot quantity.')
+    const { error: writeError } = await supabaseAdmin.rpc('apply_platform_billing', {
+      p_event: event.id,
+      p_account: account.account_id,
+      p_customer: customerId,
+      p_subscription: subscription.id,
+      p_status: subscription.status,
+      p_slots: slots,
+      p_end: new Date(item.current_period_end * 1000).toISOString(),
+      p_cancel: subscription.cancel_at_period_end,
+      p_observed: observedAt,
+    })
+    if (writeError) throw writeError
+    return json({ received: true })
+  } catch (e) {
+    return failure(e)
   }
 }

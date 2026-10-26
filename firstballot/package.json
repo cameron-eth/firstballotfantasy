@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -56,6 +57,7 @@
     "embla-carousel-react": "8.5.1",
     "framer-motion": "^12.23.6",
     "input-otp": "1.4.1",
+    "jose": "^6.2.13",
     "lucide-react": "^0.454.0",
     "next": "16.0.7",
     "next-themes": "^0.4.4",
@@ -65,6 +67,7 @@
     "react-hook-form": "^7.54.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "latest",
+    "server-only": "^0.0.1",
     "sonner": "^1.7.1",
     "stripe": "^18.5.0",
     "swr": "^2.4.1",
@@ -75,6 +78,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

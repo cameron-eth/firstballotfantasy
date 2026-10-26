@@ -1,17 +1,30 @@
+import 'server-only'
 import Stripe from 'stripe'
-
-if (!process.env.NEXT_STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables')
+import { PlatformError } from '@/lib/platform/http'
+let client: Stripe | undefined
+export function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY || process.env.NEXT_STRIPE_SECRET_KEY
+  if (!key)
+    throw new PlatformError(
+      503,
+      'BILLING_NOT_CONFIGURED',
+      'Billing is not available yet. Your free team remains available.'
+    )
+  return (client ??= new Stripe(key, { typescript: true }))
 }
-
-export const stripe = new Stripe(process.env.NEXT_STRIPE_SECRET_KEY, {
-  apiVersion: '2025-08-27.basil',
-  typescript: true,
-})
-
-export const STRIPE_PRODUCTS = {
-  PRO_MONTHLY: 'price_monthly', // Replace with your actual price ID
-  PRO_YEARLY: 'price_yearly', // Replace with your actual price ID
-} as const
-
-export type StripeProductType = keyof typeof STRIPE_PRODUCTS
+export function billingPrice(interval: 'month' | 'year') {
+  const id =
+    interval === 'month'
+      ? process.env.STRIPE_TEAM_MONTHLY_PRICE_ID
+      : process.env.STRIPE_TEAM_YEARLY_PRICE_ID
+  if (!id?.startsWith('price_'))
+    throw new PlatformError(
+      503,
+      'BILLING_NOT_CONFIGURED',
+      'This billing option is not available yet.'
+    )
+  return id
+}
+export function siteUrl() {
+  return process.env.NEXT_PUBLIC_BASE_URL || 'https://www.firstballotff.com'
+}

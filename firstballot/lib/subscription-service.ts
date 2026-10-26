@@ -1,179 +1,124 @@
-import { stripe } from './stripe'
-import { supabaseServer } from './supabase-server'
-
-export interface SubscriptionData {
-  id: string
-  auth_id: string // Changed from user_id to auth_id
-  stripe_customer_id: string
-  stripe_subscription_id: string
-  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'incomplete'
-  plan_type: 'monthly' | 'yearly'
-  current_period_start: string
-  current_period_end: string
-  created_at: string
-  updated_at: string
-}
-
+import 'server-only'
+import { getStripe, billingPrice, siteUrl } from './stripe'
+import { supabaseAdmin } from './supabase-server'
+import { billingFor } from './platform/teams'
+import { PlatformError } from './platform/http'
+import type { Principal } from './platform/auth'
 export class SubscriptionService {
-  /**
-   * Create a Stripe customer and link it to the user
-   */
-  static async createCustomer(authId: string, email: string) {
-    try {
-      // Create customer in Stripe
-      const customer = await stripe.customers.create({
-        email,
-        metadata: { authId },
-      })
-
-      // Store customer ID in our database
-      const { error } = await supabaseServer.from('subscriptions').insert({
-        auth_id: authId,
-        stripe_customer_id: customer.id,
-        status: 'incomplete',
-      })
-
-      if (error) {
-        console.error('Error storing customer ID:', error)
-        throw new Error('Failed to store customer information')
-      }
-
-      return customer
-    } catch (error) {
-      console.error('Error creating customer:', error)
-      throw error
-    }
+  static getSubscription(accountId: string) {
+    return billingFor(accountId)
   }
-
-  /**
-   * Create a checkout session for subscription
-   */
-  static async createCheckoutSession(authId: string, priceId: string) {
-    try {
-      // Get or create customer
-      let { data: subscription } = await supabaseServer
-        .from('subscriptions')
-        .select('stripe_customer_id')
-        .eq('auth_id', authId)
-        .single()
-
-      if (!subscription?.stripe_customer_id) {
-        // Get user email from auth
-        const { data: user } = await supabaseServer.auth.admin.getUserById(authId)
-        if (!user.user?.email) {
-          throw new Error('User email not found')
-        }
-
-        const customer = await this.createCustomer(authId, user.user.email)
-        subscription = { stripe_customer_id: customer.id }
-      }
-
-      // Create checkout session
-      const session = await stripe.checkout.sessions.create({
-        customer: subscription.stripe_customer_id,
-        line_items: [{ price: priceId, quantity: 1 }],
+  static async createCheckoutSession(p: Principal, interval: 'month' | 'year', quantity: number) {
+    const stripe = getStripe(),
+      priceId = billingPrice(interval)
+    const account = await billingFor(p.accountId)
+    if (
+      account?.stripe_subscription_id &&
+      !['canceled', 'incomplete_expired', 'free'].includes(account.status)
+    )
+      throw new PlatformError(
+        409,
+        'EXISTING_SUBSCRIPTION',
+        'Manage your existing subscription to change team slots.'
+      )
+    const price = await stripe.prices.retrieve(priceId)
+    if (
+      !price.active ||
+      price.type !== 'recurring' ||
+      price.recurring?.interval !== interval ||
+      price.recurring?.usage_type !== 'licensed'
+    )
+      throw new PlatformError(503, 'INVALID_PRICE', 'Billing price configuration needs attention.')
+    let customerId = account?.stripe_customer_id
+    if (!customerId) {
+      const customer = await stripe.customers.create(
+        { email: p.email, metadata: { account_id: p.accountId } },
+        { idempotencyKey: `account:${p.accountId}` }
+      )
+      customerId = customer.id
+      const { error } = await supabaseAdmin
+        .from('account_billing')
+        .upsert({ account_id: p.accountId, stripe_customer_id: customerId })
+      if (error) throw error
+    }
+    const { error: attemptError } = await supabaseAdmin
+      .from('billing_checkout_attempts')
+      .upsert(
+        { account_id: p.accountId, price_id: priceId, quantity },
+        { onConflict: 'account_id', ignoreDuplicates: true }
+      )
+    if (attemptError) throw attemptError
+    const { data: attempt, error: readError } = await supabaseAdmin
+      .from('billing_checkout_attempts')
+      .select('*')
+      .eq('account_id', p.accountId)
+      .single()
+    if (readError) throw readError
+    if (attempt.session_id) {
+      const existing = await stripe.checkout.sessions.retrieve(attempt.session_id)
+      if (existing.status === 'open') return existing
+      if (
+        existing.status === 'complete' &&
+        !(
+          account?.stripe_subscription_id === existing.subscription &&
+          ['canceled', 'incomplete_expired'].includes(account.status)
+        )
+      )
+        throw new PlatformError(
+          409,
+          'PAYMENT_PROCESSING',
+          'Payment received. Your subscription is being activated.'
+        )
+      await supabaseAdmin
+        .from('billing_checkout_attempts')
+        .delete()
+        .eq('account_id', p.accountId)
+        .eq('id', attempt.id)
+      throw new PlatformError(
+        409,
+        'CHECKOUT_EXPIRED',
+        'The previous checkout expired. Please retry with your chosen slots.'
+      )
+    }
+    // Stripe keeps idempotency results for at least 24h. Never replay an unresolved
+    // older attempt after that window: it requires reconciliation, not another charge.
+    if (Date.now() - Date.parse(attempt.created_at) > 23 * 3600_000)
+      throw new PlatformError(
+        503,
+        'CHECKOUT_RECONCILIATION',
+        'Your previous checkout needs review. Contact support before retrying.'
+      )
+    const session = await stripe.checkout.sessions.create(
+      {
+        customer: customerId,
         mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/billing?canceled=true`,
-        metadata: { authId },
+        line_items: [{ price: attempt.price_id, quantity: attempt.quantity }],
+        client_reference_id: p.accountId,
+        metadata: { account_id: p.accountId },
+        subscription_data: { metadata: { account_id: p.accountId } },
+        success_url: `${siteUrl()}/billing?success=true`,
+        cancel_url: `${siteUrl()}/billing`,
         allow_promotion_codes: true,
-        billing_address_collection: 'auto',
-      })
-
-      return session
-    } catch (error) {
-      console.error('Error creating checkout session:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Create a customer portal session
-   */
-  static async createPortalSession(authId: string) {
-    try {
-      const { data: subscription } = await supabaseServer
-        .from('subscriptions')
-        .select('stripe_customer_id')
-        .eq('auth_id', authId)
-        .single()
-
-      if (!subscription?.stripe_customer_id) {
-        throw new Error('No subscription found for user')
+      },
+      {
+        idempotencyKey: `checkout:${attempt.id}`,
       }
-
-      const session = await stripe.billingPortal.sessions.create({
-        customer: subscription.stripe_customer_id,
-        return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/billing`,
-      })
-
-      return session
-    } catch (error) {
-      console.error('Error creating portal session:', error)
-      throw error
-    }
+    )
+    const { error: saveError } = await supabaseAdmin
+      .from('billing_checkout_attempts')
+      .update({ session_id: session.id })
+      .eq('account_id', p.accountId)
+      .eq('id', attempt.id)
+    if (saveError) throw saveError
+    return session
   }
-
-  /**
-   * Get subscription data for a user
-   */
-  static async getSubscription(authId: string): Promise<SubscriptionData | null> {
-    try {
-      const { data, error } = await supabaseServer
-        .from('subscriptions')
-        .select('*')
-        .eq('auth_id', authId)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 = no rows returned
-        throw error
-      }
-
-      return data
-    } catch (error) {
-      console.error('Error fetching subscription:', error)
-      return null
-    }
-  }
-
-  /**
-   * Check if user has active subscription
-   */
-  static async hasActiveSubscription(authId: string): Promise<boolean> {
-    const subscription = await this.getSubscription(authId)
-    return subscription?.status === 'active' || subscription?.status === 'trialing'
-  }
-
-  /**
-   * Update subscription status from webhook
-   */
-  static async updateSubscriptionStatus(
-    stripeSubscriptionId: string,
-    status: string,
-    planType: 'monthly' | 'yearly',
-    currentPeriodStart: number,
-    currentPeriodEnd: number
-  ) {
-    try {
-      const { error } = await supabaseServer
-        .from('subscriptions')
-        .update({
-          status,
-          plan_type: planType,
-          current_period_start: new Date(currentPeriodStart * 1000).toISOString(),
-          current_period_end: new Date(currentPeriodEnd * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_subscription_id', stripeSubscriptionId)
-
-      if (error) {
-        console.error('Error updating subscription status:', error)
-        throw error
-      }
-    } catch (error) {
-      console.error('Error in updateSubscriptionStatus:', error)
-      throw error
-    }
+  static async createPortalSession(accountId: string) {
+    const account = await billingFor(accountId)
+    if (!account?.stripe_customer_id)
+      throw new PlatformError(409, 'NO_CUSTOMER', 'No billing account yet.')
+    return getStripe().billingPortal.sessions.create({
+      customer: account.stripe_customer_id,
+      return_url: `${siteUrl()}/billing`,
+    })
   }
 }

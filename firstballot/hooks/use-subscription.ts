@@ -1,82 +1,39 @@
 'use client'
-
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
-import { SubscriptionData } from '@/lib/subscription-service'
-
 export function useSubscription() {
   const { user } = useAuth()
-  const {
-    data: subscription = null,
-    error,
-    isLoading,
-    mutate,
-  } = useSWR<SubscriptionData | null>(
-    user ? `/api/billing/subscription?authId=${user.id}` : null,
-    async (url: string) => {
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error('Failed to fetch subscription')
-      }
-      return response.json()
+  const { data, error, isLoading, mutate } = useSWR(
+    user ? ['billing', user.id] : null,
+    async () => {
+      const r = await fetch('/api/billing/subscription')
+      const b = await r.json()
+      if (!r.ok) throw new Error(b.error)
+      return b
     }
   )
-
-  const createCheckoutSession = async (priceId: string) => {
-    if (!user) throw new Error('User not authenticated')
-
-    try {
-      const response = await fetch('/api/billing/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authId: user.id, priceId }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session')
-      }
-
-      const { url } = await response.json()
-      return url
-    } catch (err) {
-      console.error('Error creating checkout session:', err)
-      throw err
-    }
+  async function post(path: string, body: object = {}) {
+    const r = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const b = await r.json()
+    if (!r.ok) throw new Error(b.error)
+    return b.url as string
   }
-
-  const openCustomerPortal = async () => {
-    if (!user) throw new Error('User not authenticated')
-
-    try {
-      const response = await fetch('/api/billing/portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ authId: user.id }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create portal session')
-      }
-
-      const { url } = await response.json()
-      return url
-    } catch (err) {
-      console.error('Error creating portal session:', err)
-      throw err
-    }
-  }
-
-  const isSubscribed = subscription?.status === 'active' || subscription?.status === 'trialing'
-  const isPro = isSubscribed
-
   return {
-    subscription,
+    subscription: data?.subscription,
+    prices: data?.prices ?? [],
+    capacity: data?.capacity ?? 1,
+    dailyApiLimit: data?.dailyApiLimit ?? 100,
     loading: !!user && isLoading,
-    error: error instanceof Error ? error.message : null,
-    isSubscribed,
-    isPro,
+    error: error?.message,
+    isSubscribed: (data?.capacity ?? 1) > 1,
+    isPro: (data?.capacity ?? 1) > 1,
     refetch: mutate,
-    createCheckoutSession,
-    openCustomerPortal,
+    createCheckoutSession: (interval: string, quantity: number) =>
+      post('/api/billing/create-checkout-session', { interval, quantity }),
+    openCustomerPortal: () => post('/api/billing/portal'),
   }
 }

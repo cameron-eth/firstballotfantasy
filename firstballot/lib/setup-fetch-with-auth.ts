@@ -16,11 +16,10 @@ export function setupFetchWithAuth() {
 
   // Override the global fetch function
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input.toString()
+    const url = input instanceof Request ? input.url : String(input)
 
     // Only intercept our own API routes — pass everything else straight through
-    const isApiRoute =
-      url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/')
+    const isApiRoute = url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/')
 
     if (!isApiRoute) {
       return originalFetch(input, init)
@@ -34,10 +33,10 @@ export function setupFetchWithAuth() {
       const token = session?.access_token
 
       // Create new headers object
-      const headers = new Headers(init?.headers || {})
+      const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : {}))
 
       // Add authorization header for API calls if we have a token
-      if (token) {
+      if (token && !headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${token}`)
       }
 

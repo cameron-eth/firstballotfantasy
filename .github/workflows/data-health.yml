@@ -1,0 +1,33 @@
+name: Data freshness monitor
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  refresh-and-check:
+    if: vars.PLATFORM_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refresh current-season data
+        env:
+          REFRESH_SECRET: ${{ secrets.DATA_REFRESH_SECRET }}
+        run: |
+          if [ -z "$REFRESH_SECRET" ]; then
+            echo "DATA_REFRESH_SECRET is required before enabling this workflow."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 60 --request POST \
+            --header "Authorization: Bearer $REFRESH_SECRET" \
+            https://www.firstballotff.com/api/internal/refresh-data
+      - name: Verify data health
+        run: |
+          curl --fail --silent --show-error --max-time 30 https://www.firstballotff.com/api/data-health > /tmp/data-health.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/data-health.json'))
+          assert data['datasets'], 'No validated datasets are available'
+          assert all(d['status']!='expired' for d in data['datasets']), 'Dataset freshness budget exceeded'
+          PY

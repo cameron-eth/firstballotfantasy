@@ -212,6 +212,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             games_played: number
             headshot_url?: string | null
           }) => {
+            if(playerStats.fantasy_ppg==null || !Number.isFinite(Number(playerStats.fantasy_ppg))) return
             rosterStatsMap[playerStats.sleeper_player_id] = {
               fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,
               fppg_rank: playerStats.fppg_rank,
@@ -394,7 +395,7 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             fantasy_points_half_ppr: player.fantasy_points_half_ppr,
             fantasy_points: player.fantasy_points_ppr || 0,
             games_played: player.games_played || 0,
-            fantasy_ppg: player.fantasy_ppg || 0,
+            fantasy_ppg: player.stats_season ? player.fantasy_ppg : undefined,
             fppg_rank: player.fppg_rank,
             fppg_position: player.fppg_position,
             stats_season: player.stats_season,

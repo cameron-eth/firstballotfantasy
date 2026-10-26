@@ -1,13 +1,12 @@
 name: Data freshness monitor
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: "17 * * * *"
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   refresh-and-check:
-    if: vars.PLATFORM_MONITOR_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,18 +15,71 @@ jobs:
           REFRESH_SECRET: ${{ secrets.DATA_REFRESH_SECRET }}
         run: |
           if [ -z "$REFRESH_SECRET" ]; then
-            echo "DATA_REFRESH_SECRET is required before enabling this workflow."
+            echo "DATA_REFRESH_SECRET is required for the freshness monitor."
             exit 1
           fi
           curl --fail-with-body --silent --show-error --max-time 60 --request POST \
             --header "Authorization: Bearer $REFRESH_SECRET" \
-            https://www.firstballotff.com/api/internal/refresh-data
+            https://www.firstballotff.com/api/internal/refresh-data > /tmp/espn-refresh.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/espn-refresh.json'))
+          assert data.get('season'), 'Refresh response did not include the active season'
+          open('/tmp/current-season.txt','w').write(str(data['season']))
+          PY
+      - name: Refresh current-season projections
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            https://www.firstballotff.com/api/projections > /tmp/projections-refresh.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/projections-refresh.json'))
+          season=open('/tmp/current-season.txt').read().strip()
+          assert str(data.get('season')) == season, 'Projection season does not match ESPN season'
+          assert data.get('count', 0) > 0, 'Projection response has no player rows'
+          PY
+          curl --fail --silent --show-error --max-time 30 \
+            https://www.firstballotff.com/api/data-health > /tmp/pre-refresh-health.json
+          python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/pre-refresh-health.json'))
+          week=data.get('currentWeek')
+          open('/tmp/current-week.txt','w').write(str(week or ''))
+          PY
+          WEEK=$(cat /tmp/current-week.txt)
+          if [ -n "$WEEK" ]; then
+            curl --fail-with-body --silent --show-error --max-time 60 \
+              "https://www.firstballotff.com/api/projections?week=$WEEK" > /tmp/weekly-projections.json
+            python3 - <<'PY'
+          import json
+          data=json.load(open('/tmp/weekly-projections.json'))
+          season=open('/tmp/current-season.txt').read().strip()
+          week=int(open('/tmp/current-week.txt').read().strip())
+          assert str(data.get('season')) == season, 'Weekly projection season does not match ESPN season'
+          assert data.get('week') == week, 'Weekly projection response does not match the active week'
+          assert data.get('count', 0) > 0, 'Weekly projection response has no player rows'
+          PY
+          fi
       - name: Verify data health
         run: |
           curl --fail --silent --show-error --max-time 30 https://www.firstballotff.com/api/data-health > /tmp/data-health.json
           python3 - <<'PY'
           import json
           data=json.load(open('/tmp/data-health.json'))
-          assert data['datasets'], 'No validated datasets are available'
-          assert all(d['status']!='expired' for d in data['datasets']), 'Dataset freshness budget exceeded'
+          season=open('/tmp/current-season.txt').read().strip()
+          keys={d['key']:d for d in data['datasets']}
+          expected=[f'espn:ppr:{season}', f'sleeper:projections:{season}:season', 'ktc:player-values']
+          week=open('/tmp/current-week.txt').read().strip()
+          if week:
+              expected.append(f'sleeper:projections:{season}:{week}')
+          missing=[key for key in expected if key not in keys]
+          assert not missing, f'Missing monitored datasets: {missing}'
+          expired=[key for key in expected if keys[key]['status']=='expired']
+          assert not expired, f'Dataset freshness budget exceeded: {expired}'
+          unknown=[d['key'] for d in data.get('monitored',[]) if d['status']=='source-time-unknown']
+          if unknown:
+              print('Source observation timestamps are not provided by: ' + ', '.join(unknown))
+          old_records=[f"{d['key']} ({d['recordAgeDays']} days since newest row edit)" for d in data.get('monitored',[]) if d.get('recordUpdateWarning')]
+          if old_records:
+              print('Review prospect records with old edit timestamps; these do not prove source age: ' + ', '.join(old_records))
           PY

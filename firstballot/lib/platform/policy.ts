@@ -1,4 +1,5 @@
 export const READ_SCOPES = ['teams:read', 'players:read'] as const
+export const KTC_MAX_AGE_MS = 48 * 60 * 60 * 1000
 export function teamCapacity(
   billing: { status: string; paid_slots: number; period_end: string | null } | null,
   now = Date.now()

@@ -125,9 +125,18 @@ test('map guide walks live anchors, skips dynasty years for redraft and closes o
     await new Promise((r) => setTimeout(r, 20))
   })
   const click = async (text) => {
+    const button = () =>
+      [...document.querySelectorAll('button')].find((b) => b.textContent === text)
+    // React commits the anchor effect after act; wait for its animation frame before clicking.
+    for (let attempt = 0; attempt < 50 && button()?.disabled; attempt++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      })
+    }
+    assert.ok(button(), `Missing ${text} button`)
+    assert.equal(button().disabled, false, `${text} should be ready after anchor measurement`)
     await act(async () => {
-      ;[...document.querySelectorAll('button')].find((b) => b.textContent === text).click()
-      await new Promise((r) => setTimeout(r, 20))
+      button().click()
     })
   }
   assert.match(document.body.textContent, /This is your team map/)

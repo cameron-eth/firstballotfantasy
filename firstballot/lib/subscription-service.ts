@@ -96,7 +96,7 @@ export class SubscriptionService {
         client_reference_id: p.accountId,
         metadata: { account_id: p.accountId },
         subscription_data: { metadata: { account_id: p.accountId } },
-        success_url: `${siteUrl()}/billing?success=true`,
+        success_url: `${siteUrl()}/billing?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteUrl()}/billing`,
         allow_promotion_codes: true,
       },

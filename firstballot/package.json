@@ -82,6 +82,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "jsdom": "26.1.0",
     "postcss": "^8.5",
     "prettier": "^3.2.5",
     "react-scan": "^0.5.3",

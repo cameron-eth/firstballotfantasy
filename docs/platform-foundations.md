@@ -57,3 +57,7 @@ Browser state still includes presentation, selected league, local caches and opt
 Read-only audit: 1,002 prospect rows, no duplicate name/class/school groups, 66 missing ESPN IDs, 21 ungraded. The identity crosswalk had invalid placeholder IDs and three ambiguous ESPN mappings; quarantine records explain exclusions. No production records were deleted.
 
 References: [Stripe Checkout](https://docs.stripe.com/api/checkout/sessions), [Supabase OAuth setup](https://supabase.com/docs/guides/auth/oauth-server/getting-started).
+
+## Stripe follow-up verification
+
+Real sandbox Checkout, signed CLI webhook delivery, renewal, failed payment, downgrade, cancellation and resubscription have now been exercised against an isolated database using production reconciliation logic. The post-checkout page verifies session ownership, waits for persisted entitlements and refreshes team/API allowance caches after activation. See [test evidence and remaining staging boundaries](testing/stripe-verification.md). This does not remove the production migration/configuration launch gates above.

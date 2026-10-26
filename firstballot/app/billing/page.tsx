@@ -1,7 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
+import { CheckoutReturn } from '@/components/billing/CheckoutReturn'
 import { Header } from '@/components/header'
 import { useAuth } from '@/lib/auth'
 import { useSubscription } from '@/hooks/use-subscription'
@@ -62,6 +63,9 @@ export default function BillingPage() {
       setBusy('')
     }
   }
+  const hasLiveSubscription =
+    !!billing.subscription?.stripe_subscription_id &&
+    !['canceled', 'incomplete_expired', 'free'].includes(billing.subscription.status)
   const price = billing.prices.find((p: { interval: string }) => p.interval === interval)
   const amount = price
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: price.currency }).format(
@@ -78,6 +82,9 @@ export default function BillingPage() {
           Scout, rank and plan with your first team. Add more active teams when you’re ready. Every
           membership gets the same data quality.
         </p>
+        <Suspense fallback={null}>
+          <CheckoutReturn />
+        </Suspense>
         {!user ? (
           <p className="mt-8">
             {authLoading ? (
@@ -130,7 +137,11 @@ export default function BillingPage() {
                       onClick={() => act(team.active ? 'archive' : 'activate', { teamId: team.id })}
                     >
                       {team.active ? <Archive size={15} /> : <Check size={15} />}
-                      {team.active ? 'Archive' : 'Activate'}
+                      {busy === (team.active ? 'archive' : 'activate')
+                        ? 'Updating…'
+                        : team.active
+                          ? 'Archive'
+                          : 'Activate'}
                     </button>
                   </div>
                 ))}
@@ -203,12 +214,12 @@ export default function BillingPage() {
                     </span>
                   </p>
                   <button
-                    disabled={!!busy || !price}
-                    onClick={() => checkout(!!billing.subscription?.stripe_subscription_id)}
+                    disabled={!!busy || !price || billing.loading || !!billing.error}
+                    onClick={() => checkout(hasLiveSubscription)}
                     className={`${button} mt-4 border-blue-400 bg-blue-500/20`}
                   >
                     {busy === 'billing' && <Loader2 className="animate-spin" size={16} />}Review{' '}
-                    {billing.subscription?.stripe_subscription_id ? 'subscription' : 'checkout'}
+                    {hasLiveSubscription ? 'subscription' : 'checkout'}
                   </button>
                   <p className="mt-3 text-xs text-slate-500">
                     Review the full total before paying. On downgrade, keep your chosen teams active

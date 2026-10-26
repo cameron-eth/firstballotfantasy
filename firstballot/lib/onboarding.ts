@@ -1,4 +1,4 @@
-export const TOUR_VERSION = 'team-map-v1'
+export const TOUR_VERSION = 'team-map-v2'
 export const tourStorageKey = (accountId: string) => `firstballot:tour:${TOUR_VERSION}:${accountId}`
 export function hasSeenTour(metadata: Record<string, unknown> | undefined, local: string | null) {
   return metadata?.product_tour_version === TOUR_VERSION || local === TOUR_VERSION

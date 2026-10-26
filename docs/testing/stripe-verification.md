@@ -71,3 +71,5 @@ node --env-file=.env.local --env-file=.env.billing-test.local scripts/testing/st
 ```
 
 The last command saves the report and deletes the disposable test clock/customer. Do not publish fixture session URLs.
+
+Build note: Vercel also reproduced the Next 16 Turbopack Google-font internal-module resolution failure. `pnpm run build` now explicitly uses the verified webpack production builder.

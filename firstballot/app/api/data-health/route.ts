@@ -36,6 +36,8 @@ export async function GET() {
 
     const state = stateResponse?.ok ? await stateResponse.json().catch(() => null) : null
     const currentSeason = Number(state?.season) || null
+    const week = Number(state?.week)
+    const currentWeek = Number.isInteger(week) && week >= 1 && week <= 18 ? week : null
     const now = Date.now()
     const ktcDate = ktcResult.data?.scraped_date ?? ktcArchive.dates.at(-1) ?? null
     const ktcSource = ktcResult.data?.scraped_date ? 'supabase' : 'sdk-archive'
@@ -115,7 +117,9 @@ export async function GET() {
       ...snapshots.filter(
         (dataset) =>
           dataset.key === `espn:ppr:${currentSeason}` ||
-          dataset.key === `sleeper:projections:${currentSeason}:season`
+          dataset.key === `sleeper:projections:${currentSeason}:season` ||
+          (currentWeek !== null &&
+            dataset.key === `sleeper:projections:${currentSeason}:${currentWeek}`)
       ),
       ktc,
       ...prospectYears,
@@ -128,6 +132,7 @@ export async function GET() {
     return json({
       status,
       currentSeason,
+      currentWeek,
       datasets: [...snapshots, ktc, ...prospectYears],
       monitored,
       checkedAt: new Date().toISOString(),

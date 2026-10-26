@@ -74,14 +74,13 @@ def parse_stats(document, max_season):
             values = entry.get("stats", [])
             if len(names) != len(values):
                 raise ValueError(f"stats schema changed for {category['name']} {year}")
-            season = by_year.setdefault(year, {})
             for label, value in zip(names, values):
                 target = mapping.get(label)
                 if target and value not in (None, "", "-"):
                     number = float(str(value).replace(",", ""))
                     if not number.is_integer():
                         raise ValueError(f"non-integer {label} {year}")
-                    season[target] = int(number)
+                    by_year.setdefault(year, {})[target] = int(number)
     return by_year
 
 

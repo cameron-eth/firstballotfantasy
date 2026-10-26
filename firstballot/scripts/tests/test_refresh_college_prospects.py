@@ -21,7 +21,7 @@ class CollegeStatsTest(unittest.TestCase):
             ],
         }]}
         self.assertEqual(refresh.parse_stats(source, 2026), {
-            2024: {}, 2025: {"pass_yds": 1234, "pass_tds": 12},
+            2025: {"pass_yds": 1234, "pass_tds": 12},
             2026: {"pass_yds": 2345, "pass_tds": 22},
         })
 

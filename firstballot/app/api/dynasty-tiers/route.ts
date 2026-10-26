@@ -17,6 +17,7 @@ type SleeperPlayer = { full_name?: string; position?: string; team?: string; age
 type DraftFact = { selection: number; year: number } | null
 
 async function refresh() {
+  const generatedAt = new Date()
   const { data: latest, error: dateError } = await supabaseAdmin.from('ktc_player_values')
     .select('scraped_date').order('scraped_date', { ascending: false }).limit(1).single()
   if (dateError || !latest || !sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS))
@@ -112,13 +113,16 @@ async function refresh() {
     },
   }
   const serialized = JSON.stringify(payload)
-  const { error } = await supabaseAdmin.from('data_snapshots').upsert({
-    key, source: 'KTC + ESPN + Sleeper', payload,
-    fetched_at: new Date(now).toISOString(), source_observed_at: `${latest.scraped_date}T00:00:00Z`,
-    expires_at: new Date(now + 30 * 3600000).toISOString(), quality: 'validated',
-    content_hash: createHash('sha256').update(serialized).digest('hex'), season: stats.season,
+  const { data: published, error } = await supabaseAdmin.rpc('publish_dynasty_tiers', {
+    p_key: key, p_source: 'KTC + ESPN + Sleeper', p_payload: payload,
+    p_generated_at: generatedAt.toISOString(),
+    p_source_observed_at: `${latest.scraped_date}T00:00:00Z`,
+    p_expires_at: new Date(now + 30 * 3600000).toISOString(),
+    p_content_hash: createHash('sha256').update(serialized).digest('hex'),
+    p_season: stats.season,
   })
   if (error) throw Error('TIER_SNAPSHOT_WRITE_FAILED')
+  if (published !== true) return { refreshed: false, reason: 'SUPERSEDED_BY_NEWER_PUBLICATION' }
   await supabaseAdmin.from('ingestion_runs').insert({
     dataset: key, status: 'success', completed_at: new Date().toISOString(), row_count: players.length,
   })

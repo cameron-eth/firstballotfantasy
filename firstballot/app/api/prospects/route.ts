@@ -165,8 +165,10 @@ function deriveRanks(records: RankedRecord[]) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const draftYear = searchParams.get('draft_year') || String(Math.max(2027, new Date().getFullYear() + 1))
+    const draftYear =
+      searchParams.get('draft_year') || String(Math.max(2027, new Date().getFullYear() + 1))
     const isAllYears = draftYear === 'all'
+    const history = searchParams.get('scope') === 'history'
     const yearNum = !isAllYears ? toNumberOrNull(draftYear) : null
 
     if (!isAllYears && yearNum === null) {
@@ -179,10 +181,18 @@ export async function GET(request: NextRequest) {
       query = query.eq('draft_year', yearNum)
     }
 
-    // Sort by grade first so the best players surface regardless of class year
-    query = query.order('overall_grade', { ascending: false }).order('rank', { ascending: true })
+    if (history) {
+      const today = new Date()
+      query = query.lte('draft_year', today.getFullYear() - (today.getMonth() < 4 ? 1 : 0))
+    }
 
-    const { data: dynastyData, error: dynastyError } = await query
+    // Sort by grade first so the best players surface regardless of class year
+    query = query
+      .order('overall_grade', { ascending: false, nullsFirst: false })
+      .order('name', { ascending: true })
+      .order('id', { ascending: true })
+
+    const { data: dynastyData, error: dynastyError } = await query.range(0, 999)
 
     if (dynastyError) {
       console.error('Database error fetching prospects from dynasty_prospects:', dynastyError)
@@ -190,6 +200,15 @@ export async function GET(request: NextRequest) {
     }
 
     const records = dynastyData || []
+    // Supabase caps each response. History must include every archived class.
+    if (history && records.length === 1000) {
+      for (let offset = 1000; ; offset += 1000) {
+        const { data: page, error } = await query.range(offset, offset + 999)
+        if (error) throw error
+        records.push(...(page || []))
+        if (!page || page.length < 1000) break
+      }
+    }
     const { overallRankById, positionalRankById } = deriveRanks(records as RankedRecord[])
 
     const prospects: Prospect[] = records.map((record) => {
@@ -237,7 +256,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Source-checked rows remain visible until the database imports run.
-    if (isAllYears || yearNum === 2029 || yearNum === 2028) {
+    if (!history && (isAllYears || yearNum === 2029 || yearNum === 2028)) {
       const missing = [
         ...(isAllYears || yearNum === 2029 ? missingCurated2029(prospects) : []),
         ...(isAllYears || yearNum === 2028 ? missingCurated2028(prospects) : []),
@@ -247,12 +266,23 @@ export async function GET(request: NextRequest) {
         is_fallback: true,
         rank: player.position_rank,
         overall_rank: player.rank,
-        espn_id: null, cfbd_id: null, projectedRound: 'TBD',
-        tier: null, tier_numeric: null, valuation: null,
-        overall_grade: null, grade_tier: null, nfl_comparisons: null,
-        team_color: null, college_stats: 'college_stats' in player ? player.college_stats : null, updated_at: null,
-        college_production_score: null, physical_measurables_score: null,
-        hs_recruiting_score: null, draft_projection_score: null, expert_consensus_score: null,
+        espn_id: null,
+        cfbd_id: null,
+        projectedRound: 'TBD',
+        tier: null,
+        tier_numeric: null,
+        valuation: null,
+        overall_grade: null,
+        grade_tier: null,
+        nfl_comparisons: null,
+        team_color: null,
+        college_stats: 'college_stats' in player ? player.college_stats : null,
+        updated_at: null,
+        college_production_score: null,
+        physical_measurables_score: null,
+        hs_recruiting_score: null,
+        draft_projection_score: null,
+        expert_consensus_score: null,
       }))
       prospects.push(...curated)
     }

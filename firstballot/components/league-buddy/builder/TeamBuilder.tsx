@@ -1,10 +1,15 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { PlanningSuggestions, type PlanningFocus, type PlanningOffer } from './PlanningSuggestions'
+import { parseScoringSlots } from '../draft-order/maxPointsFor'
+import { lineupBaseline } from '@/lib/draft-funding'
+import { DraftCapitalRail } from './DraftCapitalRail'
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
 import { type Scenario, type Target } from '@/lib/team-scenarios'
 import { PlayerTradeModal } from '../trades/PlayerTradeModal'
-import type { PlayerData, TeamData } from '../types'
+import type { TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
 import { StrategyCard } from './StrategyCard'
 import { LineupMap } from './LineupMap'
@@ -51,7 +56,8 @@ export function TeamBuilder({
   draftOrder?: TimelineDraftOrder
 }) {
   const { user, loading: authLoading } = useAuth()
-  const [tradePlayer, setTradePlayer] = useState<PlayerData | null>(null)
+  const [focus, setFocus] = useState<PlanningFocus | null>(null)
+  const [reviewOffer, setReviewOffer] = useState<PlanningOffer | null>(null)
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [active, setActive] = useState('')
   const [ready, setReady] = useState(false)
@@ -63,7 +69,7 @@ export function TeamBuilder({
   const [source, setSource] = useState<'trade' | 'draft'>('trade')
   const [position, setPosition] = useState('ALL')
   const [year, setYear] = useState('ALL')
-  const { viewportRef, zoom, setZoom } = useCanvasZoom()
+  const { viewportRef, contentRef, spaceRef, zoom, setZoom } = useCanvasZoom()
   const endpoint = `/api/team-scenarios?league=${leagueId}&roster=${team.rosterId}`
   const {
     data: prospects = [],
@@ -202,6 +208,12 @@ export function TeamBuilder({
     )
   if (!ready || loadedKey !== accountKey || !scenario || !view)
     return <p className="py-10 text-slate-400">Loading team plans…</p>
+  const baseline = lineupBaseline(team.players, rosterPositions)
+  const retained = lineupBaseline(
+    team.players.filter((p) => !view.outgoing.includes(p.playerId)),
+    rosterPositions
+  )
+  const planLoss = Math.max(0, baseline.ppg - retained.ppg)
   const add = (target: Target) => {
     if (scenario.targets.length >= 100 || scenario.targets.some((t) => t.id === target.id)) return
     const arrival = target.kind === 'draft' ? (target.year ?? timeline.horizon) : timeline.horizon
@@ -243,7 +255,7 @@ export function TeamBuilder({
             aria-label="Zoom out map"
             className={button}
             disabled={zoom <= 10}
-            onClick={() => setZoom(zoom / 1.25)}
+            onClick={() => setZoom((value) => value / 1.25)}
           >
             −
           </button>
@@ -254,7 +266,7 @@ export function TeamBuilder({
             aria-label="Zoom in map"
             className={button}
             disabled={zoom >= 150}
-            onClick={() => setZoom(zoom * 1.25)}
+            onClick={() => setZoom((value) => value * 1.25)}
           >
             +
           </button>
@@ -304,36 +316,90 @@ export function TeamBuilder({
             backgroundSize: '20px 20px',
           }}
         >
-          <div style={{ zoom: zoom / 100 }} className="mx-auto w-max">
-            <BuilderTeamSummary
-              team={team}
-              placement={placement}
-              leagueId={leagueId}
-              isDynasty={isDynasty}
-            />
-            <LineupMap
-              fits={timeline.fits}
-              team={team}
-              teams={teams}
-              rawSlots={rosterPositions}
-              scenario={scenario}
-              view={view}
-              horizon={timeline.horizon}
-              baseYear={timeline.baseYear}
-              board={
-                isDynasty &&
-                board.user &&
-                !board.error &&
-                !prospectError &&
-                !board.isLoading &&
-                !prospectsLoading
-                  ? board.players
-                  : []
-              }
-              update={update}
-              onTrade={setTradePlayer}
-              onAdd={add}
-            />
+          <div ref={spaceRef} className="relative overflow-hidden">
+            <div
+              ref={contentRef}
+              className="absolute left-0 top-0 origin-top-left will-change-transform"
+              style={{ width: Math.max(4, parseScoringSlots(rosterPositions).length) * 256 - 16 }}
+            >
+              <BuilderTeamSummary
+                team={team}
+                placement={placement}
+                leagueId={leagueId}
+                isDynasty={isDynasty}
+              />
+              {isDynasty && timeline.horizon > timeline.baseYear && (
+                <DraftCapitalRail
+                  picks={timeline.picks}
+                  year={timeline.horizon}
+                  teams={teams}
+                  slots={timeline.slots}
+                  fits={timeline.fits}
+                  targets={scenario.targets}
+                  plans={scenario.fundingPlans ?? []}
+                  available={timeline.available}
+                  onFund={(target) =>
+                    setFocus({
+                      kind: 'draft',
+                      target,
+                      rank:
+                        prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
+                        undefined,
+                    })
+                  }
+                  onUndo={(id) =>
+                    update({
+                      fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id),
+                    })
+                  }
+                />
+              )}
+              {view.outgoing.length > 0 && (
+                <p className="mx-auto mb-4 w-fit rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200">
+                  Plan cost · {view.outgoing.length} outgoing players · {planLoss.toFixed(1)}{' '}
+                  starting FPPG removed from today’s baseline
+                  {baseline.missing || retained.missing ? ' · partial stats' : ''}. Rookie
+                  production and a new MaxPF order are not forecast.
+                </p>
+              )}
+              {timeline.funding.rejected.length > 0 && (
+                <p role="alert" className="mb-3 text-xs text-amber-300">
+                  A funding path no longer matches pick ownership. Undo it and choose a new path.
+                </p>
+              )}
+              <LineupMap
+                fits={timeline.fits}
+                team={team}
+                teams={teams}
+                rawSlots={rosterPositions}
+                scenario={scenario}
+                view={view}
+                horizon={timeline.horizon}
+                baseYear={timeline.baseYear}
+                board={
+                  isDynasty &&
+                  board.user &&
+                  !board.error &&
+                  !prospectError &&
+                  !board.isLoading &&
+                  !prospectsLoading
+                    ? board.players
+                    : []
+                }
+                update={update}
+                onTrade={(player) => setFocus({ kind: 'player', player })}
+                onFund={(target) =>
+                  setFocus({
+                    kind: 'draft',
+                    target,
+                    rank:
+                      prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
+                      undefined,
+                  })
+                }
+                onAdd={add}
+              />
+            </div>
           </div>
         </div>
         <section aria-label="Find strategy targets" className="border-t border-white/10 pt-5">
@@ -413,14 +479,39 @@ export function TeamBuilder({
           )}
         </section>
       </fieldset>
-      {tradePlayer && (
+      <AnimatePresence>
+        {focus && !reviewOffer && (
+          <PlanningSuggestions
+            key={focus.kind === 'player' ? focus.player.playerId : focus.target.id}
+            focus={focus}
+            team={team}
+            teams={teams}
+            leagueId={leagueId}
+            slots={timeline.slots}
+            rawSlots={rosterPositions}
+            scenario={scenario}
+            onClose={() => setFocus(null)}
+            onReview={setReviewOffer}
+            onSimulate={(plan) => {
+              update({
+                fundingPlans: [
+                  ...(scenario.fundingPlans ?? []).filter((f) => f.targetId !== plan.targetId),
+                  plan,
+                ],
+              })
+              setFocus(null)
+            }}
+          />
+        )}
+      </AnimatePresence>
+      {reviewOffer && (
         <PlayerTradeModal
-          key={`${leagueId}:${team.rosterId}:${tradePlayer.playerId}`}
-          player={tradePlayer}
+          key={JSON.stringify(reviewOffer)}
+          initialOffer={reviewOffer}
           team={team}
           teams={teams}
           leagueId={leagueId}
-          onClose={() => setTradePlayer(null)}
+          onClose={() => setReviewOffer(null)}
         />
       )}
     </div>

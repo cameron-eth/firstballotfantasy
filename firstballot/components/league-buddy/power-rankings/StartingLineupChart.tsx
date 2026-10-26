@@ -24,7 +24,7 @@ export function StartingLineupChart({ slots, slotRanks, leagueSize }: StartingLi
   }
 
   return (
-    <div className="flex items-end justify-between gap-1.5 sm:gap-2 h-[280px] overflow-x-auto pb-1">
+    <div className="flex items-end justify-between gap-1.5 sm:gap-2 h-[240px] overflow-x-auto pb-1">
       {slots.map((slot) => {
         const ranked = slotRanks[slot.id]
         const tone = toneForRank(ranked?.rank ?? leagueSize, leagueSize)
@@ -61,7 +61,7 @@ export function StartingLineupChart({ slots, slotRanks, leagueSize }: StartingLi
               className="text-[9px] text-slate-500 truncate max-w-[64px]"
               title={slot.player?.playerName}
             >
-              {slot.player?.playerName.split(' ').slice(-1)[0] ?? '—'}
+              {slot.player?.playerName.replace(/\s+(?:Jr\.?|Sr\.?|II|III|IV)$/i, '').split(' ').slice(-1)[0] ?? '—'}
             </span>
           </div>
         )

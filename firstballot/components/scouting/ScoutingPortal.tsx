@@ -749,7 +749,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
             </TabsContent>
 
             <TabsContent value="historical" className="mt-3">
-              <HistoricalRankingsTab currentProspects={prospects} />
+              <HistoricalRankingsTab />
             </TabsContent>
           </Tabs>
 

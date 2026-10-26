@@ -1,0 +1,30 @@
+name: Refresh historical career outcomes
+on:
+  schedule:
+    - cron: '20 12 * * 3'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python firstballot/scripts/import-history-outcomes.py
+      - name: Propose validated snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add firstballot/data/history-outcomes.json firstballot/data/nfl-player-identities.json
+          if git diff --cached --quiet; then exit 0; fi
+          BRANCH="codex/history-outcomes-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+          git commit -m 'Refresh historical career outcomes'
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title 'Refresh historical career outcomes' --body 'Validated public rookie ADP and completed-week NFL production snapshot. Missing baselines remain unrated.'

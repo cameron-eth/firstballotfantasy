@@ -14,7 +14,7 @@ Reference search across application and component TS/TSX confirmed no consumers 
 ## Follow-up priorities
 
 1. **Scouting cards and detail modals:** ProspectCard still has oversized monospaced rank/grade treatments and its own image/card hierarchy. Consolidate portrait, school identity, typography and metrics with StrategyCard without losing scouting-specific grades and reports.
-2. **Standings/playoff odds:** PlayoffOddsSection retains monospaced scorecards and a separate summary-card language. Move its summary into the standings table/header; keep the simulation and league-rule inputs.
+2. **Standings/playoff odds — completed:** One sortable table now combines standings, shared MaxPF order/projection and playoff probabilities. Removed the separate rendered playoff and standings panels; kept simulation logic and league-rule inputs.
 3. **Overview trade intelligence:** It still renders the legacy buy/hold/sell presentation alongside the newer suggested-trade workflow. Replace with the shared compact suggestions once overview entry points are unified; do not silently remove live trade data.
 4. **Save consistency:** Builder now has immediate Saving/unsaved/saved feedback; draft board and scouting-note save controls should adopt a shared persistence-status component with retry and retained edits. Do not show a saved state before acknowledgement.
 
@@ -25,3 +25,13 @@ Ran TypeScript with `--noUnusedLocals --noUnusedParameters` as an audit, without
 ## Verification
 
 Typecheck, React component checks, and 100 automated tests pass, including unique starters, shared eligible backups, manual prospect placement, overlapping flex eligibility, and persisted per-year assignment validation. UI screenshots use local review routes; those routes are removed from the shipped change. No live trade or lineup actions were sent.
+
+
+## Acquisition planning follow-up (2026-10-25)
+
+- Rookie targets are explicitly acquisition-pending. Draft access shows owned versus hypothetical picks, original roster projection, current holder, and one-pick-per-target allocation.
+- Floating suggestion cards replace the map discovery modal. Packages use existing league inventory and KTC early/mid/late pick quotes. A broad 85–130% benchmark band supplies ideas, not acceptance probabilities or a precise 1.01 price. Elite prospect premiums and future pick-order changes are not modeled.
+- Simulating a funding path removes outgoing players and changes hypothetical pick ownership only. Undo restores the scenario. Live competitive state stays on the shared baseline. Separate confirmation handles any actual trade.
+- Current lineup FPPG loss uses the existing optimal-slot engine and measured production; missing samples are labeled. No invented rookie production.
+- Team Builder is desktop-only (1024px+, fine pointer and hover). Mobile defaults to Overview; explicit Builder links explain availability. Existing saved plans are retained.
+- Four compact power-ranking cards replace the oversized chart layout. Removed StatManagementPanel, its five unused diagnostics, StandingsPlayoffs, and the obsolete PlayoffOddsSection renderer.

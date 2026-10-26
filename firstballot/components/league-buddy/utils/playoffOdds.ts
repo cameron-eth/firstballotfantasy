@@ -1,6 +1,7 @@
 import type { TeamData } from '../types'
 
 interface PlayoffOddsResult {
+  rosterId: number
   teamName: string
   wins: number
   losses: number
@@ -35,6 +36,7 @@ export function calculatePlayoffOdds(
   // Only return hardcoded values if season is completely over (no remaining weeks)
   if (teams.length === 0 || currentWeek > totalWeeks) {
     return teams.map((team, index) => ({
+      rosterId: team.rosterId,
       teamName: team.teamName,
       wins: team.wins,
       losses: team.losses,
@@ -70,6 +72,7 @@ export function calculatePlayoffOdds(
       return b.pointsFor - a.pointsFor
     })
     return sortedTeams.map((team, index) => ({
+      rosterId: team.rosterId,
       teamName: team.teamName,
       wins: team.wins,
       losses: team.losses,
@@ -116,6 +119,7 @@ export function calculatePlayoffOdds(
       return b.pointsFor - a.pointsFor
     })
     return sortedTeams.map((team, index) => ({
+      rosterId: team.rosterId,
       teamName: team.teamName,
       wins: team.wins,
       losses: team.losses,
@@ -256,6 +260,7 @@ export function calculatePlayoffOdds(
     const probability = (playoffCounts[teamIndex] / simulations) * 100
 
     return {
+      rosterId: team.rosterId,
       teamName: team.teamName,
       wins: team.wins,
       losses: team.losses,

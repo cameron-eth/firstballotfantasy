@@ -1,9 +1,10 @@
 'use client'
 import useSWR from 'swr'
 import type { TeamData } from './types'
-import { PlayoffOddsSection } from './PlayoffOddsSection'
+import { useMemo } from 'react'
+import { calculatePlayoffOdds } from './utils/playoffOdds'
 
-export function StandingsPlayoffs({ leagueId, teams }: { leagueId: string; teams: TeamData[] }) {
+export function useStandingsOdds(leagueId: string, teams: TeamData[]) {
   const { data, error, mutate } = useSWR(
     `standings-playoffs:${leagueId}:${teams.map((t) => `${t.rosterId}-${t.wins}-${t.losses}-${t.ties}`).join(',')}`,
     async () => {
@@ -43,28 +44,12 @@ export function StandingsPlayoffs({ leagueId, teams }: { leagueId: string; teams
       return { end, spots, completed, schedule }
     }
   )
-  if (error)
-    return (
-      <button className="text-sm text-blue-300" onClick={() => mutate()}>
-        Playoff odds unavailable · Retry
-      </button>
-    )
-  if (!data) return <p className="text-sm text-slate-400">Loading playoff odds…</p>
-  if (!data.spots)
-    return <p className="text-sm text-slate-400">This league has no playoff bracket.</p>
-  return (
-    <section aria-label="Playoff outlook">
-      <p className="mb-3 text-xs text-slate-400">
-        Estimated from scoring and remaining schedule; league settings determine the playoff field.
-        Division seeding and custom tiebreakers can change qualification.
-      </p>
-      <PlayoffOddsSection
-        teams={teams}
-        currentWeek={data.completed}
-        totalWeeks={data.end}
-        playoffSpots={data.spots}
-        schedule={data.schedule}
-      />
-    </section>
+  const odds = useMemo(
+    () =>
+      data?.spots
+        ? calculatePlayoffOdds(teams, data.completed, data.end, data.spots, data.schedule)
+        : [],
+    [teams, data]
   )
+  return { data, error, retry: mutate, odds }
 }

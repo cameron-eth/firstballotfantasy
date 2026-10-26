@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { UserAvatar } from '@/components/user-avatar'
 import { LEAGUE_SECTIONS, withLeagueId } from './navigation'
 import type { LeagueSection, TeamData } from './types'
@@ -24,6 +25,7 @@ export function DashboardLayout({
   isDynasty: boolean
   leagueId: string
 }) {
+  const desktopBuilder = useDesktopBuilder()
   return (
     <section
       aria-label="League dashboard"
@@ -73,16 +75,18 @@ export function DashboardLayout({
         aria-label="League sections"
         className="mb-6 flex overflow-x-auto border-b border-white/10"
       >
-        {LEAGUE_SECTIONS.map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => onSectionChange(id)}
-            aria-current={activeSection === id ? 'page' : undefined}
-            className={`shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors first:pl-0 ${activeSection === id ? 'border-blue-400 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}
-          >
-            {label}
-          </button>
-        ))}
+        {LEAGUE_SECTIONS.filter(({ id }) => id !== 'builder' || desktopBuilder).map(
+          ({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => onSectionChange(id)}
+              aria-current={activeSection === id ? 'page' : undefined}
+              className={`shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors first:pl-0 ${activeSection === id ? 'border-blue-400 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}
+            >
+              {label}
+            </button>
+          )
+        )}
       </nav>
       <div className="min-w-0">{children}</div>
     </section>

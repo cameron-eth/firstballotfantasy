@@ -20,6 +20,8 @@ export function PlayerTradingCard({
   children,
   badge,
   imageHeight = 'h-48',
+  compact = false,
+  shoulderBadge,
 }: {
   name: string
   position: string
@@ -28,6 +30,8 @@ export function PlayerTradingCard({
   children?: ReactNode
   badge?: string
   imageHeight?: string
+  shoulderBadge?: { label: string; description: string }
+  compact?: boolean
   label?: string
   action?: string
   onAction?: () => void
@@ -48,7 +52,7 @@ export function PlayerTradingCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex min-h-[350px] flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -95,6 +99,16 @@ export function PlayerTradingCard({
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#090e18] to-transparent"
         />
+        {shoulderBadge && (
+          <span
+            tabIndex={0}
+            title={shoulderBadge.description}
+            aria-label={shoulderBadge.description}
+            className="absolute bottom-3 right-4 z-20 rounded-md border border-white/20 bg-slate-950/90 px-2 py-1 text-xs font-semibold tabular-nums text-white"
+          >
+            {shoulderBadge.label}
+          </span>
+        )}
       </div>
       <div className="relative z-20 flex flex-1 flex-col bg-[#090e18] px-4 pb-4">
         <p
@@ -103,7 +117,9 @@ export function PlayerTradingCard({
         >
           {identity}
         </p>
-        <h3 className="mt-1 break-words text-xl font-bold leading-tight tracking-tight text-white">
+        <h3
+          className={`mt-1 break-words ${compact ? 'text-sm' : 'text-xl'} font-bold leading-tight tracking-tight text-white`}
+        >
           {name}
         </h3>
         {team.includes(' · ') && (

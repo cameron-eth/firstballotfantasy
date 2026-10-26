@@ -11,6 +11,7 @@ This directory contains versioned public-data artifacts. It is not a replacement
 | [ESPN fantasy API](https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/2026/segments/0/leaguedefaults/3?view=kona_player_info) | Current regular-season actual PPR totals and games played | `/api/roster-stats` selects current-season `statSourceId=0`, season-total rows only. Default league 3 supplies PPR scoring. Full NFL position ranks are calculated server-side. The normalized map is cached 15 minutes; raw payload is not delivered to the browser. The season in this example URL is illustrative; code resolves it dynamically. |
 | ESPN site API / CDN | Schedule, NFL and college portraits/logos | Public schedule reads and image URLs. The app uses stored cutouts where supplied. |
 | Supabase `dynasty_prospects` | Prospect identity, original grade, college production and class | `/api/prospects`, 5-minute shared cache. History uses a past-class filter and pagination; future curated rows are excluded. |
+| ESPN college athlete statistics | 2027 class passing, rushing, and receiving career totals | `refresh-college-prospects.py` checks stored ESPN IDs against athlete names and imports current-season totals three times weekly. Scouting grades and ranks are not recalculated. The provider does not supply an observation timestamp, so health reports check time and coverage separately. |
 | Supabase KTC history + `ktc-history.json` | Market values, trend/sparklines | Server normalization and paginated history reads; bundled fallback when DB is unavailable. Coverage metadata identifies source/date. |
 
 The ESPN API is undocumented. [Public-ESPN-API](https://github.com/pseudo-r/Public-ESPN-API) is an endpoint reference, not the data provider. Schema/status failures must surface as unavailable data rather than silently reusing a different season. The application currently uses standard PPR for actual FPPG; custom league scoring is applied to projections, not these ESPN actual totals.
@@ -55,6 +56,7 @@ node scripts/sync-ktc-values.mjs
 | --- | --- | --- |
 | `.github/workflows/history-outcomes.yml` | Wednesday 12:20 | Validates and proposes a PR for outcome + identity snapshots; does not automatically merge or deploy them |
 | `.github/workflows/ktc-history.yml` | Daily 10:30 | SDK scrape, full archive import, Supabase upsert and fallback snapshot PR |
+| `.github/workflows/college-prospects.yml` | Monday, Wednesday, Friday 11:45 | Validates 2027 ESPN athlete identities and season coverage, updates matched college totals, and stores a 7-day check snapshot. Missing or ambiguous athletes remain unchanged and are counted. |
 
 Both support manual dispatch and run scheduled jobs only once present on the default branch. They require GitHub contents/pull-request write permissions. KTC persistence also needs repository secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Public history ingestion does not require Supabase credentials.
 

@@ -63,3 +63,4 @@ jobs:
           cache-dependency-path: firstballot/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: npm test
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py'

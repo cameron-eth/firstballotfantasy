@@ -82,9 +82,12 @@ export default function BillingPage() {
       setBusy('')
     }
   }
-  const hasLiveSubscription =
+  const billingResolved = !!user && !billing.loading && !billing.error
+  const hasUnlimitedAccess = billingResolved && billing.capacity !== 1
+  const hasManageableStripeSubscription =
+    hasUnlimitedAccess &&
     !!billing.subscription?.stripe_subscription_id &&
-    !['canceled', 'incomplete_expired', 'free'].includes(billing.subscription.status)
+    ['active', 'trialing'].includes(billing.subscription.status)
   const activeTeams = data?.teams.filter((t) => t.active).length ?? 0
   const price = billing.prices.find((p: { interval: string }) => p.interval === interval)
   return (
@@ -137,33 +140,37 @@ export default function BillingPage() {
                 Every league. One membership.
               </span>
             </div>
-            <div
-              className="mt-5 inline-flex rounded-xl bg-slate-950 p-1"
-              aria-label="Billing interval"
-            >
-              {['month', 'year'].map((value) => (
-                <button
-                  key={value}
-                  aria-pressed={interval === value}
-                  onClick={() => setInterval(value)}
-                  className={`rounded-lg px-4 py-2 text-sm font-medium ${interval === value ? 'bg-amber-300 text-slate-950' : 'text-slate-300 hover:text-white'}`}
+            {(!user || (billingResolved && !hasUnlimitedAccess)) && (
+              <>
+                <div
+                  className="mt-5 inline-flex rounded-xl bg-slate-950 p-1"
+                  aria-label="Billing interval"
                 >
-                  {value === 'month' ? 'Monthly' : 'Annual · save $74'}
-                </button>
-              ))}
-            </div>
-            <p className="mt-5 text-5xl font-semibold tracking-tight">
-              {interval === 'month' ? '$12' : '$70'}
-              <span className="text-base font-normal tracking-normal text-slate-400">
-                {' '}
-                / {interval === 'month' ? 'month' : 'year'}
-              </span>
-            </p>
-            <p className="mt-2 text-sm text-slate-400">
-              {interval === 'year'
-                ? '$5.83/month equivalent, billed $70 annually.'
-                : 'Billed monthly. Cancel before your next renewal.'}
-            </p>
+                  {['month', 'year'].map((value) => (
+                    <button
+                      key={value}
+                      aria-pressed={interval === value}
+                      onClick={() => setInterval(value)}
+                      className={`rounded-lg px-4 py-2 text-sm font-medium ${interval === value ? 'bg-amber-300 text-slate-950' : 'text-slate-300 hover:text-white'}`}
+                    >
+                      {value === 'month' ? 'Monthly' : 'Annual · save $74'}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-5 text-5xl font-semibold tracking-tight">
+                  {interval === 'month' ? '$12' : '$70'}
+                  <span className="text-base font-normal tracking-normal text-slate-400">
+                    {' '}
+                    / {interval === 'month' ? 'month' : 'year'}
+                  </span>
+                </p>
+                <p className="mt-2 text-sm text-slate-400">
+                  {interval === 'year'
+                    ? '$5.83/month equivalent, billed $70 annually.'
+                    : 'Billed monthly. Cancel before your next renewal.'}
+                </p>
+              </>
+            )}
             <ul className="mt-6 space-y-3 text-sm text-slate-200">
               {[
                 'Unlimited active teams under one account',
@@ -184,12 +191,30 @@ export default function BillingPage() {
               >
                 Sign in to upgrade <ArrowUpRight size={16} />
               </Link>
+            ) : billing.loading ? (
+              <p role="status" className="mt-7 rounded-xl border border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-300">
+                <Loader2 className="mr-2 inline animate-spin" size={15} /> Checking your membership…
+              </p>
+            ) : billing.error ? (
+              <p role="alert" className="mt-7 rounded-xl border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
+                We couldn’t verify your membership. Reload this page before making a billing change.
+              </p>
+            ) : hasUnlimitedAccess ? (
+              <div role="status" className="mt-7 rounded-xl border border-emerald-300/30 bg-emerald-300/10 p-4">
+                <p className="font-semibold text-emerald-200">Unlimited membership is active</p>
+                <p className="mt-1 text-sm text-slate-300">All your connected teams and Team Builder are included.</p>
+                {hasManageableStripeSubscription && (
+                  <button className={`${button} mt-4 w-full border-emerald-300/50`} onClick={() => checkout(true)} disabled={!!busy}>
+                    Manage my membership <ArrowUpRight size={16} />
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 disabled={
-                  !!busy || billing.loading || !!billing.error || (!hasLiveSubscription && !price)
+                  !!busy || (!price)
                 }
-                onClick={() => checkout(hasLiveSubscription)}
+                onClick={() => checkout(false)}
                 className={`${button} mt-7 w-full border-amber-300 bg-amber-300 !text-slate-950`}
               >
                 {busy === 'billing' ? (
@@ -197,17 +222,15 @@ export default function BillingPage() {
                 ) : (
                   <ArrowUpRight size={16} />
                 )}
-                {hasLiveSubscription
-                  ? 'Manage my membership'
-                  : price
-                    ? 'Go Unlimited'
-                    : 'Paid membership opens soon'}
+                {price ? 'Go Unlimited' : 'Paid membership opens soon'}
               </button>
             )}
-            <p className="mt-3 text-xs text-slate-400">
-              Secure checkout with Stripe. Review your total before paying. No charge for
-              discovering teams.
-            </p>
+            {(!user || (billingResolved && !hasUnlimitedAccess)) && (
+              <p className="mt-3 text-xs text-slate-400">
+                Secure checkout with Stripe. Review your total before paying. No charge for
+                discovering teams.
+              </p>
+            )}
           </div>
         </section>
         <div className="my-8 grid gap-6 border-y border-slate-800 py-6 text-sm sm:grid-cols-3">
@@ -335,7 +358,7 @@ export default function BillingPage() {
                 </p>
               )}
             </section>
-            {hasLiveSubscription && (
+            {hasManageableStripeSubscription && (
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-400">
                 <p>Update payment details, change billing interval or cancel your membership.</p>
                 <button

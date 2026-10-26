@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowDown, ArrowRight } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
@@ -40,7 +41,7 @@ export function ScoutingExperience({ players }: { players: Player[] }) {
             <Link href="/scouting-portal" className="group inline-flex min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300">Find your next player <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
             <Link href="/league-buddy" className="inline-flex min-h-12 items-center rounded-lg border border-white/20 bg-white/5 px-5 text-sm font-semibold transition hover:border-blue-300">Connect your league</Link>
           </div>
-          <a href="#class-outlook" className="mt-10 inline-flex items-center gap-2 text-xs text-slate-400 hover:text-white">Step inside the scouting room <ArrowDown className="h-3 w-3" /></a>
+          <a href="#team-map" className="mt-10 inline-flex items-center gap-2 text-xs text-slate-400 hover:text-white">See your team on the map <ArrowDown className="h-3 w-3" /></a>
         </ScrollReveal>
         <div className="relative min-w-0">
           <div className="relative mx-auto h-[440px] max-w-[560px] sm:h-[540px]" style={{ perspective: 1200 }}>
@@ -55,6 +56,34 @@ export function ScoutingExperience({ players }: { players: Player[] }) {
           <p className="mt-4 text-center text-[10px] uppercase tracking-[0.2em] text-slate-500">Real players. Your next cornerstone.</p>
         </div>
       </div>
+    </section>
+    <section id="team-map" aria-labelledby="team-map-title" className="scroll-mt-24 border-b border-white/10 bg-slate-950/50 px-5 py-16 sm:px-8 sm:py-24">
+      <ScrollReveal className="mx-auto max-w-6xl">
+        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">Meet your Team Builder</p>
+            <h2 id="team-map-title" className="mt-4 text-3xl font-bold tracking-tight sm:text-5xl">Your roster. Your picks.<br /><span className="text-blue-300">Your next three seasons.</span></h2>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300">See who starts, who’s next, and what it takes to get there. Put future rookies into your plan and explore the trades that could make room.</p>
+          </div>
+          <div className="shrink-0">
+            <Link href="/league-buddy?tab=builder" className="hidden min-h-12 items-center justify-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300 lg:inline-flex">Build my team map <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/scouting-portal" className="inline-flex min-h-12 items-center gap-3 rounded-lg bg-blue-400 px-5 text-sm font-semibold text-slate-950 lg:hidden">Start with your prospect board <ArrowRight className="h-4 w-4" /></Link>
+            <p className="mt-3 text-xs text-slate-400">One team free · Team Builder on desktop</p>
+          </div>
+        </div>
+        <figure className="mt-10 overflow-hidden rounded-2xl border border-blue-300/20 bg-[#0b1224] shadow-[0_24px_100px_-30px_rgba(59,130,246,0.3)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-5 py-3 text-xs text-slate-400"><span className="font-semibold text-white">A plan you can see.</span><span>Actual Team Builder capture</span></div>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Team map preview; scroll horizontally to explore the lineup"><Image src="/images/product/team-map-lineup.png" alt="Team Builder map showing nine starting lineup slots, position-colored player cards, fantasy points per game, KTC values and trade-target actions." width={968} height={235} sizes="(max-width: 1200px) 100vw, 1152px" className="h-auto w-full min-w-[760px] sm:min-w-0" /></div>
+          <figcaption className="border-t border-white/10 px-5 py-3 text-xs leading-relaxed text-slate-400">Example roster snapshot. Player values and stats shown are from the capture; your connected team uses available current data.</figcaption>
+        </figure>
+        <ol className="mt-8 grid gap-6 sm:grid-cols-3">
+          {[
+            ['01', 'Start with your team', 'Connect Sleeper and see your lineup, depth and draft capital together.'],
+            ['02', 'Explore the next chapter', 'Move through future seasons and place prospects into your roster plan.'],
+            ['03', 'Find your next move', 'Explore trade ideas and the picks you would need. Review every offer before sending.'],
+          ].map(([number, title, description]) => <li key={number} className="border-t border-white/10 pt-4"><span className="text-xs font-semibold text-blue-300">{number}</span><h3 className="mt-2 text-base font-semibold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-slate-400">{description}</p></li>)}
+        </ol>
+      </ScrollReveal>
     </section>
     <section id="class-outlook" className="mx-auto max-w-7xl scroll-mt-24 px-5 py-16 sm:px-8 sm:py-24">
       <ScrollReveal className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">

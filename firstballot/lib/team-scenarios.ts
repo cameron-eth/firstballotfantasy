@@ -19,6 +19,8 @@ export type Scenario = {
   lineups?: Record<string, Record<string, string>>
   departureYears?: Record<string, number>
   fundingPlans?: FundingPlan[]
+  /** Manual pick -> prospect pairings (pick id -> target id); the planner honors these first. */
+  pickAssignments?: Record<string, string>
 }
 export function validateScenarios(value: unknown): value is Scenario[] {
   if (!Array.isArray(value) || value.length > 12) return false
@@ -65,6 +67,17 @@ export function validateScenarios(value: unknown): value is Scenario[] {
                     typeof id === 'string' &&
                     /^(nfl|prospect):[a-zA-Z0-9_-]{1,64}$/.test(id)
                 )
+            ))) &&
+        (s.pickAssignments === undefined ||
+          (s.pickAssignments !== null &&
+            typeof s.pickAssignments === 'object' &&
+            !Array.isArray(s.pickAssignments) &&
+            Object.keys(s.pickAssignments).length <= 100 &&
+            Object.entries(s.pickAssignments).every(
+              ([pickId, targetId]) =>
+                /^20\d{2}:\d{1,2}:\d+$/.test(pickId) &&
+                typeof targetId === 'string' &&
+                /^prospect:[a-zA-Z0-9_-]{1,64}$/.test(targetId)
             ))) &&
         (s.fundingPlans === undefined ||
           (Array.isArray(s.fundingPlans) &&

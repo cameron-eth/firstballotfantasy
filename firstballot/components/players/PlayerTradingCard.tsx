@@ -28,6 +28,7 @@ export function PlayerTradingCard({
   shoulderBadge,
   tier,
   signal,
+  choice,
 }: {
   name: string
   position: string
@@ -46,6 +47,7 @@ export function PlayerTradingCard({
     positionRank?: number | null
     delta30?: number | null
   }
+  choice?: { checked: boolean; onToggle: () => void }
   signal?: Pick<TradeSignal, 'headline' | 'reasons' | 'partners'>
   compact?: boolean
   label?: string
@@ -75,7 +77,7 @@ export function PlayerTradingCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : cold ? 'border-sky-200 ring-2 ring-sky-200/60 shadow-[0_0_30px_-6px_rgba(186,230,253,0.6)]' : hot ? 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_30px_-6px_rgba(52,211,153,0.65)]' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${choice?.checked ? 'border-violet-300 ring-2 ring-violet-300/70' : selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : cold ? 'border-sky-200 ring-2 ring-sky-200/60 shadow-[0_0_30px_-6px_rgba(186,230,253,0.6)]' : hot ? 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_30px_-6px_rgba(52,211,153,0.65)]' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -179,6 +181,17 @@ export function PlayerTradingCard({
           </p>
         )}
         {badge && <p className="mt-2 text-[11px] font-medium text-slate-300">{badge}</p>}
+        {choice && (
+          <label className="mt-2 flex cursor-pointer items-center gap-2 text-[11px] text-slate-300">
+            <input
+              type="checkbox"
+              checked={choice.checked}
+              onChange={choice.onToggle}
+              className="h-3.5 w-3.5 accent-violet-400"
+            />
+            Include in a trade
+          </label>
+        )}
         {signal && (
           <div className="mt-2">
             <button

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { TourReplayButton } from '@/components/onboarding/ProductTour'
 import { AnimatePresence } from 'framer-motion'
+import { PickPanel } from './PickPanel'
 import { PlanningSuggestions, type PlanningFocus, type PlanningOffer } from './PlanningSuggestions'
 import { parseScoringSlots } from '../draft-order/maxPointsFor'
 import { lineupBaseline } from '@/lib/draft-funding'
@@ -10,7 +11,8 @@ import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
 import { type Scenario, type Target } from '@/lib/team-scenarios'
 import { PlayerTradeModal } from '../trades/PlayerTradeModal'
-import type { TeamData } from '../types'
+import type { PlayerData, TeamData } from '../types'
+import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import type { Prospect } from '@/components/scouting/types'
 import { LineupMap } from './LineupMap'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
@@ -55,6 +57,8 @@ export function TeamBuilder({
 }) {
   const { user, loading: authLoading } = useAuth()
   const [focus, setFocus] = useState<PlanningFocus | null>(null)
+  const [pickFocus, setPickFocus] = useState<OwnedPick | null>(null)
+  const [chosen, setChosen] = useState<string[]>([])
   const [reviewOffer, setReviewOffer] = useState<PlanningOffer | null>(null)
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [active, setActive] = useState('')
@@ -167,6 +171,45 @@ export function TeamBuilder({
       horizon: Math.max(timeline.horizon, arrival),
     })
   }
+  const choose = (player: PlayerData) =>
+    setChosen((ids) =>
+      ids.includes(player.playerId)
+        ? ids.filter((id) => id !== player.playerId)
+        : [...ids, player.playerId]
+    )
+  const assignProspect = (prospect: Prospect, pick: OwnedPick) => {
+    const id = `prospect:${prospect.id}`
+    const year = prospect.draft_year ?? Number(pick.season)
+    const exists = scenario.targets.some((t) => t.id === id)
+    const target: Target = {
+      id,
+      name: prospect.name,
+      position: prospect.position,
+      team: prospect.school,
+      image: prospect.headshot_url?.startsWith('https://') ? prospect.headshot_url : null,
+      kind: 'draft',
+      year,
+      arrivalYear: year,
+    }
+    // One pick per prospect and one prospect per pick: moving either end replaces the old pairing.
+    const rest = Object.fromEntries(
+      Object.entries(scenario.pickAssignments ?? {}).filter(
+        ([pickId, tid]) => pickId !== pick.id && tid !== id
+      )
+    )
+    update({
+      targets:
+        exists || scenario.targets.length >= 100 ? scenario.targets : [...scenario.targets, target],
+      pickAssignments: { ...rest, [pick.id]: id },
+      horizon: Math.max(timeline.horizon, year),
+    })
+  }
+  const unassignPick = (pick: OwnedPick) =>
+    update({
+      pickAssignments: Object.fromEntries(
+        Object.entries(scenario.pickAssignments ?? {}).filter(([pickId]) => pickId !== pick.id)
+      ),
+    })
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -279,6 +322,11 @@ export function TeamBuilder({
             {isDynasty && timeline.horizon > timeline.baseYear && (
               <DraftCapitalRail
                 compact
+                assignments={scenario.pickAssignments}
+                onPick={(pick) => {
+                  setFocus(null)
+                  setPickFocus(pick)
+                }}
                 picks={timeline.picks}
                 year={timeline.horizon}
                 teams={teams}
@@ -341,7 +389,12 @@ export function TeamBuilder({
                     : []
                 }
                 update={update}
-                onTrade={(player) => setFocus({ kind: 'player', player })}
+                chosen={chosen}
+                onChoose={choose}
+                onTrade={(player) => {
+                  setPickFocus(null)
+                  setFocus({ kind: 'player', player })
+                }}
                 onFund={(target) =>
                   setFocus({
                     kind: 'draft',
@@ -355,12 +408,52 @@ export function TeamBuilder({
               />
             </div>
           </div>
+          {chosen.length > 0 && (
+            <div className="sticky bottom-3 left-0 z-30 mx-auto mt-3 flex w-fit items-center gap-3 rounded-xl border border-violet-300/40 bg-slate-950/95 px-4 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur">
+              <span className="font-semibold text-violet-100">{chosen.length} selected</span>
+              <button
+                className="rounded-md bg-violet-300 px-3 py-1.5 font-semibold text-slate-950"
+                onClick={() => {
+                  const players = team.players.filter((p) => chosen.includes(p.playerId))
+                  setPickFocus(null)
+                  setFocus({ kind: 'players', players })
+                }}
+              >
+                See trade opportunities
+              </button>
+              <button className="text-slate-400 hover:text-white" onClick={() => setChosen([])}>
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       </fieldset>
       <AnimatePresence>
+        {pickFocus && !focus && !reviewOffer && (
+          <PickPanel
+            key={pickFocus.id}
+            pick={pickFocus}
+            team={team}
+            teams={teams}
+            leagueId={leagueId}
+            slots={timeline.slots}
+            scenario={scenario}
+            prospects={prospects}
+            onAssign={assignProspect}
+            onUnassign={unassignPick}
+            onReview={setReviewOffer}
+            onClose={() => setPickFocus(null)}
+          />
+        )}
         {focus && !reviewOffer && (
           <PlanningSuggestions
-            key={focus.kind === 'player' ? focus.player.playerId : focus.target.id}
+            key={
+              focus.kind === 'player'
+                ? focus.player.playerId
+                : focus.kind === 'players'
+                  ? focus.players.map((p) => p.playerId).join('+')
+                  : focus.target.id
+            }
             focus={focus}
             team={team}
             teams={teams}

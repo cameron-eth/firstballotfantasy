@@ -107,3 +107,70 @@ export function suggestedTeamTrades(
     })
     .slice(0, 4)
 }
+
+const need = (team: TeamData, position: string, teams: TeamData[]) => {
+  const counts = (t: TeamData) => t.players.filter((p) => p.position === position).length
+  const sorted = teams.map(counts).sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+  return counts(team) < median
+}
+
+/** Ideas for a value to spend (several players, or one pick): nearest KTC value first, partner depth as tiebreak. */
+export function valueOpportunities(
+  give: { value: number; positions: string[] },
+  mine: TeamData,
+  teams: TeamData[],
+  superflex: boolean,
+  tolerance = 0.25
+) {
+  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  if (!give.value) return []
+  return teams
+    .filter((t) => t.rosterId !== mine.rosterId)
+    .flatMap((team) =>
+      team.players.flatMap((target) => {
+        const v = value(target)
+        if (!v) return []
+        const gap = Math.abs(v - give.value) / Math.max(v, give.value)
+        if (gap > tolerance) return []
+        const partnerNeed = give.positions.some((pos) => need(team, pos, teams))
+        const myNeed = need(mine, target.position, teams)
+        const reason = [
+          myNeed ? `Adds ${target.position} depth` : '',
+          partnerNeed ? `${team.teamName} is thin where you are sending` : '',
+          gap <= 0.1 ? 'KTC values within 10%' : `KTC values within ${Math.round(gap * 100)}%`,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        return [
+          {
+            team,
+            target,
+            value: v,
+            reason,
+            score: 1 - gap + (myNeed ? 0.3 : 0) + (partnerNeed ? 0.3 : 0),
+          },
+        ]
+      })
+    )
+    .sort((a, b) => b.score - a.score || a.target.playerName.localeCompare(b.target.playerName))
+}
+
+/** Multi-player package: the selected players' combined KTC value is what a partner must match. */
+export function packageOpportunities(
+  players: PlayerData[],
+  mine: TeamData,
+  teams: TeamData[],
+  superflex: boolean
+) {
+  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const total = players.reduce((sum, p) => sum + (value(p) ?? 0), 0)
+  return valueOpportunities(
+    { value: total, positions: [...new Set(players.map((p) => p.position))] },
+    mine,
+    teams,
+    superflex,
+    0.3
+  )
+}

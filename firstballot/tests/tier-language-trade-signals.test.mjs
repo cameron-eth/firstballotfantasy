@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { describeTier, isHot, HOT_DELTA } from '../lib/player-signals.ts'
+import { describeTier, isCold, isHot, HOT_DELTA } from '../lib/player-signals.ts'
 import { buildDynastyTiers } from '../lib/dynasty-tiers.ts'
 import { tradeSignals } from '../lib/trade-signals.ts'
 
@@ -19,6 +19,9 @@ test('fire needs a 500-point KTC gain over 30 days', () => {
   assert.equal(isHot(500), true)
   assert.equal(isHot(499), false)
   assert.equal(isHot(null), false)
+  assert.equal(isCold(-500), true)
+  assert.equal(isCold(-499), false)
+  assert.equal(isCold(500), false)
 })
 
 test('published tiers carry position rank and 30-day change', () => {

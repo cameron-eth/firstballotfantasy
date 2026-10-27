@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { tradeSignals } from '@/lib/trade-signals'
 import type { PlayerData, TeamData } from '../types'
 import type { Scenario, Target } from '@/lib/team-scenarios'
 import type { Prospect } from '@/components/scouting/types'
@@ -47,6 +48,15 @@ export function LineupMap({
   onFund: (t: Target) => void
 }) {
   const [placingId, setPlacingId] = useState<string | null>(null)
+  const signalById = useMemo(
+    () =>
+      new Map(
+        tradeSignals(team, teams, rawSlots)
+          .slice(0, 5)
+          .map((s) => [s.playerId, s])
+      ),
+    [team, teams, rawSlots]
+  )
   const superflex =
     rawSlots.some((slot) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE') ||
     rawSlots.filter((slot) => slot === 'QB').length > 1
@@ -110,13 +120,20 @@ export function LineupMap({
         team={p.team}
         image={p.image}
         rookie={p.rookie}
-        tier={p.roster?.tierNumber && p.roster.tierEmphasis ? {
-          number: p.roster.tierNumber,
-          name: p.roster.tier,
-          emphasis: p.roster.tierEmphasis,
-          score: p.roster.tierScore ?? undefined,
-          rank: p.roster.tierRank ?? undefined,
-        } : undefined}
+        tier={
+          p.roster?.tierNumber && p.roster.tierEmphasis
+            ? {
+                number: p.roster.tierNumber,
+                name: p.roster.tier,
+                emphasis: p.roster.tierEmphasis,
+                score: p.roster.tierScore ?? undefined,
+                rank: p.roster.tierRank ?? undefined,
+                positionRank: p.roster.tierPositionRank,
+                delta30: p.roster.ktcDelta30,
+              }
+            : undefined
+        }
+        signal={p.roster ? signalById.get(p.roster.playerId) : undefined}
         shoulderBadge={
           p.roster?.fppg_rank
             ? {

@@ -31,6 +31,16 @@ async function refresh() {
   ])
   if (ktc.error || !ktc.data || ktc.data.length < 250 || !sleeperResponse.ok)
     throw Error('INCOMPLETE_TIER_INPUT')
+  // 30-day change: the newest scrape on or before 30 days before the latest one.
+  const cutoff = new Date(Date.parse(`${latest.scraped_date}T00:00:00Z`) - 30 * 86400000).toISOString().slice(0, 10)
+  const { data: priorDate } = await supabaseAdmin.from('ktc_player_values')
+    .select('scraped_date').lte('scraped_date', cutoff).order('scraped_date', { ascending: false }).limit(1).maybeSingle()
+  const prior = new Map<string, { value_sf: number; value_1qb: number }>()
+  if (priorDate) {
+    const { data: priorRows } = await supabaseAdmin.from('ktc_player_values')
+      .select('player_name,position,value_sf,value_1qb').eq('scraped_date', priorDate.scraped_date).limit(2000)
+    for (const row of (priorRows ?? []) as KtcRow[]) prior.set(`${normalize(row.player_name)}:${row.position}`, row)
+  }
   const nflKtc = (ktc.data as KtcRow[]).filter((row) => ['QB', 'RB', 'WR', 'TE'].includes(row.position))
   const sleeper = await sleeperResponse.json() as Record<string, SleeperPlayer>
   const { data: statSnapshot, error: statError } = await supabaseAdmin.from('data_snapshots')
@@ -87,12 +97,15 @@ async function refresh() {
   const players: TierPlayer[] = matched.map(({ id, row, player }) => {
     const espnId = String(player.espn_id ?? ids[id]?.espnId ?? '')
     const season = espn[espnId]
+    const before = prior.get(`${normalize(row.player_name)}:${row.position}`)
     return {
       id, name: player.full_name ?? row.player_name, position: row.position,
       age: Number(player.age) || null, experience: Number.isFinite(player.years_exp) ? Number(player.years_exp) : null,
       draftSelection: draft[espnId]?.selection ?? null, draftYear: draft[espnId]?.year ?? null,
       ppgRank: season?.rank ?? null, games: season?.games ?? null, adp: season?.adp ?? null,
       valueSf: Number(row.value_sf), value1qb: Number(row.value_1qb),
+      change30Sf: before ? Number(row.value_sf) - Number(before.value_sf) : null,
+      change301qb: before ? Number(row.value_1qb) - Number(before.value_1qb) : null,
     }
   }).filter((p) => Number.isFinite(p.valueSf) && Number.isFinite(p.value1qb))
   const payload = {

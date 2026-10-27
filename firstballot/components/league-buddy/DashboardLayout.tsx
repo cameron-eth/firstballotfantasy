@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { RefreshCw } from 'lucide-react'
+import { useRefreshAll } from '@/lib/use-refresh-all'
 import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { UserAvatar } from '@/components/user-avatar'
 import { LEAGUE_SECTIONS, withLeagueId } from './navigation'
@@ -26,6 +28,7 @@ export function DashboardLayout({
   leagueId: string
 }) {
   const desktopBuilder = useDesktopBuilder()
+  const { refresh, refreshing } = useRefreshAll()
   return (
     <section
       aria-label="League dashboard"
@@ -57,19 +60,34 @@ export function DashboardLayout({
             )}
           </div>
         </div>
-        {isDynasty && (
-          <div className="flex flex-wrap gap-4 text-sm font-medium text-blue-300">
-            <Link href={withLeagueId('/scouting-portal', leagueId)} className="hover:text-white">
-              College scouting
-            </Link>
-            <Link
-              href={withLeagueId('/scouting-portal?tab=draftboard', leagueId)}
-              className="hover:text-white"
-            >
-              Draft board
-            </Link>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-blue-300">
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={refreshing}
+            title="Clear cached stats, values and photos, then reload everything"
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:border-white/30 hover:text-white disabled:opacity-60"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
+              aria-hidden="true"
+            />
+            {refreshing ? 'Refreshing…' : 'Refresh data'}
+          </button>
+          {isDynasty && (
+            <>
+              <Link href={withLeagueId('/scouting-portal', leagueId)} className="hover:text-white">
+                College scouting
+              </Link>
+              <Link
+                href={withLeagueId('/scouting-portal?tab=draftboard', leagueId)}
+                className="hover:text-white"
+              >
+                Draft board
+              </Link>
+            </>
+          )}
+        </div>
       </header>
       <nav
         aria-label="League sections"

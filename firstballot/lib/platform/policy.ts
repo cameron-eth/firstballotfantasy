@@ -30,6 +30,7 @@ export function isPublicApi(path: string) {
     '/api/prospects',
     '/api/history-outcomes',
     '/api/ktc-values',
+    '/api/player-image',
     '/api/projections',
     '/api/draft-capital',
     '/api/trade-inventory',

@@ -99,6 +99,6 @@ export async function GET(request: NextRequest) {
     params.get('player')
       ? { player: params.get('player'), history: historyMap[params.get('player')!] ?? [], source }
       : { data: rows, historyMap: names ? historyMap : undefined, latestDate, source },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
   )
 }

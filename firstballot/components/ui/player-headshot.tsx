@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { User } from 'lucide-react'
+import { useCacheVersion } from '@/lib/cache-version'
+import { playerImageSrc } from '@/lib/player-image'
 
 interface PlayerHeadshotProps {
   /** Direct headshot URL from database */
@@ -34,6 +36,7 @@ export function PlayerHeadshot({
   className = '',
   imageFit = 'cover',
 }: PlayerHeadshotProps) {
+  const cacheVersion = useCacheVersion()
   const [imageError, setImageError] = useState(false)
   const [fallbackError, setFallbackError] = useState(false)
 
@@ -91,7 +94,7 @@ export function PlayerHeadshot({
       style={{ width: size, height: size }}
     >
       <Image
-        src={imageUrl}
+        src={playerImageSrc(imageUrl, cacheVersion)}
         alt={playerName || 'Player'}
         fill
         sizes={`${size}px`}

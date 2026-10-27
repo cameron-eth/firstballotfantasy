@@ -1,14 +1,16 @@
 import { ArrowRight, CalendarDays, CircleDollarSign } from 'lucide-react'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 
+const nflImage = (id: string) => `https://static.www.nfl.com/image/upload/f_auto,q_auto/league/${id}`
+
 const lineup = [
-  { slot: 'QB1', position: 'QB', name: 'Jayden Daniels', team: 'WAS', ppg: '22.4', ktc: '7,412', color: 'blue' },
-  { slot: 'RB1', position: 'RB', name: 'James Cook III', team: 'BUF', ppg: '16.8', ktc: '5,986', color: 'green' },
-  { slot: 'RB2', position: 'RB', name: 'Kenneth Walker III', team: 'KC', ppg: '14.2', ktc: '5,221', color: 'green' },
-  { slot: 'WR1', position: 'WR', name: 'CeeDee Lamb', team: 'DAL', ppg: '19.7', ktc: '8,701', color: 'amber' },
-  { slot: 'WR2', position: 'WR', name: 'Chris Olave', team: 'NO', ppg: '16.1', ktc: '5,804', color: 'amber' },
-  { slot: 'WR3', position: 'WR', name: 'Parker Washington', team: 'JAX', ppg: '11.4', ktc: '2,132', color: 'amber' },
-  { slot: 'TE1', position: 'TE', name: 'Colston Loveland', team: 'CHI', ppg: '9.3', ktc: '4,102', color: 'purple' },
+  { slot: 'QB1', position: 'QB', name: 'Jayden Daniels', image: nflImage('vrdweg39v1ay4zoc0lgp'), team: 'WAS', ppg: '22.4', ktc: '7,412', color: 'blue' },
+  { slot: 'RB1', position: 'RB', name: 'James Cook III', image: nflImage('anjbznqb9i21wzcgrtbs'), team: 'BUF', ppg: '16.8', ktc: '5,986', color: 'green' },
+  { slot: 'RB2', position: 'RB', name: 'Kenneth Walker III', image: nflImage('mnzsnemdzbey5hbahdhk'), team: 'KC', ppg: '14.2', ktc: '5,221', color: 'green' },
+  { slot: 'WR1', position: 'WR', name: 'CeeDee Lamb', image: nflImage('ijxzvtumjhqu3zva1bwc'), team: 'DAL', ppg: '19.7', ktc: '8,701', color: 'amber' },
+  { slot: 'WR2', position: 'WR', name: 'Chris Olave', image: nflImage('vrrmyvpvujynckag9jop'), team: 'NO', ppg: '16.1', ktc: '5,804', color: 'amber' },
+  { slot: 'WR3', position: 'WR', name: 'Parker Washington', image: nflImage('sqgxayp6nrrpvwonksdm'), team: 'JAX', ppg: '11.4', ktc: '2,132', color: 'amber' },
+  { slot: 'TE1', position: 'TE', name: 'Colston Loveland', image: nflImage('tyjb6vfug7gaunvcune3'), team: 'CHI', ppg: '9.3', ktc: '4,102', color: 'purple' },
 ]
 
 const accents: Record<string, string> = {
@@ -42,6 +44,7 @@ export function TeamMapPreview() {
             </div>
             <PlayerTradingCard
               name={player.name}
+              image={player.image}
               position={player.position}
               team={player.team}
               label={`${player.ppg} FPPG`}

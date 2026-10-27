@@ -74,7 +74,7 @@ export function PlayerTradingCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : hot ? 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_30px_-6px_rgba(52,211,153,0.65)]' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -102,7 +102,7 @@ export function PlayerTradingCard({
             alt=""
             aria-hidden="true"
             onError={() => setFailedLogo(logo)}
-            className="pointer-events-none absolute right-5 top-3 h-16 w-16 object-contain opacity-40"
+            className={`pointer-events-none absolute top-3 h-16 w-16 object-contain opacity-40 ${hot ? 'right-14' : 'right-5'}`}
           />
         )}
         {image && failedImage !== image ? (
@@ -121,6 +121,24 @@ export function PlayerTradingCard({
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#090e18] to-transparent"
         />
+        {hot && (
+          <span
+            role="img"
+            aria-label={`KTC value up ${Math.round(tier!.delta30!)} in 30 days`}
+            title={`KTC value up ${Math.round(tier!.delta30!)} in the last 30 days`}
+            className="absolute right-3 top-3 z-30 rounded-full border border-emerald-300/60 bg-slate-950/80 px-1.5 py-0.5 text-base leading-none"
+          >
+            🔥
+          </span>
+        )}
+        {tier && (
+          <span
+            title={`${tier.name}${tier.rank ? ` · overall rank #${tier.rank}` : ''}`}
+            className={`absolute bottom-3 left-4 z-20 rounded-md border bg-slate-950/90 px-2 py-1 text-xs font-semibold ${standing?.tone === 'bad' ? 'border-rose-400/50 text-rose-300' : standing?.tone === 'elite' ? 'border-amber-300/60 text-amber-200' : standing?.tone === 'good' ? 'border-emerald-400/50 text-emerald-200' : 'border-white/15 text-slate-400'}`}
+          >
+            {standing?.label ?? tier.name}
+          </span>
+        )}
         {shoulderBadge && (
           <span
             tabIndex={0}
@@ -143,27 +161,7 @@ export function PlayerTradingCard({
           className={`mt-1 break-words ${compact ? 'text-sm' : 'text-xl'} font-bold leading-tight tracking-tight text-white`}
         >
           {name}
-          {hot && (
-            <span
-              role="img"
-              aria-label={`KTC value up ${Math.round(tier!.delta30!)} in 30 days`}
-              title={`KTC value up ${Math.round(tier!.delta30!)} in the last 30 days`}
-              className="ml-1"
-            >
-              🔥
-            </span>
-          )}
         </h3>
-        {standing?.label && (
-          <p
-            className={`mt-1 text-[11px] font-semibold ${standing.tone === 'bad' ? 'text-rose-300' : standing.tone === 'elite' ? 'text-amber-200' : 'text-emerald-200'}`}
-            title={
-              tier ? `${tier.name}${tier.rank ? ` · overall rank #${tier.rank}` : ''}` : undefined
-            }
-          >
-            {standing.label}
-          </p>
-        )}
         {team.includes(' · ') && (
           <p className="mt-1 break-words text-[11px] text-slate-400">
             {team.slice(team.indexOf(' · ') + 3)}

@@ -72,6 +72,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     allPlayers,
     rosterPositionsRaw,
     leagueTransactions,
+    valuesReady,
     refetch: fetchLeagueData,
   } = useLeagueData(leagueId, user)
 
@@ -96,13 +97,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
   // Memoized competitive-state placements (Now × Future), computed once per render tree
   const leaguePlacements = useMemo(() => {
+    // Placements depend on KTC values; computing earlier shows a state that changes a moment later.
+    if (!valuesReady) return { placements: {}, nowMedian: 50, futureMedian: 50 }
     try {
       return calculateLeaguePlacements(teams, !isOffSeason())
     } catch (error) {
       console.error('Error calculating league placements:', error)
       return { placements: {}, nowMedian: 50, futureMedian: 50 }
     }
-  }, [teams])
+  }, [teams, valuesReady])
 
   // Memoized event handlers to prevent unnecessary re-renders
   const handleTeamSelect = useCallback((team: TeamData) => {

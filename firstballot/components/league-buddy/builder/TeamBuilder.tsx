@@ -409,7 +409,7 @@ export function TeamBuilder({
             </div>
           </div>
           {chosen.length > 0 && (
-            <div className="sticky bottom-3 left-0 z-30 mx-auto mt-3 flex w-fit items-center gap-3 rounded-xl border border-violet-300/40 bg-slate-950/95 px-4 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur">
+            <div className="fixed bottom-6 left-1/2 z-40 flex w-fit -translate-x-1/2 items-center gap-3 rounded-xl border border-violet-300/40 bg-slate-950/95 px-4 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur">
               <span className="font-semibold text-violet-100">{chosen.length} selected</span>
               <button
                 className="rounded-md bg-violet-300 px-3 py-1.5 font-semibold text-slate-950"

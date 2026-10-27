@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { describeTier, isCold, isHot, HOT_DELTA } from '../lib/player-signals.ts'
+import { describeTier, isCold, isHot, plainTierName, HOT_DELTA } from '../lib/player-signals.ts'
 import { buildDynastyTiers } from '../lib/dynasty-tiers.ts'
 import { tradeSignals } from '../lib/trade-signals.ts'
 
@@ -98,4 +98,9 @@ test('benched starter-quality depth is surplus only when a partner fits both sid
   assert.equal(matched.kind, 'surplus')
   assert.deepEqual(matched.partners.map((p) => p.teamName), ['Team 2'])
   assert.equal(tradeSignals(mine, [mine, nofit], slots).some((s) => s.playerId === spare.playerId), false)
+})
+
+test('tier tag text drops the numeric suffix', () => {
+  assert.equal(plainTierName('Flex / upside (Tier 5)'), 'Flex / upside')
+  assert.equal(plainTierName('Elite'), 'Elite')
 })

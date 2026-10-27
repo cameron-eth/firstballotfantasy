@@ -235,18 +235,20 @@ export function PlanningSuggestions({
               {f
                 ? renderPick(f.pick)
                 : p && (
-                    <PlayerTradingCard
-                      compact
-                      imageHeight="h-32"
-                      name={p.target.playerName}
-                      position={p.target.position}
-                      team={p.target.team}
-                      image={
-                        p.target.headshot_url ||
-                        `https://sleepercdn.com/content/nfl/players/${p.target.playerId}.jpg`
-                      }
-                      label={`KTC ${p.value?.toLocaleString() ?? '—'}`}
-                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <PlayerTradingCard
+                        compact
+                        imageHeight="h-24"
+                        name={p.target.playerName}
+                        position={p.target.position}
+                        team={p.target.team}
+                        image={
+                          p.target.headshot_url ||
+                          `https://sleepercdn.com/content/nfl/players/${p.target.playerId}.jpg`
+                        }
+                        label={`KTC ${p.value?.toLocaleString() ?? '—'}`}
+                      />
+                    </div>
                   )}
               <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-300">
                 You send
@@ -299,11 +301,7 @@ export function PlanningSuggestions({
                     {focus.kind === 'draft' ? focus.rank : ''} proxy; no rookie production forecast.
                   </p>
                 </div>
-              ) : (
-                <p className="text-xs leading-relaxed text-slate-400">
-                  {p?.reason}. KTC is context, not acceptance odds.
-                </p>
-              )}
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 {f && (
                   <button

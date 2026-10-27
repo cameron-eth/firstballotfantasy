@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import { useRefreshAll } from '@/lib/use-refresh-all'
 import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { UserAvatar } from '@/components/user-avatar'
+import { Badge } from './ui/Badge'
 import { LEAGUE_SECTIONS, withLeagueId } from './navigation'
 import type { LeagueSection, TeamData } from './types'
 
@@ -41,21 +42,28 @@ export function DashboardLayout({
               avatarId={team.ownerAvatar}
               displayName={team.ownerName}
               username={team.ownerUsername}
-              size={44}
-              className="shrink-0 rounded-full"
+              size={64}
+              className="shrink-0 rounded-full ring-2 ring-blue-300/40"
             />
           )}
           <div className="min-w-0">
             <p className="mb-1 text-xs text-slate-400">
               Week {currentWeek} · {isDynasty ? 'Dynasty' : 'Redraft'}
             </p>
-            <h1 className="break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
+            <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               {team?.teamName ?? 'League dashboard'}
             </h1>
             {team && (
-              <p className="mt-1 text-xs text-slate-400">
-                {team.wins}–{team.losses}
-                {team.ties ? `–${team.ties}` : ''} · {team.players.length} players
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <Badge
+                  tone={
+                    team.wins > team.losses ? 'good' : team.losses > team.wins ? 'bad' : 'neutral'
+                  }
+                >
+                  {team.wins}–{team.losses}
+                  {team.ties ? `–${team.ties}` : ''}
+                </Badge>
+                <span>{team.players.length} players</span>
               </p>
             )}
           </div>
@@ -91,7 +99,7 @@ export function DashboardLayout({
       </header>
       <nav
         aria-label="League sections"
-        className="mb-6 flex overflow-x-auto border-b border-white/10"
+        className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-slate-900/60 p-1"
       >
         {LEAGUE_SECTIONS.filter(({ id }) => id !== 'builder' || desktopBuilder).map(
           ({ id, label }) => (
@@ -99,7 +107,7 @@ export function DashboardLayout({
               key={id}
               onClick={() => onSectionChange(id)}
               aria-current={activeSection === id ? 'page' : undefined}
-              className={`shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors first:pl-0 ${activeSection === id ? 'border-blue-400 text-white' : 'border-transparent text-slate-400 hover:text-white'}`}
+              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeSection === id ? 'bg-blue-400/20 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
             >
               {label}
             </button>

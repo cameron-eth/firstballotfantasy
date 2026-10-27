@@ -170,10 +170,6 @@ export function PickPanel({
               ))}
             </ul>
           )}
-          <p className="text-[11px] leading-relaxed text-slate-500">
-            Class rank is a cost proxy, not ADP. Assigning only plans; it never changes your Sleeper
-            account.
-          </p>
         </div>
       ) : !inventory || !values ? (
         <p className="py-6 text-sm text-slate-400">Finding league assets…</p>
@@ -201,9 +197,7 @@ export function PickPanel({
                     {idea.target.position} · {idea.team.teamName}
                   </span>
                 </p>
-                <p className="mt-1 text-slate-400">
-                  KTC {idea.value.toLocaleString()} · {idea.reason}
-                </p>
+                <p className="mt-1 text-slate-400">KTC {idea.value.toLocaleString()}</p>
                 <button
                   className="mt-2 rounded-md bg-violet-300 px-2 py-1 font-semibold text-slate-950"
                   onClick={() =>
@@ -219,9 +213,6 @@ export function PickPanel({
               </li>
             ))}
           </ul>
-          <p className="text-[11px] leading-relaxed text-slate-500">
-            Bucket benchmark, not a price for this exact pick. KTC is context, not acceptance odds.
-          </p>
         </div>
       )}
     </motion.aside>

@@ -39,3 +39,6 @@ export const isHot = (delta30: number | null | undefined) =>
 
 export const isCold = (delta30: number | null | undefined) =>
   typeof delta30 === 'number' && delta30 <= -COLD_DELTA
+
+/** Published tier text may carry a "(Tier 5)" suffix; the card shows only the plain name. */
+export const plainTierName = (name: string) => name.replace(/\s*\(Tier \d+\)\s*$/, '')

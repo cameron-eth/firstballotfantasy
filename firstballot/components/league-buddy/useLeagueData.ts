@@ -25,6 +25,8 @@ import {
 interface UseLeagueDataReturn {
   teams: TeamData[]
   loading: boolean
+  /** False until KTC values have been merged (or failed), so value-based models don't flash fallback results. */
+  valuesReady: boolean
   error: string | null
   selectedTeam: TeamData | null
   setSelectedTeam: (team: TeamData | null) => void
@@ -624,7 +626,7 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
         .sort(),
     [data?.teams]
   )
-  const { data: ktcMaps } = useSWR(
+  const { data: ktcMaps, error: ktcError } = useSWR(
     ktcNames.length > 0 ? ['league-buddy-ktc', leagueId, version, ktcNames.join('|')] : null,
     () => fetchKtcMaps(ktcNames, version),
     { revalidateOnFocus: false, dedupingInterval: 300_000, keepPreviousData: true }
@@ -663,6 +665,7 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
   return {
     teams,
     loading: isLoading,
+    valuesReady: !!data && (ktcNames.length === 0 || !!ktcMaps || !!ktcError),
     error: error instanceof Error ? error.message : null,
     selectedTeam,
     setSelectedTeam,

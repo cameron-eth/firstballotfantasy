@@ -1,6 +1,6 @@
 'use client'
 import type { TradeSignal } from '@/lib/trade-signals'
-import { describeTier, isCold, isHot } from '@/lib/player-signals'
+import { describeTier, isCold, isHot, plainTierName } from '@/lib/player-signals'
 import { useCacheVersion } from '@/lib/cache-version'
 import { playerImageSrc } from '@/lib/player-image'
 import { useState, type ReactNode } from 'react'
@@ -149,7 +149,7 @@ export function PlayerTradingCard({
             title={`${tier.name}${tier.rank ? ` · overall rank #${tier.rank}` : ''}`}
             className={`absolute bottom-3 left-4 z-20 rounded-md border bg-slate-950/90 px-2 py-1 text-xs font-semibold ${standing?.tone === 'bad' ? 'border-rose-400/50 text-rose-300' : standing?.tone === 'elite' ? 'border-amber-300/60 text-amber-200' : standing?.tone === 'good' ? 'border-emerald-400/50 text-emerald-200' : 'border-white/15 text-slate-400'}`}
           >
-            {standing?.label ?? tier.name}
+            {standing?.label ?? plainTierName(tier.name)}
           </span>
         )}
         {shoulderBadge && (

@@ -1,4 +1,6 @@
 'use client'
+import type { TradeSignal } from '@/lib/trade-signals'
+import { describeTier, isHot } from '@/lib/player-signals'
 import { useCacheVersion } from '@/lib/cache-version'
 import { playerImageSrc } from '@/lib/player-image'
 import { useState, type ReactNode } from 'react'
@@ -25,6 +27,7 @@ export function PlayerTradingCard({
   compact = false,
   shoulderBadge,
   tier,
+  signal,
 }: {
   name: string
   position: string
@@ -34,7 +37,16 @@ export function PlayerTradingCard({
   badge?: string
   imageHeight?: string
   shoulderBadge?: { label: string; description: string }
-  tier?: { number: number; name: string; emphasis: string; score?: number; rank?: number }
+  tier?: {
+    number: number
+    name: string
+    emphasis: string
+    score?: number
+    rank?: number
+    positionRank?: number | null
+    delta30?: number | null
+  }
+  signal?: Pick<TradeSignal, 'headline' | 'reasons' | 'partners'>
   compact?: boolean
   label?: string
   action?: string
@@ -48,6 +60,11 @@ export function PlayerTradingCard({
   const [failedImage, setFailedImage] = useState<string | null>(null)
   const cacheVersion = useCacheVersion()
   const [failedLogo, setFailedLogo] = useState<string | null>(null)
+  const [showWhy, setShowWhy] = useState(false)
+  const standing = tier
+    ? describeTier({ tierNumber: tier.number, position, positionRank: tier.positionRank })
+    : null
+  const hot = isHot(tier?.delta30)
   const color = positionPalette[position] ?? neutralPalette
   const identity = team.split(' · ')[0]
   const logo =
@@ -57,7 +74,7 @@ export function PlayerTradingCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : tier?.emphasis === 'strong' ? 'border-amber-300/80 ring-1 ring-amber-300/50' : tier?.emphasis === 'positive' ? 'border-emerald-400/50' : tier?.emphasis === 'negative' ? 'border-rose-400/35' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -79,13 +96,6 @@ export function PlayerTradingCard({
         {rookie && <span className="ml-2 border-l border-white/20 pl-2 text-lime-300">Rookie</span>}
       </span>
       <div className={`relative ${imageHeight} shrink-0`}>
-        {tier && (
-          <span title={`${tier.name}${tier.score == null ? '' : ` · model score ${tier.score}`}${tier.rank == null ? '' : ` · global rank #${tier.rank}`}`}
-            aria-label={`Dynasty tier ${tier.number}: ${tier.name}`}
-            className={`absolute right-3 top-20 z-20 rounded border bg-slate-950/90 px-2 py-1 text-[10px] font-semibold ${tier.emphasis === 'strong' ? 'border-amber-300/60 text-amber-200' : tier.emphasis === 'positive' ? 'border-emerald-300/50 text-emerald-200' : tier.emphasis === 'negative' ? 'border-rose-300/40 text-rose-200' : 'border-white/15 text-slate-400'}`}>
-            T{tier.number}
-          </span>
-        )}
         {logo && failedLogo !== logo && (
           <img
             src={logo}
@@ -133,13 +143,68 @@ export function PlayerTradingCard({
           className={`mt-1 break-words ${compact ? 'text-sm' : 'text-xl'} font-bold leading-tight tracking-tight text-white`}
         >
           {name}
+          {hot && (
+            <span
+              role="img"
+              aria-label={`KTC value up ${Math.round(tier!.delta30!)} in 30 days`}
+              title={`KTC value up ${Math.round(tier!.delta30!)} in the last 30 days`}
+              className="ml-1"
+            >
+              🔥
+            </span>
+          )}
         </h3>
+        {standing?.label && (
+          <p
+            className={`mt-1 text-[11px] font-semibold ${standing.tone === 'bad' ? 'text-rose-300' : standing.tone === 'elite' ? 'text-amber-200' : 'text-emerald-200'}`}
+            title={
+              tier ? `${tier.name}${tier.rank ? ` · overall rank #${tier.rank}` : ''}` : undefined
+            }
+          >
+            {standing.label}
+          </p>
+        )}
         {team.includes(' · ') && (
           <p className="mt-1 break-words text-[11px] text-slate-400">
             {team.slice(team.indexOf(' · ') + 3)}
           </p>
         )}
         {badge && <p className="mt-2 text-[11px] font-medium text-slate-300">{badge}</p>}
+        {signal && (
+          <div className="mt-2">
+            <button
+              type="button"
+              aria-expanded={showWhy}
+              onClick={() => setShowWhy(!showWhy)}
+              className="w-full rounded-md border border-orange-300/40 bg-orange-400/10 px-2 py-1 text-left text-[11px] font-semibold text-orange-200 hover:bg-orange-400/20"
+            >
+              Consider trading · {signal.headline}
+            </button>
+            {showWhy && (
+              <div className="mt-2 space-y-2 rounded-md border border-white/10 bg-slate-900/80 p-2 text-[11px] text-slate-300">
+                <p className="font-semibold text-slate-200">Why</p>
+                <ul className="list-disc space-y-1 pl-4">
+                  {signal.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+                {signal.partners.length > 0 && (
+                  <>
+                    <p className="font-semibold text-slate-200">Who to call</p>
+                    <ul className="space-y-1">
+                      {signal.partners.map((partner) => (
+                        <li key={partner.rosterId}>
+                          <span className="font-medium text-white">{partner.teamName}</span> ·{' '}
+                          {partner.why}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {children && <div className="mt-3 text-xs text-slate-300">{children}</div>}
         <div className="mt-auto pt-4">
           {label && (

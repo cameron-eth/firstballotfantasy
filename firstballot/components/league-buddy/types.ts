@@ -83,6 +83,8 @@ export interface PlayerData {
   tierEmphasis?: string | null
   tierScore?: number | null
   tierRank?: number | null
+  tierPositionRank?: number | null
+  ktcDelta30?: number | null
   age: number
   experience: number
   isRookie?: boolean

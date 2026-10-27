@@ -66,16 +66,20 @@ interface SleeperUser {
   avatar?: string
 }
 
+interface TierEntry {
+  rank: number
+  number: number
+  name: string
+  emphasis: string
+  score: number
+  positionRank?: number
+  delta30?: number | null
+}
+
 interface TierResponse {
   players?: {
-    sf?: Record<
-      string,
-      { rank: number; number: number; name: string; emphasis: string; score: number }
-    >
-    one_qb?: Record<
-      string,
-      { rank: number; number: number; name: string; emphasis: string; score: number }
-    >
+    sf?: Record<string, TierEntry>
+    one_qb?: Record<string, TierEntry>
   }
 }
 
@@ -400,6 +404,8 @@ async function fetchLeagueDataBundle(
             tierEmphasis: ranking?.emphasis ?? null,
             tierScore: ranking?.score ?? null,
             tierRank: ranking?.rank ?? null,
+            tierPositionRank: ranking?.positionRank ?? null,
+            ktcDelta30: ranking?.delta30 ?? null,
             age: player.age || 0,
             experience: player.years_exp || 0,
             isRookie: player.years_exp === 0,

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TourReplayButton } from '@/components/onboarding/ProductTour'
 import { AnimatePresence } from 'framer-motion'
 import { PlanningSuggestions, type PlanningFocus, type PlanningOffer } from './PlanningSuggestions'
@@ -12,14 +12,12 @@ import { type Scenario, type Target } from '@/lib/team-scenarios'
 import { PlayerTradeModal } from '../trades/PlayerTradeModal'
 import type { TeamData } from '../types'
 import type { Prospect } from '@/components/scouting/types'
-import { StrategyCard } from './StrategyCard'
 import { LineupMap } from './LineupMap'
 import { BuilderTeamSummary } from './BuilderTeamSummary'
 import type { TeamPlacement } from '../competitiveState'
 import { useBoardFit } from './BoardFit'
 import { useTeamTimeline, type TimelineDraftOrder } from './TeamTimeline'
 import { PlanMenu } from './PlanMenu'
-import { CompactSelect } from '@/components/ui/compact-select'
 import { useCanvasZoom } from './useCanvasZoom'
 
 const fresh = (): Scenario => ({
@@ -29,7 +27,6 @@ const fresh = (): Scenario => ({
   outgoing: [],
   targets: [],
 })
-const input = 'rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200'
 const button =
   'rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-40'
 const fetchProspects = async (url: string): Promise<Prospect[]> => {
@@ -66,17 +63,12 @@ export function TeamBuilder({
   const [dirty, setDirty] = useState(false)
   const [message, setMessage] = useState('')
   const [loadedKey, setLoadedKey] = useState('')
-  const [query, setQuery] = useState('')
-  const [source, setSource] = useState<'trade' | 'draft'>('trade')
-  const [position, setPosition] = useState('ALL')
-  const [year, setYear] = useState('ALL')
   const { viewportRef, contentRef, spaceRef, zoom, setZoom } = useCanvasZoom()
   const endpoint = `/api/team-scenarios?league=${leagueId}&roster=${team.rosterId}`
   const {
     data: prospects = [],
     error: prospectError,
     isLoading: prospectsLoading,
-    mutate,
   } = useSWR(isDynasty ? '/api/prospects?draft_year=all' : null, fetchProspects)
   const accountKey = `${user?.id ?? 'guest'}:${endpoint}`
   const {
@@ -150,54 +142,6 @@ export function TeamBuilder({
       setBusy(false)
     }
   }
-  const nfl = useMemo(
-    () =>
-      teams
-        .filter((t) => t.rosterId !== team.rosterId)
-        .flatMap((t) =>
-          t.players.map((p) => ({
-            id: `nfl:${p.playerId}`,
-            name: p.playerName,
-            position: p.position,
-            team: `${p.team} · ${t.teamName}`,
-            image: p.headshot_url || `https://sleepercdn.com/content/nfl/players/${p.playerId}.jpg`,
-            kind: 'trade' as const,
-          }))
-        ),
-    [teams, team.rosterId]
-  )
-  const rookies = new Set(
-    teams.flatMap((t) => t.players.filter((p) => p.isRookie).map((p) => `nfl:${p.playerId}`))
-  )
-  const pool: Target[] =
-    source === 'trade'
-      ? nfl
-      : prospects.map((p) => ({
-          id: `prospect:${p.id}`,
-          name: p.name,
-          position: p.position,
-          team: p.school,
-          image: p.headshot_url ?? null,
-          kind: 'draft',
-          year: p.draft_year ?? undefined,
-        }))
-  const candidates = pool.filter(
-    (p) =>
-      (position === 'ALL' || p.position === position) &&
-      (source !== 'draft' || year === 'ALL' || String(p.year) === year) &&
-      `${p.name} ${p.team}`.toLowerCase().includes(query.toLowerCase()) &&
-      !scenario?.targets.some((t) => t.id === p.id)
-  )
-  const positions = Array.from(
-    new Set([
-      'QB',
-      'RB',
-      'WR',
-      'TE',
-      ...team.players.map((p) => p.position),
-      ...(scenario?.targets.map((t) => t.position) ?? []),
-    ])
-  )
   if (loadError)
     return (
       <div role="alert" className="py-10 text-slate-300">
@@ -242,7 +186,6 @@ export function TeamBuilder({
                   aria-pressed={timeline.horizon === horizon}
                   onClick={() => {
                     update({ horizon })
-                    setYear(offset ? String(horizon) : 'ALL')
                   }}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${timeline.horizon === horizon ? 'bg-blue-400/15 text-blue-200 shadow-sm' : 'text-slate-400 hover:text-white'}`}
                 >
@@ -312,42 +255,53 @@ export function TeamBuilder({
         </button>
       )}
       <fieldset disabled={busy} className="space-y-3 min-w-0">
-        <BuilderTeamSummary
-          team={team}
-          placement={placement}
-          leagueId={leagueId}
-          isDynasty={isDynasty}
-        />
-        {isDynasty && timeline.horizon > timeline.baseYear && (
-          <DraftCapitalRail
-            picks={timeline.picks}
-            year={timeline.horizon}
-            teams={teams}
-            slots={timeline.slots}
-            fits={timeline.fits}
-            targets={scenario.targets}
-            plans={scenario.fundingPlans ?? []}
-            available={timeline.available}
-            onFund={(target) => setFocus({
-              kind: 'draft', target,
-              rank: prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ?? undefined,
-            })}
-            onUndo={(id) => update({ fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id) })}
-          />
-        )}
         <div
           role="region"
           ref={viewportRef}
           aria-label="Team strategy map"
           data-map-tour="lineup"
           tabIndex={0}
-          className="h-[calc(100dvh-260px)] min-h-[520px] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 focus-visible:outline focus-visible:outline-blue-400"
+          className="h-[calc(100dvh-190px)] min-h-[560px] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 pt-0 focus-visible:outline focus-visible:outline-blue-400"
           style={{
             touchAction: 'pan-x pan-y',
             backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)',
             backgroundSize: '20px 20px',
           }}
         >
+          <div className="sticky left-0 top-0 z-30 -mx-5 mb-4 border-b border-white/10 bg-slate-950/90 px-5 py-2 backdrop-blur">
+            <BuilderTeamSummary
+              compact
+              team={team}
+              placement={placement}
+              leagueId={leagueId}
+              isDynasty={isDynasty}
+            />
+            {isDynasty && timeline.horizon > timeline.baseYear && (
+              <DraftCapitalRail
+                compact
+                picks={timeline.picks}
+                year={timeline.horizon}
+                teams={teams}
+                slots={timeline.slots}
+                fits={timeline.fits}
+                targets={scenario.targets}
+                plans={scenario.fundingPlans ?? []}
+                available={timeline.available}
+                onFund={(target) =>
+                  setFocus({
+                    kind: 'draft',
+                    target,
+                    rank:
+                      prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
+                      undefined,
+                  })
+                }
+                onUndo={(id) =>
+                  update({ fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id) })
+                }
+              />
+            )}
+          </div>
           <div ref={spaceRef} className="relative overflow-hidden">
             <div
               ref={contentRef}
@@ -402,84 +356,6 @@ export function TeamBuilder({
             </div>
           </div>
         </div>
-        <section aria-label="Find strategy targets" className="border-t border-white/10 pt-5">
-          <div data-map-tour="targets">
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <h3 className="mr-auto font-semibold text-white">Find your next player</h3>
-              <CompactSelect
-                label="Target source"
-                value={source}
-                onChange={(value) => setSource(value as 'trade' | 'draft')}
-                disabled={busy}
-                options={[
-                  { value: 'trade', label: 'Trade targets' },
-                  ...(isDynasty ? [{ value: 'draft', label: 'College prospects' }] : []),
-                ]}
-              />
-              <CompactSelect
-                label="Target position"
-                value={position}
-                onChange={setPosition}
-                disabled={busy}
-                options={[
-                  { value: 'ALL', label: 'All positions' },
-                  ...positions.map((p) => ({ value: p, label: p })),
-                ]}
-              />
-              {source === 'draft' && (
-                <CompactSelect
-                  label="Draft class"
-                  value={year}
-                  onChange={setYear}
-                  disabled={busy}
-                  options={[
-                    { value: 'ALL', label: 'All classes' },
-                    ...Array.from(new Set(prospects.map((p) => p.draft_year).filter(Boolean)))
-                      .sort()
-                      .map((y) => ({ value: String(y), label: String(y) })),
-                  ]}
-                />
-              )}
-            </div>
-            <input
-              id="builder-search"
-              aria-label="Find a target player"
-              className={`${input} mb-4 w-full`}
-              placeholder="Search players, schools or league teams"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          {prospectError && source === 'draft' ? (
-            <p role="alert" className="text-sm text-red-300">
-              Could not load college players. <button onClick={() => mutate()}>Retry</button>
-            </p>
-          ) : prospectsLoading ? (
-            <p className="text-slate-400">Loading prospects…</p>
-          ) : (
-            <>
-              <p className="mb-3 text-xs text-slate-500">
-                {candidates.length} matches
-                {candidates.length > 40 ? ' · showing first 40; narrow your search' : ''} · targets
-                are ideas, not guaranteed acquisitions
-              </p>
-              <div className="grid max-h-[32rem] grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2 lg:grid-cols-4">
-                {candidates.slice(0, 40).map((t) => (
-                  <StrategyCard
-                    key={t.id}
-                    {...t}
-                    rookie={rookies.has(t.id)}
-                    label={
-                      t.kind === 'draft' ? String(t.year ?? 'Class TBD') : 'Available to target'
-                    }
-                    action="Add"
-                    onAction={() => add(t)}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </section>
       </fieldset>
       <AnimatePresence>
         {focus && !reviewOffer && (

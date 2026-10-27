@@ -16,7 +16,9 @@ export function BuilderTeamSummary({
   placement,
   leagueId,
   isDynasty,
+  compact = false,
 }: {
+  compact?: boolean
   team: TeamData
   placement?: TeamPlacement
   leagueId: string
@@ -28,6 +30,38 @@ export function BuilderTeamSummary({
     fetchCapital,
     { refreshInterval: 300000 }
   )
+  if (compact)
+    return (
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+        <p className="font-semibold text-white">{team.teamName}</p>
+        {isDynasty && state && (
+          <p className={`font-semibold ${state.text}`} title={state.description}>
+            {state.label}
+          </p>
+        )}
+        <p className="text-slate-400">
+          Core age{' '}
+          <span className="font-semibold text-white">
+            {placement?.avgAge ? placement.avgAge.toFixed(1) : '—'}
+          </span>
+        </p>
+        <p className="text-slate-400">
+          Record{' '}
+          <span className="font-semibold text-white">
+            {team.wins}–{team.losses}
+            {team.ties ? `–${team.ties}` : ''}
+          </span>
+        </p>
+        {isDynasty && data && !error && (
+          <p className="text-slate-400" title="Owned picks across the next three drafts">
+            Picks{' '}
+            <span className="font-semibold text-white">
+              {data.years.map((y) => `${y.year} · ${y.total}`).join('   ')}
+            </span>
+          </p>
+        )}
+      </div>
+    )
   return (
     <div className="mx-auto w-full rounded-xl border border-slate-600 bg-slate-900 px-5 py-4 md:px-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">

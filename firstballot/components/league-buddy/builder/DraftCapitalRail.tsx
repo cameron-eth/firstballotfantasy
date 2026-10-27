@@ -15,7 +15,9 @@ export function DraftCapitalRail({
   available,
   onFund,
   onUndo,
+  compact = false,
 }: {
+  compact?: boolean
   picks: OwnedPick[]
   year: number
   teams: TeamData[]
@@ -29,6 +31,71 @@ export function DraftCapitalRail({
 }) {
   const current = picks.filter((p) => Number(p.season) === year)
   const goals = targets.filter((t) => t.kind === 'draft' && t.year === year)
+  if (compact)
+    return (
+      <section
+        aria-label="Draft access and funding"
+        className="mt-2 flex flex-wrap items-center gap-2 text-xs"
+      >
+        <span className="font-semibold text-violet-200">{year} picks</span>
+        {!available ? (
+          <span className="text-slate-400">Pick inventory unavailable; funding is unverified.</span>
+        ) : !current.length ? (
+          <span className="text-amber-300">
+            None in this class. A rookie target needs a pick first.
+          </span>
+        ) : (
+          current.map((p) => {
+            const assigned = fits.find((f) => f.pick?.id === p.id)
+            const target = goals.find((t) => t.id === assigned?.targetId)
+            const planned = plans.find((f) => f.receivePickId === p.id)
+            const via = teams.find((t) => t.rosterId === p.roster_id)?.teamName ?? 'original team'
+            return (
+              <span
+                key={p.id}
+                title={`Via ${via}${projectedPick(p, slots, teams.length) ? ' · projected order' : ''}. Class rank is a cost proxy, not ADP; no pick guarantees a player.`}
+                className={`rounded-md border px-2 py-1 ${planned ? 'border-dashed border-amber-400/40' : 'border-violet-400/30'} text-slate-200`}
+              >
+                <span className="font-semibold text-violet-200">
+                  {slots[p.roster_id]
+                    ? `${p.round}.${String(slots[p.roster_id]).padStart(2, '0')}`
+                    : `R${p.round}`}
+                </span>{' '}
+                {planned ? 'trade assumed' : 'owned'}
+                {target
+                  ? ` · ${assigned?.status === 'covered' ? 'in range for' : 'short of'} ${target.name}`
+                  : ''}
+              </span>
+            )
+          })
+        )}
+        {goals.map((t) => {
+          const fit = fits.find((f) => f.targetId === t.id),
+            plan = plans.find((f) => f.targetId === t.id)
+          return (
+            <span key={t.id} className="flex items-center gap-2">
+              <button
+                className="rounded-md border border-slate-600 px-2 py-1 text-blue-200"
+                onClick={() => onFund(t)}
+              >
+                {t.name} ·{' '}
+                {plan
+                  ? 'Review funding'
+                  : fit?.status === 'covered'
+                    ? 'Pick in range'
+                    : 'Find a path'}{' '}
+                →
+              </button>
+              {plan && (
+                <button onClick={() => onUndo(t.id)} className="text-slate-400">
+                  Undo simulation
+                </button>
+              )}
+            </span>
+          )
+        })}
+      </section>
+    )
   return (
     <section
       aria-label="Draft access and funding"

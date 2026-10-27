@@ -29,6 +29,8 @@ export function LineupMap({
   board,
   update,
   onTrade,
+  chosen,
+  onChoose,
   onAdd,
   onFund,
   fits,
@@ -44,6 +46,8 @@ export function LineupMap({
   board: Prospect[]
   update: (patch: Partial<Scenario>) => void
   onTrade: (p: PlayerData) => void
+  chosen: string[]
+  onChoose: (p: PlayerData) => void
   onAdd: (t: Target) => void
   onFund: (t: Target) => void
 }) {
@@ -134,6 +138,14 @@ export function LineupMap({
             : undefined
         }
         signal={p.roster ? signalById.get(p.roster.playerId) : undefined}
+        choice={
+          p.roster
+            ? {
+                checked: chosen.includes(p.roster.playerId),
+                onToggle: () => onChoose(p.roster!),
+              }
+            : undefined
+        }
         shoulderBadge={
           p.roster?.fppg_rank
             ? {

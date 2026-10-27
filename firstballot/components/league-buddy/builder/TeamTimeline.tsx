@@ -75,9 +75,15 @@ export function useTeamTimeline({
   const picks = funding.picks.filter((p) => p.owner_id === team.rosterId)
   const fits =
     data && scenario
-      ? assessDraftCapital(scenario.targets, prospects, picks, slots, teams.length, [
-          ...new Set(data.picks.map((p) => Number(p.season))),
-        ])
+      ? assessDraftCapital(
+          scenario.targets,
+          prospects,
+          picks,
+          slots,
+          teams.length,
+          [...new Set(data.picks.map((p) => Number(p.season)))],
+          scenario.pickAssignments
+        )
       : []
   const view = scenario
     ? scenarioAtYear({ ...scenario, fundingPlans: funding.accepted }, horizon, baseYear)

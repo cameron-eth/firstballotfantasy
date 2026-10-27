@@ -10,7 +10,7 @@ import {
   type FundingPlan,
   type PickQuote,
 } from '@/lib/draft-funding'
-import { tradeOpportunities } from '@/lib/sleeper-sdk/trade-opportunities'
+import { packageOpportunities, tradeOpportunities } from '@/lib/sleeper-sdk/trade-opportunities'
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
@@ -18,6 +18,7 @@ import { pickLabel, type OfferSide } from '../trades/TradeAssetList'
 export type PlanningOffer = { partnerId: number; give: OfferSide; receive: OfferSide }
 export type PlanningFocus =
   | { kind: 'player'; player: PlayerData }
+  | { kind: 'players'; players: PlayerData[] }
   | { kind: 'draft'; target: Target; rank?: number }
 const fetcher = async (url: string) => {
   const r = await fetch(url)
@@ -104,25 +105,40 @@ export function PlanningSuggestions({
           })
           .slice(0, 12)
       : []
-  const count = focus.kind === 'draft' ? funding.length : playerIdeas.length
+  const packageIdeas =
+    focus.kind === 'players' && inventory
+      ? packageOpportunities(focus.players, team, teams, inventory.superflex).slice(0, 12)
+      : []
+  const sending =
+    focus.kind === 'player' ? [focus.player] : focus.kind === 'players' ? focus.players : []
+  const count =
+    focus.kind === 'draft'
+      ? funding.length
+      : focus.kind === 'players'
+        ? packageIdeas.length
+        : playerIdeas.length
   const current = index % Math.max(count, 1)
   const f = funding[current],
-    p = playerIdeas[current]
+    p = focus.kind === 'players' ? packageIdeas[current] : playerIdeas[current]
   const offer: PlanningOffer | undefined = f
     ? {
         partnerId: f.owner.rosterId,
         give: { players: f.plan.givePlayerIds, picks: f.plan.givePickIds, faab: 0 },
         receive: { players: [], picks: [f.pick.id], faab: 0 },
       }
-    : p && focus.kind === 'player'
+    : p && sending.length
       ? {
           partnerId: p.team.rosterId,
-          give: { players: [focus.player.playerId], picks: [], faab: 0 },
+          give: { players: sending.map((x) => x.playerId), picks: [], faab: 0 },
           receive: { players: [p.target.playerId], picks: [], faab: 0 },
         }
       : undefined
   const title =
-    focus.kind === 'draft' ? `Fund ${focus.target.name}` : `Trade ${focus.player.playerName}`
+    focus.kind === 'draft'
+      ? `Fund ${focus.target.name}`
+      : focus.kind === 'players'
+        ? `Trade ${focus.players.length} players together`
+        : `Trade ${focus.player.playerName}`
   const renderPick = (pick: OwnedPick) => (
     <div key={pick.id} className="rounded-xl border border-violet-400/40 bg-violet-400/10 p-4">
       <p className="text-[10px] uppercase tracking-wider text-violet-300">
@@ -178,7 +194,9 @@ export function PlanningSuggestions({
         <p className="text-sm leading-relaxed text-slate-400">
           {focus.kind === 'draft'
             ? 'No priced package reaches this target with the current data. Check pick projections, try another prospect, or keep this as an unfunded goal. Unknown pick prices are not treated as free.'
-            : 'No nearby KTC-value suggestions found for this player.'}
+            : focus.kind === 'players'
+              ? 'No players near the combined KTC value of this package.'
+              : 'No nearby KTC-value suggestions found for this player.'}
         </p>
       ) : (
         <>
@@ -234,7 +252,7 @@ export function PlanningSuggestions({
                 You send
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {(f?.give ?? (focus.kind === 'player' ? [focus.player] : [])).map((player) => (
+                {(f?.give ?? sending).map((player) => (
                   <PlayerTradingCard
                     key={player.playerId}
                     compact

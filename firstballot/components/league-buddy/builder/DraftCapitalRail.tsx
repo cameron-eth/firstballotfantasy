@@ -1,5 +1,6 @@
 'use client'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
+import { AppTooltip } from '@/components/ui/app-tooltip'
 import { projectedPick, type FundingPlan } from '@/lib/draft-funding'
 import type { CapitalFit } from '@/lib/team-timeline'
 import type { Target } from '@/lib/team-scenarios'
@@ -16,7 +17,11 @@ export function DraftCapitalRail({
   onFund,
   onUndo,
   compact = false,
+  onPick,
+  assignments = {},
 }: {
+  onPick?: (pick: OwnedPick) => void
+  assignments?: Record<string, string>
   compact?: boolean
   picks: OwnedPick[]
   year: number
@@ -50,22 +55,43 @@ export function DraftCapitalRail({
             const target = goals.find((t) => t.id === assigned?.targetId)
             const planned = plans.find((f) => f.receivePickId === p.id)
             const via = teams.find((t) => t.rosterId === p.roster_id)?.teamName ?? 'original team'
+            const pinned = targets.find((t) => t.id === assignments[p.id])
+            const label = slots[p.roster_id]
+              ? `${p.round}.${String(slots[p.roster_id]).padStart(2, '0')}`
+              : `R${p.round}`
             return (
-              <span
+              <AppTooltip
                 key={p.id}
-                title={`Via ${via}${projectedPick(p, slots, teams.length) ? ' · projected order' : ''}. Class rank is a cost proxy, not ADP; no pick guarantees a player.`}
-                className={`rounded-md border px-2 py-1 ${planned ? 'border-dashed border-amber-400/40' : 'border-violet-400/30'} text-slate-200`}
+                content={
+                  <div className="space-y-1">
+                    <p className="font-semibold text-white">
+                      Pick {label} · {p.season}
+                    </p>
+                    <p>
+                      Via {via}
+                      {projectedPick(p, slots, teams.length) ? ' · projected order' : ''}
+                    </p>
+                    <p className="text-slate-500">
+                      Class rank is a cost proxy, not ADP; no pick guarantees a player.
+                    </p>
+                    <p className="text-blue-200">Click to assign a prospect or see trade ideas.</p>
+                  </div>
+                }
               >
-                <span className="font-semibold text-violet-200">
-                  {slots[p.roster_id]
-                    ? `${p.round}.${String(slots[p.roster_id]).padStart(2, '0')}`
-                    : `R${p.round}`}
-                </span>{' '}
-                {planned ? 'trade assumed' : 'owned'}
-                {target
-                  ? ` · ${assigned?.status === 'covered' ? 'in range for' : 'short of'} ${target.name}`
-                  : ''}
-              </span>
+                <button
+                  type="button"
+                  onClick={() => onPick?.(p)}
+                  className={`rounded-md border px-2 py-1 text-slate-200 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${planned ? 'border-dashed border-amber-400/40' : pinned ? 'border-emerald-400/50' : 'border-violet-400/30'}`}
+                >
+                  <span className="font-semibold text-violet-200">{label}</span>{' '}
+                  {planned ? 'trade assumed' : 'owned'}
+                  {pinned
+                    ? ` · ${pinned.name}`
+                    : target
+                      ? ` · ${assigned?.status === 'covered' ? 'in range for' : 'short of'} ${target.name}`
+                      : ''}
+                </button>
+              </AppTooltip>
             )
           })
         )}

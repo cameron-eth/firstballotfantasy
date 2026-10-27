@@ -1,6 +1,9 @@
 /** KTC points gained in 30 days that earn the fire marker. */
 export const HOT_DELTA = 500
 
+/** KTC points lost in 30 days that earn the ice marker. */
+export const COLD_DELTA = 500
+
 export type TierTone = 'elite' | 'good' | 'neutral' | 'bad'
 
 const GOOD_ADJECTIVE: Record<number, string> = { 1: 'Elite', 2: 'Star', 3: 'Strong' }
@@ -33,3 +36,6 @@ export function describeTier(input: {
 
 export const isHot = (delta30: number | null | undefined) =>
   typeof delta30 === 'number' && delta30 >= HOT_DELTA
+
+export const isCold = (delta30: number | null | undefined) =>
+  typeof delta30 === 'number' && delta30 <= -COLD_DELTA

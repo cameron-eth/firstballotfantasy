@@ -1,6 +1,6 @@
 'use client'
 import type { TradeSignal } from '@/lib/trade-signals'
-import { describeTier, isHot } from '@/lib/player-signals'
+import { describeTier, isCold, isHot } from '@/lib/player-signals'
 import { useCacheVersion } from '@/lib/cache-version'
 import { playerImageSrc } from '@/lib/player-image'
 import { useState, type ReactNode } from 'react'
@@ -65,6 +65,7 @@ export function PlayerTradingCard({
     ? describeTier({ tierNumber: tier.number, position, positionRank: tier.positionRank })
     : null
   const hot = isHot(tier?.delta30)
+  const cold = isCold(tier?.delta30)
   const color = positionPalette[position] ?? neutralPalette
   const identity = team.split(' · ')[0]
   const logo =
@@ -74,7 +75,7 @@ export function PlayerTradingCard({
       : null)
   return (
     <article
-      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : hot ? 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_30px_-6px_rgba(52,211,153,0.65)]' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
+      className={`group/card relative isolate flex ${compact ? 'min-h-0' : 'min-h-[350px]'} flex-col overflow-hidden rounded-[20px] border shadow-[0_16px_40px_-20px_#000] transition duration-300 motion-safe:hover:-translate-y-1 ${selected ? 'border-emerald-300 ring-2 ring-emerald-300/60' : rookie ? 'border-lime-300 ring-1 ring-lime-300/60' : outgoing ? 'border-orange-300/40' : cold ? 'border-sky-200 ring-2 ring-sky-200/60 shadow-[0_0_30px_-6px_rgba(186,230,253,0.6)]' : hot ? 'border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_30px_-6px_rgba(52,211,153,0.65)]' : tier?.number === 1 ? 'border-amber-300 ring-2 ring-amber-300/60 shadow-[0_0_28px_-6px_rgba(252,211,77,0.55)]' : tier?.number === 2 ? 'border-amber-300/75 ring-1 ring-amber-300/40' : tier?.number === 3 ? 'border-emerald-400/70 ring-1 ring-emerald-400/30' : standing?.tone === 'bad' ? 'border-rose-400/55' : 'border-white/20 hover:border-white/40'} ${outgoing ? 'saturate-50' : ''}`}
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
       <div
@@ -102,7 +103,7 @@ export function PlayerTradingCard({
             alt=""
             aria-hidden="true"
             onError={() => setFailedLogo(logo)}
-            className={`pointer-events-none absolute top-3 h-16 w-16 object-contain opacity-40 ${hot ? 'right-14' : 'right-5'}`}
+            className={`pointer-events-none absolute top-3 h-16 w-16 object-contain opacity-40 ${hot || cold ? 'right-14' : 'right-5'}`}
           />
         )}
         {image && failedImage !== image ? (
@@ -129,6 +130,16 @@ export function PlayerTradingCard({
             className="absolute right-3 top-3 z-30 rounded-full border border-emerald-300/60 bg-slate-950/80 px-1.5 py-0.5 text-base leading-none"
           >
             🔥
+          </span>
+        )}
+        {cold && (
+          <span
+            role="img"
+            aria-label={`KTC value down ${Math.abs(Math.round(tier!.delta30!))} in 30 days`}
+            title={`KTC value down ${Math.abs(Math.round(tier!.delta30!))} in the last 30 days`}
+            className="absolute right-3 top-3 z-30 rounded-full border border-sky-200/60 bg-slate-950/80 px-1.5 py-0.5 text-base leading-none"
+          >
+            ❄️
           </span>
         )}
         {tier && (

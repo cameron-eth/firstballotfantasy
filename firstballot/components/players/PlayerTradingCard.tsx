@@ -1,4 +1,6 @@
 'use client'
+import { useCacheVersion } from '@/lib/cache-version'
+import { playerImageSrc } from '@/lib/player-image'
 import { useState, type ReactNode } from 'react'
 import { ArrowUpRight, LoaderCircle } from 'lucide-react'
 import { COLLEGE_LOGOS } from '@/lib/college-logos'
@@ -44,6 +46,7 @@ export function PlayerTradingCard({
   busy?: boolean
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null)
+  const cacheVersion = useCacheVersion()
   const [failedLogo, setFailedLogo] = useState<string | null>(null)
   const color = positionPalette[position] ?? neutralPalette
   const identity = team.split(' · ')[0]
@@ -94,7 +97,7 @@ export function PlayerTradingCard({
         )}
         {image && failedImage !== image ? (
           <img
-            src={image}
+            src={playerImageSrc(image, cacheVersion)}
             alt=""
             onError={() => setFailedImage(image)}
             className="absolute inset-0 h-full w-full object-contain object-bottom px-3 pt-2 drop-shadow-[0_12px_20px_rgba(0,0,0,0.4)] transition-transform duration-700 motion-safe:group-hover/card:scale-[1.04]"

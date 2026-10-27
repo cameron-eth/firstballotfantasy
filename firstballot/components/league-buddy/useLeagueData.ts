@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import useSWR from 'swr'
 import { leagueCache } from '@/lib/league-cache'
+import { getCacheVersion, useCacheVersion } from '@/lib/cache-version'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import type {
   TeamData,
@@ -66,8 +67,16 @@ interface SleeperUser {
 }
 
 interface TierResponse {
-  players?: { sf?: Record<string, { rank: number; number: number; name: string; emphasis: string; score: number }>;
-    one_qb?: Record<string, { rank: number; number: number; name: string; emphasis: string; score: number }> }
+  players?: {
+    sf?: Record<
+      string,
+      { rank: number; number: number; name: string; emphasis: string; score: number }
+    >
+    one_qb?: Record<
+      string,
+      { rank: number; number: number; name: string; emphasis: string; score: number }
+    >
+  }
 }
 
 interface TrendingItem {
@@ -127,8 +136,33 @@ async function fetchWeekSchedule(week: number): Promise<any[]> {
   return []
 }
 
-async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<LeagueDataBundle> {
+const PLAYERS_TTL_MS = 6 * 60 * 60 * 1000
+let playersMemo: { at: number; data: Promise<Record<string, any>> } | null = null
+
+/** The Sleeper player blob is ~10 MB parsed; keep one copy per session instead of one per refetch. */
+function getPlayersOnce(): Promise<Record<string, any>> {
+  if (playersMemo && Date.now() - playersMemo.at < PLAYERS_TTL_MS) return playersMemo.data
+  const data = sleeperApi.getAllPlayers() as Promise<Record<string, any>>
+  playersMemo = { at: Date.now(), data }
+  data.catch(() => {
+    if (playersMemo?.data === data) playersMemo = null
+  })
+  return data
+}
+
+export function clearPlayersMemo() {
+  playersMemo = null
+}
+
+const fresh = { cache: 'no-store' } as const
+
+async function fetchLeagueDataBundle(
+  leagueId: string,
+  user: unknown,
+  version: number
+): Promise<LeagueDataBundle> {
   leagueCache.setLeagueId(leagueId)
+  const v = `_v=${version}`
 
   interface NflState {
     week?: number
@@ -136,42 +170,52 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     season_type?: string
   }
 
-  const nflState = (await fetch('https://api.sleeper.app/v1/state/nfl', {
-    cache: 'no-store',
-  }).then((r) => r.json())) as NflState
-  const week = nflState?.week || nflState?.display_week || 1
-
-  const [rosters, users, allPlayersData, league, matchups, rankingsResult, nflScheduleData] =
+  // Wave 1: everything that does not depend on the current week.
+  const [nflState, rosters, users, allPlayersData, league, rankingsResult, trending] =
     (await Promise.all([
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`, {
-        cache: 'no-store',
-      }).then((r) => r.json()),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
-        (r) => r.json()
-      ),
-      sleeperApi.getAllPlayers(),
+      fetch('https://api.sleeper.app/v1/state/nfl', fresh).then((r) => r.json()),
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`, fresh).then((r) => r.json()),
+      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, fresh).then((r) => r.json()),
+      getPlayersOnce(),
       sleeperApi.getLeagueInfo(leagueId),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, {
-        cache: 'no-store',
-      })
-        .then(async (r) => {
-          if (!r.ok) return []
-          return r.json()
-        })
-        .catch(() => []),
-      fetch('/api/dynasty-tiers')
+      fetch(`/api/dynasty-tiers?${v}`)
         .then((res) => (res.ok ? res.json() : []))
         .catch(() => []),
-      fetchWeekSchedule(week),
-    ])) as [SleeperRoster[], SleeperUser[], Record<string, any>, any, SleeperMatchup[], any, any[]]
+      sleeperApi.getTrendingPlayers().catch(() => []),
+    ])) as [NflState, SleeperRoster[], SleeperUser[], Record<string, any>, any, any, any]
+  const week = nflState?.week || nflState?.display_week || 1
 
   if (!rosters || !users || !allPlayersData || !league) {
     throw new Error('Invalid data received from API')
   }
+  const allSleeperPlayerIds = Array.from(new Set(rosters.flatMap((r) => r.players || [])))
+
+  // Wave 2: week-dependent and roster-dependent requests, all in flight together.
+  const [matchups, nflScheduleData, statsResponse, txResults] = (await Promise.all([
+    fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, fresh)
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []),
+    fetchWeekSchedule(week),
+    allSleeperPlayerIds.length > 0
+      ? fetch(`/api/roster-stats?player_ids=${allSleeperPlayerIds.join(',')}&${v}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      : Promise.resolve(null),
+    Promise.all(
+      Array.from({ length: week }, (_, i) => i + 1).map((w) =>
+        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${w}`, fresh)
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => [])
+      )
+    ),
+  ])) as [SleeperMatchup[], any[], any, SleeperTransaction[][]]
 
   const validUsers = users.filter((u) => u && u.user_id)
   const validRosters = rosters.filter((r) => r && r.roster_id)
-  const allSleeperPlayerIds = Array.from(new Set(rosters.flatMap((r) => r.players || [])))
+
+  if (!rosters || !users || !allPlayersData || !league) {
+    throw new Error('Invalid data received from API')
+  }
 
   const rosterStatsMap: Record<
     string,
@@ -186,50 +230,41 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     }
   > = {}
 
-  if (allSleeperPlayerIds.length > 0) {
-    try {
-      const response = await fetch(
-        `/api/roster-stats?player_ids=${allSleeperPlayerIds.join(',')}`,
-        {
-          cache: 'no-store',
+  if (Array.isArray(statsResponse?.data)) {
+    statsResponse.data.forEach(
+      (playerStats: {
+        sleeper_player_id: string
+        fantasy_ppg: number | string
+        fppg_rank?: number | null
+        fppg_position?: string | null
+        stats_season?: number
+        total_fantasy_points: number | string
+        games_played: number
+        headshot_url?: string | null
+      }) => {
+        if (playerStats.fantasy_ppg == null || !Number.isFinite(Number(playerStats.fantasy_ppg)))
+          return
+        rosterStatsMap[playerStats.sleeper_player_id] = {
+          fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,
+          fppg_rank: playerStats.fppg_rank,
+          fppg_position: playerStats.fppg_position,
+          stats_season: playerStats.stats_season,
+          total_fantasy_points: parseFloat(String(playerStats.total_fantasy_points)) || 0,
+          games_played: playerStats.games_played || 0,
+          headshot_url: playerStats.headshot_url || null,
         }
-      )
-
-      if (response.ok) {
-        const result = await response.json()
-        result.data.forEach(
-          (playerStats: {
-            sleeper_player_id: string
-            fantasy_ppg: number | string
-            fppg_rank?: number | null
-            fppg_position?: string | null
-            stats_season?: number
-            total_fantasy_points: number | string
-            games_played: number
-            headshot_url?: string | null
-          }) => {
-            if(playerStats.fantasy_ppg==null || !Number.isFinite(Number(playerStats.fantasy_ppg))) return
-            rosterStatsMap[playerStats.sleeper_player_id] = {
-              fantasy_ppg: parseFloat(String(playerStats.fantasy_ppg)) || 0,
-              fppg_rank: playerStats.fppg_rank,
-              fppg_position: playerStats.fppg_position,
-              stats_season: playerStats.stats_season,
-              total_fantasy_points: parseFloat(String(playerStats.total_fantasy_points)) || 0,
-              games_played: playerStats.games_played || 0,
-              headshot_url: playerStats.headshot_url || null,
-            }
-          }
-        )
       }
-    } catch {
-      // Non-fatal
-    }
+    )
   }
 
-  const isSuperflex = Array.isArray(league?.roster_positions) &&
-    (league.roster_positions.some((slot: string) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE') ||
+  const isSuperflex =
+    Array.isArray(league?.roster_positions) &&
+    (league.roster_positions.some(
+      (slot: string) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE'
+    ) ||
       league.roster_positions.filter((slot: string) => slot === 'QB').length > 1)
-  const rankingsMap = ((rankingsResult as TierResponse)?.players?.[isSuperflex ? 'sf' : 'one_qb'] ?? {})
+  const rankingsMap =
+    (rankingsResult as TierResponse)?.players?.[isSuperflex ? 'sf' : 'one_qb'] ?? {}
 
   const enhancedPlayers = { ...allPlayersData }
   Object.entries(rosterStatsMap).forEach(([sleeperId, stats]) => {
@@ -246,7 +281,6 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     }
   })
 
-  const trending = await sleeperApi.getTrendingPlayers().catch(() => [])
   const trendingPlayers: TrendingPlayer[] = Array.isArray(trending)
     ? trending
         .map((item: TrendingItem) => {
@@ -383,10 +417,15 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
             fppg_rank: player.fppg_rank,
             fppg_position: player.fppg_position,
             stats_season: player.stats_season,
-            rankingData: ranking ? {
-              rank: ranking.rank, position: player.position, team: player.team,
-              name: playerName, tier: ranking.number,
-            } : undefined,
+            rankingData: ranking
+              ? {
+                  rank: ranking.rank,
+                  position: player.position,
+                  team: player.team,
+                  name: playerName,
+                  tier: ranking.number,
+                }
+              : undefined,
           }
         })
         .filter(Boolean) as PlayerData[]
@@ -422,83 +461,8 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
     team.grade = calculateGradeFromPercentile(team.gradeScore, allScores).letter
   })
 
-  try {
-    const allPlayerNames = Array.from(
-      new Set(
-        teamsData.flatMap((team) =>
-          team.players
-            .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-            .map((p) => p.playerName)
-        )
-      )
-    ).filter(Boolean)
-
-    if (allPlayerNames.length > 0) {
-      const chunkSize = 50
-      const ktcHistoryMap: Record<string, KtcHistoryPoint[]> = {}
-      const ktcLatestMap: Record<string, { value_sf: number; value_1qb: number }> = {}
-
-      for (let i = 0; i < allPlayerNames.length; i += chunkSize) {
-        const chunk = allPlayerNames.slice(i, i + chunkSize)
-        try {
-          const resp = await fetch(`/api/ktc-values?names=${encodeURIComponent(chunk.join(','))}`)
-          if (!resp.ok) continue
-          const json = await resp.json()
-          if (json.historyMap) {
-            Object.entries(json.historyMap as Record<string, KtcHistoryPoint[]>).forEach(
-              ([name, hist]) => {
-                ktcHistoryMap[name] = hist
-              }
-            )
-          }
-          if (Array.isArray(json.data)) {
-            json.data.forEach(
-              (row: { player_name: string; value_sf: number; value_1qb: number }) => {
-                ktcLatestMap[row.player_name] = {
-                  value_sf: row.value_sf,
-                  value_1qb: row.value_1qb,
-                }
-              }
-            )
-          }
-        } catch {
-          // Non-fatal
-        }
-      }
-
-      teamsData.forEach((team) => {
-        team.players = team.players.map((player) => {
-          const hist = ktcHistoryMap[player.playerName]
-          const latest = ktcLatestMap[player.playerName]
-          const delta =
-            hist && hist.length >= 2 ? hist[hist.length - 1].value_sf - hist[0].value_sf : undefined
-
-          return {
-            ...player,
-            ktcHistory: hist ?? undefined,
-            ktcValueSf: latest?.value_sf ?? undefined,
-            ktcValue1qb: latest?.value_1qb ?? undefined,
-            ktcTrendDelta: delta,
-          }
-        })
-      })
-    }
-  } catch {
-    // Non-fatal
-  }
-
   let leagueTransactions: SleeperTransaction[] = []
   try {
-    const weekNums = Array.from({ length: week }, (_, i) => i + 1)
-    const txResults = await Promise.all(
-      weekNums.map((w) =>
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${w}`, {
-          cache: 'no-store',
-        })
-          .then((r) => (r.ok ? r.json() : []))
-          .catch(() => [])
-      )
-    )
     const allTx: SleeperTransaction[] = txResults
       .flat()
       .filter((tx: SleeperTransaction) => tx.status === 'complete')
@@ -577,16 +541,93 @@ async function fetchLeagueDataBundle(leagueId: string, user?: unknown): Promise<
   }
 }
 
+type KtcMaps = {
+  history: Record<string, KtcHistoryPoint[]>
+  latest: Record<string, { value_sf: number; value_1qb: number }>
+}
+
+/** KTC history is the heaviest payload, so it loads after first paint and chunks run in parallel. */
+async function fetchKtcMaps(names: string[], version: number): Promise<KtcMaps> {
+  const chunkSize = 50
+  const chunks: string[][] = []
+  for (let i = 0; i < names.length; i += chunkSize) chunks.push(names.slice(i, i + chunkSize))
+  const history: KtcMaps['history'] = {}
+  const latest: KtcMaps['latest'] = {}
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const resp = await fetch(
+          `/api/ktc-values?names=${encodeURIComponent(chunk.join(','))}&_v=${version}`
+        )
+        if (!resp.ok) return
+        const json = await resp.json()
+        if (json.historyMap) Object.assign(history, json.historyMap)
+        if (Array.isArray(json.data)) {
+          json.data.forEach((row: { player_name: string; value_sf: number; value_1qb: number }) => {
+            latest[row.player_name] = { value_sf: row.value_sf, value_1qb: row.value_1qb }
+          })
+        }
+      } catch {
+        // Non-fatal
+      }
+    })
+  )
+  return { history, latest }
+}
+
+function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
+  return teams.map((team) => ({
+    ...team,
+    players: team.players.map((player) => {
+      const hist = maps.history[player.playerName]
+      const latest = maps.latest[player.playerName]
+      return {
+        ...player,
+        ktcHistory: hist ?? undefined,
+        ktcValueSf: latest?.value_sf ?? undefined,
+        ktcValue1qb: latest?.value_1qb ?? undefined,
+        ktcTrendDelta:
+          hist && hist.length >= 2 ? hist[hist.length - 1].value_sf - hist[0].value_sf : undefined,
+      }
+    }),
+  }))
+}
+
 export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataReturn {
   const [selectedRosterId, setSelectedRosterId] = useState<number | null>(null)
 
+  const version = useCacheVersion()
   const { data, error, isLoading, mutate } = useSWR(
     leagueId ? ['league-buddy-v2-season-stats', leagueId, getUserId(user) ?? 'anon'] : null,
-    ([, id]) => fetchLeagueDataBundle(id as string, user),
-    { revalidateOnFocus: true, refreshInterval: 900_000 }
+    ([, id]) => fetchLeagueDataBundle(id as string, user, getCacheVersion()),
+    { revalidateOnFocus: true, focusThrottleInterval: 300_000, refreshInterval: 900_000 }
   )
 
-  const teams = data?.teams ?? []
+  const ktcNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (data?.teams ?? []).flatMap((team) =>
+            team.players
+              .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+              .map((p) => p.playerName)
+          )
+        )
+      )
+        .filter(Boolean)
+        .sort(),
+    [data?.teams]
+  )
+  const { data: ktcMaps } = useSWR(
+    ktcNames.length > 0 ? ['league-buddy-ktc', leagueId, version, ktcNames.join('|')] : null,
+    () => fetchKtcMaps(ktcNames, version),
+    { revalidateOnFocus: false, dedupingInterval: 300_000, keepPreviousData: true }
+  )
+
+  const teams = useMemo(
+    () => (data?.teams ? (ktcMaps ? applyKtc(data.teams, ktcMaps) : data.teams) : []),
+    [data?.teams, ktcMaps]
+  )
   const leagueOverview = data?.leagueOverview ?? null
   const currentMatchups = data?.currentMatchups ?? []
   const currentWeek = data?.currentWeek ?? 1

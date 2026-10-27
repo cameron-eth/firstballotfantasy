@@ -1,5 +1,9 @@
 import { playerData } from '@/lib/platform/player-data'
-import { failure, json } from '@/lib/platform/http'
+import { NextResponse } from 'next/server'
+import { failure } from '@/lib/platform/http'
+
+// Stats move on a weekly cadence; `_v` in the URL (bumped by Refresh) bypasses edge copies.
+const SHARED = 'public, s-maxage=300, stale-while-revalidate=600'
 export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   try {
@@ -9,12 +13,15 @@ export async function GET(request: Request) {
       ),
     ]
     const result = await playerData(ids,1000)
-    return json({
-      ...result,
-      count: result.data.length,
-      source: 'ESPN',
-      updatedAt: result.freshness.fetchedAt,
-    })
+    return NextResponse.json(
+      {
+        ...result,
+        count: result.data.length,
+        source: 'ESPN',
+        updatedAt: result.freshness.fetchedAt,
+      },
+      { headers: { 'Cache-Control': SHARED } }
+    )
   } catch (e) {
     return failure(e)
   }

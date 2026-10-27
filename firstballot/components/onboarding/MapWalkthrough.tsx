@@ -21,9 +21,9 @@ const steps = [
     body: 'Now is your current roster. Choose a future year to see when prospects can arrive. Your owned picks appear in that future view; projected MaxPF estimates their slots. A target you cannot afford needs a plan to acquire draft capital.',
   },
   {
-    anchor: 'targets',
+    anchor: 'lineup',
     title: 'Find your next move.',
-    body: 'Search trade targets or, in dynasty, college prospects here. Add a target to explore their fit. On the map, Show trade targets opens suggested cards beside a player. Any real trade still requires a separate review and confirmation.',
+    body: 'On the map, Show trade targets opens suggested cards beside a player, and your draft picks and team state stay pinned at the top. Add a target to explore their fit. Any real trade still requires a separate review and confirmation.',
   },
   {
     anchor: 'plans',

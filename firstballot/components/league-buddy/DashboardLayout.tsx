@@ -103,18 +103,18 @@ export function DashboardLayout({
         aria-label="League sections"
         className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-slate-900/60 p-1"
       >
-        {LEAGUE_SECTIONS.filter(({ id }) => id !== 'builder' || desktopBuilder).map(
-          ({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => onSectionChange(id)}
-              aria-current={activeSection === id ? 'page' : undefined}
-              className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${activeSection === id ? 'bg-blue-400/20 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-            >
-              {label}
-            </button>
-          )
-        )}
+        {LEAGUE_SECTIONS.filter(
+          ({ id }) => (id !== 'builder' || desktopBuilder) && (id !== 'picks' || isDynasty)
+        ).map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => onSectionChange(id)}
+            aria-current={activeSection === id ? 'page' : undefined}
+            className={`shrink-0 rounded-lg px-2.5 py-2 text-sm font-medium sm:px-4 transition-colors ${activeSection === id ? 'bg-blue-400/20 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
       <div className="min-w-0">{children}</div>
     </section>

@@ -5,6 +5,11 @@ export const DYNASTY_TIER_VERSION = 1
  * DYNASTY_TIER_VERSION moves every reader to the new key with the writer.
  */
 export const TIER_KEY = `dynasty:tiers:v${DYNASTY_TIER_VERSION}`
+/**
+ * ingestion_runs dataset prefix that scripts/sync-ktc-values.mjs writes once a KTC day is
+ * completely stored. The tier build publishes only from a marked day (PR-11).
+ */
+export const KTC_DAY_MARKER_PREFIX = 'ktc:day:'
 /** ESPN draft position by athlete id; an immutable fact cached for the tier build. */
 export const DRAFT_CAPITAL_KEY = 'nfl:draft-capital:v1'
 

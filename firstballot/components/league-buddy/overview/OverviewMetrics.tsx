@@ -1,13 +1,11 @@
 import { cn } from '@/lib/utils'
 import { RANK_TEXT, probabilityText, rankTone } from '@/lib/design/tones'
 import { StatTile } from '@/components/ui/stat-tile'
-import type { CompetitiveStateMeta } from '../competitiveState'
 
 export interface OverviewMetricValues {
   leagueSize: number
   /** Dynasty (KTC) value rank; 0 when values haven't loaded. */
   valueRank: number
-  state: CompetitiveStateMeta | null
   playoffOdds?: number
   playoffSpots?: number
   pointsFor: number
@@ -35,13 +33,7 @@ export function OverviewMetrics({ m }: { m: OverviewMetricValues }) {
         label="Dynasty rank"
         value={m.valueRank > 0 ? `#${m.valueRank}` : '—'}
         valueClassName={m.valueRank > 0 ? RANK_TEXT[rankTone(m.valueRank, m.leagueSize)] : ''}
-        detail={
-          m.state ? (
-            <span className={m.state.text}>{m.state.label}</span>
-          ) : (
-            `of ${m.leagueSize} by KTC value`
-          )
-        }
+        detail={`of ${m.leagueSize} by KTC value`}
       />
       <StatTile
         size="lg"

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { AppTooltip } from '@/components/ui/app-tooltip'
 import { useRefreshAll } from '@/lib/use-refresh-all'
 import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
@@ -89,17 +90,26 @@ export function DashboardLayout({
       </header>
       <nav
         aria-label="League sections"
-        className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-slate-900/60 p-1"
+        className="mb-5 flex gap-1 overflow-x-auto border-b border-line/60 scrollbar-hide"
       >
         {LEAGUE_SECTIONS.filter(
           ({ id }) => (id !== 'builder' || desktopBuilder) && (id !== 'picks' || isDynasty)
-        ).map(({ id, label }) => (
+        ).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
+            type="button"
             onClick={() => onSectionChange(id)}
             aria-current={activeSection === id ? 'page' : undefined}
-            className={`shrink-0 rounded-lg px-2.5 py-2 text-sm font-medium sm:px-4 transition-colors ${activeSection === id ? 'bg-blue-400/20 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+            className={cn(
+              'relative inline-flex shrink-0 items-center gap-2 px-2.5 pb-3 pt-2 text-sm sm:px-3 font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-action',
+              // Active: action-blue text and a 2px indicator sitting on the nav's hairline.
+              'after:absolute after:inset-x-2.5 after:-bottom-px sm:after:inset-x-3 after:h-0.5 after:rounded-full',
+              activeSection === id
+                ? 'text-blue-300 after:bg-action'
+                : 'text-slate-400 after:bg-transparent hover:text-white'
+            )}
           >
+            <Icon className="hidden size-4 sm:block" aria-hidden />
             {label}
           </button>
         ))}

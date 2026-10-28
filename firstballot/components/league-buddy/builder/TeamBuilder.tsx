@@ -15,8 +15,9 @@ import type { PlayerData, TeamData } from '../types'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import type { Prospect } from '@/components/scouting/types'
 import { LineupMap } from './LineupMap'
-import { BuilderTeamSummary } from './BuilderTeamSummary'
-import type { TeamPlacement } from '../competitiveState'
+import { SegmentedControl } from '@/components/ui/segmented-control'
+import { buttonVariants } from '@/components/ui/button'
+import { Minus, Plus } from 'lucide-react'
 import { useBoardFit } from './BoardFit'
 import { useTeamTimeline, type TimelineDraftOrder } from './TeamTimeline'
 import { PlanMenu } from './PlanMenu'
@@ -29,8 +30,7 @@ const fresh = (): Scenario => ({
   outgoing: [],
   targets: [],
 })
-const button =
-  'rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-40'
+const zoomButton = 'grid h-full w-9 place-items-center hover:bg-white/5 disabled:opacity-40'
 const fetchProspects = async (url: string): Promise<Prospect[]> => {
   const r = await fetch(url)
   if (!r.ok) throw new Error('College prospects could not load.')
@@ -43,7 +43,6 @@ export function TeamBuilder({
   teams,
   leagueId,
   isDynasty,
-  placement,
   draftOrder,
   rosterPositions,
 }: {
@@ -51,7 +50,6 @@ export function TeamBuilder({
   teams: TeamData[]
   leagueId: string
   isDynasty: boolean
-  placement?: TeamPlacement
   rosterPositions: string[]
   draftOrder?: TimelineDraftOrder
 }) {
@@ -150,7 +148,10 @@ export function TeamBuilder({
     return (
       <div role="alert" className="py-10 text-slate-300">
         {loadError.message}{' '}
-        <button className={button} onClick={() => retrySaved()}>
+        <button
+          className={buttonVariants({ variant: 'subtle', size: 'xs' })}
+          onClick={() => retrySaved()}
+        >
           Retry
         </button>
       </div>
@@ -212,57 +213,55 @@ export function TeamBuilder({
     })
   return (
     <div className="space-y-3">
+      {/* One toolbar: the roster year on the left, view controls on the right. */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         {isDynasty && (
-          <div
-            role="group"
-            aria-label="Roster year"
-            data-map-tour="years"
-            className="inline-flex rounded-lg border border-slate-700/50 bg-slate-800/40 p-1"
-          >
-            {[0, 1, 2, 3].map((offset) => {
-              const horizon = timeline.baseYear + offset
-              return (
-                <button
-                  key={horizon}
-                  disabled={busy}
-                  aria-pressed={timeline.horizon === horizon}
-                  onClick={() => {
-                    update({ horizon })
-                  }}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${timeline.horizon === horizon ? 'bg-blue-400/15 text-blue-200 shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                >
-                  {offset ? horizon : 'Now'}
-                </button>
-              )
-            })}
+          <div data-map-tour="years">
+            <SegmentedControl
+              label="Roster year"
+              disabled={busy}
+              value={String(timeline.horizon)}
+              onChange={(year) => update({ horizon: Number(year) })}
+              options={[0, 1, 2, 3].map((offset) => ({
+                value: String(timeline.baseYear + offset),
+                label: offset ? String(timeline.baseYear + offset) : 'Now',
+              }))}
+            />
           </div>
         )}
         <div
           data-map-tour="zoom"
-          className="ml-auto flex items-center gap-2 text-xs text-slate-400"
+          className="ml-auto flex h-9 items-center rounded-lg border border-line/60 bg-surface/40 text-xs text-slate-300"
         >
           <button
             aria-label="Zoom out map"
-            className={button}
+            className={zoomButton}
             disabled={zoom <= 10}
             onClick={() => setZoom((value) => value / 1.25)}
           >
-            −
+            <Minus className="size-3.5" aria-hidden />
           </button>
-          <button aria-label="Reset map zoom" title="Reset zoom" onClick={() => setZoom(100)}>
+          <button
+            aria-label="Reset map zoom"
+            title="Reset zoom"
+            className="h-full min-w-12 border-x border-line/60 px-2 tabular-nums hover:bg-white/5"
+            onClick={() => setZoom(100)}
+          >
             {zoom}%
           </button>
           <button
             aria-label="Zoom in map"
-            className={button}
+            className={zoomButton}
             disabled={zoom >= 150}
             onClick={() => setZoom((value) => value * 1.25)}
           >
-            +
+            <Plus className="size-3.5" aria-hidden />
           </button>
         </div>
-        <TourReplayButton label="Map guide" />
+        <TourReplayButton
+          label="Map guide"
+          className={buttonVariants({ variant: 'subtle', size: 'xs', className: 'h-9' })}
+        />
         <div data-map-tour="plans">
           <PlanMenu
             scenarios={scenarios}
@@ -299,15 +298,10 @@ export function TeamBuilder({
       )}
       <fieldset disabled={busy} className="space-y-3 min-w-0">
         <div className="relative overflow-hidden rounded-lg border border-white/10">
-          <div className="border-b border-white/10 bg-slate-950/90 px-5 py-2">
-            <BuilderTeamSummary
-              compact
-              team={team}
-              placement={placement}
-              leagueId={leagueId}
-              isDynasty={isDynasty}
-            />
-            {isDynasty && timeline.horizon > timeline.baseYear && (
+          {/* Team identity lives in the dashboard header; only the interactive pick rail
+              (assign prospects, fund targets) sits above the canvas, and only for future years. */}
+          {isDynasty && timeline.horizon > timeline.baseYear && (
+            <div className="border-b border-white/10 bg-slate-950/90 px-5 py-2">
               <DraftCapitalRail
                 compact
                 assignments={scenario.pickAssignments}
@@ -336,8 +330,8 @@ export function TeamBuilder({
                   update({ fundingPlans: scenario.fundingPlans?.filter((f) => f.targetId !== id) })
                 }
               />
-            )}
-          </div>
+            </div>
+          )}
           <div
             role="region"
             ref={viewportRef}

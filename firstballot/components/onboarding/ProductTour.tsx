@@ -123,15 +123,18 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
     </TourContext.Provider>
   )
 }
-export function TourReplayButton({ label = 'Replay welcome tour' }: { label?: string }) {
+export function TourReplayButton({
+  label = 'Replay welcome tour',
+  className = 'inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-blue-200 hover:bg-slate-800',
+}: {
+  label?: string
+  className?: string
+}) {
   const { replay } = useProductTour()
   const { user } = useAuth()
   if (!user) return null
   return (
-    <button
-      onClick={replay}
-      className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-blue-200 hover:bg-slate-800"
-    >
+    <button onClick={replay} className={className}>
       <Layers size={14} />
       {label}
     </button>

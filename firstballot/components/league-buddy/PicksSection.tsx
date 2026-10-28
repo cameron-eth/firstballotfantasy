@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { SELECTED_ROW, STICKY_HOVER, STICKY_SELECTED } from '@/lib/design/tones'
@@ -28,10 +29,13 @@ export function PicksSection({
   selectedTeam,
   leagueId,
   draftOrder,
+  focusSeason,
 }: {
   teams: TeamData[]
   selectedTeam: TeamData
   leagueId: string
+  /** A draft year opened from the header summary; its card scrolls into view and is outlined. */
+  focusSeason?: string | null
   draftOrder: {
     maxPointsFor: Record<number, MaxPointsForEntry>
     projectedMaxPointsFor: Record<number, number>
@@ -52,6 +56,12 @@ export function PicksSection({
     isLoading,
     retry,
   } = usePickCapital(leagueId, teams, selectedTeam.rosterId, draftOrder)
+  useEffect(() => {
+    if (focusSeason && !isLoading)
+      document
+        .getElementById(`picks-${focusSeason}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [focusSeason, isLoading])
   const teamName = (rosterId: number) =>
     teams.find((t) => t.rosterId === rosterId)?.teamName ?? `Team ${rosterId}`
   const capital = useMemo(
@@ -127,7 +137,14 @@ export function PicksSection({
 
             <div className="grid gap-3 lg:grid-cols-3">
               {years.map((y) => (
-                <div key={y.season} className="rounded-xl border border-line/60 bg-surface/40 p-4">
+                <div
+                  key={y.season}
+                  id={`picks-${y.season}`}
+                  className={cn(
+                    'scroll-mt-24 rounded-xl border bg-surface/40 p-4',
+                    focusSeason === y.season ? 'border-action/60' : 'border-line/60'
+                  )}
+                >
                   <div className="mb-3 flex items-baseline justify-between gap-2">
                     <h3 className="text-sm font-semibold text-white">{y.season} draft</h3>
                     <span className="text-xs text-slate-400">

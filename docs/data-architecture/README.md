@@ -30,6 +30,7 @@
 | [PERFORMANCE_ACCURACY.md](PERFORMANCE_ACCURACY.md) | Prioritized findings, cross-page consistency, observability |
 | [TARGET_ARCHITECTURE.md](TARGET_ARCHITECTURE.md) | Proposed architecture and ADRs |
 | [REMEDIATION_PLAN.md](REMEDIATION_PLAN.md) | Roadmap with severity, dependencies and validation |
+| [PR_SEQUENCE.md](PR_SEQUENCE.md) | Phase 2: dependency-aware PR sequence, completion gates, decisions D1–D4 |
 | [RUNTIME_EVIDENCE.md](RUNTIME_EVIDENCE.md) | Raw job history, data-health and catalog query results behind the [V] labels |
 
 ---

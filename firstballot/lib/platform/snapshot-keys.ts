@@ -20,3 +20,10 @@ export const PROSPECT_STATS_PATTERN = 'prospects:%:espn'
 
 /** One league's Sleeper rosters. Private per league, so data-health never lists it. */
 export const sleeperRostersKey = (leagueId: string) => `sleeper:rosters:${leagueId}`
+
+/**
+ * One league's server-computed dashboard metrics (PR-15), per format and week. Private per
+ * league, so data-health never lists it.
+ */
+export const leagueMetricsKey = (leagueId: string, format: 'sf' | '1qb', week: number) =>
+  `league-metrics:${leagueId}:${format}:${week}`

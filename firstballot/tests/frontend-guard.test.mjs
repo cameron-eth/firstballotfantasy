@@ -98,7 +98,7 @@ test('file size guard: only approved legacy files may exceed the default budget'
     ['components/scouting/ProspectComparison.tsx', 800],
     ['components/scouting/ScoutingPortal.tsx', 920],
     ['components/ui/sidebar.tsx', 760],
-    ['components/league-buddy/useLeagueData.ts', 720],
+    ['components/league-buddy/useLeagueData.ts', 120],
   ])
 
   const sourceFiles = [...walk('app'), ...walk('components'), ...walk('lib'), ...walk('hooks')]

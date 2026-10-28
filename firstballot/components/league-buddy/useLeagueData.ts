@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import useSWR from 'swr'
 import { leagueCache } from '@/lib/league-cache'
+import { teamScores } from '@/lib/team-score'
 import { getCacheVersion, useCacheVersion } from '@/lib/cache-version'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import type {
@@ -601,6 +602,16 @@ function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
   }))
 }
 
+/** Re-score every team once its values are known, so the grade reflects quality, not roster size. */
+function withTeamScores(teams: TeamData[]): TeamData[] {
+  const scores = teamScores(teams)
+  const all = teams.map((t) => scores.get(t.rosterId)?.composite ?? 0)
+  return teams.map((team) => {
+    const gradeScore = scores.get(team.rosterId)?.composite ?? 0
+    return { ...team, gradeScore, grade: calculateGradeFromPercentile(gradeScore, all).letter }
+  })
+}
+
 export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataReturn {
   const [selectedRosterId, setSelectedRosterId] = useState<number | null>(null)
 
@@ -633,7 +644,7 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
   )
 
   const teams = useMemo(
-    () => (data?.teams ? (ktcMaps ? applyKtc(data.teams, ktcMaps) : data.teams) : []),
+    () => (data?.teams ? withTeamScores(ktcMaps ? applyKtc(data.teams, ktcMaps) : data.teams) : []),
     [data?.teams, ktcMaps]
   )
   const leagueOverview = data?.leagueOverview ?? null

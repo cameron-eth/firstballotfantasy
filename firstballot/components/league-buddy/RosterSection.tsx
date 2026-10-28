@@ -10,6 +10,7 @@ import { SleeperActions, type SleeperConnection } from './SleeperActions'
 import { computeStartSit } from './projections/startSit'
 import type { ProjectionMap } from './projections/useProjections'
 import { TeamHero } from './TeamHero'
+import { teamValueScore } from '@/lib/team-score'
 import { PlayerFace } from './ui/PlayerFace'
 import { HeatBadge, InjuryBadge, PositionBadge, StatusBadge, TierBadge } from './ui/Badge'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
@@ -104,24 +105,22 @@ export function RosterSection({
     )
   const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
   const ages = skill.filter((p) => p.age > 0)
-  const value = skill.reduce((sum, p) => sum + (p.ktcValueSf ?? 0), 0)
+  // Quality-weighted team value: stars count more than depth, the deep bench barely counts.
+  const value = teamValueScore(selectedTeam.players)
   const valueRank =
     [...teams]
-      .sort(
-        (a, b) =>
-          b.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0) -
-          a.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0)
-      )
-      .findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+      .map((t) => ({ id: t.rosterId, v: teamValueScore(t.players) }))
+      .sort((a, b) => b.v - a.v)
+      .findIndex((t) => t.id === selectedTeam.rosterId) + 1
   const metricHelp: Record<string, string> = {
     'Lineup projection':
       'Sum of available weekly Sleeper forecasts for your current starters, scored with this league’s rules. Partial coverage is labeled.',
-    'Dynasty value':
-      'Sum of KTC superflex values for skill-position players. This reference uses superflex values even if your league uses another format.',
+    'Team value':
+      'Quality-weighted KTC superflex value: each player counts more than proportionally to their value, your best nine count fully and deeper bench players count less, so a pile of depth cannot outrank a few stars.',
     'Average age':
       'Average known age of quarterbacks, running backs, receivers and tight ends on this roster.',
     'Roster grade':
-      'Relative roster strength from the app’s player rankings, not a prediction of this week’s score.',
+      'League-relative score: 70% quality-weighted dynasty value, 30% quality-weighted points per game. Stars count more than depth, so a pile of bench players does not raise it. Not a prediction of this week’s score.',
   }
   const starterPlayers = selectedTeam.starters
     .filter((id) => id && id !== '0')
@@ -151,8 +150,8 @@ export function RosterSection({
       accent: 'text-blue-200',
     },
     {
-      label: 'Dynasty value',
-      help: metricHelp['Dynasty value'],
+      label: 'Team value',
+      help: metricHelp['Team value'],
       value: value ? value.toLocaleString() : '—',
       detail: value ? `#${valueRank} of ${teams.length}` : undefined,
       accent: 'text-white',

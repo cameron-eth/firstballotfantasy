@@ -17,6 +17,7 @@
 //
 import { playerValue, type ValuationContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from './types'
+import { teamValueScore } from '@/lib/team-score'
 
 /** Dynasty superflex pricing — QB scarcity is part of the value signal. */
 const VALUATION_CTX: ValuationContext = { superflex: true }
@@ -48,39 +49,42 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     key: 'juggernaut',
     label: 'Juggernaut',
     tagline: 'Best of both worlds',
-    description: 'Elite roster, young enough to dominate now and keep the window open. Press your advantage.',
+    description:
+      'Elite roster, young enough to dominate now and keep the window open. Press your advantage.',
     accent: '#fbbf24',
     text: 'text-yellow-400',
     border: 'border-yellow-400/40',
     bg: 'bg-yellow-400/10',
     plan: [
-      'Press the advantage — target other contenders\' aging vets while your window is wide open',
-      'Avoid trading future picks away; you don\'t need to mortgage the future to win now',
+      "Press the advantage — target other contenders' aging vets while your window is wide open",
+      "Avoid trading future picks away; you don't need to mortgage the future to win now",
       'Use your depth as trade capital to plug the one or two weakest starting spots',
-      'Don\'t get complacent on the waiver wire — marginal upgrades compound over a long window',
+      "Don't get complacent on the waiver wire — marginal upgrades compound over a long window",
     ],
   },
   contender: {
     key: 'contender',
     label: 'Contender',
     tagline: 'Win-now window open',
-    description: 'Strong roster with an aging core. The window is open — push your chips in before it closes.',
+    description:
+      'Strong roster with an aging core. The window is open — push your chips in before it closes.',
     accent: '#60a5fa',
     text: 'text-blue-400',
     border: 'border-blue-400/40',
     bg: 'bg-blue-400/10',
     plan: [
       'Sell future picks for proven win-now production — your aging core has a shrinking shelf life',
-      'Target rebuilding teams\' aging starters at a discount before their value cliff hits',
+      "Target rebuilding teams' aging starters at a discount before their value cliff hits",
       'Prioritize depth at your thinnest starting position over speculative youth',
-      'Don\'t hoard rookie picks you won\'t be competitive enough to use',
+      "Don't hoard rookie picks you won't be competitive enough to use",
     ],
   },
   'house-money': {
     key: 'house-money',
     label: 'Pretender',
     tagline: 'Punching above your roster',
-    description: 'Your record is outrunning your roster value. Everything from here is a bonus — sell high or ride it.',
+    description:
+      'Your record is outrunning your roster value. Everything from here is a bonus — sell high or ride it.',
     accent: '#c084fc',
     text: 'text-purple-400',
     border: 'border-purple-400/40',
@@ -89,37 +93,39 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
       'Sell high on any player whose value has spiked past what their long-term outlook supports',
       'Be honest about roster construction — a good record can mask real depth problems',
       'Target future picks in trades rather than more short-term rentals',
-      'Don\'t buy into your own hype — bolster the roster like a team that expects to regress',
+      "Don't buy into your own hype — bolster the roster like a team that expects to regress",
     ],
   },
   rebuild: {
     key: 'rebuild',
     label: 'Rebuilder',
     tagline: 'Young and ascending',
-    description: 'Light on win-now value but rich in youth. Stockpile picks, develop, and time the leap.',
+    description:
+      'Light on win-now value but rich in youth. Stockpile picks, develop, and time the leap.',
     accent: '#22d3ee',
     text: 'text-cyan-400',
     border: 'border-cyan-400/40',
     bg: 'bg-cyan-400/10',
     plan: [
       'Trade aging win-now vets to contenders while their value is still high',
-      'Stockpile future draft picks — they\'re your cheapest path to more young assets',
-      'Be patient with your young core; don\'t panic-trade after a slow start',
-      'Avoid overpaying for short-term rentals that don\'t extend your competitive window',
+      "Stockpile future draft picks — they're your cheapest path to more young assets",
+      "Be patient with your young core; don't panic-trade after a slow start",
+      "Avoid overpaying for short-term rentals that don't extend your competitive window",
     ],
   },
   purgatory: {
     key: 'purgatory',
     label: 'Fringe Team',
     tagline: 'Stuck in the middle',
-    description: 'Not strong enough to contend, not young enough to rebuild. Pick a direction and commit.',
+    description:
+      'Not strong enough to contend, not young enough to rebuild. Pick a direction and commit.',
     accent: '#f87171',
     text: 'text-red-400',
     border: 'border-red-400/40',
     bg: 'bg-red-400/10',
     plan: [
       'Pick a direction — half-measures keep you stuck here longest',
-      'Audit your core\'s remaining window; if it\'s under 2 years, lean toward rebuilding',
+      "Audit your core's remaining window; if it's under 2 years, lean toward rebuilding",
       'Sell aging assets before they decline further, even at a discount',
       'Avoid speculative "sidegrade" trades that don\'t clearly push you toward contending or rebuilding',
     ],
@@ -149,8 +155,9 @@ function coreAssets(team: TeamData): PlayerData[] {
     .slice(0, CORE_DEPTH)
 }
 
+/** Quality-weighted, so a deep bench of low-value players cannot outrank a few stars. */
 function rosterValue(team: TeamData): number {
-  return coreAssets(team).reduce((sum, p) => sum + playerValue(p, VALUATION_CTX), 0)
+  return teamValueScore(team.players)
 }
 
 function coreAvgAge(team: TeamData): number {
@@ -181,10 +188,7 @@ function winPct(team: TeamData): number {
  * Compute competitive-state placements for every team, relative to the league.
  * `inSeason` enables the House Money overlay (needs real games played).
  */
-export function calculateLeaguePlacements(
-  teams: TeamData[],
-  inSeason: boolean
-): LeaguePlacements {
+export function calculateLeaguePlacements(teams: TeamData[], inSeason: boolean): LeaguePlacements {
   if (!teams || teams.length === 0) {
     return { placements: {}, nowMedian: 50, futureMedian: 50 }
   }

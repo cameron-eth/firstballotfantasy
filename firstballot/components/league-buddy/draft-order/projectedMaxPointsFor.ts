@@ -111,3 +111,38 @@ export function computeProjectedMaxPointsFor({
 
   return { projected, perWeek, calibration, remainingWeeks }
 }
+
+/**
+ * League wiring for computeProjectedMaxPointsFor: the dashboard and the golden-metric
+ * tests both call this, so the inputs are assembled in exactly one place.
+ */
+export function projectLeagueMaxPointsFor(
+  teams: { rosterId: number; players: { playerId: string; position: string }[] }[],
+  seasonProjections: Parameters<typeof computeProjectedMaxPointsFor>[0]['seasonProjections'],
+  rosterPositions: string[],
+  draftOrder: {
+    maxPointsFor: Record<number, { rosterId: number; maxPointsFor: number }>
+    maxPointsForCompleted: Record<number, number>
+    completedWeeks: number
+    weeksCounted: number
+    lastRegularWeek: number
+  }
+) {
+  const realized: Record<number, number> = {}
+  for (const entry of Object.values(draftOrder.maxPointsFor)) {
+    realized[entry.rosterId] = entry.maxPointsFor
+  }
+  return computeProjectedMaxPointsFor({
+    teams: teams.map((team) => ({
+      rosterId: team.rosterId,
+      players: team.players.map((p) => ({ playerId: p.playerId, position: p.position })),
+    })),
+    seasonProjections,
+    rosterPositions,
+    realizedMaxPointsFor: realized,
+    realizedCompletedWeeks: draftOrder.maxPointsForCompleted,
+    completedWeeks: draftOrder.completedWeeks,
+    weeksPlayed: draftOrder.weeksCounted,
+    lastRegularWeek: draftOrder.lastRegularWeek,
+  })
+}

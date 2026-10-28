@@ -39,7 +39,7 @@ import { LeagueActivityBanner } from './league-buddy/LeagueActivityBanner'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
 import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings'
 import { useDraftOrder } from './league-buddy/draft-order/useDraftOrder'
-import { computeProjectedMaxPointsFor } from './league-buddy/draft-order/projectedMaxPointsFor'
+import { projectLeagueMaxPointsFor } from './league-buddy/draft-order/projectedMaxPointsFor'
 import { useProjections } from './league-buddy/projections/useProjections'
 
 export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
@@ -173,34 +173,26 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     loading: draftOrderLoading,
   } = useDraftOrder(leagueId, currentWeek, allPlayers, rosterPositionsRaw)
 
-  const projection = useMemo(() => {
-    const realized: Record<number, number> = {}
-    for (const entry of Object.values(maxPointsFor)) {
-      realized[entry.rosterId] = entry.maxPointsFor
-    }
-    return computeProjectedMaxPointsFor({
-      teams: teams.map((team) => ({
-        rosterId: team.rosterId,
-        players: team.players.map((p) => ({ playerId: p.playerId, position: p.position })),
-      })),
+  const projection = useMemo(
+    () =>
+      projectLeagueMaxPointsFor(teams, seasonProjections, rosterPositionsRaw, {
+        maxPointsFor,
+        maxPointsForCompleted,
+        completedWeeks,
+        weeksCounted,
+        lastRegularWeek,
+      }),
+    [
+      teams,
       seasonProjections,
-      rosterPositions: rosterPositionsRaw,
-      realizedMaxPointsFor: realized,
-      realizedCompletedWeeks: maxPointsForCompleted,
+      rosterPositionsRaw,
+      maxPointsFor,
+      maxPointsForCompleted,
       completedWeeks,
-      weeksPlayed: weeksCounted,
+      weeksCounted,
       lastRegularWeek,
-    })
-  }, [
-    teams,
-    seasonProjections,
-    rosterPositionsRaw,
-    maxPointsFor,
-    maxPointsForCompleted,
-    completedWeeks,
-    weeksCounted,
-    lastRegularWeek,
-  ])
+    ]
+  )
 
   const rosterProjections = useMemo(
     () => ({

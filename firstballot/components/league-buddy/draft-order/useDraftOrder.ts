@@ -22,7 +22,7 @@ export interface UseDraftOrderResult {
   error: string | null
 }
 
-async function fetchDraftOrderBundle(
+export async function fetchDraftOrderBundle(
   leagueId: string,
   rosterPositions: string[],
   positions: Record<string, string>

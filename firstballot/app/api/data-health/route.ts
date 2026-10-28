@@ -2,7 +2,8 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import { freshness, KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { failure, json } from '@/lib/platform/http'
 import ktcArchive from '@/data/ktc-history.json'
-import { FIRST_ESPN_SEASON } from '@/lib/platform/player-data'
+import { espnSeasonKey, FIRST_ESPN_SEASON } from '@/lib/platform/player-data'
+import { TIER_KEY } from '@/lib/dynasty-tiers'
 
 /** Completed ESPN seasons behind career FPPG; an expired one hides career badges. */
 const isCareerSeason = (key: string, currentSeason: number | null) => {
@@ -20,7 +21,7 @@ export async function GET() {
           .from('data_snapshots')
           .select('key,source,fetched_at,source_observed_at,expires_at,quality,season,week')
           // Only publish shared provider datasets. Per-league roster cache keys are private.
-          .or('key.like.espn:%,key.like.sleeper:projections:%,key.eq.dynasty:tiers:v1')
+          .or(`key.like.espn:%,key.like.sleeper:projections:%,key.eq.${TIER_KEY}`)
           .order('key')
           .limit(100),
         fetch('https://api.sleeper.app/v1/state/nfl', {
@@ -156,9 +157,9 @@ export async function GET() {
     const monitored = [
       ...snapshots.filter(
         (dataset) =>
-          dataset.key === `espn:ppr:${currentSeason}` ||
+          (currentSeason != null && dataset.key === espnSeasonKey(currentSeason)) ||
           isCareerSeason(dataset.key, currentSeason) ||
-          dataset.key === 'dynasty:tiers:v1' ||
+          dataset.key === TIER_KEY ||
           dataset.key === `sleeper:projections:${currentSeason}:season` ||
           (currentWeek !== null &&
             dataset.key === `sleeper:projections:${currentSeason}:${currentWeek}`)

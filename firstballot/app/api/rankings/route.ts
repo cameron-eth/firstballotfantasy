@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-server'
-import type { DynastyTier, TierFormat } from '@/lib/dynasty-tiers'
+import { TIER_KEY, type DynastyTier, type TierFormat } from '@/lib/dynasty-tiers'
 
 export const dynamic = 'force-dynamic'
 type Identity = { name: string; position: string; team: string | null; age: number | null; espnId: string; draftYear: number | null }
@@ -8,7 +8,7 @@ type Payload = { players: Record<TierFormat, Record<string, DynastyTier>>; ident
 
 export async function GET(request: NextRequest) {
   const { data, error } = await supabaseAdmin.from('data_snapshots')
-    .select('payload,expires_at,fetched_at').eq('key', 'dynasty:tiers:v1').maybeSingle()
+    .select('payload,expires_at,fetched_at').eq('key', TIER_KEY).maybeSingle()
   if (error || !data || Date.parse(data.expires_at) <= Date.now())
     return NextResponse.json({ error: 'Current rankings are unavailable' }, { status: 503,
       headers: { 'Cache-Control': 'no-store' } })

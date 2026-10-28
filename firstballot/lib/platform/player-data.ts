@@ -11,10 +11,13 @@ import { PlatformError } from './http'
 /** ESPN's season totals start here; earlier seasons return no players. */
 export const FIRST_ESPN_SEASON = 2018
 
+/** Snapshot key for one season of ESPN PPR totals. */
+export const espnSeasonKey = (season: number) => `espn:ppr:${season}`
+
 /** One season of ESPN PPR totals, snapshotted. Past seasons are final, so they cache long. */
 function espnSeason(season: number, ttlSeconds: number) {
   return snapshot(
-    `espn:ppr:${season}`,
+    espnSeasonKey(season),
     'ESPN',
     ttlSeconds,
     async () => {

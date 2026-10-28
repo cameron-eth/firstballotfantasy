@@ -2,15 +2,18 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import identities from '@/data/nfl-player-identities.json'
-import { playerData } from '@/lib/platform/player-data'
+import { espnSeasonKey, playerData } from '@/lib/platform/player-data'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
-import { buildDynastyTiers, DYNASTY_TIER_VERSION, DYNASTY_TIERS, type TierPlayer } from '@/lib/dynasty-tiers'
+import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
+import { writeSnapshot } from '@/lib/platform/snapshots'
 import type { CurrentSeasonStat } from '@/lib/current-season-stats'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
-const key = `dynasty:tiers:v${DYNASTY_TIER_VERSION}`
-const draftKey = 'nfl:draft-capital:v1'
+const key = TIER_KEY
+const draftKey = DRAFT_CAPITAL_KEY
+/** Draft position never changes, so the cache keeps for five years. */
+const DRAFT_CAPITAL_TTL_SECONDS = 5 * 365 * 86400
 const normalize = (value: string) => value.toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '').replace(/[^a-z0-9]/g, '')
 type KtcRow = { player_name: string; position: string; value_sf: number; value_1qb: number; scraped_date: string }
 type SleeperPlayer = { full_name?: string; position?: string; team?: string; age?: number; years_exp?: number; espn_id?: string; metadata?: { rookie_year?: string } }
@@ -44,7 +47,7 @@ async function refresh() {
   const nflKtc = (ktc.data as KtcRow[]).filter((row) => ['QB', 'RB', 'WR', 'TE'].includes(row.position))
   const sleeper = await sleeperResponse.json() as Record<string, SleeperPlayer>
   const { data: statSnapshot, error: statError } = await supabaseAdmin.from('data_snapshots')
-    .select('payload,expires_at').eq('key', `espn:ppr:${stats.season}`).single()
+    .select('payload,expires_at').eq('key', espnSeasonKey(stats.season)).single()
   if (statError || !statSnapshot || Date.parse(statSnapshot.expires_at) <= Date.now())
     throw Error('ESPN_SOURCE_STALE')
   const espn = statSnapshot.payload as Record<string, CurrentSeasonStat>
@@ -85,14 +88,11 @@ async function refresh() {
   }
   const now = Date.now()
   if (missing.length) {
-    const payload = JSON.stringify(draft)
-    const { error } = await supabaseAdmin.from('data_snapshots').upsert({
-      key: draftKey, source: 'ESPN NFL athlete draft records', payload: draft,
-      fetched_at: new Date(now).toISOString(), source_observed_at: null,
-      expires_at: new Date(now + 5 * 365 * 86400000).toISOString(), quality: 'unverified',
-      content_hash: createHash('sha256').update(payload).digest('hex'),
-    })
-    if (error) throw Error('DRAFT_CACHE_WRITE_FAILED')
+    try {
+      await writeSnapshot(draftKey, 'ESPN NFL athlete draft records', DRAFT_CAPITAL_TTL_SECONDS, draft)
+    } catch {
+      throw Error('DRAFT_CACHE_WRITE_FAILED')
+    }
   }
   const players: TierPlayer[] = matched.map(({ id, row, player }) => {
     const espnId = String(player.espn_id ?? ids[id]?.espnId ?? '')

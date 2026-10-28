@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { TIER_KEY } from '@/lib/dynasty-tiers'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import { getCachedPlayers } from '@/lib/players-cache'
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       (async () => {
         try {
           const result = await supabaseAdmin.from('data_snapshots')
-            .select('payload,expires_at').eq('key', 'dynasty:tiers:v1').maybeSingle()
+            .select('payload,expires_at').eq('key', TIER_KEY).maybeSingle()
           if (result.error || !result.data || Date.parse(result.data.expires_at) <= Date.now())
             return { data: [], error: new Error('Current tiers unavailable') }
           const payload = result.data.payload as {

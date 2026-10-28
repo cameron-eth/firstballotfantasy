@@ -1,10 +1,12 @@
 'use client'
 
 import React from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { X, School } from 'lucide-react'
+import { X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
+import { PositionBadge } from '@/components/league-buddy/ui/Badge'
+import { tierStyleFor } from './board-player'
+import { useCommunityTrends } from './CrowdRank'
 import { PlayerHeadshot } from '@/components/ui/player-headshot'
 import type { Prospect } from './types'
 
@@ -39,11 +41,9 @@ export function ProspectDetailModal({
   notesAvailable = true,
   getProspectGrade,
   getDraftPick,
-  getProspectTier,
-  calculateProspectValue,
-  getPositionColor,
 }: ProspectDetailModalProps) {
   const [localNotes, setLocalNotes] = React.useState(prospect?.notes || '')
+  const trends = useCommunityTrends()
 
   React.useEffect(() => {
     setLocalNotes(prospect?.notes || '')
@@ -51,175 +51,174 @@ export function ProspectDetailModal({
 
   if (!prospect) return null
 
+  const palette = positionPalette[prospect.position] ?? neutralPalette
+  const tier = getProspectGrade(prospect)
+  const tierStyle = tierStyleFor(tier)
+  const graded = prospect.overall_grade != null
+  const crowd = trends?.[`prospect:${prospect.id}`]
+  const need = !hasTeamContext ? null : positionNeeds[prospect.position] > 0
+  const canSave = !prospect.is_fallback && isLoggedIn && notesAvailable
+  const stats: { label: string; value: string }[] = [
+    { label: 'Class rank', value: `${prospect.position}${prospect.rank}` },
+    { label: 'Grade', value: graded ? Number(prospect.overall_grade).toFixed(1) : '—' },
+    ...(graded ? [{ label: 'Projected round', value: getDraftPick(prospect) }] : []),
+    { label: 'Crowd rank', value: crowd?.rank ? `#${crowd.rank}` : '—' },
+  ]
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <Card className="bg-slate-900 border-slate-700/50 w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl">
-        {/* Modern Hero Header */}
-        <div className="relative h-44 shrink-0 overflow-hidden border-b border-white/5 bg-[#0a0f1a]">
-          {/* Large Player Image - Positioned to the left and sitting on the border */}
-          <div className="absolute left-0 bottom-0 w-48 h-full z-10 pointer-events-none">
-            <div className="relative w-full h-full flex items-end">
-              <PlayerHeadshot
-                headshotUrl={prospect.headshot_url}
-                espnId={prospect.espn_id}
-                playerName={prospect.name}
-                size={176}
-                imageFit="contain"
-                className="!rounded-none !bg-transparent border-none shadow-none transform translate-x-[-10%] brightness-110 contrast-110"
-              />
-            </div>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={prospect.name}
+        onClick={(e) => e.stopPropagation()}
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-slate-950 shadow-2xl"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300 transition-colors hover:border-white/30 hover:text-white"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <header
+          className="flex items-end gap-5 border-b border-white/10 p-6 pb-5"
+          style={{
+            background: `radial-gradient(ellipse at 15% 20%, ${palette.glow}55, transparent 60%)`,
+          }}
+        >
+          <div
+            className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl"
+            style={{
+              background: `radial-gradient(ellipse at 60% 25%, ${palette.glow}aa, ${palette.wash} 75%)`,
+            }}
+          >
+            <PlayerHeadshot
+              headshotUrl={prospect.headshot_url}
+              espnId={prospect.espn_id}
+              playerName={prospect.name}
+              size={112}
+              className="!h-full !w-full !rounded-none !bg-transparent"
+            />
           </div>
-
-          {/* Minimal Gradients - Only to ensure text contrast on the far right */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0f1a]/20 via-transparent to-transparent z-20" />
-
-          {/* Header Content Overlay - Aligned to the top of the header area */}
-          <div className="relative z-30 h-full flex flex-col justify-start pt-6 pl-36 pr-12 sm:pl-40">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-[9px] font-black text-blue-400 font-mono tracking-widest uppercase">
-                {prospect.position}{prospect.rank} · {prospect.draft_year ?? '—'} projection
-              </div>
-              <div className="h-px w-8 bg-white/10" />
-            </div>
-            <h1 className="text-xl sm:text-3xl font-black text-white font-mono uppercase tracking-tighter leading-none mb-2">
-              {prospect.name}
-            </h1>
-            <p className="text-[10px] text-slate-400 font-mono uppercase tracking-[0.3em] flex items-center gap-2">
-              <School className="h-3.5 w-3.5 text-slate-500" />
-              {prospect.school}
+          <div className="min-w-0 pb-1 pr-10">
+            <h2 className="text-2xl font-semibold tracking-tight text-white">{prospect.name}</h2>
+            <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+              <PositionBadge position={prospect.position} />
+              <span
+                className={cn(
+                  'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold leading-none',
+                  tierStyle.bg,
+                  tierStyle.text,
+                  tierStyle.border
+                )}
+              >
+                {tier}
+              </span>
+              <span>{prospect.school}</span>
+              <span className="text-slate-600">·</span>
+              <span>{prospect.draft_year ?? '—'} class</span>
             </p>
           </div>
+        </header>
 
-          {/* Close Button */}
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="absolute top-4 right-4 z-40 hover:bg-white/10 h-10 w-10 p-0 rounded-full bg-black/20 backdrop-blur-md border border-white/5"
-          >
-            <X className="h-5 w-5 text-white" />
-          </Button>
-        </div>
-
-        <CardContent className="p-6">
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge
-                className={`${getPositionColor(prospect.position)}/30 text-slate-200 border border-slate-500/30 text-[10px] uppercase font-black tracking-widest`}
+        <div className="space-y-5 p-6">
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border border-white/10 bg-slate-900/60 p-3"
               >
-                {getProspectGrade(prospect)}
-              </Badge>
-              {prospect.overall_grade != null && <Badge
-                variant="outline"
-                className="text-blue-400 border-blue-400/20 bg-blue-400/5 text-[10px] uppercase font-black"
-              >
-                {getDraftPick(prospect)} ROUND
-              </Badge>}
-              {prospect.overall_grade != null && <Badge
-                variant="outline"
-                className="text-emerald-400 border-emerald-400/20 bg-emerald-400/5 text-[10px] uppercase font-black"
-              >
-                {getProspectTier(prospect.rank, prospect.tier)}
-              </Badge>}
-              {prospect.source_url && <a href={prospect.source_url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-blue-300 hover:underline">Verified team roster ↗</a>}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Analysis Card 1 */}
-              <div className="bg-slate-950/40 border border-white/5 rounded-xl p-4">
-                <div className="text-[10px] text-slate-500 uppercase font-mono mb-3 tracking-widest">
-                  Market Valuation
-                </div>
-                <div className="space-y-3">
-                  {prospect.overall_grade != null ? <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-mono">Index Score</span>
-                    <span className="text-blue-400 font-black font-mono">
-                      {calculateProspectValue(prospect.rank, prospect.position)}
-                    </span>
-                  </div> : <p className="text-xs text-slate-400">Evaluation pending for this early class.</p>}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-mono">Positional Rank</span>
-                    <span className="text-white font-black font-mono">#{prospect.rank}</span>
-                  </div>
-                  {prospect.overall_grade != null && <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500"
-                      style={{ width: `${Math.max(10, 100 - prospect.rank * 2)}%` }}
-                    />
-                  </div>}
-                </div>
+                <dt className="text-[11px] text-slate-400">{stat.label}</dt>
+                <dd className="mt-1 text-lg font-semibold tabular-nums text-white">{stat.value}</dd>
               </div>
+            ))}
+          </dl>
 
-              {/* Analysis Card 2 */}
-              <div className="bg-slate-950/40 border border-white/5 rounded-xl p-4">
-                <div className="text-[10px] text-slate-500 uppercase font-mono mb-3 tracking-widest">
-                  Roster Alignment
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-mono">Position Need</span>
-                    <Badge
-                      className={
-                        !hasTeamContext
-                          ? 'bg-slate-500/20 text-slate-300 border border-slate-500/30 text-[9px] font-black'
-                          : positionNeeds[prospect.position] > 0
-                          ? 'bg-red-500/20 text-red-300 border border-red-500/30 text-[9px] font-black'
-                          : 'bg-green-500/20 text-green-300 border border-green-500/30 text-[9px] font-black'
-                      }
-                    >
-                      {!hasTeamContext ? 'CONNECT TEAM' : positionNeeds[prospect.position] > 0 ? 'CRITICAL' : 'STABLE'}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-slate-400">{hasTeamContext ? 'Use your scouting notes to assess roster fit.' : 'Connect a league to see how this prospect fits your roster.'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Customization: Personal Scouting Report */}
-            <div className="bg-slate-950/40 border border-white/5 rounded-xl p-4">
-              <div className="flex justify-between items-center mb-3">
-                <div className="text-[10px] text-slate-500 uppercase font-mono tracking-widest">
-                  Personal Scouting Report
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-tighter"
-                  onClick={() => onSaveNotes(prospect.id, localNotes)}
-                  disabled={prospect.is_fallback || !isLoggedIn || !notesAvailable}
-                >
-                  {!notesAvailable ? 'Notes unavailable' : prospect.is_fallback ? 'Available after import' : isLoggedIn ? 'Save Analysis' : 'Log in to save'}
-                </Button>
-              </div>
-              <textarea
-                className="w-full bg-slate-900/50 border border-white/5 rounded-lg p-3 text-xs text-slate-300 font-mono min-h-[100px] focus:outline-none focus:border-blue-500/30 placeholder:text-slate-700 transition-colors"
-                placeholder="Enter personal notes, draft strategy, or trait analysis..."
-                disabled={!notesAvailable}
-                value={localNotes}
-                onChange={(e) => setLocalNotes(e.target.value)}
-              />
-              {noteSaveStatus && <p role="status" className="mt-2 text-xs text-blue-300">{noteSaveStatus}</p>}
-              {noteSaveError && <p role="alert" className="mt-2 text-xs text-red-300">{noteSaveError}</p>}
-              {prospect.is_fallback && <p className="mt-2 text-xs text-amber-300">Personal notes for this player become available when the 2029 database import is applied.</p>}
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                className="bg-blue-500 text-slate-900 hover:bg-blue-400 font-black text-[10px] uppercase tracking-widest flex-1 h-10 shadow-[0_0_20px_rgba(59,130,246,0.3)]"
-                onClick={onAddToDraftBoard}
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm">
+            <span className="text-slate-300">Fit at {prospect.position}</span>
+            {need === null ? (
+              <span className="text-xs text-slate-400">Connect a league to see roster fit</span>
+            ) : (
+              <span
+                className={cn(
+                  'rounded-md border px-2 py-0.5 text-xs font-semibold',
+                  need
+                    ? 'border-rose-400/40 bg-rose-400/10 text-rose-300'
+                    : 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200'
+                )}
               >
-                Add to Draft Board
-              </Button>
-              <Button
-                variant="outline"
-                className="border-slate-700 text-slate-400 hover:border-slate-500 bg-transparent flex-1 h-10 text-[10px] uppercase font-black tracking-widest"
-                onClick={onClose}
-              >
-                Dismiss
-              </Button>
-            </div>
+                {need ? 'You need one' : 'Covered'}
+              </span>
+            )}
           </div>
-        </CardContent>
-      </Card>
+
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="prospect-notes" className="text-sm font-medium text-slate-200">
+                Your notes
+              </label>
+              <button
+                type="button"
+                onClick={() => onSaveNotes(prospect.id, localNotes)}
+                disabled={!canSave}
+                className="rounded-md px-2 py-1 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-400/10 disabled:text-slate-500 disabled:hover:bg-transparent"
+              >
+                {!notesAvailable
+                  ? 'Notes unavailable'
+                  : prospect.is_fallback
+                    ? 'Available after import'
+                    : isLoggedIn
+                      ? 'Save'
+                      : 'Log in to save'}
+              </button>
+            </div>
+            <textarea
+              id="prospect-notes"
+              className="min-h-[110px] w-full rounded-xl border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-200 placeholder:text-slate-600 focus:border-blue-400/40 focus:outline-none"
+              placeholder="Traits, concerns, where you'd take him…"
+              disabled={!notesAvailable}
+              value={localNotes}
+              onChange={(e) => setLocalNotes(e.target.value)}
+            />
+            {noteSaveStatus && (
+              <p role="status" className="text-xs text-blue-300">
+                {noteSaveStatus}
+              </p>
+            )}
+            {noteSaveError && (
+              <p role="alert" className="text-xs text-rose-300">
+                {noteSaveError}
+              </p>
+            )}
+          </section>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onAddToDraftBoard}
+              className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-400 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:brightness-110"
+            >
+              Add to draft board
+            </button>
+            {prospect.source_url && (
+              <a
+                href={prospect.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-slate-400 hover:text-white"
+              >
+                Team roster ↗
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

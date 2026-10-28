@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, TrendingUp, BarChart3 } from 'lucide-react'
+import { Eye, TrendingUp, BarChart3, ChartScatter } from 'lucide-react'
+import { HitsMissesTab } from './HitsMissesTab'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -44,7 +45,7 @@ interface ScoutingPortalProps {
   leagueId: string
   initialTab?: string
 }
-const PORTAL_TABS = ['prospects', 'draftboard', 'historical'] as const
+const PORTAL_TABS = ['prospects', 'draftboard', 'historical', 'hits'] as const
 type PortalTab = (typeof PORTAL_TABS)[number]
 
 /** Guards against stale deep links (e.g. the retired `?tab=alltime`). */
@@ -658,35 +659,41 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
             className="w-full"
           >
             <div className="mb-3 md:mb-4 shrink-0">
-              <TabsList className="grid grid-cols-3 md:flex md:items-center gap-1.5 md:gap-2 bg-transparent h-auto p-0 border-none md:justify-start">
+              <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border border-white/10 bg-slate-900/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:inline-flex md:w-auto">
                 <TabsTrigger
                   value="prospects"
-                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
-                    <Eye className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                  <div className="flex items-center justify-center gap-2">
+                    <Eye className="h-4 w-4" aria-hidden="true" />
                     <span className="truncate">Prospects</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="draftboard"
-                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
-                    <TrendingUp className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                    <span className="truncate">Board</span>
+                  <div className="flex items-center justify-center gap-2">
+                    <TrendingUp className="h-4 w-4" aria-hidden="true" />
+                    <span className="truncate">Draft board</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
                   value="historical"
-                  className="relative h-9 md:h-10 px-2 md:px-6 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black font-mono uppercase tracking-[0.08em] md:tracking-[0.2em] border border-border bg-card/60 text-muted-foreground data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-blue-500/30 transition-all group overflow-hidden"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
-                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative flex items-center gap-1 md:gap-2 justify-center">
-                    <BarChart3 className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                  <div className="flex items-center justify-center gap-2">
+                    <BarChart3 className="h-4 w-4" aria-hidden="true" />
                     <span className="truncate">History</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="hits"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <ChartScatter className="h-4 w-4" aria-hidden="true" />
+                    <span className="truncate">Hits & misses</span>
                   </div>
                 </TabsTrigger>
               </TabsList>
@@ -750,6 +757,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
             <TabsContent value="historical" className="mt-3">
               <HistoricalRankingsTab />
+            </TabsContent>
+            <TabsContent value="hits" className="mt-3">
+              <HitsMissesTab />
             </TabsContent>
           </Tabs>
 

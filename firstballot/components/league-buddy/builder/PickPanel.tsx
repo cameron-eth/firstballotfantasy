@@ -93,7 +93,7 @@ export function PickPanel({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: reduced ? 0 : 24 }}
       transition={{ duration: reduced ? 0 : 0.18 }}
-      className="fixed right-3 top-24 z-40 max-h-[calc(100dvh-120px)] w-[340px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-2xl border border-violet-300/40 bg-slate-950/95 p-4 shadow-2xl backdrop-blur-xl lg:right-6"
+      className="absolute bottom-3 right-3 top-3 z-40 w-[360px] max-w-[calc(100%-24px)] overflow-y-auto rounded-2xl border border-violet-300/40 bg-slate-950/95 p-4 shadow-2xl backdrop-blur-xl"
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>

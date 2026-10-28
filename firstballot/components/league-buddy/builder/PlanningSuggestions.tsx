@@ -160,7 +160,7 @@ export function PlanningSuggestions({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: reduced ? 0 : 24 }}
       transition={{ duration: reduced ? 0 : 0.18 }}
-      className="fixed right-3 top-24 max-h-[calc(100dvh-120px)] z-40 w-[340px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-2xl border border-blue-300/40 bg-slate-950/95 p-4 shadow-2xl backdrop-blur-xl lg:right-6"
+      className="absolute bottom-3 right-3 top-3 z-40 w-[360px] max-w-[calc(100%-24px)] overflow-y-auto rounded-2xl border border-blue-300/40 bg-slate-950/95 p-4 shadow-2xl backdrop-blur-xl"
     >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
@@ -229,48 +229,50 @@ export function PlanningSuggestions({
               className="space-y-3"
             >
               <p className="text-xs text-slate-400">With {f?.owner.teamName ?? p?.team.teamName}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-                You receive
-              </p>
-              {f
-                ? renderPick(f.pick)
-                : p && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <PlayerTradingCard
-                        compact
-                        imageHeight="h-24"
-                        name={p.target.playerName}
-                        position={p.target.position}
-                        team={p.target.team}
-                        image={
-                          p.target.headshot_url ||
-                          `https://sleepercdn.com/content/nfl/players/${p.target.playerId}.jpg`
-                        }
-                        label={`KTC ${p.value?.toLocaleString() ?? '—'}`}
-                      />
-                    </div>
-                  )}
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-300">
-                You send
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {(f?.give ?? sending).map((player) => (
-                  <PlayerTradingCard
-                    key={player.playerId}
-                    compact
-                    imageHeight="h-24"
-                    name={player.playerName}
-                    position={player.position}
-                    team={player.team}
-                    image={
-                      player.headshot_url ||
-                      `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`
-                    }
-                    label={`KTC ${(inventory?.superflex ? player.ktcValueSf : player.ktcValue1qb)?.toLocaleString() ?? '—'}`}
-                  />
-                ))}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                    You receive
+                  </p>
+                  {f
+                    ? renderPick(f.pick)
+                    : p && (
+                        <PlayerTradingCard
+                          compact
+                          imageHeight="h-24"
+                          name={p.target.playerName}
+                          position={p.target.position}
+                          team={p.target.team}
+                          image={
+                            p.target.headshot_url ||
+                            `https://sleepercdn.com/content/nfl/players/${p.target.playerId}.jpg`
+                          }
+                          label={`KTC ${p.value?.toLocaleString() ?? '—'}`}
+                        />
+                      )}
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-300">
+                    You send
+                  </p>
+                  {(f?.give ?? sending).map((player) => (
+                    <PlayerTradingCard
+                      key={player.playerId}
+                      compact
+                      imageHeight="h-24"
+                      name={player.playerName}
+                      position={player.position}
+                      team={player.team}
+                      image={
+                        player.headshot_url ||
+                        `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`
+                      }
+                      label={`KTC ${(inventory?.superflex ? player.ktcValueSf : player.ktcValue1qb)?.toLocaleString() ?? '—'}`}
+                    />
+                  ))}
+                  {f?.givePicks.map(renderPick)}
+                </div>
               </div>
-              {f?.givePicks.map(renderPick)}
               {f ? (
                 <div className="space-y-2 text-xs leading-relaxed text-slate-400">
                   <p className="text-amber-200">

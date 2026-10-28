@@ -2,6 +2,7 @@
 // The same key function is used to record (scripts/capture-league-fixture.mjs) and replay,
 // so a request the code adds or changes fails loudly instead of silently missing data.
 import { readFileSync } from 'node:fs'
+import { matchKtcToSleeper } from '../../lib/ktc-identity.ts'
 import { gunzipSync } from 'node:zlib'
 
 /** A recorded league from tests/fixtures/leagues/<name>.json.gz. */
@@ -41,13 +42,53 @@ export function installStorage() {
  * Replace global fetch with the fixture. `transform(key, body)` lets a test derive a
  * variant league (2QB, preseason) from a recorded one without recording it again.
  */
+/**
+ * Fixtures recorded before PR-19 hold `/api/ktc-values?names=` responses. The dashboard
+ * now asks by Sleeper id, so answer `?sleeperIds=` from those recordings, resolving each
+ * recorded KTC row to a Sleeper id with the production matcher (lib/ktc-identity), exactly
+ * as the tier publish does.
+ */
+function ktcBySleeperIds(requests) {
+  const players = requests['https://api.sleeper.app/v1/players/nfl']?.body ?? {}
+  const rows = []
+  let latestDate = null
+  for (const [key, { body }] of Object.entries(requests)) {
+    if (!key.startsWith('/api/ktc-values?names=')) continue
+    latestDate = body.latestDate ?? latestDate
+    for (const row of body.data ?? []) rows.push({ ...row, history: body.historyMap?.[row.player_name] })
+  }
+  const bySleeper = new Map(matchKtcToSleeper(rows, players).map(({ id, row }) => [id, row]))
+  return (ids) => {
+    const history = {}
+    const latest = {}
+    for (const id of ids) {
+      const row = bySleeper.get(id)
+      if (!row) continue
+      if (row.history) history[id] = row.history
+      latest[id] = { value_sf: row.value_sf, value_1qb: row.value_1qb }
+    }
+    return { latestDate, history, latest, source: 'supabase' }
+  }
+}
+
 export function installReplay(fixture, transform = (_key, body) => body) {
   const requests = fixture.requests
+  const answerSleeperIds = ktcBySleeperIds(requests)
   // App code often catches fetch errors (e.g. KTC chunks are "non-fatal"), so a missing
   // response must also be recorded here for the test to assert on.
   const misses = []
   globalThis.fetch = async (input) => {
     const key = fixtureKey(input)
+    if (key.startsWith('/api/ktc-values?sleeperIds=')) {
+      const ids = new URLSearchParams(key.split('?')[1]).get('sleeperIds').split(',')
+      const value = transform(key, answerSleeperIds(ids))
+      return {
+        ok: true,
+        status: 200,
+        json: async () => structuredClone(value),
+        text: async () => JSON.stringify(value),
+      }
+    }
     if (!(key in requests)) {
       misses.push(key)
       throw new Error(`Fixture ${fixture.name} has no response for ${key}`)

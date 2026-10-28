@@ -550,8 +550,8 @@ export function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
   return teams.map((team) => ({
     ...team,
     players: team.players.map((player) => {
-      const hist = maps.history[player.playerName]
-      const latest = maps.latest[player.playerName]
+      const hist = maps.history[player.playerId]
+      const latest = maps.latest[player.playerId]
       return {
         ...player,
         ktcHistory: hist ?? undefined,
@@ -574,14 +574,14 @@ export function withTeamScores(teams: TeamData[], ctx: LeagueContext): TeamData[
   })
 }
 
-/** Core-position player names to look up in KTC, deduped and sorted (part of the SWR key). */
-export function ktcNamesFor(teams: TeamData[]): string[] {
+/** Core-position Sleeper ids to look up in KTC, deduped and sorted (part of the SWR key). */
+export function ktcPlayerIdsFor(teams: TeamData[]): string[] {
   return Array.from(
     new Set(
       teams.flatMap((team) =>
         team.players
           .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-          .map((p) => p.playerName)
+          .map((p) => p.playerId)
       )
     )
   )

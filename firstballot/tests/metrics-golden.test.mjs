@@ -69,6 +69,7 @@ const NO_AGES = new Set(
   ).players
 )
 const NO_MAX_PF = 5
+const SF_PLAYERS = SF['https://api.sleeper.app/v1/players/nfl'].body
 const noKtc = (name) => /^[A-C]/.test(name)
 VARIANTS['missing-data'] = {
   base: 'sf-dynasty',
@@ -78,14 +79,15 @@ VARIANTS['missing-data'] = {
         Object.entries(body).map(([id, p]) => [id, NO_AGES.has(id) ? { ...p, age: null } : p])
       )
     if (key.includes('/matchups/')) return body.filter((m) => m.roster_id !== NO_MAX_PF)
-    if (key.startsWith('/api/ktc-values'))
+    if (key.startsWith('/api/ktc-values?sleeperIds=')) {
+      // Values arrive by Sleeper id (PR-19); drop them by the player's name.
+      const keep = ([id]) => !noKtc(SF_PLAYERS[id]?.full_name ?? '')
       return {
         ...body,
-        data: body.data.filter((row) => !noKtc(row.player_name)),
-        historyMap: Object.fromEntries(
-          Object.entries(body.historyMap ?? {}).filter(([name]) => !noKtc(name))
-        ),
+        history: Object.fromEntries(Object.entries(body.history).filter(keep)),
+        latest: Object.fromEntries(Object.entries(body.latest).filter(keep)),
       }
+    }
     return body
   },
 }

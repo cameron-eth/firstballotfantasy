@@ -8,7 +8,7 @@ import {
   fetchKtcMaps,
   fetchLeagueDataBundle,
   getUserId,
-  ktcNamesFor,
+  ktcPlayerIdsFor,
   withTeamScores,
 } from './leagueDataBundle'
 
@@ -17,7 +17,7 @@ export {
   clearPlayersMemo,
   fetchKtcMaps,
   fetchLeagueDataBundle,
-  ktcNamesFor,
+  ktcPlayerIdsFor,
   withTeamScores,
   type KtcMaps,
 } from './leagueDataBundle'
@@ -56,10 +56,10 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
     { revalidateOnFocus: true, focusThrottleInterval: 300_000, refreshInterval: 900_000 }
   )
 
-  const ktcNames = useMemo(() => ktcNamesFor(data?.teams ?? []), [data?.teams])
+  const ktcIds = useMemo(() => ktcPlayerIdsFor(data?.teams ?? []), [data?.teams])
   const { data: ktcMaps, error: ktcError } = useSWR(
-    ktcNames.length > 0 ? ['league-buddy-ktc', leagueId, version, ktcNames.join('|')] : null,
-    () => fetchKtcMaps(ktcNames, version),
+    ktcIds.length > 0 ? ['league-buddy-ktc', leagueId, version, ktcIds.join('|')] : null,
+    () => fetchKtcMaps(ktcIds, version),
     { revalidateOnFocus: false, dedupingInterval: 300_000, keepPreviousData: true }
   )
 
@@ -100,7 +100,7 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
   return {
     teams,
     loading: isLoading,
-    valuesReady: !!data && (ktcNames.length === 0 || !!ktcMaps || !!ktcError),
+    valuesReady: !!data && (ktcIds.length === 0 || !!ktcMaps || !!ktcError),
     error: error instanceof Error ? error.message : null,
     selectedTeam,
     setSelectedTeam,

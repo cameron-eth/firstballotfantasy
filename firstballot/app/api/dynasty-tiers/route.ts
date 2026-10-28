@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { espnSeasonKey, playerData } from '@/lib/platform/player-data'
+import { matchKtcToSleeper } from '@/lib/ktc-identity'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, KTC_DAY_MARKER_PREFIX, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
 import { writeSnapshot } from '@/lib/platform/snapshots'
@@ -14,8 +15,7 @@ const key = TIER_KEY
 const draftKey = DRAFT_CAPITAL_KEY
 /** Draft position never changes, so the cache keeps for five years. */
 const DRAFT_CAPITAL_TTL_SECONDS = 5 * 365 * 86400
-const normalize = (value: string) => value.toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '').replace(/[^a-z0-9]/g, '')
-type KtcRow = { ktc_player_id: number; player_name: string; position: string; value_sf: number; value_1qb: number; scraped_date: string }
+type KtcRow = { ktc_player_id: number; player_name: string; position: string; team: string | null; value_sf: number; value_1qb: number; scraped_date: string }
 type SleeperPlayer = { full_name?: string; position?: string; team?: string; age?: number; years_exp?: number; espn_id?: string; metadata?: { rookie_year?: string } }
 type DraftFact = { selection: number; year: number } | null
 
@@ -32,7 +32,7 @@ async function refresh() {
   if (!sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS)) throw Error('KTC_SOURCE_STALE')
   const [ktc, sleeperResponse, stats] = await Promise.all([
     supabaseAdmin.from('ktc_player_values')
-      .select('ktc_player_id,player_name,position,value_sf,value_1qb,scraped_date')
+      .select('ktc_player_id,player_name,position,team,value_sf,value_1qb,scraped_date')
       .eq('scraped_date', latest.scraped_date).limit(2000),
     fetch('https://api.sleeper.app/v1/players/nfl', { cache: 'no-store', signal: AbortSignal.timeout(30000) }),
     playerData(['8144']), // Revalidates the shared ESPN current-season snapshot before reading it.
@@ -58,16 +58,8 @@ async function refresh() {
   if (statError || !statSnapshot || Date.parse(statSnapshot.expires_at) <= Date.now())
     throw Error('ESPN_SOURCE_STALE')
   const espn = statSnapshot.payload as Record<string, CurrentSeasonStat>
-  const byName = new Map<string, string[]>()
-  for (const [id, player] of Object.entries(sleeper)) {
-    if (!player.full_name || !['QB', 'RB', 'WR', 'TE'].includes(player.position ?? '')) continue
-    const identity = `${normalize(player.full_name)}:${player.position}`
-    byName.set(identity, [...(byName.get(identity) ?? []), id])
-  }
-  const matched = nflKtc.flatMap((row) => {
-    const ids = byName.get(`${normalize(row.player_name)}:${row.position}`) ?? []
-    return ids.length === 1 ? [{ id: ids[0], row, player: sleeper[ids[0]] }] : []
-  })
+  // The one place KTC is matched to Sleeper (lib/ktc-identity); readers use these ids.
+  const matched = matchKtcToSleeper(nflKtc, sleeper)
   if (matched.length < 200 || matched.length / nflKtc.length < 0.9)
     throw Error('PLAYER_ID_COVERAGE_LOW')
   const { data: draftStored, error: draftReadError } = await supabaseAdmin.from('data_snapshots')

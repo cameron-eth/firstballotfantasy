@@ -10,7 +10,7 @@ import {
   fetchKtcMaps,
   applyKtc,
   withTeamScores,
-  ktcNamesFor,
+  ktcPlayerIdsFor,
   clearPlayersMemo,
 } from '../../components/league-buddy/useLeagueData.ts'
 import { fetchStandingsSettings } from '../../components/league-buddy/useStandingsOdds.ts'
@@ -43,7 +43,7 @@ for (const name of ['sf-dynasty', '1qb-dynasty', 'redraft-1qb']) {
   const bundle = await fetchLeagueDataBundle(fixture.leagueId, null, 0)
   const ctx = bundle.leagueContext
   const teams = withTeamScores(
-    applyKtc(bundle.teams, await fetchKtcMaps(ktcNamesFor(bundle.teams), 0)),
+    applyKtc(bundle.teams, await fetchKtcMaps(ktcPlayerIdsFor(bundle.teams), 0)),
     ctx
   )
   const settings = await fetchStandingsSettings(fixture.leagueId, teams)

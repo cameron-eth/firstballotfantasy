@@ -43,6 +43,9 @@ jobs:
           data=json.load(open('/tmp/espn-refresh.json'))
           assert data.get('season'), 'Refresh response did not include the active season'
           assert data.get('careerSeasons'), 'Career FPPG seasons failed to refresh; career badges are hidden'
+          # Stale-while-error keeps pages up during an ESPN outage; the monitor must still fail.
+          assert not data.get('freshness', {}).get('stale'), 'ESPN refresh failed; serving the last good season (stale)'
+          assert not data['careerSeasons'].get('stale'), 'ESPN refresh failed for a past season; serving it stale'
           open('/tmp/current-season.txt','w').write(str(data['season']))
           PY
       - name: Refresh current-season projections
@@ -55,6 +58,7 @@ jobs:
           season=open('/tmp/current-season.txt').read().strip()
           assert str(data.get('season')) == season, 'Projection season does not match ESPN season'
           assert data.get('count', 0) > 0, 'Projection response has no player rows'
+          assert not data.get('freshness', {}).get('stale'), 'Sleeper projections refresh failed; serving the last good copy (stale)'
           PY
           curl --fail --silent --show-error --max-time 30 \
             https://www.firstballotff.com/api/data-health > /tmp/pre-refresh-health.json

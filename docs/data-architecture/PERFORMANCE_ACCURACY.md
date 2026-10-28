@@ -141,10 +141,12 @@ These are code-supported estimates and have not been profiled.
 
 | # | Finding | Evidence | Impact estimate |
 |---|---|---|---|
-| PF-1 | Playoff odds: 10,000-run Monte Carlo on the main thread, re-run per tab mount and per `teams` identity | `useStandingsOdds.ts:47-53` | Likely the largest client CPU cost; may cause visible jank on mobile |
+| PF-1 | Playoff odds: 10,000-run Monte Carlo on the main thread, re-run per tab mount and per `teams` identity | `useStandingsOdds.ts:47-53` | **Measured (PR-1 bench, Node desktop): 529 ms median in sf-dynasty (median-game league), 70–85 ms in the others.** The largest client CPU cost [V] |
 | PF-2 | Trade Market: up to ~200 Sleeper calls per load (8 seasons × ~25), `no-store`, plus the full **~17 MB** players DB in the response | `app/api/trade-market/route.ts:43-314` | Slowest page; large egress. Public with no auth, so anyone can trigger the fan-out |
 | PF-3 | Community: every request downloads every ballot object, then fits Bradley–Terry (×7 for trends) | `lib/community/store.ts:39-70`; `trends.ts:34-46` | Grows linearly with ballots, without bound |
-| PF-4 | `suggestedTeamTrades` re-runs on every render (unstable `dismissed` array plus a 30 s timer) | `useTradeDismissals.ts:31,42` | Continuous CPU while the Overview is open |
+| PF-4 | `suggestedTeamTrades` re-runs on every render (unstable `dismissed` array plus a 30 s timer) | `useTradeDismissals.ts:31,42` | **Measured: 56–67 ms per run in dynasty fixtures**, repeated on each re-render [V] |
+| PF-12 | `/api/ktc-values` returns full KTC history, about 1.3 MB per 50 names (≈26 KB per player); the dashboard only uses the first and last points | `app/api/ktc-values/route.ts`; `useLeagueData.ts` `applyKtc` | ≈7–8 MB downloaded per dashboard load in a 12-team league [V, fixture capture] |
+| PF-13 | Power rankings, placements, position ranks and team scores are **cheap**: under 1 ms each (PR-1 bench) | — | Moving them server-side is for consistency, not performance [V] |
 | PF-5 | Dashboard request waterfall: 3 dependent waves, then 2 chained hooks. Transactions for weeks 1..N are fetched separately with `no-store` every 15 min. The league record is fetched 3× and the week's matchups up to 3× | `useLeagueData.ts:181-218, 640-659`; `useDraftOrder.ts`; `useStandingsOdds.ts` | Slow first load; many duplicate requests |
 | PF-6 | `playerData` reads ~9 large JSONB snapshot rows (`select('*')`) per roster-stats call | `lib/platform/snapshots.ts:24`; `player-data.ts:63-101` | DB egress per call (MBs); no in-process memo |
 | PF-7 | `/api/league-roster` downloads `players/nfl` (~18 MB) per call | `app/api/league-roster/route.ts:57-64` | Slow scouting load |

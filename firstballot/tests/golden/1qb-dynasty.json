@@ -45,6 +45,10 @@
       "grade": "A+",
       "gradeScore": 98,
       "teamValueScore": 53689,
+      "dynastyRank": {
+        "teamValue": 3,
+        "outlook": 3
+      },
       "ktcSfTotal": 94998,
       "tieredPlayers": 22,
       "power": {
@@ -78,6 +82,10 @@
       "grade": "C-",
       "gradeScore": 64,
       "teamValueScore": 33341,
+      "dynastyRank": {
+        "teamValue": 11,
+        "outlook": 11
+      },
       "ktcSfTotal": 71347,
       "tieredPlayers": 24,
       "power": {
@@ -111,6 +119,10 @@
       "grade": "C+",
       "gradeScore": 67,
       "teamValueScore": 36884,
+      "dynastyRank": {
+        "teamValue": 9,
+        "outlook": 9
+      },
       "ktcSfTotal": 78065,
       "tieredPlayers": 24,
       "power": {
@@ -144,6 +156,10 @@
       "grade": "A+",
       "gradeScore": 99,
       "teamValueScore": 55388,
+      "dynastyRank": {
+        "teamValue": 1,
+        "outlook": 1
+      },
       "ktcSfTotal": 99334,
       "tieredPlayers": 24,
       "power": {
@@ -177,6 +193,10 @@
       "grade": "A-",
       "gradeScore": 90,
       "teamValueScore": 50396,
+      "dynastyRank": {
+        "teamValue": 4,
+        "outlook": 4
+      },
       "ktcSfTotal": 90098,
       "tieredPlayers": 22,
       "power": {
@@ -210,6 +230,10 @@
       "grade": "D",
       "gradeScore": 42,
       "teamValueScore": 24597,
+      "dynastyRank": {
+        "teamValue": 12,
+        "outlook": 12
+      },
       "ktcSfTotal": 52236,
       "tieredPlayers": 20,
       "power": {
@@ -243,6 +267,10 @@
       "grade": "B+",
       "gradeScore": 83,
       "teamValueScore": 45294,
+      "dynastyRank": {
+        "teamValue": 5,
+        "outlook": 5
+      },
       "ktcSfTotal": 80233,
       "tieredPlayers": 21,
       "power": {
@@ -276,6 +304,10 @@
       "grade": "B",
       "gradeScore": 79,
       "teamValueScore": 42762,
+      "dynastyRank": {
+        "teamValue": 7,
+        "outlook": 7
+      },
       "ktcSfTotal": 81821,
       "tieredPlayers": 23,
       "power": {
@@ -309,6 +341,10 @@
       "grade": "B",
       "gradeScore": 76,
       "teamValueScore": 43904,
+      "dynastyRank": {
+        "teamValue": 6,
+        "outlook": 6
+      },
       "ktcSfTotal": 82869,
       "tieredPlayers": 23,
       "power": {
@@ -342,6 +378,10 @@
       "grade": "A",
       "gradeScore": 97,
       "teamValueScore": 54583,
+      "dynastyRank": {
+        "teamValue": 2,
+        "outlook": 2
+      },
       "ktcSfTotal": 93967,
       "tieredPlayers": 23,
       "power": {
@@ -375,6 +415,10 @@
       "grade": "C",
       "gradeScore": 66,
       "teamValueScore": 36372,
+      "dynastyRank": {
+        "teamValue": 10,
+        "outlook": 10
+      },
       "ktcSfTotal": 67355,
       "tieredPlayers": 23,
       "power": {
@@ -408,6 +452,10 @@
       "grade": "B-",
       "gradeScore": 75,
       "teamValueScore": 41012,
+      "dynastyRank": {
+        "teamValue": 8,
+        "outlook": 8
+      },
       "ktcSfTotal": 83114,
       "tieredPlayers": 23,
       "power": {

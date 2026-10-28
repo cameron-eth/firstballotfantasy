@@ -1,9 +1,6 @@
 // Utility functions for LeagueBuddy component
 import type { PlayerData, PositionStrengths, TeamData, SleeperTransaction } from './types'
-import { CORE_POSITIONS, ktcValue, playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
-
-/** Top N assets that define a roster's value profile. */
-const CORE_DEPTH = 12
+import { ktcValue, playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 
 /** Top of the value scale a single position group is measured against. */
 const POSITION_VALUE_CEILING = 9999
@@ -14,24 +11,6 @@ export const getTierFromRank = (rank: number): string => {
   if (rank <= 24) return 'Tier 2'
   if (rank <= 48) return 'Tier 3'
   return 'Tier 4'
-}
-
-/** Core assets that define a roster's value, best first. */
-const coreAssets = (players: PlayerData[], ctx: LeagueContext, depth = CORE_DEPTH): PlayerData[] =>
-  players
-    .filter((p) => (CORE_POSITIONS as readonly string[]).includes(p.position?.toUpperCase() ?? ''))
-    .sort((a, b) => playerValue(b, ctx) - playerValue(a, ctx))
-    .slice(0, depth)
-
-/**
- * A roster's raw strength on the SDK's dynasty value scale: the summed value of its top
- * core assets, divided by 100 so the number reads like a score rather than a KTC total.
- * Feeds the percentile grade, so only the relative ordering matters.
- */
-export const calculateRawScore = (players: PlayerData[], ctx: LeagueContext): number => {
-  if (!players || players.length === 0) return 0
-  const total = coreAssets(players, ctx).reduce((sum, p) => sum + playerValue(p, ctx), 0)
-  return Math.round(total / 100)
 }
 
 export const calculateGradeFromPercentile = (

@@ -68,6 +68,13 @@ for (const [name, { base, transform }] of Object.entries(VARIANTS)) {
     const misses = installReplay(fixture, transform)
     const metrics = await computeLeagueMetrics(fixture.leagueId)
     assert.deepEqual(misses, [], 'the code requested something the fixture did not record')
+    // One dynasty value (D1): Overview, My Team and the Outlook rank every team the same.
+    for (const [rosterId, team] of Object.entries(metrics.teams))
+      assert.equal(
+        team.dynastyRank.outlook,
+        team.dynastyRank.teamValue,
+        `team ${rosterId}: Outlook and dynasty rank disagree`
+      )
     // Same inputs, same outputs: run twice and require identical results.
     installReplay(fixture, transform)
     assert.deepEqual(

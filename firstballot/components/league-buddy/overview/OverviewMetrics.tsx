@@ -4,7 +4,7 @@ import { StatTile } from '@/components/ui/stat-tile'
 
 export interface OverviewMetricValues {
   leagueSize: number
-  /** Dynasty (KTC) value rank; 0 when values haven't loaded. */
+  /** Dynasty value rank (lib/league-metrics/team-value); 0 when there are no teams. */
   valueRank: number
   playoffOdds?: number
   playoffSpots?: number
@@ -33,7 +33,7 @@ export function OverviewMetrics({ m }: { m: OverviewMetricValues }) {
         label="Dynasty rank"
         value={m.valueRank > 0 ? `#${m.valueRank}` : '—'}
         valueClassName={m.valueRank > 0 ? RANK_TEXT[rankTone(m.valueRank, m.leagueSize)] : ''}
-        detail={`of ${m.leagueSize} by KTC value`}
+        detail={`of ${m.leagueSize} by team value`}
       />
       <StatTile
         size="lg"

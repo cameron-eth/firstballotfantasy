@@ -16,7 +16,6 @@ import type {
   SleeperTransaction,
 } from './types'
 import {
-  calculateRawScore,
   calculateGradeFromPercentile,
   calculatePositionStrengths,
   calculateRecentForm,
@@ -453,8 +452,6 @@ export async function fetchLeagueDataBundle(
         })
         .filter(Boolean) as PlayerData[]
 
-      const rawScore = calculateRawScore(players, leagueContext)
-
       return {
         rosterId: roster.roster_id,
         teamName,
@@ -468,7 +465,7 @@ export async function fetchLeagueDataBundle(
         pointsAgainst: roster.settings?.fpts_against || 0,
         rank: roster.rank || 0,
         grade: '',
-        gradeScore: rawScore,
+        gradeScore: 0,
         players,
         starters: roster.starters || [],
         positionStrengths: calculatePositionStrengths(players, leagueContext),
@@ -478,11 +475,6 @@ export async function fetchLeagueDataBundle(
       }
     })
     .filter(Boolean) as TeamData[]
-
-  const allScores = teamsData.map((team) => team.gradeScore)
-  teamsData.forEach((team) => {
-    team.grade = calculateGradeFromPercentile(team.gradeScore, allScores).letter
-  })
 
   let leagueTransactions: SleeperTransaction[] = []
   try {
@@ -525,7 +517,8 @@ export async function fetchLeagueDataBundle(
   const userRoster = userId ? validRosters.find((r) => r.owner_id === userId) : null
 
   return {
-    teams: teamsData,
+    // Graded with the same team score the dashboard uses once KTC values arrive.
+    teams: withTeamScores(teamsData, leagueContext),
     leagueOverview: {
       isDynasty: league?.settings?.type === 2,
       totalTeams: rosters.length,

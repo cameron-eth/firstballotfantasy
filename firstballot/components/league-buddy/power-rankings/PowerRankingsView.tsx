@@ -27,7 +27,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 /**
- * The power-rankings board: one league-wide leaderboard plus four readouts of the
+ * The lineup-strength board (power score; dynasty value is a separate metric): one league-wide leaderboard plus four readouts of the
  * selected roster — positional strength, slot-by-slot strength, starters against bench,
  * and the starting lineup itself. Every number is derived in the browser from the Sleeper
  * roster data already in memory (see lib/sleeper-sdk/values.ts).
@@ -104,8 +104,8 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
   return (
     <div className="space-y-4">
       <SectionHeader
-        title="Power rankings"
-        subtitle={`${rankings.superflex ? 'Superflex' : '1QB'} dynasty values · ${
+        title="Lineup strength"
+        subtitle={`Best possible starting lineup at ${rankings.superflex ? 'superflex' : '1QB'} values · ${
           selectedEntry
             ? `${selectedTeam?.teamName} ranks ${ordinal(selectedEntry.rank)} of ${leagueSize}`
             : `${leagueSize} teams`

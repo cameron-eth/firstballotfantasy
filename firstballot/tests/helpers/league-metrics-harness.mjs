@@ -20,7 +20,7 @@ import {
 } from '../../components/league-buddy/utils.ts'
 import { calculateLeaguePlacements } from '../../components/league-buddy/competitiveState.ts'
 import { buildPowerRankings } from '../../lib/sleeper-sdk/values.ts'
-import { teamValueScore } from '../../lib/team-score.ts'
+import { leagueTeamValues } from '../../lib/league-metrics/team-value.ts'
 import { suggestedTeamTrades } from '../../lib/sleeper-sdk/trade-opportunities.ts'
 import { tradeSignals } from '../../lib/trade-signals.ts'
 import { picksByYear, leagueCapital } from '../../lib/picks-overview.ts'
@@ -66,6 +66,11 @@ export async function computeLeagueMetrics(leagueId) {
   )
   const placements = calculateLeaguePlacements(teams, true, ctx)
   const positionRanks = calculateLeaguePositionRankings(teams, ctx)
+  // Overview "Dynasty rank" and My Team "Team value" both read leagueTeamValues.
+  const teamValues = leagueTeamValues(teams, ctx)
+  // The Outlook orders teams by placement value; rank it with the same tie rule.
+  const outlookValue = (id) => placements.placements[id]?.valueTotal ?? 0
+  const outlookRank = (id) => teams.filter((o) => outlookValue(o.rosterId) > outlookValue(id)).length + 1
   const order = (metric) =>
     Object.fromEntries(
       buildDraftOrder(teams, draft.maxPointsFor, projection.projected, metric).map((row) => [
@@ -98,7 +103,8 @@ export async function computeLeagueMetrics(leagueId) {
           pointsFor: r(t.pointsFor, 2),
           grade: t.grade,
           gradeScore: r(t.gradeScore),
-          teamValueScore: r(teamValueScore(t.players, ctx)),
+          teamValueScore: r(teamValues.get(t.rosterId).value),
+          dynastyRank: { teamValue: teamValues.get(t.rosterId).rank, outlook: outlookRank(t.rosterId) },
           ktcSfTotal: t.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0),
           tieredPlayers: t.players.filter((p) => p.tierNumber).length,
           power: (() => {

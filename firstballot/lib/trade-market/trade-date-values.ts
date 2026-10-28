@@ -14,15 +14,6 @@ type Trade = {
   status_updated?: number
   adds?: Record<string, number> | null
 }
-type SleeperPlayer = { first_name?: string; last_name?: string; full_name?: string }
-
-/** Same normalization the Trade Market uses to join KTC names. */
-export const normalizeKtcName = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
 
 /** UTC calendar day of a Sleeper timestamp (unix ms). */
 export const tradeDay = (trade: Trade) =>
@@ -49,7 +40,9 @@ export function ktcDaysNeeded(trades: Trade[], sortedDays: readonly string[]): s
  */
 export function tradeDateKtc(
   trades: Trade[],
-  players: Record<string, SleeperPlayer>,
+  /** Sleeper id → KTC id, from the tier publish's match (PR-19). */
+  ktcIds: Map<string, number>,
+  /** Day → KTC id → KTC SF value. */
   ktcByDay: Record<string, Record<string, number>>,
   sortedDays: readonly string[]
 ): Record<string, Record<string, number>> {
@@ -60,9 +53,8 @@ export function tradeDateKtc(
     const values = ktcByDay[day] ?? {}
     const priced: Record<string, number> = {}
     for (const pid of Object.keys(trade.adds ?? {})) {
-      const p = players[pid]
-      const name = p?.full_name || `${p?.first_name ?? ''} ${p?.last_name ?? ''}`.trim()
-      const value = name ? values[normalizeKtcName(name)] : undefined
+      const ktcId = ktcIds.get(pid)
+      const value = ktcId != null ? values[String(ktcId)] : undefined
       if (typeof value === 'number' && value > 0) priced[pid] = value
     }
     result[trade.transaction_id] = priced
@@ -76,16 +68,13 @@ export function tradeDateKtc(
  * that day (null), the player falls back to rank, as today's view does without KTC.
  */
 export function rankingsAtTradeDate(
-  playerName: string,
+  playerId: string,
   ktc: number | null,
-  rankings: Record<string, any>,
-  keysFor: (name: string) => string[]
+  rankings: Record<string, any>
 ): Record<string, any> {
-  const own = keysFor(playerName)
-    .map((key) => rankings[key])
-    .find(Boolean)
+  const own = rankings[playerId]
   return {
-    [playerName]: {
+    [playerId]: {
       rank: 999,
       tier_name: 'Unranked',
       ...own,

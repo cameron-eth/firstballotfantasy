@@ -322,6 +322,23 @@ export const GRADE_COLORS = {
 } as const
 
 // Smart player name matching with dynasty database
+/**
+ * Name forms a ranking may be stored under, in the order matchPlayerToRankings tries
+ * them (each also tried normalized). The Trade Market route uses the same list to send
+ * only the rankings its trades can match (PR-16).
+ */
+export const rankingNameVariations = (playerName: string): string[] => [
+  playerName,
+  playerName.replace(/\./g, ''), // Remove periods
+  playerName.replace(/\s+/g, ' ').trim(), // Normalize spaces
+  playerName.toLowerCase(),
+  playerName.split(' ').reverse().join(' '), // Last, First
+]
+
+/** Every rankings key a player's name can match: each variation, raw and normalized. */
+export const rankingNameKeys = (playerName: string): string[] =>
+  rankingNameVariations(playerName).flatMap((v) => [v, normalizeName(v)])
+
 export const matchPlayerToRankings = (
   playerName: string,
   dynastyRankings: Record<string, any>
@@ -343,15 +360,7 @@ export const matchPlayerToRankings = (
   }
 
   // Try different name formats
-  const nameVariations = [
-    playerName,
-    playerName.replace(/\./g, ''), // Remove periods
-    playerName.replace(/\s+/g, ' ').trim(), // Normalize spaces
-    playerName.toLowerCase(),
-    playerName.split(' ').reverse().join(' '), // Last, First
-  ]
-
-  for (const variation of nameVariations) {
+  for (const variation of rankingNameVariations(playerName)) {
     const normalizedVariation = normalizeName(variation)
     if (dynastyRankings[variation] || dynastyRankings[normalizedVariation]) {
       const ranking = dynastyRankings[variation] || dynastyRankings[normalizedVariation]

@@ -38,7 +38,7 @@ These rules resolve the conflicts found in the audit:
 - **Ranks use one scale:** top third positive, middle third slate-300 (**not blue**), bottom third negative. This replaces `rank-colors.ts` and the two scales in `OverviewHeader.tsx`.
 - **Grades use one scale:** A elite, B positive, C slate, D/F negative, i.e. `gradeTone` in `Badge.tsx:94`. `GRADE_COLORS` in `types.ts` is removed.
 - **Buy and Sell:** the arrows keep showing the price move (↘ for Buy Low, ↗ for Sell High). The section color shows the action, not the move: Buy is `action`, Sell is `value` amber ("cash out"), Hold is slate. That means no orange, and no emerald beside a falling arrow.
-- **Franchise states** (`competitiveState.ts`) map onto existing tones: Juggernaut elite, Contender positive, Fringe warning, Rebuilder pick. No new hex values.
+- **Franchise states** (`competitiveState.ts`) map onto existing tones: Juggernaut elite, Contender positive, Pretender warning, Rebuilder pick, Fringe negative. No new hex values.
 - **Picks:** blue was doing two jobs in the builder (action and QB), and violet was doing two jobs (TE and picks). Selection moves to `action`. Picks keep violet, but always as a chip with a pick glyph, so they can't be confused with a TE chip. *Decision needed:* the alternative is to move picks to a distinct hue (lime).
 - **Charts** read the same CSS vars through a `chartTheme` object in `lib/design/tones.ts`, covering axis `slate-400`, grid `slate-700` and tooltip. Hand-copied `#94a3b8` and `#334155` go away.
 - **Gradients** are allowed only as the card position wash (`PlayerTradingCard`) and the landing hero background. Every other gradient is decorative and is removed.

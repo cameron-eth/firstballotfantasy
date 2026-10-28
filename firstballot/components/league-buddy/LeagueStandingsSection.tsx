@@ -5,7 +5,7 @@ import { buildDraftOrder, formatRecord } from './draft-order/draftOrderBoard'
 import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
 import { useStandingsOdds } from './useStandingsOdds'
 import { cn } from '@/lib/utils'
-import { SELECTED_ROW, probabilityText } from '@/lib/design/tones'
+import { SELECTED_ROW, STICKY_HOVER, STICKY_SELECTED, probabilityText } from '@/lib/design/tones'
 import { SectionHeader } from '@/components/ui/section-header'
 import { SegmentedControl, type SegmentedOption } from '@/components/ui/segmented-control'
 import {
@@ -214,9 +214,7 @@ export function LeagueStandingsSection({
                   sticky
                   className={cn(
                     'max-w-44 px-3 py-2 sm:max-w-none',
-                    selected
-                      ? 'bg-[color-mix(in_srgb,hsl(var(--action))_10%,hsl(var(--background)))] shadow-[inset_3px_0_0_hsl(var(--action))]'
-                      : 'group-hover:bg-[color-mix(in_srgb,white_3%,hsl(var(--background)))]'
+                    selected ? STICKY_SELECTED : STICKY_HOVER
                   )}
                 >
                   <button

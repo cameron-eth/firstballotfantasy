@@ -26,6 +26,10 @@ export const PICK_PINNED_TONE = 'border-positive/50 bg-positive/5 text-violet-20
 
 /** Selected row, tab or card: action tint plus an accent. Never gold. */
 export const SELECTED_ROW = 'bg-action/10 shadow-[inset_3px_0_0_hsl(var(--action))]'
+/** Sticky table cells need an opaque fill, so the selected and hover tints are pre-mixed. */
+export const STICKY_SELECTED =
+  'bg-[color-mix(in_srgb,hsl(var(--action))_10%,hsl(var(--background)))] shadow-[inset_3px_0_0_hsl(var(--action))]'
+export const STICKY_HOVER = 'group-hover:bg-[color-mix(in_srgb,white_3%,hsl(var(--background)))]'
 
 export const gradeTone = (grade: string): TierTone =>
   /^A/.test(grade) ? 'elite' : /^B/.test(grade) ? 'good' : /^[DF]/.test(grade) ? 'bad' : 'neutral'

@@ -1,7 +1,19 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Compass, LayoutGrid, List as ListIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { SELECTED_ROW, STICKY_HOVER, STICKY_SELECTED } from '@/lib/design/tones'
+import { SectionHeader } from '@/components/ui/section-header'
+import { SegmentedControl } from '@/components/ui/segmented-control'
+import { StatTile } from '@/components/ui/stat-tile'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   COMPETITIVE_STATES,
   type CompetitiveStateKey,
@@ -28,7 +40,11 @@ function clamp(value: number, min: number, max: number): number {
 // league's actual data, so each label is centered within its own quadrant's real
 // bounds rather than pinned to the plot's absolute corners — otherwise a skewed
 // median leaves labels sitting outside the region they're supposed to name.
-const CORNER_DEFS: Array<{ key: CompetitiveStateKey; vertical: 'top' | 'bottom'; side: 'left' | 'right' }> = [
+const CORNER_DEFS: Array<{
+  key: CompetitiveStateKey
+  vertical: 'top' | 'bottom'
+  side: 'left' | 'right'
+}> = [
   { key: 'rebuild', vertical: 'top', side: 'left' },
   { key: 'juggernaut', vertical: 'top', side: 'right' },
   { key: 'purgatory', vertical: 'bottom', side: 'left' },
@@ -63,8 +79,7 @@ export function CompetitiveStateMap({
   const [view, setView] = useState<'map' | 'list'>('list')
   const [sortKey, setSortKey] = useState<SortKey>('power')
 
-  const teamName = (rosterId: number) =>
-    teams.find((t) => t.rosterId === rosterId)?.teamName ?? ''
+  const teamName = (rosterId: number) => teams.find((t) => t.rosterId === rosterId)?.teamName ?? ''
 
   const ranked = useMemo(() => {
     const score = (rosterId: number) => powerScores[rosterId] ?? 0
@@ -84,225 +99,292 @@ export function CompetitiveStateMap({
   const corners = cornerLayout(mx, my)
 
   // Render non-selected dots first, selected last so it sits on top.
-  const others = Object.values(placements.placements).filter(
-    (p) => p.rosterId !== selectedRosterId
-  )
+  const others = Object.values(placements.placements).filter((p) => p.rosterId !== selectedRosterId)
 
+  const head = (key: SortKey) =>
+    cn('h-9 whitespace-nowrap px-3 text-xs', sortKey === key ? 'text-white' : 'text-slate-400')
   return (
-    <div
-      className="rounded-lg px-4 py-3 border bg-slate-900/40"
-      style={{ borderColor: `${meta.accent}40` }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Compass className="h-3 w-3" style={{ color: meta.accent }} />
-        <span className="text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-          Franchise Outlook
-        </span>
-        <span className="text-slate-600 text-[10px]">· relative to league</span>
-
-        <div className="ml-auto flex items-center gap-0.5 rounded-md bg-slate-800/60 p-0.5 border border-slate-700/50">
-          <button
-            type="button"
-            onClick={() => setView('map')}
-            className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
-              view === 'map' ? 'bg-slate-700 text-slate-100' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <LayoutGrid className="h-2.5 w-2.5" /> Map
-          </button>
-          <button
-            type="button"
-            onClick={() => setView('list')}
-            className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
-              view === 'list' ? 'bg-slate-700 text-slate-100' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <ListIcon className="h-2.5 w-2.5" /> List
-          </button>
-        </div>
-      </div>
+    <section aria-label="Franchise outlook">
+      <SectionHeader
+        title="Franchise outlook"
+        subtitle="Win-now value against future value, relative to the league"
+        actions={
+          <>
+            {view === 'list' && (
+              <SegmentedControl
+                label="Sort outlook"
+                value={sortKey}
+                onChange={setSortKey}
+                options={[
+                  { value: 'power', label: 'Power' },
+                  { value: 'now', label: 'Win-now' },
+                  { value: 'future', label: 'Future' },
+                ]}
+              />
+            )}
+            <SegmentedControl
+              label="Outlook view"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: 'list', label: 'List' },
+                { value: 'map', label: 'Map' },
+              ]}
+            />
+          </>
+        }
+      />
 
       {view === 'list' ? (
-        <div className="space-y-2">
-          <div className="grid grid-cols-[24px_1fr_auto_auto_auto_auto] gap-2 px-2 text-[9px] font-mono uppercase text-slate-500">
-            <span>#</span>
-            <span>Team</span>
-            <button
-              type="button"
-              onClick={() => setSortKey('power')}
-              className={`text-right hover:text-slate-300 ${sortKey === 'power' ? 'text-slate-300' : ''}`}
-            >
-              Power {sortKey === 'power' ? '▾' : ''}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSortKey('now')}
-              className={`text-right hover:text-slate-300 ${sortKey === 'now' ? 'text-slate-300' : ''}`}
-            >
-              Win-Now {sortKey === 'now' ? '▾' : ''}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSortKey('future')}
-              className={`text-right hover:text-slate-300 ${sortKey === 'future' ? 'text-slate-300' : ''}`}
-            >
-              Future {sortKey === 'future' ? '▾' : ''}
-            </button>
-            <span className="text-right">Age</span>
-          </div>
-          <div className="divide-y divide-slate-800">
+        <Table
+          containerClassName="rounded-xl border border-line/60"
+          region="Franchise outlook table"
+        >
+          <TableHeader className="[&_tr]:border-line/60">
+            <TableRow className="hover:bg-transparent">
+              <TableHead sticky className="h-9 px-3 text-xs text-slate-400">
+                Team
+              </TableHead>
+              <TableHead numeric className={head('power')}>
+                Power
+              </TableHead>
+              <TableHead numeric className={head('now')}>
+                Win-now
+              </TableHead>
+              <TableHead numeric className={head('future')}>
+                Future
+              </TableHead>
+              <TableHead numeric className="h-9 px-3 text-xs text-slate-400">
+                Core age
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {ranked.map((p, idx) => {
               const isSelected = p.rosterId === selectedRosterId
               const rowMeta = COMPETITIVE_STATES[p.state]
+              const cell = (key: SortKey) =>
+                cn(
+                  'px-3 py-2 text-sm',
+                  sortKey === key ? 'font-semibold text-white' : 'text-slate-300'
+                )
               return (
-                <div
+                <TableRow
                   key={p.rosterId}
-                  className={`grid grid-cols-[24px_1fr_auto_auto_auto_auto] items-center gap-2 rounded px-2 py-1.5 ${
-                    isSelected ? 'bg-slate-800/80 ring-1 ring-inset' : ''
-                  }`}
-                  style={isSelected ? { boxShadow: `inset 0 0 0 1px ${rowMeta.accent}66` } : undefined}
+                  className={cn(
+                    'group border-line/40',
+                    isSelected ? SELECTED_ROW : 'hover:bg-white/[0.03]'
+                  )}
                 >
-                  <span className="text-slate-500 text-[10px] font-mono tabular-nums">{idx + 1}</span>
-                  <div className="min-w-0 flex items-center gap-1.5">
-                    <span
-                      className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: rowMeta.accent }}
-                    />
-                    <span
-                      className={`text-xs truncate ${isSelected ? 'font-semibold text-slate-100' : 'text-slate-400'}`}
-                    >
-                      {teamName(p.rosterId)}
-                    </span>
-                    <span
-                      className="text-[9px] font-mono uppercase flex-shrink-0"
-                      style={{ color: rowMeta.accent }}
-                    >
-                      {rowMeta.label}
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs font-mono tabular-nums text-right font-bold ${
-                      isSelected ? 'text-yellow-400' : 'text-slate-200'
-                    }`}
+                  <TableCell
+                    sticky
+                    className={cn(
+                      'max-w-44 px-3 py-2 sm:max-w-none',
+                      isSelected ? STICKY_SELECTED : STICKY_HOVER
+                    )}
                   >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="w-5 shrink-0 text-right text-xs tabular-nums text-slate-500">
+                        {idx + 1}
+                      </span>
+                      {/* On phones the state badge drops under the name to keep the column narrow. */}
+                      <span className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+                        <span
+                          className={cn(
+                            'max-w-full truncate text-sm',
+                            isSelected ? 'font-semibold text-white' : 'text-slate-200'
+                          )}
+                        >
+                          {teamName(p.rosterId)}
+                        </span>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-md border px-1.5 py-0.5 text-badge font-semibold leading-none',
+                            rowMeta.border,
+                            rowMeta.bg,
+                            rowMeta.text
+                          )}
+                        >
+                          {rowMeta.label}
+                        </span>
+                      </span>
+                    </span>
+                  </TableCell>
+                  <TableCell numeric className={cell('power')}>
                     {powerScores[p.rosterId] ?? '—'}
-                  </span>
-                  <span className="text-slate-300 text-xs font-mono tabular-nums text-right">
+                  </TableCell>
+                  <TableCell numeric className={cell('now')}>
                     {p.nowScore}
-                  </span>
-                  <span className="text-slate-300 text-xs font-mono tabular-nums text-right">
+                  </TableCell>
+                  <TableCell numeric className={cell('future')}>
                     {p.futureScore}
-                  </span>
-                  <span className="text-slate-500 text-[10px] font-mono tabular-nums text-right">
+                  </TableCell>
+                  <TableCell numeric className="px-3 py-2 text-sm text-slate-400">
                     {p.avgAge > 0 ? p.avgAge.toFixed(1) : '—'}
-                  </span>
-                </div>
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </div>
-        </div>
+          </TableBody>
+        </Table>
       ) : (
-      <div className="flex flex-col md:flex-row gap-4 items-center">
-        {/* ── Quadrant map ── */}
-        <div className="w-full md:w-[58%] flex-shrink-0">
-          <svg viewBox="0 0 262 224" className="w-full" role="img" aria-label="Competitive state map">
-            {/* Quadrant tints */}
-            <rect x={X0} y={Y0} width={mx - X0} height={my - Y0} fill={COMPETITIVE_STATES.rebuild.accent} opacity={0.05} />
-            <rect x={mx} y={Y0} width={X1 - mx} height={my - Y0} fill={COMPETITIVE_STATES.juggernaut.accent} opacity={0.06} />
-            <rect x={X0} y={my} width={mx - X0} height={Y1 - my} fill={COMPETITIVE_STATES.purgatory.accent} opacity={0.05} />
-            <rect x={mx} y={my} width={X1 - mx} height={Y1 - my} fill={COMPETITIVE_STATES.contender.accent} opacity={0.05} />
-
-            {/* Plot border */}
-            <rect x={X0} y={Y0} width={X1 - X0} height={Y1 - Y0} fill="none" stroke="#334155" strokeWidth={1} rx={3} />
-
-            {/* Median crosshair */}
-            <line x1={mx} y1={Y0} x2={mx} y2={Y1} stroke="#475569" strokeWidth={1} strokeDasharray="3 3" opacity={0.6} />
-            <line x1={X0} y1={my} x2={X1} y2={my} stroke="#475569" strokeWidth={1} strokeDasharray="3 3" opacity={0.6} />
-
-            {/* Corner labels — centered within each quadrant's actual (median-split) bounds */}
-            {corners.map((c) => (
-              <text
-                key={c.key}
-                x={c.x}
-                y={c.y}
-                textAnchor="middle"
-                className="font-mono"
-                fontSize={7}
-                fill={COMPETITIVE_STATES[c.key].accent}
-                opacity={selected.state === c.key ? 0.95 : 0.45}
-                fontWeight={selected.state === c.key ? 700 : 400}
-              >
-                {COMPETITIVE_STATES[c.key].label.toUpperCase()}
-              </text>
-            ))}
-
-            {/* Other teams */}
-            {others.map((p) => (
+        <div className="flex flex-col items-center gap-4 rounded-xl border border-line/60 bg-surface/40 p-4 md:flex-row">
+          <div className="w-full flex-shrink-0 md:w-[58%]">
+            <svg
+              viewBox="0 0 262 224"
+              className="w-full"
+              role="img"
+              aria-label="Competitive state map"
+            >
+              <rect
+                x={X0}
+                y={Y0}
+                width={mx - X0}
+                height={my - Y0}
+                fill={COMPETITIVE_STATES.rebuild.accent}
+                opacity={0.05}
+              />
+              <rect
+                x={mx}
+                y={Y0}
+                width={X1 - mx}
+                height={my - Y0}
+                fill={COMPETITIVE_STATES.juggernaut.accent}
+                opacity={0.06}
+              />
+              <rect
+                x={X0}
+                y={my}
+                width={mx - X0}
+                height={Y1 - my}
+                fill={COMPETITIVE_STATES.purgatory.accent}
+                opacity={0.05}
+              />
+              <rect
+                x={mx}
+                y={my}
+                width={X1 - mx}
+                height={Y1 - my}
+                fill={COMPETITIVE_STATES.contender.accent}
+                opacity={0.05}
+              />
+              <rect
+                x={X0}
+                y={Y0}
+                width={X1 - X0}
+                height={Y1 - Y0}
+                fill="none"
+                stroke="#334155"
+                strokeWidth={1}
+                rx={3}
+              />
+              <line
+                x1={mx}
+                y1={Y0}
+                x2={mx}
+                y2={Y1}
+                stroke="#475569"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                opacity={0.6}
+              />
+              <line
+                x1={X0}
+                y1={my}
+                x2={X1}
+                y2={my}
+                stroke="#475569"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                opacity={0.6}
+              />
+              {corners.map((c) => (
+                <text
+                  key={c.key}
+                  x={c.x}
+                  y={c.y}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill={COMPETITIVE_STATES[c.key].accent}
+                  opacity={selected.state === c.key ? 0.95 : 0.5}
+                  fontWeight={selected.state === c.key ? 600 : 400}
+                >
+                  {COMPETITIVE_STATES[c.key].label}
+                </text>
+              ))}
+              {others.map((p) => (
+                <circle
+                  key={p.rosterId}
+                  cx={fx(p.nowScore)}
+                  cy={fy(p.futureScore)}
+                  r={3}
+                  fill={COMPETITIVE_STATES[p.state].accent}
+                  opacity={0.45}
+                >
+                  <title>{`${teamName(p.rosterId)} · ${COMPETITIVE_STATES[p.state].label}`}</title>
+                </circle>
+              ))}
               <circle
-                key={p.rosterId}
-                cx={fx(p.nowScore)}
-                cy={fy(p.futureScore)}
-                r={3}
-                fill={COMPETITIVE_STATES[p.state].accent}
-                opacity={0.45}
+                cx={fx(selected.nowScore)}
+                cy={fy(selected.futureScore)}
+                r={7}
+                fill="none"
+                stroke={meta.accent}
+                strokeWidth={1.5}
+                opacity={0.5}
               >
-                <title>{`${teamName(p.rosterId)} · ${COMPETITIVE_STATES[p.state].label}`}</title>
+                <title>{`${teamName(selectedRosterId)} · ${meta.label}`}</title>
               </circle>
-            ))}
-
-            {/* Selected team */}
-            <circle cx={fx(selected.nowScore)} cy={fy(selected.futureScore)} r={7} fill="none" stroke={meta.accent} strokeWidth={1.5} opacity={0.5}>
-              <title>{`${teamName(selectedRosterId)} · ${meta.label}`}</title>
-            </circle>
-            <circle cx={fx(selected.nowScore)} cy={fy(selected.futureScore)} r={4.5} fill={meta.accent} stroke="#0f172a" strokeWidth={1.5}>
-              <title>{`${teamName(selectedRosterId)} · ${meta.label}`}</title>
-            </circle>
-
-            {/* Axis labels */}
-            <text x={(X0 + X1) / 2} y={Y1 + 14} textAnchor="middle" className="font-mono" fontSize={7} fill="#64748b">
-              WIN-NOW VALUE →
-            </text>
-            <text x={11} y={(Y0 + Y1) / 2} textAnchor="middle" className="font-mono" fontSize={7} fill="#64748b" transform={`rotate(-90 11 ${(Y0 + Y1) / 2})`}>
-              FUTURE / YOUTH →
-            </text>
-          </svg>
-        </div>
-
-        {/* ── State readout (the "why" + scores; the headline state lives in the header) ── */}
-        <div className="flex-1 min-w-0 w-full">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: meta.accent }} />
-            <span className="text-slate-500 text-[9px] font-mono uppercase tracking-wider">
-              What it means
-            </span>
+              <circle
+                cx={fx(selected.nowScore)}
+                cy={fy(selected.futureScore)}
+                r={4.5}
+                fill={meta.accent}
+                stroke="#0f172a"
+                strokeWidth={1.5}
+              >
+                <title>{`${teamName(selectedRosterId)} · ${meta.label}`}</title>
+              </circle>
+              <text x={(X0 + X1) / 2} y={Y1 + 15} textAnchor="middle" fontSize={9} fill="#94a3b8">
+                Win-now value →
+              </text>
+              <text
+                x={11}
+                y={(Y0 + Y1) / 2}
+                textAnchor="middle"
+                fontSize={9}
+                fill="#94a3b8"
+                transform={`rotate(-90 11 ${(Y0 + Y1) / 2})`}
+              >
+                Future value →
+              </text>
+            </svg>
           </div>
-          <p className="text-slate-300 text-[11px] leading-relaxed mb-3">{meta.description}</p>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-slate-900/60 rounded-md px-2.5 py-1.5 border border-slate-700/50">
-              <div className="text-slate-500 text-[9px] font-mono uppercase">Win-Now</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-slate-200 text-sm font-bold font-mono">{selected.nowScore}</span>
-                <span className="text-slate-600 text-[9px] font-mono">/100</span>
-                <span className={`text-[9px] font-mono ml-auto ${selected.nowScore >= placements.nowMedian ? 'text-emerald-400' : 'text-orange-400'}`}>
-                  {selected.nowScore >= placements.nowMedian ? 'above' : 'below'} med
-                </span>
-              </div>
-            </div>
-            <div className="bg-slate-900/60 rounded-md px-2.5 py-1.5 border border-slate-700/50">
-              <div className="text-slate-500 text-[9px] font-mono uppercase">Future</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-slate-200 text-sm font-bold font-mono">{selected.futureScore}</span>
-                <span className="text-slate-600 text-[9px] font-mono">/100</span>
-                <span className="text-slate-600 text-[9px] font-mono ml-auto">
-                  {selected.avgAge > 0 ? `${selected.avgAge.toFixed(1)}y core` : '—'}
-                </span>
-              </div>
+          <div className="w-full min-w-0 flex-1 space-y-3">
+            <p className="text-sm text-slate-300">{meta.description}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <StatTile
+                label="Win-now"
+                value={`${selected.nowScore}/100`}
+                detail={
+                  <span
+                    className={
+                      selected.nowScore >= placements.nowMedian ? 'text-positive' : 'text-negative'
+                    }
+                  >
+                    {selected.nowScore >= placements.nowMedian ? 'Above' : 'Below'} league median
+                  </span>
+                }
+              />
+              <StatTile
+                label="Future"
+                value={`${selected.futureScore}/100`}
+                detail={selected.avgAge > 0 ? `Core age ${selected.avgAge.toFixed(1)}` : undefined}
+              />
             </div>
           </div>
         </div>
-      </div>
       )}
-    </div>
+    </section>
   )
 }

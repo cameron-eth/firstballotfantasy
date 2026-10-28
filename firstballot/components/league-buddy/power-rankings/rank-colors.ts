@@ -8,9 +8,10 @@ export interface RankTone {
   hex: string
 }
 
-const STRONG: RankTone = { bar: 'bg-emerald-500', text: 'text-emerald-300', hex: '#10b981' }
-const NEUTRAL: RankTone = { bar: 'bg-blue-500', text: 'text-blue-300', hex: '#3b82f6' }
-const WEAK: RankTone = { bar: 'bg-rose-500', text: 'text-rose-300', hex: '#f43f5e' }
+// Semantic tokens (DESIGN_SYSTEM.md §1): neutral is slate, never blue, so it can't read as QB or an action.
+const STRONG: RankTone = { bar: 'bg-positive', text: 'text-emerald-300', hex: '#34d399' }
+const NEUTRAL: RankTone = { bar: 'bg-slate-500', text: 'text-slate-300', hex: '#64748b' }
+const WEAK: RankTone = { bar: 'bg-negative', text: 'text-rose-300', hex: '#fb7185' }
 
 export function toneForRank(rank: number, leagueSize: number): RankTone {
   if (leagueSize <= 0) return NEUTRAL

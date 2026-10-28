@@ -2,66 +2,103 @@
 import { useLeagueFormat } from '@/hooks/use-league-format'
 
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Target, Sun } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { StatTile } from '@/components/ui/stat-tile'
 import { UserAvatar } from '@/components/user-avatar'
-import { Trophy, Target, Sun, Medal, TrendingUp, Star } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { rankTone } from '@/lib/design/tones'
+import type { TierTone } from '@/lib/player-signals'
 import type { MatchupData, OverviewActions, TeamData } from './types'
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
 import { CompetitiveStateMap } from './CompetitiveStateMap'
 import { DraftOrderPanel } from './draft-order/DraftOrderPanel'
 import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
+import { GradeBadge } from './ui/Badge'
 
-const GRADE_COLORS = {
-  'A+': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  A: 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  'A-': 'bg-yellow-400/20 text-yellow-400 border-yellow-400',
-  'B+': 'bg-green-400/20 text-green-400 border-green-400',
-  B: 'bg-green-400/20 text-green-400 border-green-400',
-  'B-': 'bg-green-500/20 text-green-500 border-green-500',
-  'C+': 'bg-blue-400/20 text-blue-400 border-blue-400',
-  C: 'bg-blue-400/20 text-blue-400 border-blue-400',
-  'C-': 'bg-blue-500/20 text-blue-500 border-blue-500',
-  'D+': 'bg-orange-400/20 text-orange-400 border-orange-400',
-  D: 'bg-orange-400/20 text-orange-400 border-orange-400',
-  'D-': 'bg-red-400/20 text-red-400 border-red-400',
-  F: 'bg-red-500/20 text-red-500 border-red-500',
-}
-
-const POSITION_STRENGTH_COLOR = (score: number) => {
-  if (score >= 80) return 'bg-emerald-400'
-  if (score >= 60) return 'bg-yellow-400'
-  if (score >= 40) return 'bg-orange-400'
-  return 'bg-red-500'
-}
-
-function rankTextColor(rank: number, leagueSize: number): string {
-  if (rank <= 0) return 'text-slate-500'
-  if (rank <= Math.ceil(leagueSize / 4)) return 'text-emerald-400'
-  if (rank <= Math.ceil(leagueSize / 2)) return 'text-yellow-400'
-  return 'text-orange-400'
+const RANK_TEXT: Record<TierTone, string> = {
+  elite: 'text-elite',
+  good: 'text-positive',
+  neutral: 'text-slate-200',
+  bad: 'text-negative',
 }
 
 function RecentFormPips({ form }: { form: string }) {
-  if (!form) return <span className="text-slate-500 text-xs">—</span>
+  if (!form) return <span className="text-xs text-slate-500">—</span>
   const games = form.split('').slice(-5)
   const gameCounts = new Map<string, number>()
   return (
-    <div className="flex items-center gap-0.5">
+    <span className="flex items-center gap-0.5" aria-label={`Recent form ${games.join(' ')}`}>
       {games.map((g) => {
         const occurrence = (gameCounts.get(g) ?? 0) + 1
         gameCounts.set(g, occurrence)
-
         return (
-          <div
+          <span
             key={`${form}-${g}-${occurrence}`}
-            className={`w-2 h-2 rounded-full ${
-              g === 'W' ? 'bg-emerald-400' : g === 'L' ? 'bg-red-500' : 'bg-slate-500'
-            }`}
+            className={cn(
+              'size-2 rounded-full',
+              g === 'W' ? 'bg-positive' : g === 'L' ? 'bg-negative' : 'bg-slate-500'
+            )}
           />
         )
       })}
+    </span>
+  )
+}
+
+/** Off-season: where the team sits in the grade standings, with its neighbours. */
+function OffSeasonStanding({
+  sortedTeams,
+  selectedTeam,
+}: {
+  sortedTeams: TeamData[]
+  selectedTeam: TeamData
+}) {
+  const leagueSize = sortedTeams.length
+  const gradeRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+  const windowStart = Math.max(0, Math.min(gradeRank - 2, leagueSize - 3))
+  const nearby = sortedTeams.slice(windowStart, windowStart + 3)
+  const countdown = offSeasonCountdown()
+  return (
+    <div className="rounded-xl border border-line/60 bg-surface/40 p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm text-slate-400">
+        <Sun className="size-4" aria-hidden />
+        Off-season{countdown ? ` · ${countdown}` : ''}
+      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <div>
+          <div
+            className={cn(
+              'text-3xl font-semibold tabular-nums',
+              RANK_TEXT[rankTone(gradeRank, leagueSize)]
+            )}
+          >
+            #{gradeRank}
+          </div>
+          <div className="text-2xs text-slate-500">of {leagueSize} by grade</div>
+        </div>
+        <div className="min-w-48 flex-1 space-y-1">
+          {nearby.map((team, i) => {
+            const selected = team.rosterId === selectedTeam.rosterId
+            return (
+              <div
+                key={team.rosterId}
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-2 py-1 text-sm',
+                  selected ? 'bg-action/10 font-semibold text-white' : 'text-slate-400'
+                )}
+              >
+                <span className="w-6 text-xs tabular-nums text-slate-500">
+                  #{windowStart + i + 1}
+                </span>
+                <GradeBadge grade={team.grade} />
+                <span className="truncate">{team.teamName}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
@@ -131,14 +168,11 @@ export function OverviewHeader({
     .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
     .sort((a, b) => (b.ktcValueSf ?? b.rank * -1) - (a.ktcValueSf ?? a.rank * -1))[0]
 
-  // Position strengths
-  const posStrengths = selectedTeam.positionStrengths
-
   // Rank among sorted teams
   const leagueRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
 
   // Competitive-state placement (Now × Future), relative to the league
-  const { placements, positionRankings = {}, powerScores, weekProjections } = rankings
+  const { placements, powerScores, weekProjections } = rankings
 
   // What this team's current starters are projected to score this week. Starters can
   // be empty before a lineup is set, in which case there is nothing to total.
@@ -156,478 +190,198 @@ export function OverviewHeader({
   // League averages, for "you vs the league" comparisons
   const avgPointsFor = teams.reduce((sum, t) => sum + t.pointsFor, 0) / (leagueSize || 1)
   const avgPointsAgainst = teams.reduce((sum, t) => sum + t.pointsAgainst, 0) / (leagueSize || 1)
-  const avgMoves = teams.reduce((sum, t) => sum + t.totalMoves, 0) / (leagueSize || 1)
 
-  const myPositionRanks = positionRankings[selectedTeam.rosterId] ?? {}
+  const rankText = (rank: number) =>
+    rank > 0 ? RANK_TEXT[rankTone(rank, leagueSize)] : 'text-slate-500'
+  const pfDelta = selectedTeam.pointsFor - avgPointsFor
+  const paDelta = selectedTeam.pointsAgainst - avgPointsAgainst
+  const actionButtons = [
+    { key: 'trade', label: 'Trade market', onClick: actions.onTradeMarketClick, show: true },
+    { key: 'scout', label: 'Scout', onClick: actions.onScoutingPortalClick, show: showScouting },
+    { key: 'draft', label: 'Draft board', onClick: actions.onDraftBuddyClick, show: showScouting },
+    {
+      key: 'playoffs',
+      label: 'Playoff odds',
+      onClick: actions.onPlayoffOddsClick,
+      show: !!actions.onPlayoffOddsClick,
+    },
+  ].filter((a) => a.show)
 
   return (
-    <Card className="rounded-none border-0 border-b border-white/10 bg-transparent shadow-none overflow-hidden">
-      {/* State-colored accent strip — instant whole-header signal */}
-      {stateMeta && (
-        <div
-          className="h-1 w-full"
-          style={{
-            background: `linear-gradient(90deg, ${stateMeta.accent} 0%, ${stateMeta.accent}33 100%)`,
-          }}
-        />
-      )}
-      <CardContent className="px-0 py-5">
-        {/* ════ TIER 1 · IDENTITY + VERDICT ════ */}
-        <div className="flex items-start justify-between gap-4 mb-5">
-          <div className="flex items-start gap-3 min-w-0">
-            <UserAvatar
-              avatarId={selectedTeam.ownerAvatar}
-              displayName={selectedTeam.ownerName}
-              username={selectedTeam.ownerUsername}
-              size={52}
-              className="ring-2 ring-yellow-400/30 flex-shrink-0"
-            />
-            <div className="min-w-0">
-              <h2 className="text-xl font-bold text-yellow-400 font-mono leading-tight truncate">
-                {selectedTeam.teamName}
-              </h2>
-              <div className="text-slate-400 text-xs mt-0.5 truncate">
-                {selectedTeam.ownerName}
-                {selectedTeam.ownerUsername && (
-                  <span className="text-slate-600"> · @{selectedTeam.ownerUsername}</span>
-                )}
-              </div>
-              {/* Muted meta strip */}
-              <div className="flex items-center gap-2.5 mt-2 flex-wrap text-slate-500">
-                <span className="flex items-center gap-1">
-                  <Trophy className="h-3 w-3" />
-                  <span className="font-mono text-xs text-slate-400">
-                    {selectedTeam.wins}-{selectedTeam.losses}
-                  </span>
-                  <span className="text-[10px]">({winPct}%)</span>
-                </span>
-                <span className="text-slate-700">·</span>
-                <span className="font-mono text-xs">PF {selectedTeam.pointsFor.toFixed(1)}</span>
-                <span className="text-slate-700">·</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="font-mono text-[10px] uppercase">Form</span>
-                  <RecentFormPips form={selectedTeam.recentForm} />
-                </span>
-                <span className="text-slate-700">·</span>
-                <span className="font-mono text-xs">{selectedTeam.totalMoves} moves</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Verdict — the headline signal */}
+    <section aria-label="Team overview" className="space-y-4">
+      {/* The verdict: franchise state is the headline, dynasty rank the one hero number. */}
+      <div
+        className={cn(
+          'flex items-start justify-between gap-4 rounded-xl border bg-surface/40 p-4',
+          stateMeta ? stateMeta.border : 'border-line/60'
+        )}
+      >
+        <div className="min-w-0 flex-1">
           {stateMeta && (
-            <div className="flex flex-col items-end flex-shrink-0 text-right">
-              <div className="flex items-center gap-1.5">
+            <>
+              <div className={cn('flex items-center gap-2 text-xl font-semibold', stateMeta.text)}>
                 <span
-                  className="inline-block w-2.5 h-2.5 rounded-full"
+                  className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: stateMeta.accent }}
                 />
-                <span
-                  className="text-2xl font-black font-mono uppercase tracking-tight leading-none"
-                  style={{ color: stateMeta.accent }}
-                >
-                  {stateMeta.label}
-                </span>
+                {stateMeta.label}
               </div>
-              <span className="text-slate-500 text-[11px] font-mono mt-1">{stateMeta.tagline}</span>
-              <div className="flex items-center gap-1.5 mt-2">
-                <Badge
-                  variant="outline"
-                  className={`text-xs font-mono font-bold px-1.5 py-0 ${GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]}`}
-                >
-                  {selectedTeam.grade}
-                </Badge>
-                <span className="text-slate-500 text-xs font-mono">
-                  #{leagueRank} of {leagueSize}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ════ TIER 2 · TEAM VITALS ════ */}
-        <div className="grid grid-cols-3 gap-px bg-slate-700/30 rounded-lg overflow-hidden mb-2">
-          {/* Dynasty Rank */}
-          <div className="bg-slate-800/80 px-3 py-2">
-            <div className="text-slate-500 text-[9px] font-mono uppercase mb-0.5">Dynasty Rank</div>
-            <div className="flex items-baseline gap-1">
-              <span
-                className={`text-base font-black font-mono ${
-                  ktcLeagueRank === 0
-                    ? 'text-slate-500'
-                    : ktcLeagueRank <= Math.ceil(leagueSize / 4)
-                      ? 'text-emerald-400'
-                      : ktcLeagueRank <= Math.ceil(leagueSize / 2)
-                        ? 'text-yellow-400'
-                        : 'text-orange-400'
-                }`}
-              >
-                {ktcLeagueRank > 0 ? `#${ktcLeagueRank}` : '—'}
-              </span>
-              {ktcLeagueRank > 0 && (
-                <span className="text-slate-600 text-[10px] font-mono">of {leagueSize}</span>
-              )}
-            </div>
-          </div>
-
-          {/* Top Asset */}
-          <div className="bg-slate-800/80 px-3 py-2 min-w-0">
-            <div className="text-slate-500 text-[9px] font-mono uppercase mb-0.5">Top Asset</div>
-            {topPlayer ? (
-              <div className="min-w-0">
-                <div className="text-slate-200 text-xs font-semibold truncate leading-tight">
-                  {topPlayer.playerName}
-                </div>
-                <div className="text-slate-500 text-[10px] font-mono truncate">
-                  #{topPlayer.rank}
-                  {topPlayer.ktcValueSf ? ` · ${topPlayer.ktcValueSf.toLocaleString()}` : ''}
-                </div>
-              </div>
-            ) : (
-              <span className="text-slate-600 text-xs">—</span>
-            )}
-          </div>
-
-          {/* Proj / Wk */}
-          <div className="bg-slate-800/80 px-3 py-2">
-            <div className="text-slate-500 text-[9px] font-mono uppercase mb-0.5">Proj / Wk</div>
-            <span className="text-base font-black font-mono text-yellow-400">
-              {projectedThisWeek.toFixed(1)}
-            </span>
-          </div>
-        </div>
-
-        {/* You vs. League Average */}
-        <div className="grid grid-cols-3 gap-px bg-slate-700/30 rounded-lg overflow-hidden mb-4">
-          {[
-            {
-              label: 'Points For',
-              value: selectedTeam.pointsFor,
-              avg: avgPointsFor,
-              higherIsBetter: true,
-            },
-            {
-              label: 'Points Against',
-              value: selectedTeam.pointsAgainst,
-              avg: avgPointsAgainst,
-              higherIsBetter: false,
-            },
-            { label: 'Moves', value: selectedTeam.totalMoves, avg: avgMoves, higherIsBetter: true },
-          ].map(({ label, value, avg, higherIsBetter }) => {
-            const delta = value - avg
-            const isGood = higherIsBetter ? delta >= 0 : delta <= 0
-            return (
-              <div key={label} className="bg-slate-800/80 px-3 py-2">
-                <div className="text-slate-500 text-[9px] font-mono uppercase mb-0.5">{label}</div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-slate-200 text-base font-black font-mono">
-                    {value.toFixed(label === 'Moves' ? 0 : 1)}
-                  </span>
-                  <span
-                    className={`text-[9px] font-mono ${isGood ? 'text-emerald-400' : 'text-orange-400'}`}
-                  >
-                    {delta >= 0 ? '+' : ''}
-                    {delta.toFixed(1)} vs avg
-                  </span>
-                </div>
-                <div className="text-slate-600 text-[9px] font-mono mt-0.5">
-                  league avg {avg.toFixed(1)}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Position strength — compact inline */}
-        <div className="bg-slate-900/30 rounded-lg px-4 py-2.5 mb-4 border border-slate-700/30">
-          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-            <span className="text-slate-500 text-[9px] font-mono uppercase tracking-wider flex items-center gap-1.5 flex-shrink-0">
-              <Star className="h-3 w-3" /> Position Strength
-            </span>
-            <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5">
-              {(['QB', 'RB', 'WR', 'TE'] as const).map((pos) => {
-                const score = posStrengths?.[pos] ?? 0
-                const rank = myPositionRanks[pos]
-                return (
-                  <div key={pos} className="flex items-center gap-2">
-                    <span className="text-slate-500 text-[10px] font-mono w-5 flex-shrink-0">
-                      {pos}
-                    </span>
-                    <div className="h-1.5 flex-1 bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${POSITION_STRENGTH_COLOR(score)}`}
-                        style={{ width: `${Math.min(score, 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-slate-400 text-[10px] font-mono font-bold w-5 text-right flex-shrink-0">
-                      {score}
-                    </span>
-                    {rank ? (
-                      <span
-                        className={`text-[9px] font-mono font-bold w-7 text-right flex-shrink-0 ${rankTextColor(rank, leagueSize)}`}
-                      >
-                        #{rank}
-                      </span>
-                    ) : (
-                      <span className="w-7 flex-shrink-0" />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* ════ TIER 3 · LEAGUE CONTEXT: franchise outlook ════ */}
-        {selectedPlacement && (
-          <div className="mb-4">
-            <CompetitiveStateMap
-              placements={placements}
-              teams={teams}
-              selectedRosterId={selectedTeam.rosterId}
-              powerScores={powerScores}
-            />
-          </div>
-        )}
-
-        {/* ════ TIER 4 · ACTIONS ════ */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            type="button"
-            onClick={actions.onTradeMarketClick}
-            className="flex-1 min-w-[5.5rem] rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-300 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
-          >
-            Trade
-          </button>
-          {showScouting && (
-            <>
-              <button
-                type="button"
-                onClick={actions.onScoutingPortalClick}
-                className="flex-1 min-w-[5.5rem] rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-300 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
-              >
-                Scout
-              </button>
-              <button
-                type="button"
-                onClick={actions.onDraftBuddyClick}
-                className="flex-1 min-w-[5.5rem] rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-300 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
-              >
-                Draft
-              </button>
+              <p className="mt-0.5 text-sm text-slate-400">{stateMeta.tagline}</p>
             </>
           )}
-          {actions.onPlayoffOddsClick ? (
-            <button
-              type="button"
-              onClick={actions.onPlayoffOddsClick}
-              className="flex-1 min-w-[5.5rem] rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-wide text-slate-300 hover:border-yellow-400/50 hover:text-yellow-400 transition-colors"
-            >
-              Playoffs
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => setShowDraftOrder((open) => !open)}
-            aria-expanded={showDraftOrder}
-            className={`flex-1 min-w-[5.5rem] rounded-md border px-2 py-1.5 text-center font-mono text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-              showDraftOrder
-                ? 'border-yellow-400/60 bg-yellow-400/10 text-yellow-400'
-                : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-yellow-400/50 hover:text-yellow-400'
-            }`}
-          >
-            Draft Order
-          </button>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-300">
+            <span className="tabular-nums">
+              {selectedTeam.wins}–{selectedTeam.losses}
+              <span className="ml-1 text-slate-500">({winPct}%)</span>
+            </span>
+            <RecentFormPips form={selectedTeam.recentForm} />
+            <GradeBadge grade={selectedTeam.grade} />
+            <span className="text-xs text-slate-500">
+              #{leagueRank} of {leagueSize} by grade
+            </span>
+          </div>
         </div>
-
-        {showDraftOrder && (
-          <div className="mb-4">
-            <DraftOrderPanel
-              teams={teams}
-              maxPointsFor={rankings.draftOrder.maxPointsFor}
-              projectedMaxPointsFor={rankings.draftOrder.projectedMaxPointsFor}
-              weeksCounted={rankings.draftOrder.weeksCounted}
-              remainingWeeks={rankings.draftOrder.remainingWeeks}
-              season={rankings.draftOrder.season}
-              loading={rankings.draftOrder.loading}
-              selectedRosterId={selectedTeam.rosterId}
-            />
+        <div className="shrink-0 text-right">
+          <div className={cn('text-3xl font-semibold tabular-nums', rankText(ktcLeagueRank))}>
+            {ktcLeagueRank > 0 ? `#${ktcLeagueRank}` : '—'}
           </div>
-        )}
+          <div className="text-xs text-slate-400">Dynasty value</div>
+          <div className="text-2xs text-slate-500">of {leagueSize} teams</div>
+        </div>
+      </div>
 
-        {/* ── MATCHUP / OFF-SEASON PANEL ── */}
-        {isOffSeason() ? (
-          (() => {
-            const gradeRank = sortedTeams.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
-            const rankColor =
-              gradeRank <= Math.ceil(leagueSize / 4)
-                ? 'text-emerald-400'
-                : gradeRank <= Math.ceil(leagueSize / 2)
-                  ? 'text-yellow-400'
-                  : 'text-orange-400'
-            const suffix =
-              gradeRank === 1 ? 'ST' : gradeRank === 2 ? 'ND' : gradeRank === 3 ? 'RD' : 'TH'
-            const windowStart = Math.max(0, Math.min(gradeRank - 2, leagueSize - 3))
-            const nearbyTeams = sortedTeams.slice(windowStart, windowStart + 3)
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatTile
+          label="Projected this week"
+          value={projectedThisWeek.toFixed(1)}
+          valueClassName="text-production"
+          detail="Current starters"
+        />
+        <StatTile
+          label="Points for"
+          value={selectedTeam.pointsFor.toFixed(1)}
+          detail={
+            <span className={pfDelta >= 0 ? 'text-positive' : 'text-negative'}>
+              {pfDelta >= 0 ? '+' : ''}
+              {pfDelta.toFixed(1)} vs league avg
+            </span>
+          }
+        />
+        <StatTile
+          label="Points against"
+          value={selectedTeam.pointsAgainst.toFixed(1)}
+          detail={
+            <span className={paDelta <= 0 ? 'text-positive' : 'text-negative'}>
+              {paDelta >= 0 ? '+' : ''}
+              {paDelta.toFixed(1)} vs league avg
+            </span>
+          }
+        />
+        <StatTile
+          label="Top asset"
+          value={topPlayer?.playerName ?? '—'}
+          detail={
+            topPlayer?.ktcValueSf ? (
+              <span className="text-value">KTC {topPlayer.ktcValueSf.toLocaleString()}</span>
+            ) : undefined
+          }
+        />
+      </div>
 
-            return (
-              <div className="bg-gradient-to-r from-yellow-400/5 to-amber-400/5 rounded-lg p-4 border border-yellow-400/20">
-                {/* Header row */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Sun className="h-3.5 w-3.5 text-yellow-400/60" />
-                    <span className="text-yellow-400/70 font-mono text-xs font-semibold uppercase tracking-wider">
-                      Off-Season
-                    </span>
-                    {offSeasonCountdown() && (
-                      <>
-                        <span className="text-slate-600 text-xs">·</span>
-                        <span className="text-slate-500 text-xs">{offSeasonCountdown()}</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Medal className="h-3.5 w-3.5 text-yellow-400/60" />
-                    <span className="text-slate-400 text-xs font-mono">League Standing</span>
-                  </div>
-                </div>
+      <div className="flex flex-wrap gap-2">
+        {actionButtons.map((a) => (
+          <Button key={a.key} variant="subtle" size="xs" onClick={a.onClick}>
+            {a.label}
+          </Button>
+        ))}
+        <Button
+          variant={showDraftOrder ? 'tint' : 'subtle'}
+          size="xs"
+          onClick={() => setShowDraftOrder((open) => !open)}
+          aria-expanded={showDraftOrder}
+        >
+          Draft order
+        </Button>
+      </div>
 
-                {/* Content row */}
-                <div className="flex items-center gap-4">
-                  {/* Big rank */}
-                  <div className="flex-shrink-0 text-center min-w-[72px]">
-                    <div className={`font-black font-mono leading-none ${rankColor}`}>
-                      <span className="text-4xl">{gradeRank}</span>
-                      <span className="text-xl">{suffix}</span>
-                    </div>
-                    <div className="text-slate-500 text-[10px] font-mono mt-0.5">
-                      of {leagueSize}
-                    </div>
-                  </div>
+      {showDraftOrder && (
+        <DraftOrderPanel
+          teams={teams}
+          maxPointsFor={rankings.draftOrder.maxPointsFor}
+          projectedMaxPointsFor={rankings.draftOrder.projectedMaxPointsFor}
+          weeksCounted={rankings.draftOrder.weeksCounted}
+          remainingWeeks={rankings.draftOrder.remainingWeeks}
+          season={rankings.draftOrder.season}
+          loading={rankings.draftOrder.loading}
+          selectedRosterId={selectedTeam.rosterId}
+        />
+      )}
 
-                  {/* Divider */}
-                  <div className="w-px h-14 bg-slate-700 flex-shrink-0" />
+      {selectedPlacement && (
+        <CompetitiveStateMap
+          placements={placements}
+          teams={teams}
+          selectedRosterId={selectedTeam.rosterId}
+          powerScores={powerScores}
+        />
+      )}
 
-                  {/* Mini standings */}
-                  <div className="flex-1 space-y-1">
-                    {nearbyTeams.map((team, i) => {
-                      const pos = windowStart + i + 1
-                      const isSelected = team.rosterId === selectedTeam.rosterId
-                      return (
-                        <div
-                          key={team.rosterId}
-                          className={`flex items-center gap-2 rounded px-2 py-0.5 ${
-                            isSelected ? 'bg-yellow-400/10 border border-yellow-400/30' : ''
-                          }`}
-                        >
-                          <span
-                            className={`text-xs font-mono font-bold w-5 tabular-nums ${isSelected ? 'text-yellow-400' : 'text-slate-500'}`}
-                          >
-                            #{pos}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={`text-[9px] px-1 py-0 font-mono border ${GRADE_COLORS[team.grade as keyof typeof GRADE_COLORS] ?? 'text-slate-400 border-slate-600'}`}
-                          >
-                            {team.grade}
-                          </Badge>
-                          <span
-                            className={`text-xs truncate flex-1 ${isSelected ? 'text-yellow-400 font-semibold' : 'text-slate-400'}`}
-                          >
-                            {team.teamName}
-                          </span>
-                          {isSelected && (
-                            <TrendingUp className="h-3 w-3 text-yellow-400 flex-shrink-0" />
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Divider */}
-                  <div className="w-px h-14 bg-slate-700 flex-shrink-0" />
-
-                  {/* Grade */}
-                  <div className="flex-shrink-0 text-center min-w-[48px]">
-                    <div
-                      className={`text-3xl font-black font-mono ${
-                        GRADE_COLORS[selectedTeam.grade as keyof typeof GRADE_COLORS]?.split(
-                          ' '
-                        )[1] ?? 'text-slate-300'
-                      }`}
-                    >
-                      {selectedTeam.grade}
-                    </div>
-                    <div className="text-slate-500 text-[10px] font-mono mt-0.5">grade</div>
-                  </div>
-                </div>
-              </div>
-            )
-          })()
-        ) : userMatchup ? (
-          <div className="bg-slate-700/30 rounded-lg p-3">
-            <div className="text-center mb-2">
-              <div className="text-slate-500 font-mono text-xs mb-1">WEEK {currentWeek}</div>
-              <div
-                className={`text-sm font-bold ${isWinning ? 'text-green-400' : isTied ? 'text-slate-300' : 'text-red-400'}`}
-              >
-                {isWinning ? 'WINNING' : isTied ? 'TIED' : 'LOSING'}
-                {userMatchup.actualPoints > 0 && (
-                  <span className="ml-2">by {Math.abs(pointDiff).toFixed(1)}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              {/* Your Team */}
-              <div className="flex flex-col items-center space-y-1 flex-1">
-                <UserAvatar
-                  avatarId={selectedTeam.ownerAvatar}
-                  displayName={selectedTeam.ownerName}
-                  username={selectedTeam.ownerUsername}
-                  size={40}
-                  className="ring-2 ring-yellow-400/50 flex-shrink-0"
-                />
-                <div className="text-center">
-                  <div className="text-slate-400 text-xs font-mono mb-1">YOU</div>
-                  <div className="text-xl font-bold text-slate-100 font-mono">
-                    {userMatchup.actualPoints > 0 ? userMatchup.actualPoints.toFixed(1) : '0'}
-                  </div>
-                </div>
-              </div>
-
-              {/* VS */}
-              <div className="text-slate-600 font-mono text-sm px-2 flex-shrink-0">VS</div>
-
-              {/* Opponent Team */}
-              <div className="flex flex-col items-center space-y-1 flex-1">
-                <UserAvatar
-                  avatarId={userMatchup.opponentAvatar}
-                  displayName={userMatchup.opponentDisplayName || userMatchup.opponentTeamName}
-                  username={userMatchup.opponentUsername || userMatchup.opponentTeamName}
-                  size={40}
-                  className="ring-2 ring-blue-400/50 flex-shrink-0"
-                />
-                <div className="text-center">
-                  <div className="text-slate-400 text-xs font-mono mb-1 truncate">
-                    {userMatchup.opponentTeamName.toUpperCase()}
-                  </div>
-                  <div className="text-xl font-bold text-slate-100 font-mono">
-                    {userMatchup.opponentActualPoints > 0
-                      ? userMatchup.opponentActualPoints.toFixed(1)
-                      : '0'}
-                  </div>
+      {isOffSeason() ? (
+        <OffSeasonStanding sortedTeams={sortedTeams} selectedTeam={selectedTeam} />
+      ) : userMatchup ? (
+        <div className="rounded-xl border border-line/60 bg-surface/40 p-4">
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <span className="text-sm text-slate-400">Week {currentWeek}</span>
+            <span
+              className={cn(
+                'text-sm font-semibold',
+                isWinning ? 'text-positive' : isTied ? 'text-slate-300' : 'text-negative'
+              )}
+            >
+              {isWinning ? 'Winning' : isTied ? 'Tied' : 'Losing'}
+              {userMatchup.actualPoints > 0 && ` by ${Math.abs(pointDiff).toFixed(1)}`}
+            </span>
+          </div>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <UserAvatar
+                avatarId={selectedTeam.ownerAvatar}
+                displayName={selectedTeam.ownerName}
+                username={selectedTeam.ownerUsername}
+                size={36}
+              />
+              <div className="min-w-0">
+                <div className="truncate text-xs text-slate-400">You</div>
+                <div className="text-xl font-semibold tabular-nums text-white">
+                  {userMatchup.actualPoints.toFixed(1)}
                 </div>
               </div>
             </div>
+            <span className="text-xs text-slate-500">vs</span>
+            <div className="flex min-w-0 items-center justify-end gap-2 text-right">
+              <div className="min-w-0">
+                <div className="truncate text-xs text-slate-400">
+                  {userMatchup.opponentTeamName}
+                </div>
+                <div className="text-xl font-semibold tabular-nums text-white">
+                  {userMatchup.opponentActualPoints.toFixed(1)}
+                </div>
+              </div>
+              <UserAvatar
+                avatarId={userMatchup.opponentAvatar}
+                displayName={userMatchup.opponentDisplayName || userMatchup.opponentTeamName}
+                username={userMatchup.opponentUsername || userMatchup.opponentTeamName}
+                size={36}
+              />
+            </div>
           </div>
-        ) : (
-          <div className="text-center py-4">
-            <Target className="h-6 w-6 text-slate-500 mx-auto mb-2" />
-            <p className="text-slate-400 text-sm">No matchup for Week {currentWeek}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-line/60 px-4 py-3 text-sm text-slate-400">
+          <Target className="size-4" aria-hidden />
+          No matchup for week {currentWeek}
+        </div>
+      )}
+    </section>
   )
 }

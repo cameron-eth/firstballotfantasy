@@ -36,33 +36,27 @@ export function PositionStrengthRadar({ data }: PositionStrengthRadarProps) {
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data}>
           <PolarGrid stroke="#ffffff18" />
-          <PolarAngleAxis
-            dataKey="position"
-            tick={{ fill: '#94a3b8', fontSize: 11, fontFamily: 'monospace' }}
-          />
+          <PolarAngleAxis dataKey="position" tick={{ fill: '#94a3b8', fontSize: 11 }} />
           <PolarRadiusAxis type="number" domain={[0, 100]} tick={false} axisLine={false} />
           {/* Recharts' entry animation never settles under React 19 here, leaving the
               polygons collapsed at the center — draw them at their final size instead. */}
           <Radar
             name="Starters"
             dataKey="starters"
-            stroke="#3b82f6"
-            fill="#3b82f6"
+            stroke="#60a5fa"
+            fill="#60a5fa"
             fillOpacity={0.45}
             isAnimationActive={false}
           />
           <Radar
             name="Bench"
             dataKey="bench"
-            stroke="#fbbf24"
-            fill="#fbbf24"
+            stroke="#94a3b8"
+            fill="#94a3b8"
             fillOpacity={0.2}
             isAnimationActive={false}
           />
-          <Legend
-            wrapperStyle={{ fontSize: 11, fontFamily: 'monospace', color: '#94a3b8' }}
-            iconSize={8}
-          />
+          <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} iconSize={8} />
           <Tooltip
             contentStyle={{
               backgroundColor: '#0f172a',
@@ -70,7 +64,7 @@ export function PositionStrengthRadar({ data }: PositionStrengthRadarProps) {
               borderRadius: 8,
               fontSize: 12,
             }}
-            labelStyle={{ color: '#fbbf24', fontFamily: 'monospace' }}
+            labelStyle={{ color: '#f8fafc' }}
             formatter={(value, name) => [`${Number(value ?? 0)}/100`, String(name)]}
           />
         </RadarChart>

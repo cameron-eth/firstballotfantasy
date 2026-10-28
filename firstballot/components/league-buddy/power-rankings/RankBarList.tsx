@@ -38,20 +38,18 @@ export function RankBarList({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between px-1 pb-2 border-b border-slate-700">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400">
-          {labelHeader}
-        </span>
-        <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400">Rank</span>
+        <span className="text-xs text-slate-400">{labelHeader}</span>
+        <span className="text-xs text-slate-400">Rank</span>
       </div>
 
       {rows.map((row) => {
         const tone = toneForRank(row.rank, leagueSize)
         return (
           <div key={row.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
-            <div className={row.sublabel ? "w-full flex items-baseline gap-2" : "w-14 shrink-0"}>
-              <div className="text-xs font-mono font-bold text-slate-200">{row.label}</div>
+            <div className={row.sublabel ? 'w-full flex items-baseline gap-2' : 'w-14 shrink-0'}>
+              <div className="text-xs font-semibold text-slate-200">{row.label}</div>
               {row.sublabel && (
-                <div className="text-[10px] text-slate-400 break-words" title={row.sublabel}>
+                <div className="text-2xs text-slate-400 break-words" title={row.sublabel}>
                   {row.sublabel}
                 </div>
               )}
@@ -64,7 +62,7 @@ export function RankBarList({
               />
             </div>
 
-            <span className={`w-10 text-right text-xs font-mono font-bold ${tone.text}`}>
+            <span className={`w-10 text-right text-xs font-semibold tabular-nums ${tone.text}`}>
               {ordinal(row.rank)}
             </span>
           </div>

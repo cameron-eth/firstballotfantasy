@@ -34,7 +34,7 @@ export function DraftBoardControls({
   }, [hasChanges])
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex w-full items-center gap-2 sm:w-auto">
       {/* Save Button */}
       <Button
         size="sm"
@@ -49,7 +49,7 @@ export function DraftBoardControls({
                 ? 'Save changes'
                 : 'Save board'
         }
-        className={`h-9 min-h-9 gap-2 px-3 text-[11px] transition-all ${
+        className={`h-9 min-h-9 flex-1 gap-2 px-3 text-[11px] transition-all sm:flex-none ${
           saveSuccess
             ? 'bg-green-600 hover:bg-green-700'
             : hasChanges

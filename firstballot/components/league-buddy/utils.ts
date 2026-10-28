@@ -372,3 +372,10 @@ export const buildActivityFeed = (
     })),
   }))
 }
+
+/** League table order: win percentage (ties count half), then points for. */
+export function recordOrder(teams: TeamData[]): TeamData[] {
+  const pct = (t: TeamData) =>
+    (t.wins + (t.ties ?? 0) / 2) / Math.max(1, t.wins + t.losses + (t.ties ?? 0))
+  return [...teams].sort((a, b) => pct(b) - pct(a) || b.pointsFor - a.pointsFor)
+}

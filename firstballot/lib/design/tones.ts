@@ -34,6 +34,14 @@ export const STICKY_HOVER = 'group-hover:bg-[color-mix(in_srgb,white_3%,hsl(var(
 export const gradeTone = (grade: string): TierTone =>
   /^A/.test(grade) ? 'elite' : /^B/.test(grade) ? 'good' : /^[DF]/.test(grade) ? 'bad' : 'neutral'
 
+/** Text color for a rank on the one league scale. */
+export const RANK_TEXT: Record<TierTone, string> = {
+  elite: 'text-elite',
+  good: 'text-positive',
+  neutral: 'text-slate-200',
+  bad: 'text-negative',
+}
+
 /** One rank scale for the app: top third good, middle neutral, bottom third bad. */
 export const rankTone = (rank: number, of: number): TierTone =>
   rank <= Math.ceil(of / 3) ? 'good' : rank > of - Math.ceil(of / 3) ? 'bad' : 'neutral'

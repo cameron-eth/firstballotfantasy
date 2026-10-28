@@ -19,12 +19,15 @@ import type {
   OverviewActions,
   TeamData,
 } from './league-buddy/types'
-import { calculateLeaguePositionRankings } from './league-buddy/utils'
+import { calculateLeaguePositionRankings, recordOrder } from './league-buddy/utils'
 import { resolveLeagueSection } from './league-buddy/navigation'
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { RosterSection } from './league-buddy/RosterSection'
 import { LeagueStandingsSection } from './league-buddy/LeagueStandingsSection'
 import { PicksSection } from './league-buddy/PicksSection'
+import { DraftCapitalSummary } from './league-buddy/overview/DraftCapitalSummary'
+import { CompetitiveStateMap } from './league-buddy/CompetitiveStateMap'
+import { usePickCapital } from './league-buddy/usePickCapital'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
 import { DashboardLayout } from './league-buddy/DashboardLayout'
@@ -124,18 +127,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const handleTradeMarketClick = useCallback(() => {
     router.push(`/trade-market?leagueId=${leagueId}`)
   }, [router, leagueId])
-
-  const handleScoutingPortalClick = useCallback(() => {
-    router.push(`/scouting-portal?leagueId=${leagueId}`)
-  }, [router, leagueId])
-
-  const handleDraftBuddyClick = useCallback(() => {
-    router.push(`/scouting-portal?tab=draftboard&leagueId=${leagueId}`)
-  }, [router, leagueId])
-
-  const handlePlayoffOddsClick = useCallback(() => {
-    changeSection('league')
-  }, [changeSection])
 
   const { rankings: powerRankings, scores: powerScores } = usePowerRankings(
     teams,
@@ -248,6 +239,13 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     [maxPointsFor, projection, weeksCounted, draftOrderSeason, draftOrderLoading]
   )
 
+  const isDynasty = leagueOverview?.isDynasty === true
+  const pickCapital = usePickCapital(leagueId, teams, selectedTeam?.rosterId, draftOrder, isDynasty)
+  const standing = selectedTeam
+    ? recordOrder(teams).findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+    : 0
+  const coreAge = selectedTeam ? leaguePlacements.placements[selectedTeam.rosterId]?.avgAge : 0
+
   const overviewRankings = useMemo<OverviewRankings>(
     () => ({
       placements: leaguePlacements,
@@ -255,26 +253,26 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       powerScores,
       draftOrder,
       weekProjections,
+      superflex: powerRankings.superflex,
     }),
-    [leaguePlacements, leaguePositionRankings, powerScores, draftOrder, weekProjections]
+    [
+      leaguePlacements,
+      leaguePositionRankings,
+      powerScores,
+      draftOrder,
+      weekProjections,
+      powerRankings.superflex,
+    ]
   )
 
   const overviewActions = useMemo<OverviewActions>(
     () => ({
-      onTradeMarketClick: handleTradeMarketClick,
-      onScoutingPortalClick: handleScoutingPortalClick,
-      onDraftBuddyClick: handleDraftBuddyClick,
-      onPlayoffOddsClick: handlePlayoffOddsClick,
-      onPicksClick: leagueOverview?.isDynasty ? () => changeSection('picks') : undefined,
+      openSection: changeSection,
+      openTradeMarket: handleTradeMarketClick,
+      desktopBuilder,
+      isDynasty,
     }),
-    [
-      handleDraftBuddyClick,
-      handlePlayoffOddsClick,
-      handleScoutingPortalClick,
-      handleTradeMarketClick,
-      leagueOverview?.isDynasty,
-      changeSection,
-    ]
+    [changeSection, handleTradeMarketClick, desktopBuilder, isDynasty]
   )
 
   if (loading) {
@@ -344,51 +342,38 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       onSectionChange={changeSection}
       team={selectedTeam}
       currentWeek={currentWeek}
-      isDynasty={leagueOverview?.isDynasty === true}
-      leagueId={leagueId}
+      isDynasty={isDynasty}
+      meta={
+        <>
+          {standing > 0 && (
+            <span className="tabular-nums">
+              #{standing} of {teams.length}
+            </span>
+          )}
+          {coreAge ? <span className="tabular-nums">Core age {coreAge.toFixed(1)}</span> : null}
+        </>
+      }
+      aside={
+        isDynasty && !pickCapital.error ? (
+          <DraftCapitalSummary
+            years={pickCapital.years}
+            loading={pickCapital.isLoading}
+            onOpen={() => changeSection('picks')}
+          />
+        ) : null
+      }
     >
       {/* OVERVIEW SECTION */}
       {activeSection === 'overview' && selectedTeam && leagueOverview && (
-        <>
-          <div className="mb-4">
-            <LeagueActivityBanner
-              transactions={leagueTransactions}
-              teams={teams}
-              allPlayers={allPlayers}
-            />
-          </div>
-
-          <OverviewHeader
-            selectedTeam={selectedTeam}
-            sortedTeams={sortedTeams}
-            currentMatchups={currentMatchups}
-            currentWeek={currentWeek}
-            teams={teams}
-            actions={overviewActions}
-            rankings={overviewRankings}
-          />
-
-          <div className="mt-6">
-            <PowerRankingsView
-              rankings={powerRankings}
-              selectedTeam={selectedTeam}
-              leagueSize={teams.length}
-            />
-          </div>
-
-          {/* Trade Intelligence — Sell High / Hold / Buy Low */}
-          <div className="mt-6">
-            <SectionHeader
-              title="Trade intelligence"
-              subtitle="Sell high, hold or buy low, from today's KTC moves"
-              className="mb-0"
-            />
-            <TradeIntelligencePanel
-              players={selectedTeam.players}
-              leaguePlayerPool={teams.flatMap((t) => t.players)}
-            />
-          </div>
-        </>
+        <OverviewHeader
+          selectedTeam={selectedTeam}
+          teams={teams}
+          leagueId={leagueId}
+          currentMatchups={currentMatchups}
+          currentWeek={currentWeek}
+          actions={overviewActions}
+          rankings={overviewRankings}
+        />
       )}
 
       {activeSection === 'builder' && !desktopBuilder && (
@@ -430,6 +415,21 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
         />
       )}
 
+      {/* Market signals on your own players: sell high, hold, buy low from today's KTC moves. */}
+      {activeSection === 'roster' && selectedTeam && (
+        <div className="mt-8">
+          <SectionHeader
+            title="Market signals"
+            subtitle="Sell high, hold or buy low, from today's KTC moves"
+            className="mb-0"
+          />
+          <TradeIntelligencePanel
+            players={selectedTeam.players}
+            leaguePlayerPool={teams.flatMap((t) => t.players)}
+          />
+        </div>
+      )}
+
       {activeSection === 'picks' &&
         selectedTeam &&
         (leagueOverview?.isDynasty ? (
@@ -454,6 +454,30 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           isDynasty={leagueOverview?.isDynasty === true}
           draftOrder={draftOrder}
         />
+      )}
+
+      {/* League context: how every franchise is built, and what just happened. */}
+      {activeSection === 'league' && selectedTeam && (
+        <div className="mt-8 space-y-8">
+          {leaguePlacements.placements[selectedTeam.rosterId] && (
+            <CompetitiveStateMap
+              placements={leaguePlacements}
+              teams={teams}
+              selectedRosterId={selectedTeam.rosterId}
+              powerScores={powerScores}
+            />
+          )}
+          <PowerRankingsView
+            rankings={powerRankings}
+            selectedTeam={selectedTeam}
+            leagueSize={teams.length}
+          />
+          <LeagueActivityBanner
+            transactions={leagueTransactions}
+            teams={teams}
+            allPlayers={allPlayers}
+          />
+        </div>
       )}
 
       {/* AUDIT SECTION */}

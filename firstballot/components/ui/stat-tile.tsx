@@ -10,25 +10,30 @@ export function StatTile({
   value,
   detail,
   valueClassName,
+  size = 'md',
   className,
 }: {
   label: ReactNode
   value: ReactNode
   detail?: ReactNode
   valueClassName?: string
+  /** `lg` is the dashboard metric row: the same recipe with a larger number. */
+  size?: 'md' | 'lg'
   className?: string
 }) {
   return (
     <div
       className={cn(
-        'min-w-0 rounded-lg border border-line/60 bg-surface/40 px-3 py-2.5',
+        'min-w-0 rounded-lg border border-line/60 bg-surface/40',
+        size === 'lg' ? 'px-4 py-3' : 'px-3 py-2.5',
         className
       )}
     >
       <div className="truncate text-xs text-slate-400">{label}</div>
       <div
         className={cn(
-          'mt-1 truncate text-base font-semibold tabular-nums text-white',
+          'mt-1 truncate font-semibold tabular-nums text-white',
+          size === 'lg' ? 'text-2xl' : 'text-base',
           valueClassName
         )}
       >

@@ -298,7 +298,7 @@ export function TeamBuilder({
         </button>
       )}
       <fieldset disabled={busy} className="space-y-3 min-w-0">
-        <div className="overflow-hidden rounded-lg border border-white/10">
+        <div className="relative overflow-hidden rounded-lg border border-white/10">
           <div className="border-b border-white/10 bg-slate-950/90 px-5 py-2">
             <BuilderTeamSummary
               compact
@@ -428,55 +428,55 @@ export function TeamBuilder({
               </div>
             )}
           </div>
+          <AnimatePresence>
+            {pickFocus && !focus && !reviewOffer && (
+              <PickPanel
+                key={pickFocus.id}
+                pick={pickFocus}
+                team={team}
+                teams={teams}
+                leagueId={leagueId}
+                slots={timeline.slots}
+                scenario={scenario}
+                prospects={prospects}
+                onAssign={assignProspect}
+                onUnassign={unassignPick}
+                onReview={setReviewOffer}
+                onClose={() => setPickFocus(null)}
+              />
+            )}
+            {focus && !reviewOffer && (
+              <PlanningSuggestions
+                key={
+                  focus.kind === 'player'
+                    ? focus.player.playerId
+                    : focus.kind === 'players'
+                      ? focus.players.map((p) => p.playerId).join('+')
+                      : focus.target.id
+                }
+                focus={focus}
+                team={team}
+                teams={teams}
+                leagueId={leagueId}
+                slots={timeline.slots}
+                rawSlots={rosterPositions}
+                scenario={scenario}
+                onClose={() => setFocus(null)}
+                onReview={setReviewOffer}
+                onSimulate={(plan) => {
+                  update({
+                    fundingPlans: [
+                      ...(scenario.fundingPlans ?? []).filter((f) => f.targetId !== plan.targetId),
+                      plan,
+                    ],
+                  })
+                  setFocus(null)
+                }}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </fieldset>
-      <AnimatePresence>
-        {pickFocus && !focus && !reviewOffer && (
-          <PickPanel
-            key={pickFocus.id}
-            pick={pickFocus}
-            team={team}
-            teams={teams}
-            leagueId={leagueId}
-            slots={timeline.slots}
-            scenario={scenario}
-            prospects={prospects}
-            onAssign={assignProspect}
-            onUnassign={unassignPick}
-            onReview={setReviewOffer}
-            onClose={() => setPickFocus(null)}
-          />
-        )}
-        {focus && !reviewOffer && (
-          <PlanningSuggestions
-            key={
-              focus.kind === 'player'
-                ? focus.player.playerId
-                : focus.kind === 'players'
-                  ? focus.players.map((p) => p.playerId).join('+')
-                  : focus.target.id
-            }
-            focus={focus}
-            team={team}
-            teams={teams}
-            leagueId={leagueId}
-            slots={timeline.slots}
-            rawSlots={rosterPositions}
-            scenario={scenario}
-            onClose={() => setFocus(null)}
-            onReview={setReviewOffer}
-            onSimulate={(plan) => {
-              update({
-                fundingPlans: [
-                  ...(scenario.fundingPlans ?? []).filter((f) => f.targetId !== plan.targetId),
-                  plan,
-                ],
-              })
-              setFocus(null)
-            }}
-          />
-        )}
-      </AnimatePresence>
       {reviewOffer && (
         <PlayerTradeModal
           key={JSON.stringify(reviewOffer)}

@@ -13,7 +13,7 @@ import { useAuth } from '@/lib/auth'
 import { tradeOpportunities } from '@/lib/sleeper-sdk/trade-opportunities'
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import type { PlayerData, TeamData } from '../types'
-import { TradeAssetList, emptySide, pickLabel, type OfferSide } from './TradeAssetList'
+import { TradeAssetList, emptySide, pickAssetLabel, type OfferSide } from './TradeAssetList'
 import { OfferComparison } from './OfferComparison'
 const button =
   'rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-40'
@@ -97,7 +97,7 @@ export function PlayerTradeModal({
     (p) =>
       p.owner_id !== team.rosterId &&
       teams.some((t) => t.rosterId === p.owner_id) &&
-      `${pickLabel(p, teams)} ${teams.find((t) => t.rosterId === p.owner_id)?.teamName}`
+      `${pickAssetLabel(p, teams)} ${teams.find((t) => t.rosterId === p.owner_id)?.teamName}`
         .toLowerCase()
         .includes(query.toLowerCase())
   )
@@ -274,7 +274,9 @@ export function PlayerTradeModal({
                             setReceive({ ...emptySide(), picks: [p.id] })
                           }}
                         >
-                          <strong className="block text-purple-200">{pickLabel(p, teams)}</strong>
+                          <strong className="block text-purple-200">
+                            {pickAssetLabel(p, teams)}
+                          </strong>
                           <span className="text-xs text-slate-400">
                             Held by {teams.find((t) => t.rosterId === p.owner_id)?.teamName} · slot
                             undetermined

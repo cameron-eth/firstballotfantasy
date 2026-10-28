@@ -7,6 +7,7 @@
  */
 import type { TeamData } from '../types'
 import { compareStandings, winPct } from '@/lib/league-metrics/standings'
+import { slotLabel } from '@/lib/picks-overview'
 import type { MaxPointsForEntry } from './maxPointsFor'
 
 export type DraftOrderMetric = 'record' | 'maxpf' | 'projected'
@@ -56,8 +57,8 @@ export interface DraftOrderRow {
   raceShare: number
 }
 
-export function pickLabel(pick: number): string {
-  return `1.${String(pick).padStart(2, '0')}`
+export function firstRoundLabel(pick: number): string {
+  return slotLabel(1, pick)
 }
 
 interface Scored {
@@ -136,7 +137,7 @@ export function buildDraftOrder(
 
     return {
       pick,
-      label: pickLabel(pick),
+      label: firstRoundLabel(pick),
       rosterId: s.team.rosterId,
       teamName: s.team.teamName,
       wins: s.team.wins,
@@ -147,7 +148,7 @@ export function buildDraftOrder(
       maxPointsFor: s.maxPointsFor,
       projectedMaxPointsFor: s.projectedMaxPointsFor,
       altPick,
-      altLabel: pickLabel(altPick),
+      altLabel: firstRoundLabel(altPick),
       gapToTop,
       raceShare: spread > 0 ? 1 - (valueOf(s) - top) / spread : 0,
     }

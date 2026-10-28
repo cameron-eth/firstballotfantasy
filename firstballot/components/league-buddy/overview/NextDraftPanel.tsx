@@ -1,6 +1,7 @@
 'use client'
 import { ArrowRight } from 'lucide-react'
 import { pickLabel } from '@/lib/picks-overview'
+import { BASIS_PHRASE } from '@/lib/league-metrics/draft-slots'
 import { Button } from '@/components/ui/button'
 import { SectionHeader } from '@/components/ui/section-header'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,7 +23,7 @@ export function NextDraftPanel({
   draftOrder: PickCapitalDraftOrder
   onOpen: () => void
 }) {
-  const { years, slotsFor, hasProjection, isLoading, error } = usePickCapital(
+  const { years, slotsFor, slotBasis, isLoading, error } = usePickCapital(
     leagueId,
     teams,
     team.rosterId,
@@ -36,7 +37,7 @@ export function NextDraftPanel({
     <section aria-label="Next draft picks" className="min-w-0">
       <SectionHeader
         title={next ? `${next.season} draft picks` : 'Draft picks'}
-        subtitle={hasProjection ? 'Slots by projected order' : 'Slots by record'}
+        subtitle={`Slots by ${BASIS_PHRASE[slotBasis]}`}
         actions={
           <Button variant="tint" size="xs" onClick={onOpen}>
             All picks

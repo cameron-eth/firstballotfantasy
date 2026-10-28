@@ -1,4 +1,6 @@
 'use client'
+import { slotLabel } from '@/lib/picks-overview'
+import { BASIS_PHRASE, type DraftSlotBasis } from '@/lib/league-metrics/draft-slots'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import { AppTooltip } from '@/components/ui/app-tooltip'
 import { projectedPick, type FundingPlan } from '@/lib/draft-funding'
@@ -10,6 +12,7 @@ export function DraftCapitalRail({
   year,
   teams,
   slots,
+  slotBasis,
   fits,
   targets,
   plans,
@@ -27,6 +30,8 @@ export function DraftCapitalRail({
   year: number
   teams: TeamData[]
   slots: Record<number, number>
+  /** How the slots were decided (lib/league-metrics/draft-slots). */
+  slotBasis: DraftSlotBasis
   fits: CapitalFit[]
   targets: Target[]
   plans: FundingPlan[]
@@ -57,7 +62,7 @@ export function DraftCapitalRail({
             const via = teams.find((t) => t.rosterId === p.roster_id)?.teamName ?? 'original team'
             const pinned = targets.find((t) => t.id === assignments[p.id])
             const label = slots[p.roster_id]
-              ? `${p.round}.${String(slots[p.roster_id]).padStart(2, '0')}`
+              ? slotLabel(p.round, slots[p.roster_id])
               : `R${p.round}`
             return (
               <AppTooltip
@@ -69,7 +74,9 @@ export function DraftCapitalRail({
                     </p>
                     <p>
                       Via {via}
-                      {projectedPick(p, slots, teams.length) ? ' · projected order' : ''}
+                      {projectedPick(p, slots, teams.length)
+                        ? ` · slot by ${BASIS_PHRASE[slotBasis]}`
+                        : ''}
                     </p>
                     <p className="text-slate-500">
                       Class rank is a cost proxy, not ADP; no pick guarantees a player.
@@ -151,9 +158,7 @@ export function DraftCapitalRail({
                 className={`rounded-lg border px-3 py-2 ${planned ? 'border-dashed border-amber-400/40' : 'border-violet-400/30'} text-sm`}
               >
                 <p className="font-semibold text-violet-200">
-                  {slots[p.roster_id]
-                    ? `${p.round}.${String(slots[p.roster_id]).padStart(2, '0')}`
-                    : `Round ${p.round}`}{' '}
+                  {slots[p.roster_id] ? slotLabel(p.round, slots[p.roster_id]) : `Round ${p.round}`}{' '}
                   · {planned ? 'Trade assumed' : 'Owned'}
                 </p>
                 <p className="mt-1 text-slate-400">

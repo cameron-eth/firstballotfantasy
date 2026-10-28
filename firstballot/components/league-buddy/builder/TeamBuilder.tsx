@@ -313,6 +313,7 @@ export function TeamBuilder({
                 year={timeline.horizon}
                 teams={teams}
                 slots={timeline.slots}
+                slotBasis={timeline.slotBasis}
                 fits={timeline.fits}
                 targets={scenario.targets}
                 plans={scenario.fundingPlans ?? []}
@@ -431,6 +432,7 @@ export function TeamBuilder({
                 teams={teams}
                 leagueId={leagueId}
                 slots={timeline.slots}
+                slotBasis={timeline.slotBasis}
                 scenario={scenario}
                 prospects={prospects}
                 onAssign={assignProspect}

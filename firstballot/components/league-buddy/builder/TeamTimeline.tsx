@@ -6,13 +6,9 @@ import { assessDraftCapital, scenarioAtYear, type CapitalFit } from '@/lib/team-
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import type { Prospect } from '@/components/scouting/types'
 import type { TeamData } from '../types'
-import { buildDraftOrder } from '../draft-order/draftOrderBoard'
-import type { MaxPointsForEntry } from '../draft-order/maxPointsFor'
-export interface TimelineDraftOrder {
-  maxPointsFor: Record<number, MaxPointsForEntry>
-  projectedMaxPointsFor: Record<number, number>
+import { draftSlots, type DraftSlotInputs } from '@/lib/league-metrics/draft-slots'
+export interface TimelineDraftOrder extends DraftSlotInputs {
   season: string
-  loading: boolean
 }
 export function useTeamTimeline({
   enabled,
@@ -41,24 +37,11 @@ export function useTeamTimeline({
       return r.json()
     }
   )
-  const complete =
-    !!draftOrder &&
-    !draftOrder.loading &&
-    teams.length > 1 &&
-    teams.every(
-      (t) =>
-        Number.isFinite(draftOrder.projectedMaxPointsFor[t.rosterId]) &&
-        draftOrder.projectedMaxPointsFor[t.rosterId] > 0
-    )
-  const rows = complete
-    ? buildDraftOrder(
-        teams,
-        draftOrder!.maxPointsFor,
-        draftOrder!.projectedMaxPointsFor,
-        'projected'
-      )
-    : []
-  const slots = Object.fromEntries(rows.map((r) => [r.rosterId, r.pick]))
+  // The league's draft-slot policy, the same slots the Overview and Picks tab show.
+  const draft = draftOrder ? draftSlots(teams, draftOrder) : null
+  const complete = !!draft?.ready
+  const slots = draft?.slotByRoster ?? {}
+  const slotBasis = draft?.basis ?? 'record'
   const plans = (scenario?.fundingPlans ?? []).filter(
     (f) =>
       scenario?.targets.some((t) => t.id === f.targetId) &&
@@ -97,6 +80,7 @@ export function useTeamTimeline({
     picks,
     fits,
     slots,
+    slotBasis,
     complete,
     loading: isLoading || draftOrder?.loading,
     error,

@@ -26,12 +26,15 @@ import {
   type DraftOrderMetric,
   type DraftOrderRow,
 } from './draftOrderBoard'
+import { basisReady, defaultDraftSlotBasis } from '@/lib/league-metrics/draft-slots'
 
 interface DraftOrderPanelProps {
   teams: TeamData[]
   maxPointsFor: Record<number, MaxPointsForEntry>
   /** rosterId → projected season-end Max PF. */
   projectedMaxPointsFor: Record<number, number>
+  /** rosterId → projected lineup points per remaining week (0 without projections). */
+  projectedPerWeek: Record<number, number>
   /** Regular-season weeks that have been scored; 0 means Max PF has no data yet. */
   weeksCounted: number
   /** Regular-season weeks still to play. */
@@ -39,6 +42,7 @@ interface DraftOrderPanelProps {
   /** The season these totals cover, shown so the board can't be read as last year's. */
   season: string
   loading: boolean
+  /** Opens on this basis instead of the league's default (lib/league-metrics/draft-slots). */
   initialMetric?: DraftOrderMetric
   selectedRosterId: number
 }
@@ -103,10 +107,22 @@ export function DraftOrderPanel({
   remainingWeeks,
   season,
   loading,
-  initialMetric = 'record',
+  projectedPerWeek,
+  initialMetric,
   selectedRosterId,
 }: DraftOrderPanelProps) {
-  const [metric, setMetric] = useState<DraftOrderMetric>(initialMetric)
+  const inputs = {
+    maxPointsFor,
+    projectedMaxPointsFor,
+    projectedPerWeek,
+    weeksCounted,
+    remainingWeeks,
+    loading,
+  }
+  // Until the viewer picks a basis the board follows the league default, so it shows the
+  // same slots as the capital cards above it.
+  const [chosen, setMetric] = useState<DraftOrderMetric | undefined>(initialMetric)
+  const metric = chosen ?? defaultDraftSlotBasis(teams, inputs)
 
   const rows = useMemo(
     () => buildDraftOrder(teams, maxPointsFor, projectedMaxPointsFor, metric),
@@ -115,8 +131,8 @@ export function DraftOrderPanel({
 
   // Max PF needs at least one scored week to mean anything; until then every team
   // sits at zero and the board would be an arbitrary shuffle presented as a race.
-  const maxPfReady = weeksCounted > 0
-  const projectedReady = Object.keys(projectedMaxPointsFor).length > 0
+  const maxPfReady = basisReady('maxpf', teams, inputs)
+  const projectedReady = basisReady('projected', teams, inputs)
   const unready =
     !loading && ((metric === 'maxpf' && !maxPfReady) || (metric === 'projected' && !projectedReady))
 

@@ -60,5 +60,10 @@ export function leagueCapital(picks: OwnedPick[], rosterIds: number[]): RosterCa
  */
 export function pickLabel(pick: OwnedPick, slotByRoster: Record<number, number>): string {
   const slot = slotByRoster[pick.roster_id]
-  return slot ? `${pick.round}.${String(slot).padStart(2, '0')}` : `${pick.season} R${pick.round}`
+  return slot ? slotLabel(pick.round, slot) : `${pick.season} R${pick.round}`
+}
+
+/** '1.03': round, then the slot padded to two digits. */
+export function slotLabel(round: number, slot: number): string {
+  return `${round}.${String(slot).padStart(2, '0')}`
 }

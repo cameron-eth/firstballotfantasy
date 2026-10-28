@@ -1,4 +1,6 @@
 'use client'
+import { slotLabel } from '@/lib/picks-overview'
+import { BASIS_PHRASE, type DraftSlotBasis } from '@/lib/league-metrics/draft-slots'
 import { useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -9,7 +11,7 @@ import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import { pickBenchmark, projectedPick, type PickQuote } from '@/lib/draft-funding'
 import { valueOpportunities } from '@/lib/sleeper-sdk/trade-opportunities'
-import { pickLabel } from '../trades/TradeAssetList'
+import { pickAssetLabel } from '../trades/TradeAssetList'
 import type { PlanningOffer } from './PlanningSuggestions'
 
 const fetcher = async (url: string) => {
@@ -24,6 +26,7 @@ export function PickPanel({
   teams,
   leagueId,
   slots,
+  slotBasis,
   scenario,
   prospects,
   onAssign,
@@ -36,6 +39,8 @@ export function PickPanel({
   teams: TeamData[]
   leagueId: string
   slots: Record<number, number>
+  /** How the slots were decided (lib/league-metrics/draft-slots). */
+  slotBasis: DraftSlotBasis
   scenario: Scenario
   prospects: Prospect[]
   onAssign: (prospect: Prospect, pick: OwnedPick) => void
@@ -52,7 +57,7 @@ export function PickPanel({
   )
   const { data: values } = useSWR<{ data: PickQuote[] }>('/api/ktc-values', fetcher)
   const label = slots[pick.roster_id]
-    ? `${pick.round}.${String(slots[pick.roster_id]).padStart(2, '0')}`
+    ? slotLabel(pick.round, slots[pick.roster_id])
     : `Round ${pick.round}`
   const assignedId = scenario.pickAssignments?.[pick.id]
   const assigned = scenario.targets.find((t) => t.id === assignedId)
@@ -102,8 +107,10 @@ export function PickPanel({
           </p>
           <h3 className="mt-1 font-semibold text-white">Pick {label}</h3>
           <p className="text-xs text-slate-400">
-            {pickLabel(pick, teams)}
-            {projectedPick(pick, slots, teams.length) ? ' · projected order' : ''}
+            {pickAssetLabel(pick, teams)}
+            {projectedPick(pick, slots, teams.length)
+              ? ` · slot by ${BASIS_PHRASE[slotBasis]}`
+              : ''}
           </p>
         </div>
         <button

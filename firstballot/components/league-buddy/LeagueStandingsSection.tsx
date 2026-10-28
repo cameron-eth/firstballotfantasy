@@ -1,8 +1,8 @@
 'use client'
 import { useMemo, useState } from 'react'
 import type { TeamData } from './types'
-import { buildDraftOrder, formatRecord } from './draft-order/draftOrderBoard'
-import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
+import { formatRecord } from './draft-order/draftOrderBoard'
+import { draftSlots, type DraftSlotInputs } from '@/lib/league-metrics/draft-slots'
 import { useStandingsOdds } from './useStandingsOdds'
 import { recordOrder } from './utils'
 import { cn } from '@/lib/utils'
@@ -33,46 +33,18 @@ export function LeagueStandingsSection({
   onTeamSelect: (team: TeamData) => void
   leagueId: string
   isDynasty: boolean
-  draftOrder: {
-    maxPointsFor: Record<number, MaxPointsForEntry>
-    projectedMaxPointsFor: Record<number, number>
-    loading: boolean
-    weeksCounted: number
-    season: string
-  }
+  draftOrder: DraftSlotInputs & { season: string }
 }) {
   const [sort, setSort] = useState<'record' | 'maxpf' | 'projected' | 'odds'>('record')
   const { data, error, retry, odds } = useStandingsOdds(leagueId, teams)
-  const complete =
-    !draftOrder.loading &&
-    draftOrder.weeksCounted > 0 &&
-    teams.every((t) => draftOrder.maxPointsFor[t.rosterId])
-  const projectedComplete =
-    complete &&
-    teams.every(
-      (t) =>
-        Number.isFinite(draftOrder.projectedMaxPointsFor[t.rosterId]) &&
-        draftOrder.projectedMaxPointsFor[t.rosterId] > 0
-    )
-  const draft = useMemo(
-    () =>
-      complete
-        ? buildDraftOrder(teams, draftOrder.maxPointsFor, draftOrder.projectedMaxPointsFor, 'maxpf')
-        : [],
-    [teams, draftOrder, complete]
+  // Each column names its basis; readiness comes from the shared draft-slot policy.
+  const maxPf = useMemo(() => draftSlots(teams, draftOrder, 'maxpf'), [teams, draftOrder])
+  const projectedSlots = useMemo(
+    () => draftSlots(teams, draftOrder, 'projected'),
+    [teams, draftOrder]
   )
-  const projected = useMemo(
-    () =>
-      projectedComplete
-        ? buildDraftOrder(
-            teams,
-            draftOrder.maxPointsFor,
-            draftOrder.projectedMaxPointsFor,
-            'projected'
-          )
-        : [],
-    [teams, draftOrder, projectedComplete]
-  )
+  const draft = maxPf.rows
+  const projected = projectedSlots.rows
   const record = recordOrder(teams)
   const probability = (id: number) => odds.find((o) => o.rosterId === id)?.playoffProbability
   const rows = [...record].sort((a, b) =>

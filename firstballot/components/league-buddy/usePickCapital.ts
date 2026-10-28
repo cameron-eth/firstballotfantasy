@@ -4,14 +4,9 @@ import useSWR from 'swr'
 import { picksByYear } from '@/lib/picks-overview'
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import type { TeamData } from './types'
-import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
-import { buildDraftOrder } from './draft-order/draftOrderBoard'
+import { draftSlots, type DraftSlotInputs } from '@/lib/league-metrics/draft-slots'
 
-export interface PickCapitalDraftOrder {
-  maxPointsFor: Record<number, MaxPointsForEntry>
-  projectedMaxPointsFor: Record<number, number>
-  loading: boolean
-}
+export type PickCapitalDraftOrder = DraftSlotInputs
 
 const fetchInventory = async (url: string): Promise<TradeInventory> => {
   const r = await fetch(url)
@@ -22,7 +17,7 @@ const fetchInventory = async (url: string): Promise<TradeInventory> => {
 /**
  * One team's draft capital from the league pick inventory, shared by the dashboard header,
  * the Overview picks panel and the Picks tab (SWR dedupes the request across them).
- * Slots for the next draft follow the projected order, or the record order until it loads.
+ * Slots for the next draft follow the league's draft-slot policy (lib/league-metrics/draft-slots).
  */
 export function usePickCapital(
   leagueId: string,
@@ -36,17 +31,12 @@ export function usePickCapital(
     fetchInventory
   )
   const picks = useMemo(() => data?.picks ?? [], [data])
-  const hasProjection = !!draftOrder && Object.keys(draftOrder.projectedMaxPointsFor).length > 0
-  const slotByRoster = useMemo<Record<number, number>>(() => {
-    if (!draftOrder || draftOrder.loading) return {}
-    const rows = buildDraftOrder(
-      teams,
-      draftOrder.maxPointsFor,
-      draftOrder.projectedMaxPointsFor,
-      hasProjection ? 'projected' : 'record'
-    )
-    return Object.fromEntries(rows.map((r) => [r.rosterId, r.pick]))
-  }, [teams, draftOrder, hasProjection])
+  const slots = useMemo(
+    () => (draftOrder ? draftSlots(teams, draftOrder) : null),
+    [teams, draftOrder]
+  )
+  const slotByRoster = useMemo(() => slots?.slotByRoster ?? {}, [slots])
+  const slotBasis = slots?.basis ?? 'record'
   const years = useMemo(
     () => (rosterId == null ? [] : picksByYear(picks, rosterId)),
     [picks, rosterId]
@@ -59,7 +49,8 @@ export function usePickCapital(
     slotByRoster,
     /** Slot labels only apply to the next draft; later years read "2028 R1". */
     slotsFor: (season: string) => (season === nextSeason ? slotByRoster : {}),
-    hasProjection,
+    /** The basis the slots were decided on, for the label beside them. */
+    slotBasis,
     error,
     isLoading,
     retry: () => mutate(),

@@ -4,8 +4,8 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { MatchupData, OverviewActions, TeamData } from './types'
 import type { LeaguePlacements } from './competitiveState'
-import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
-import { buildDraftOrder } from './draft-order/draftOrderBoard'
+import { BASIS_PHRASE, draftSlots, type DraftSlotInputs } from '@/lib/league-metrics/draft-slots'
+import { firstRoundLabel } from './draft-order/draftOrderBoard'
 import { UserAvatar } from '@/components/user-avatar'
 import { useStandingsOdds } from './useStandingsOdds'
 import { recordOrder } from './utils'
@@ -73,14 +73,8 @@ export interface OverviewRankings {
 }
 
 /** Season Max Points For, the input to the anti-tanking draft-order board. */
-export interface OverviewDraftOrder {
-  maxPointsFor: Record<number, MaxPointsForEntry>
-  /** rosterId → projected season-end Max PF. */
-  projectedMaxPointsFor: Record<number, number>
-  weeksCounted: number
-  remainingWeeks: number
+export interface OverviewDraftOrder extends DraftSlotInputs {
   season: string
-  loading: boolean
 }
 
 interface OverviewHeaderProps {
@@ -122,14 +116,11 @@ export function OverviewHeader({
   const projectedRank =
     projectedThisWeek > 0 ? teams.filter((t) => projected(t) > projectedThisWeek).length + 1 : 0
 
-  const maxPfSlot = useMemo(() => {
-    if (draftOrder.loading || draftOrder.weeksCounted === 0) return undefined
-    return buildDraftOrder(
-      teams,
-      draftOrder.maxPointsFor,
-      draftOrder.projectedMaxPointsFor,
-      'maxpf'
-    ).find((r) => r.rosterId === selectedTeam.rosterId)?.label
+  // The league's draft-slot policy, so this tile matches the Picks cards and board.
+  const draftSlot = useMemo(() => {
+    const slots = draftSlots(teams, draftOrder)
+    const slot = slots.slotByRoster[selectedTeam.rosterId]
+    return slot ? { label: firstRoundLabel(slot), basis: BASIS_PHRASE[slots.basis] } : undefined
   }, [teams, draftOrder, selectedTeam])
 
   const matchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
@@ -152,7 +143,7 @@ export function OverviewHeader({
             projectedThisWeek,
             projectedRank,
             maxPointsFor: draftOrder.maxPointsFor[selectedTeam.rosterId]?.maxPointsFor,
-            maxPfSlot: actions.isDynasty ? maxPfSlot : undefined,
+            draftSlot: actions.isDynasty ? draftSlot : undefined,
           }}
         />
         {matchup && <LiveMatchup team={selectedTeam} matchup={matchup} week={currentWeek} />}

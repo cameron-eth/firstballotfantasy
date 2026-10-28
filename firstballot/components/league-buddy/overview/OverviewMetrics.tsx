@@ -16,8 +16,8 @@ export interface OverviewMetricValues {
   /** Rank of this week's starter projection; 0 when nothing is projected. */
   projectedRank: number
   maxPointsFor?: number
-  /** Draft slot by Max PF, e.g. '1.01'; dynasty leagues only. */
-  maxPfSlot?: string
+  /** Next draft slot under the league's slot policy, e.g. '1.01'; dynasty leagues only. */
+  draftSlot?: { label: string; basis: string }
 }
 
 const signed = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(1)}`
@@ -74,9 +74,9 @@ export function OverviewMetrics({ m }: { m: OverviewMetricValues }) {
         label="Max PF"
         value={m.maxPointsFor ? m.maxPointsFor.toFixed(1) : '—'}
         detail={
-          m.maxPfSlot ? (
-            <span className={cn(m.maxPfSlot === '1.01' ? 'text-pick' : '')}>
-              Slot {m.maxPfSlot} by Max PF
+          m.draftSlot ? (
+            <span className={cn(m.draftSlot.label === '1.01' ? 'text-pick' : '')}>
+              Slot {m.draftSlot.label} by {m.draftSlot.basis}
             </span>
           ) : (
             'Best possible lineups'

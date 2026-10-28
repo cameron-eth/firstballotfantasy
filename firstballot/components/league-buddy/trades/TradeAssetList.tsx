@@ -1,4 +1,5 @@
 'use client'
+import { pickLabel } from '@/lib/picks-overview'
 import type { PlayerData, TeamData } from '../types'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 export interface OfferSide {
@@ -61,7 +62,7 @@ export function TradeAssetList({
                 checked={side.picks.includes(p.id)}
                 onChange={() => toggle('picks', p.id)}
               />
-              <span>{pickLabel(p, teams)}</span>
+              <span>{pickAssetLabel(p, teams)}</span>
             </label>
           ))}
       </div>
@@ -83,8 +84,13 @@ export function TradeAssetList({
     </fieldset>
   )
 }
-export function pickLabel(pick: OwnedPick, teams: TeamData[]) {
-  return `${pick.season} R${pick.round} · ${teams.find((t) => t.rosterId === pick.roster_id)?.teamName ?? `Roster ${pick.roster_id}`} original`
+/** A pick as a trade asset: the slot label (lib/picks-overview) plus its original team. */
+export function pickAssetLabel(
+  pick: OwnedPick,
+  teams: TeamData[],
+  slotByRoster: Record<number, number> = {}
+) {
+  return `${pickLabel(pick, slotByRoster)} · ${teams.find((t) => t.rosterId === pick.roster_id)?.teamName ?? `Roster ${pick.roster_id}`} original`
 }
 export function sideSummary(
   side: OfferSide,
@@ -97,7 +103,7 @@ export function sideSummary(
       ...side.players.map((id) => players.find((p) => p.playerId === id)?.playerName ?? id),
       ...side.picks.map((id) => {
         const p = picks.find((p) => p.id === id)
-        return p ? pickLabel(p, teams) : 'Unavailable pick'
+        return p ? pickAssetLabel(p, teams) : 'Unavailable pick'
       }),
       ...(side.faab ? [`${side.faab} FAAB`] : []),
     ].join(', ') || 'Nothing selected'

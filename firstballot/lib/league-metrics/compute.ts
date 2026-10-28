@@ -13,8 +13,8 @@ import {
   fetchLeagueDataBundle,
   ktcNamesFor,
   withTeamScores,
-} from '@/components/league-buddy/useLeagueData'
-import { fetchDraftOrderBundle } from '@/components/league-buddy/draft-order/useDraftOrder'
+} from '@/components/league-buddy/leagueDataBundle'
+import { fetchDraftOrderBundle } from '@/components/league-buddy/draft-order/draftOrderBundle'
 import { fetchStandingsSettings } from '@/components/league-buddy/standingsSettings'
 import { projectLeagueMaxPointsFor } from '@/components/league-buddy/draft-order/projectedMaxPointsFor'
 import {

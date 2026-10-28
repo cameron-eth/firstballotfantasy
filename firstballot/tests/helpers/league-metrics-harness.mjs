@@ -2,7 +2,7 @@
 // returns every lineage metric (docs/data-architecture/DATA_INVENTORY.md §2) as plain JSON.
 // No metric is re-implemented here: the league metrics come from lib/league-metrics/compute,
 // the same module /api/league/[id]/metrics runs on the server (PR-15).
-import { clearPlayersMemo } from '../../components/league-buddy/useLeagueData.ts'
+import { clearPlayersMemo } from '../../components/league-buddy/leagueDataBundle.ts'
 import { clearPlayoffOddsCache } from '../../components/league-buddy/utils/playoffOdds.ts'
 import { leagueMetrics, loadLeagueInputs } from '../../lib/league-metrics/compute.ts'
 import { suggestedTeamTrades } from '../../lib/sleeper-sdk/trade-opportunities.ts'

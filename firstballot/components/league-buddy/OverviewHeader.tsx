@@ -1,7 +1,6 @@
 'use client'
 import { useLeagueFormat } from '@/hooks/use-league-format'
 
-import { useState } from 'react'
 import { Target, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { StatTile } from '@/components/ui/stat-tile'
@@ -13,7 +12,6 @@ import type { MatchupData, OverviewActions, TeamData } from './types'
 import { isOffSeason, offSeasonCountdown } from '@/lib/season-utils'
 import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
 import { CompetitiveStateMap } from './CompetitiveStateMap'
-import { DraftOrderPanel } from './draft-order/DraftOrderPanel'
 import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
 import { GradeBadge } from './ui/Badge'
 
@@ -146,7 +144,6 @@ export function OverviewHeader({
   rankings,
 }: OverviewHeaderProps) {
   const { showScouting } = useLeagueFormat()
-  const [showDraftOrder, setShowDraftOrder] = useState(false)
   const userMatchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const pointDiff = userMatchup ? userMatchup.actualPoints - userMatchup.opponentActualPoints : 0
   const isWinning = pointDiff > 0
@@ -294,28 +291,12 @@ export function OverviewHeader({
             {a.label}
           </Button>
         ))}
-        <Button
-          variant={showDraftOrder ? 'tint' : 'subtle'}
-          size="xs"
-          onClick={() => setShowDraftOrder((open) => !open)}
-          aria-expanded={showDraftOrder}
-        >
-          Draft order
-        </Button>
+        {actions.onPicksClick && (
+          <Button variant="subtle" size="xs" onClick={actions.onPicksClick}>
+            Picks
+          </Button>
+        )}
       </div>
-
-      {showDraftOrder && (
-        <DraftOrderPanel
-          teams={teams}
-          maxPointsFor={rankings.draftOrder.maxPointsFor}
-          projectedMaxPointsFor={rankings.draftOrder.projectedMaxPointsFor}
-          weeksCounted={rankings.draftOrder.weeksCounted}
-          remainingWeeks={rankings.draftOrder.remainingWeeks}
-          season={rankings.draftOrder.season}
-          loading={rankings.draftOrder.loading}
-          selectedRosterId={selectedTeam.rosterId}
-        />
-      )}
 
       {selectedPlacement && (
         <CompetitiveStateMap

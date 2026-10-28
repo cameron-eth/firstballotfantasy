@@ -1,7 +1,20 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Gavel, Crown, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { SELECTED_ROW } from '@/lib/design/tones'
+import { SectionHeader } from '@/components/ui/section-header'
+import { SegmentedControl } from '@/components/ui/segmented-control'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { PickChip } from '../ui/PickChip'
 import type { TeamData } from '../types'
 import type { MaxPointsForEntry } from './maxPointsFor'
 import {
@@ -13,8 +26,6 @@ import {
   type DraftOrderMetric,
   type DraftOrderRow,
 } from './draftOrderBoard'
-
-const ACCENT = '#fbbf24' // yellow-400, the app's draft-capital accent
 
 interface DraftOrderPanelProps {
   teams: TeamData[]
@@ -117,183 +128,137 @@ export function DraftOrderPanel({
   const noGamesDecided = rows.every((row) => row.wins + row.losses + row.ties === 0)
 
   return (
-    <div
-      className="rounded-lg px-4 py-3 border bg-slate-900/40"
-      style={{ borderColor: `${ACCENT}40` }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <Gavel className="h-3 w-3" style={{ color: ACCENT }} />
-        <span className="text-slate-400 text-[10px] font-mono uppercase tracking-wider">
-          Draft Order
-        </span>
-        <span className="text-slate-600 text-[10px]">· race to the 1.01</span>
-
-        <div className="ml-auto flex items-center gap-0.5 rounded-md bg-slate-800/60 p-0.5 border border-slate-700/50">
-          {METRICS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setMetric(option)}
-              className={`rounded px-1.5 py-0.5 text-[9px] font-mono uppercase transition-colors ${
-                metric === option
-                  ? 'bg-slate-700 text-slate-100'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {METRIC_LABELS[option]}
-            </button>
-          ))}
-        </div>
-      </div>
+    <section aria-label="Draft order">
+      <SectionHeader
+        title="Draft order"
+        subtitle={
+          leader && !loading && !unready
+            ? mine?.pick === 1
+              ? 'You hold the 1.01'
+              : mine
+                ? `You pick ${mine.label}, ${formatGap(mine, metric)} from the 1.01 (${leader.teamName})`
+                : `${leader.teamName} holds the 1.01`
+            : 'Race to the 1.01'
+        }
+        actions={
+          <SegmentedControl
+            label="Draft order basis"
+            value={metric}
+            onChange={setMetric}
+            options={METRICS.map((m) => ({ value: m, label: METRIC_LABELS[m] }))}
+          />
+        }
+      />
 
       {loading ? (
-        <div className="flex items-center gap-2 py-6 justify-center text-slate-500 text-xs font-mono">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-line/60 py-8 text-sm text-slate-400">
+          <Loader2 className="size-4 animate-spin" aria-hidden />
           Scoring every lineup…
         </div>
       ) : unready ? (
-        <div className="py-6 text-center text-slate-500 text-xs">
+        <div className="rounded-xl border border-dashed border-line/60 py-8 text-center text-sm text-slate-400">
           {metric === 'maxpf'
             ? 'Max PF unlocks once Week 1 scores post.'
             : 'Projections are still loading.'}
         </div>
       ) : (
         <>
-          {/* ── Who holds the pick, and where you sit ── */}
-          {leader && (
-            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-slate-800/40 px-3 py-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Crown className="h-3 w-3 flex-shrink-0" style={{ color: ACCENT }} />
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                  1.01
-                </span>
-                <span className="text-xs font-semibold text-slate-100 truncate">
-                  {leader.teamName}
-                </span>
-              </div>
-              {mine && (
-                <div className="text-[11px] text-slate-400 ml-auto">
-                  {mine.pick === 1 ? (
-                    <span style={{ color: ACCENT }}>You hold the 1.01</span>
-                  ) : (
-                    <>
-                      You pick{' '}
-                      <span className="font-mono font-semibold text-slate-200">{mine.label}</span>
-                      <span className="text-slate-600"> · </span>
-                      <span className="font-mono">{formatGap(mine, metric)}</span>
-                      <span className="text-slate-600"> from the 1.01</span>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
           {metric === 'record' && noGamesDecided && (
-            <p className="mb-2 text-[10px] text-slate-500">
-              No games decided yet — this order is the points-scored tiebreak.
+            <p className="mb-2 text-xs text-slate-400">
+              No games decided yet, so this order is the points-scored tiebreak.
             </p>
           )}
-
-          {/* ── Full board ── */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-[34px_1fr_auto_auto_auto] gap-2 px-2 text-[9px] font-mono uppercase text-slate-500">
-              <span>Pick</span>
-              <span>Team</span>
-              {columns.map((column) => (
-                <span key={column.label} className="text-right">
-                  {column.label}
-                </span>
-              ))}
-            </div>
-
-            <div className="divide-y divide-slate-800">
+          <Table region="Draft order board" containerClassName="rounded-xl border border-line/60">
+            <TableHeader className="[&_tr]:border-line/60">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-10 w-20 px-3 text-xs text-slate-400">Pick</TableHead>
+                <TableHead className="h-10 px-3 text-xs text-slate-400">Team</TableHead>
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.label}
+                    numeric
+                    className={cn(
+                      'h-10 whitespace-nowrap px-3 text-xs',
+                      column.emphasis ? 'text-white' : 'text-slate-400'
+                    )}
+                  >
+                    {column.label}
+                  </TableHead>
+                ))}
+                <TableHead className="hidden h-10 w-40 px-3 text-xs text-slate-400 md:table-cell">
+                  Race
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row) => {
                 const isMine = row.rosterId === selectedRosterId
                 const holdsPick = row.pick === 1
                 // A three-slot move between the two orderings is the interesting
                 // signal: it means the two measures disagree about this team.
                 const swung = Math.abs(row.altPick - row.pick) >= 3
-
                 return (
-                  <div key={row.rosterId} className="relative">
-                    {/* Spotlight the pick itself; every other row stays flat so the race
-                        bar below is the only thing encoding distance. */}
-                    {holdsPick && (
-                      <div
-                        className="absolute inset-0 rounded pointer-events-none"
-                        style={{ backgroundColor: `${ACCENT}14` }}
-                      />
+                  <TableRow
+                    key={row.rosterId}
+                    className={cn(
+                      'border-line/40',
+                      isMine ? SELECTED_ROW : 'hover:bg-white/[0.03]'
                     )}
-                    {/* Race bar: how close this team is to the 1.01 under the active metric.
-                        Full width = holds the pick. Kept to a hairline at the bottom edge —
-                        as a full-height fill it read as a background glitch behind the text. */}
-                    <div
-                      className="absolute bottom-0 left-0 h-[2px] rounded-full pointer-events-none"
-                      style={{
-                        width: `${Math.max(0, Math.min(1, row.raceShare)) * 100}%`,
-                        backgroundColor: holdsPick ? ACCENT : `${ACCENT}4d`,
-                      }}
-                    />
-                    <div
-                      className={`relative grid grid-cols-[34px_1fr_auto_auto_auto] items-center gap-2 rounded px-2 py-1.5 ${
-                        isMine ? 'bg-slate-800/60' : ''
-                      }`}
-                      style={isMine ? { boxShadow: `inset 0 0 0 1px ${ACCENT}66` } : undefined}
-                    >
+                  >
+                    <TableCell className="px-3 py-2">
+                      <PickChip label={row.label} />
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
                       <span
-                        className="text-[10px] font-mono tabular-nums"
-                        style={{ color: holdsPick ? ACCENT : undefined }}
+                        className={cn(
+                          'block truncate text-sm',
+                          isMine ? 'font-semibold text-white' : 'text-slate-200'
+                        )}
                       >
-                        <span className={holdsPick ? 'font-bold' : 'text-slate-500'}>
-                          {row.label}
-                        </span>
+                        {row.teamName}
                       </span>
-
-                      <div className="min-w-0 flex items-center gap-1.5">
-                        <span
-                          className={`text-xs truncate ${
-                            isMine ? 'font-semibold text-slate-100' : 'text-slate-400'
-                          }`}
+                      <span className="block text-2xs tabular-nums text-slate-500">
+                        {holdsPick ? 'Holds the pick' : formatGap(row, metric)}
+                      </span>
+                    </TableCell>
+                    {columns.map((column, index) => {
+                      const isComparison = index === columns.length - 1
+                      return (
+                        <TableCell
+                          key={column.label}
+                          numeric
+                          className={cn(
+                            'whitespace-nowrap px-3 py-2 text-sm',
+                            column.emphasis
+                              ? 'font-semibold text-white'
+                              : isComparison && swung
+                                ? 'font-semibold text-warning'
+                                : 'text-slate-400'
+                          )}
                         >
-                          {row.teamName}
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-600 flex-shrink-0 hidden sm:inline">
-                          {formatGap(row, metric)}
-                        </span>
-                      </div>
-
-                      {columns.map((column, index) => {
-                        const isComparison = index === columns.length - 1
-                        const emphasised = column.emphasis
-                        return (
-                          <span
-                            key={column.label}
-                            className={`text-[10px] font-mono tabular-nums text-right ${
-                              isComparison ? 'w-9' : 'w-14'
-                            } ${
-                              emphasised
-                                ? 'text-slate-200 font-semibold'
-                                : isComparison && swung
-                                  ? ''
-                                  : isComparison
-                                    ? 'text-slate-600'
-                                    : 'text-slate-500'
-                            }`}
-                            style={isComparison && swung ? { color: ACCENT } : undefined}
-                          >
-                            {column.render(row)}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </div>
+                          {column.render(row)}
+                        </TableCell>
+                      )
+                    })}
+                    <TableCell className="hidden px-3 py-2 md:table-cell">
+                      {/* How close this team is to the 1.01 under the active metric. */}
+                      <span className="block h-1.5 w-full overflow-hidden rounded-full bg-line/60">
+                        <span
+                          className={cn(
+                            'block h-full rounded-full',
+                            holdsPick ? 'bg-pick' : 'bg-pick/40'
+                          )}
+                          style={{ width: `${Math.max(0, Math.min(1, row.raceShare)) * 100}%` }}
+                        />
+                      </span>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </div>
-          </div>
+            </TableBody>
+          </Table>
 
-          <p className="mt-3 text-[10px] leading-relaxed text-slate-600">
+          <p className="mt-2 text-2xs text-slate-500">
             {metric === 'projected' ? (
               <>
                 Season-end Max PF: what&apos;s already banked plus {remainingWeeks} projected{' '}
@@ -304,9 +269,9 @@ export function DraftOrderPanel({
             ) : (
               <>
                 Max PF is what each roster <em>would</em> have scored starting its best lineup every
-                week — benching your starters doesn&apos;t move it. The{' '}
-                <span className="font-mono">By {METRIC_LABELS[alternateMetric(metric)]}</span>{' '}
-                column is where each team would pick under the other rule.
+                week, so benching your starters doesn&apos;t move it. The &ldquo;By{' '}
+                {METRIC_LABELS[alternateMetric(metric)]}&rdquo; column is where each team would pick
+                under the other rule; orange marks a swing of three slots or more.
                 {maxPfReady && (
                   <>
                     {' '}
@@ -319,6 +284,6 @@ export function DraftOrderPanel({
           </p>
         </>
       )}
-    </div>
+    </section>
   )
 }

@@ -8,11 +8,15 @@ test('league deep links open the requested workspace section', () => {
   assert.equal(resolveLeagueSection('roster'), 'roster')
   assert.equal(resolveLeagueSection('league'), 'league')
   assert.equal(resolveLeagueSection('matchup'), 'league')
+  assert.equal(resolveLeagueSection('picks'), 'picks')
   assert.equal(resolveLeagueSection(null), 'builder')
 })
 
 test('quick links retain their tab when league context is added', () => {
-  assert.equal(withLeagueId('/scouting-portal?tab=draftboard', '123'), '/scouting-portal?tab=draftboard&leagueId=123')
+  assert.equal(
+    withLeagueId('/scouting-portal?tab=draftboard', '123'),
+    '/scouting-portal?tab=draftboard&leagueId=123'
+  )
   assert.equal(withLeagueId('/scouting-portal', null), '/scouting-portal')
 })
 

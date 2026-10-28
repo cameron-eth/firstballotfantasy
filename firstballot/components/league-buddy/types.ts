@@ -10,7 +10,7 @@ export interface LeagueBuddyProps {
   onLeagueChange?: (leagueId: string) => void
 }
 
-export type LeagueSection = 'overview' | 'roster' | 'league' | 'builder'
+export type LeagueSection = 'overview' | 'roster' | 'league' | 'picks' | 'builder'
 
 export interface PlayerRankingSummary {
   rank: number
@@ -28,6 +28,8 @@ export interface OverviewActions {
   onScoutingPortalClick: () => void
   onDraftBuddyClick: () => void
   onPlayoffOddsClick?: () => void
+  /** Opens the Picks tab; dynasty leagues only. */
+  onPicksClick?: () => void
 }
 
 export interface SleeperTransaction {

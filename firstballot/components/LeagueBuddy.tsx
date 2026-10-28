@@ -24,6 +24,7 @@ import { resolveLeagueSection } from './league-buddy/navigation'
 import { calculateLeaguePlacements } from './league-buddy/competitiveState'
 import { RosterSection } from './league-buddy/RosterSection'
 import { LeagueStandingsSection } from './league-buddy/LeagueStandingsSection'
+import { PicksSection } from './league-buddy/PicksSection'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
 import { DashboardLayout } from './league-buddy/DashboardLayout'
@@ -264,12 +265,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       onScoutingPortalClick: handleScoutingPortalClick,
       onDraftBuddyClick: handleDraftBuddyClick,
       onPlayoffOddsClick: handlePlayoffOddsClick,
+      onPicksClick: leagueOverview?.isDynasty ? () => changeSection('picks') : undefined,
     }),
     [
       handleDraftBuddyClick,
       handlePlayoffOddsClick,
       handleScoutingPortalClick,
       handleTradeMarketClick,
+      leagueOverview?.isDynasty,
+      changeSection,
     ]
   )
 
@@ -425,6 +429,21 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           projections={rosterProjections}
         />
       )}
+
+      {activeSection === 'picks' &&
+        selectedTeam &&
+        (leagueOverview?.isDynasty ? (
+          <PicksSection
+            teams={teams}
+            selectedTeam={selectedTeam}
+            leagueId={leagueId}
+            draftOrder={draftOrder}
+          />
+        ) : (
+          <p className="rounded-xl border border-dashed border-line/60 px-4 py-6 text-sm text-slate-400">
+            Picks are tracked for dynasty leagues. This league redrafts every season.
+          </p>
+        ))}
 
       {activeSection === 'league' && selectedTeam && (
         <LeagueStandingsSection

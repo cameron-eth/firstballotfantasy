@@ -1,6 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
 import { tradeSignals } from '@/lib/trade-signals'
+import { isOffSeason } from '@/lib/season-utils'
 import { ktcValue, resolveLeagueContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from '../types'
 import type { Scenario, Target } from '@/lib/team-scenarios'
@@ -84,7 +85,7 @@ export function LineupMap({
   const signalById = useMemo(
     () =>
       new Map(
-        tradeSignals(team, teams, rawSlots)
+        tradeSignals(team, teams, rawSlots, !isOffSeason())
           .slice(0, 5)
           .map((s) => [s.playerId, s])
       ),

@@ -86,8 +86,13 @@ function profile(team: TeamData, rawSlots: string[]) {
  * Who on `mine` is worth shopping, and the chain of facts behind each answer.
  * Pure: the same rosters and standings always give the same signals.
  */
-export function tradeSignals(mine: TeamData, teams: TeamData[], rawSlots: string[]): TradeSignal[] {
-  const inSeason = teams.some((t) => t.wins + t.losses > 0)
+export function tradeSignals(
+  mine: TeamData,
+  teams: TeamData[],
+  rawSlots: string[],
+  /** Pass the dashboard's own rule (`!isOffSeason()`) so franchise states match the header. */
+  inSeason: boolean
+): TradeSignal[] {
   const { placements } = calculateLeaguePlacements(
     teams,
     inSeason,

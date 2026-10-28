@@ -116,14 +116,14 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-xl border border-line/60 bg-surface/40 shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-semibold text-white">Positional ranks</CardTitle>
+            <CardTitle className="text-sm font-semibold text-white">Lineup by position</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <RankBarList
               rows={positionalRows}
               leagueSize={leagueSize}
               labelHeader="Pos"
-              emptyMessage="Select a team to see its positional ranks"
+              emptyMessage="Select a team to see its lineup by position"
             />
           </CardContent>
         </Card>

@@ -162,7 +162,7 @@ export async function computeLeagueMetrics(leagueId) {
         partner: s.team.rosterId,
         reason: s.reason,
       })),
-      tradeSignals: tradeSignals(viewer, teams, slots).map((s) => ({
+      tradeSignals: tradeSignals(viewer, teams, slots, true).map((s) => ({
         player: s.playerId,
         kind: s.kind,
         headline: s.headline,

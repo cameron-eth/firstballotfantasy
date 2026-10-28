@@ -72,7 +72,7 @@ test('older productive player on a non-competing team is flagged with buyers', (
     player('QB', 1, 90), player('RB', 1, 85), player('RB', 1, 84), player('WR', 1, 88), player('WR', 1, 87), player('TE', 1, 83), player('WR', 1, 82, 25),
   ])
   const needy = team(3, 11, 3, [player('QB', 1, 90), player('RB', 8, 5), player('RB', 8, 4), player('WR', 1, 88), player('WR', 1, 87), player('TE', 1, 83), player('WR', 1, 82)])
-  const out = tradeSignals(mine, [mine, strong(2, 10), needy, strong(4, 9), team(5, 3, 11, [player('QB', 6, 30, 22), player('RB', 6, 30, 22), player('WR', 6, 30, 22)])], slots)
+  const out = tradeSignals(mine, [mine, strong(2, 10), needy, strong(4, 9), team(5, 3, 11, [player('QB', 6, 30, 22), player('RB', 6, 30, 22), player('WR', 6, 30, 22)])], slots, true)
   const signal = out.find((s) => s.playerId === old.playerId)
   assert.ok(signal, 'aging back is flagged')
   assert.equal(signal.kind, 'aging')
@@ -84,7 +84,7 @@ test('a contender is not told to dump its older starters', () => {
   const old = player('RB', 2, 74, 30)
   const mine = team(1, 11, 2, [player('QB', 1, 90), old, player('RB', 1, 85), player('WR', 1, 88), player('WR', 1, 87), player('TE', 1, 83), player('WR', 1, 82)])
   const weak = (id) => team(id, 3, 10, [player('QB', 6, 30, 22), player('RB', 6, 30, 22), player('WR', 6, 30, 22), player('TE', 6, 30, 22)])
-  const out = tradeSignals(mine, [mine, weak(2), weak(3), weak(4)], slots)
+  const out = tradeSignals(mine, [mine, weak(2), weak(3), weak(4)], slots, true)
   assert.equal(out.some((s) => s.kind === 'aging'), false)
 })
 
@@ -93,11 +93,11 @@ test('benched starter-quality depth is surplus only when a partner fits both sid
   const mine = team(1, 6, 6, [player('QB', 4, 55), player('RB', 4, 52), player('RB', 8, 5), player('WR', 2, 75), player('WR', 2, 74), player('WR', 3, 64), spare, player('TE', 4, 52)])
   const fits = team(2, 6, 6, [player('QB', 4, 55), player('RB', 4, 52), player('RB', 4, 52), player('RB', 3, 63), player('RB', 3, 62), player('WR', 8, 5), player('WR', 8, 4), player('TE', 4, 52)])
   const nofit = team(3, 6, 6, [player('QB', 4, 55), player('RB', 4, 52), player('RB', 4, 51), player('WR', 2, 75), player('WR', 2, 74), player('TE', 4, 52)])
-  const matched = tradeSignals(mine, [mine, fits, nofit], slots).find((s) => s.playerId === spare.playerId)
+  const matched = tradeSignals(mine, [mine, fits, nofit], slots, true).find((s) => s.playerId === spare.playerId)
   assert.ok(matched)
   assert.equal(matched.kind, 'surplus')
   assert.deepEqual(matched.partners.map((p) => p.teamName), ['Team 2'])
-  assert.equal(tradeSignals(mine, [mine, nofit], slots).some((s) => s.playerId === spare.playerId), false)
+  assert.equal(tradeSignals(mine, [mine, nofit], slots, true).some((s) => s.playerId === spare.playerId), false)
 })
 
 test('tier tag text drops the numeric suffix', () => {

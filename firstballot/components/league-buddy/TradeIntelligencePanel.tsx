@@ -10,12 +10,18 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { PlayerData } from './types'
 import { calculatePositionalMedians, calculatePERatio, type PositionalMedians } from './utils'
 import { ktcHistoryValue, ktcValue, type LeagueContext } from '@/lib/sleeper-sdk'
+import type { TradeSignal } from '@/lib/trade-signals'
 
 interface TradeIntelligencePanelProps {
   players: PlayerData[]
   /** All rostered players league-wide, used to compute positional P/E medians. Falls back to `players` (within-team only) if omitted. */
   leaguePlayerPool?: PlayerData[]
   leagueContext: LeagueContext
+  /**
+   * The roster-fit signals the Builder shows ("Consider trading"), by player. They answer a
+   * different question from the market signal, so both are shown with their reasons.
+   */
+  rosterSignals: Map<string, TradeSignal>
 }
 
 function getDynastyWindow(
@@ -128,7 +134,15 @@ function classifyPlayer(
   }
 }
 
-function PlayerRow({ classified, ctx }: { classified: ClassifiedPlayer; ctx: LeagueContext }) {
+function PlayerRow({
+  classified,
+  ctx,
+  rosterSignal,
+}: {
+  classified: ClassifiedPlayer
+  ctx: LeagueContext
+  rosterSignal?: TradeSignal
+}) {
   const { player, dailyDelta, reason } = classified
   return (
     <PlayerTradingCard
@@ -166,6 +180,20 @@ function PlayerRow({ classified, ctx }: { classified: ClassifiedPlayer; ctx: Lea
           />
         </div>
       )}
+      {rosterSignal && (
+        <div className="mt-2 border-t border-line/60 pt-2 text-[11px]">
+          <p className="text-slate-300">
+            <span className="text-slate-500">Roster fit · </span>
+            {rosterSignal.headline}
+          </p>
+          {rosterSignal.reasons[0] && <p className="text-slate-500">{rosterSignal.reasons[0]}</p>}
+          {classified.signal === 'buy' && (
+            <p className="text-amber-300">
+              Signals disagree: the market price says buy, your roster says shop him.
+            </p>
+          )}
+        </div>
+      )}
     </PlayerTradingCard>
   )
 }
@@ -174,6 +202,7 @@ export function TradeIntelligencePanel({
   players,
   leaguePlayerPool,
   leagueContext,
+  rosterSignals,
 }: TradeIntelligencePanelProps) {
   const medians = useMemo(
     () => calculatePositionalMedians(leaguePlayerPool ?? players, leagueContext),
@@ -285,7 +314,11 @@ export function TradeIntelligencePanel({
               >
                 {col.players.map((c) => (
                   <div key={c.player.playerId} className="w-60 shrink-0 snap-start">
-                    <PlayerRow classified={c} ctx={leagueContext} />
+                    <PlayerRow
+                      classified={c}
+                      ctx={leagueContext}
+                      rosterSignal={rosterSignals.get(c.player.playerId)}
+                    />
                   </div>
                 ))}
               </div>

@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import useSWR from 'swr'
+import { perGameProjections, weekPoints as weekPointsOf } from './projectedPoints'
 
 export interface ProjectionEntry {
   /** Projected points under the league's own scoring. */
@@ -29,6 +30,10 @@ export interface UseProjectionsResult {
   week: ProjectionMap
   /** Projected points per game — the season total divided by projected games. */
   ppg: (playerId: string) => number
+  /** The same per-game projections as a map, for consumers that need every player. */
+  ppgByPlayer: Record<string, number>
+  /** This week's projected points per player. */
+  weekByPlayer: Record<string, number>
   /** This week's projection for one player. */
   weekly: (playerId: string) => number
   /** False when a league scoring rule pays out but is never projected (K/DEF only). */
@@ -79,14 +84,9 @@ export function useProjections(leagueId: string, week: number): UseProjectionsRe
   const season = seasonData?.points ?? {}
   const weekPoints = weekData?.points ?? {}
 
-  const ppg = useCallback(
-    (playerId: string) => {
-      const entry = season[playerId]
-      if (!entry || !entry.gp) return 0
-      return entry.pts / entry.gp
-    },
-    [season]
-  )
+  const ppgByPlayer = useMemo(() => perGameProjections(season), [season])
+  const weekByPlayer = useMemo(() => weekPointsOf(weekPoints), [weekPoints])
+  const ppg = useCallback((playerId: string) => ppgByPlayer[playerId] ?? 0, [ppgByPlayer])
 
   const weekly = useCallback((playerId: string) => weekPoints[playerId]?.pts ?? 0, [weekPoints])
 
@@ -94,6 +94,8 @@ export function useProjections(leagueId: string, week: number): UseProjectionsRe
     season,
     week: weekPoints,
     ppg,
+    ppgByPlayer,
+    weekByPlayer,
     weekly,
     exact: (seasonData?.exact ?? true) && (weekData?.exact ?? true),
     error: weekError

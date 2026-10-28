@@ -11,6 +11,7 @@ import { computeStartSit } from './projections/startSit'
 import type { ProjectionMap } from './projections/useProjections'
 import { TeamHero } from './TeamHero'
 import { leagueTeamValues } from '@/lib/league-metrics/team-value'
+import { CORE_DEPTH, coreAvgAge } from './competitiveState'
 import { ktcValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import { PlayerFace } from './ui/PlayerFace'
 import {
@@ -115,9 +116,9 @@ export function RosterSection({
         : (a.rank || 999) - (b.rank || 999)
     )
   const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-  const ages = skill.filter((p) => p.age > 0)
   // Quality-weighted team value: stars count more than depth, the deep bench barely counts.
   const teamValue = leagueTeamValues(teams, leagueContext).get(selectedTeam.rosterId)
+  const coreAge = coreAvgAge(selectedTeam, leagueContext)
   const value = teamValue?.value ?? 0
   const valueRank = teamValue?.rank ?? 0
   const productionRank =
@@ -134,8 +135,7 @@ export function RosterSection({
         ? ` ${teamValue.estimated} of your players have no KTC value and are estimated from consensus rank.`
         : ''
     }`,
-    'Average age':
-      'Average known age of quarterbacks, running backs, receivers and tight ends on this roster.',
+    'Core age': `Average known age of your ${CORE_DEPTH} most valuable quarterbacks, running backs, receivers and tight ends: the same core age as the header and Outlook.`,
     'Roster grade':
       'League-relative score: 70% quality-weighted dynasty value, 30% quality-weighted points per game. Stars count more than depth, so a pile of bench players does not raise it. Not a prediction of this week’s score.',
   }
@@ -197,9 +197,9 @@ export function RosterSection({
             : 'text-white',
     },
     {
-      label: 'Average age',
-      help: metricHelp['Average age'],
-      value: ages.length ? (ages.reduce((s, p) => s + p.age, 0) / ages.length).toFixed(1) : '—',
+      label: 'Core age',
+      help: metricHelp['Core age'],
+      value: coreAge > 0 ? coreAge.toFixed(1) : '—',
       detail: undefined,
       accent: 'text-white',
     },

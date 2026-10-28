@@ -21,7 +21,7 @@ import { leagueTeamValues } from '@/lib/league-metrics/team-value'
 import { winPct } from '@/lib/league-metrics/standings'
 
 const CORE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
-const CORE_DEPTH = 12 // top N assets that define a roster's value & age profile
+export const CORE_DEPTH = 12 // top N assets that define a roster's value & age profile
 
 export type CompetitiveStateKey =
   | 'juggernaut'
@@ -156,7 +156,11 @@ function coreAssets(team: TeamData, ctx: LeagueContext): PlayerData[] {
     .slice(0, CORE_DEPTH)
 }
 
-function coreAvgAge(team: TeamData, ctx: LeagueContext): number {
+/**
+ * Core age: mean known age of the team's top core assets by dynasty value; 0 when none is
+ * known. The header, Outlook and My Team all show this one number (G1, inventory #18).
+ */
+export function coreAvgAge(team: TeamData, ctx: LeagueContext): number {
   const aged = coreAssets(team, ctx).filter((p) => (p.age ?? 0) > 0)
   if (aged.length === 0) return 0
   return aged.reduce((sum, p) => sum + p.age, 0) / aged.length

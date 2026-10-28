@@ -41,6 +41,15 @@ if (serverMetrics) {
   clearPlayoffOddsCache()
 }
 const misses = installReplay(fixture)
+// Count every request the dashboard makes, by URL without its cache-busting query.
+const requests = []
+{
+  const replay = globalThis.fetch
+  globalThis.fetch = (input, init) => {
+    requests.push(String(input).replace(/([?&])_v=\d+/, '$1').replace(/[?&]$/, ''))
+    return replay(input, init)
+  }
+}
 if (metricsBody) {
   const replay = globalThis.fetch
   globalThis.fetch = (input, init) =>
@@ -74,6 +83,7 @@ const settle = async (ms = 50, rounds = 40) => {
 }
 await settle()
 const loaded = commits.length
+const loadRequests = requests.length
 
 const measure = async (label, step) => {
   const start = commits.length
@@ -100,6 +110,11 @@ const rows = [
 ]
 console.log(`Node ${process.version} · fixture sf-dynasty · server metrics ${serverMetrics ? 'on' : 'off'} · replay misses ${misses.length}`)
 if (process.env.BENCH_DEBUG) console.log(misses)
+const byUrl = {}
+for (const url of requests.slice(0, loadRequests)) byUrl[url] = (byUrl[url] ?? 0) + 1
+const duplicates = Object.entries(byUrl).filter(([, n]) => n > 1)
+console.log(`initial-load requests: ${loadRequests} (${Object.keys(byUrl).length} distinct)`)
+if (process.env.BENCH_REQUESTS) for (const [url, n] of duplicates.sort((a, b) => b[1] - a[1])) console.log(`  ${n}× ${url.slice(0, 110)}`)
 console.log('| Interaction | Commits | Render ms |')
 console.log('|---|---|---|')
 for (const r of rows) console.log(`| ${r.label} | ${r.commits} | ${r.ms.toFixed(1)} |`)

@@ -5,6 +5,7 @@ import { teamScores } from '@/lib/team-score'
 import { resolveLeagueContext, type LeagueContext } from '@/lib/league-metrics/context'
 import { sleeperPoints } from '@/lib/league-metrics/standings'
 import { sleeperApi } from '@/lib/nextjs-cache'
+import { sleeperLeague, sleeperMatchups, sleeperState } from '@/lib/sleeper-shared'
 import type { KtcMaps } from './ktcMaps'
 import type {
   TeamData,
@@ -166,11 +167,12 @@ export async function fetchLeagueDataBundle(
   // Wave 1: everything that does not depend on the current week.
   const [nflState, rosters, users, allPlayersData, league, rankingsResult, trending] =
     (await Promise.all([
-      fetch('https://api.sleeper.app/v1/state/nfl', fresh).then((r) => r.json()),
+      // State, league and this week's matchups are shared with the other loaders (PR-18).
+      sleeperState().catch(() => null),
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`, fresh).then((r) => r.json()),
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, fresh).then((r) => r.json()),
       getPlayersOnce(),
-      sleeperApi.getLeagueInfo(leagueId),
+      sleeperLeague(leagueId),
       fetch(`${apiBase}/api/dynasty-tiers?${v}`)
         .then((res) => (res.ok ? res.json() : []))
         .catch(() => []),
@@ -185,9 +187,7 @@ export async function fetchLeagueDataBundle(
 
   // Wave 2: week-dependent and roster-dependent requests, all in flight together.
   const [matchups, nflScheduleData, statsResponse, txResults] = (await Promise.all([
-    fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, fresh)
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => []),
+    sleeperMatchups(leagueId, week).catch(() => []),
     fetchWeekSchedule(week),
     allSleeperPlayerIds.length > 0
       ? fetch(`${apiBase}/api/roster-stats?player_ids=${allSleeperPlayerIds.join(',')}&${v}`)

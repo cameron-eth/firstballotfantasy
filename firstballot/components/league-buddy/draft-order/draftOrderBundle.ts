@@ -1,5 +1,6 @@
 // Draft-order inputs without React, so the server metrics route can load them too.
 import { sleeperApi } from '@/lib/nextjs-cache'
+import { sleeperLeague, sleeperMatchups, sleeperState } from '@/lib/sleeper-shared'
 import type { SleeperMatchup } from '../types'
 import { computeMaxPointsFor } from './maxPointsFor'
 import { resolveSeasonWindow, type LeagueInfo, type NflState } from './seasonWindow'
@@ -10,8 +11,8 @@ export async function fetchDraftOrderBundle(
   positions: Record<string, string>
 ) {
   const [league, nflState] = (await Promise.all([
-    sleeperApi.getLeagueInfo(leagueId).catch(() => null),
-    sleeperApi.getNflState().catch(() => null),
+    sleeperLeague(leagueId).catch(() => null),
+    sleeperState().catch(() => null),
   ])) as [LeagueInfo | null, NflState | null]
 
   const { weeks, season, liveWeek, lastRegularWeek } = resolveSeasonWindow(nflState, league)
@@ -21,12 +22,10 @@ export async function fetchDraftOrderBundle(
       // Finished weeks never change, so they go through the shared cache. The week
       // still being played does change, and `sleeperApi` asks for `force-cache` —
       // which on the client is the browser cache, with no revalidate window to save
-      // it. Fetch that one directly so a live score isn't frozen mid-week.
+      // it. Read that one uncached, sharing the request with the other loaders (PR-18).
       const request =
         liveWeek !== null && week >= liveWeek
-          ? fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`, {
-              cache: 'no-store',
-            }).then((r) => (r.ok ? r.json() : []))
+          ? sleeperMatchups(leagueId, week)
           : sleeperApi.getLeagueMatchups(leagueId, week)
 
       return request

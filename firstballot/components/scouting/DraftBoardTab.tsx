@@ -30,6 +30,9 @@ import {
   type GradeField,
 } from './board-player'
 import { computeMyGrade, parseUserGrade } from '@/lib/user-grade'
+import { CrowdRank, useCommunityTrends } from './CrowdRank'
+import { PositionBadge } from '@/components/league-buddy/ui/Badge'
+import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
 import type { ProspectGradePatch } from '@/hooks/use-prospect-grades'
 import type { UserProspectGrade } from '@/types/prospect-grades'
 
@@ -73,10 +76,10 @@ const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
  * Column widths for the desktop board. The header and every row share this, so
  * it lives in one place — two copies of the string drift the moment one changes.
  * Order: drag · player · pos · rank · grade · film · talent · my grade · my # ·
- *        40 · ht · wt · phy · ktc · remove
+ *        40 · ht · wt · phy · crowd · ktc · remove
  */
 const BOARD_GRID_TEMPLATE =
-  '20px minmax(180px,1fr) 40px 50px 56px 46px 46px 54px 50px 48px 44px 48px 46px 96px 24px'
+  '20px minmax(220px,1fr) 44px 50px 56px 46px 46px 54px 50px 48px 44px 48px 46px 84px 96px 24px'
 const ReorderAny = Reorder as unknown as {
   Group: React.ComponentType<Record<string, unknown>>
   Item: React.ComponentType<Record<string, unknown>>
@@ -162,6 +165,7 @@ export function DraftBoardTab({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null)
   const [editDraft, setEditDraft] = useState('')
   const [sortByMyGrade, setSortByMyGrade] = useState(false)
+  const communityTrends = useCommunityTrends()
 
   const canGrade = isLoggedIn && Boolean(onSetGrade)
 
@@ -544,6 +548,12 @@ export function DraftBoardTab({
                 <span className="text-center">Ht</span>
                 <span className="text-center">Wt</span>
                 <span className="text-center">Phy</span>
+                <span
+                  className="text-center text-violet-300/80"
+                  title="Community rank and 7-day movement. A rank appears after five comparisons."
+                >
+                  Crowd
+                </span>
                 <span className="text-center text-emerald-500/80">KTC</span>
                 <span />
               </div>
@@ -925,7 +935,7 @@ export function DraftBoardTab({
                                   </div>
                                 </div>
                                 <div
-                                  className="hidden lg:grid items-stretch h-16 pl-2 pr-2"
+                                  className="hidden lg:grid items-stretch h-20 pl-2 pr-2"
                                   style={{ gridTemplateColumns: BOARD_GRID_TEMPLATE }}
                                 >
                                   {/* Drag handle */}
@@ -936,20 +946,24 @@ export function DraftBoardTab({
                                   {/* Player: headshot + name + school */}
                                   {/* Player: full-height cutout image + name */}
                                   <div className="flex items-center gap-3 min-w-0">
-                                    {/* Cutout image — no circle, like ProspectCard */}
-                                    <div className="relative w-10 h-14 self-end flex-shrink-0 bg-slate-800/40 overflow-hidden rounded-sm">
-                                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent z-[1]" />
+                                    {/* Face tile on a position-colored wash, like the cards elsewhere */}
+                                    <div
+                                      className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl"
+                                      style={{
+                                        background: `radial-gradient(ellipse at 60% 25%, ${(positionPalette[player.position] ?? neutralPalette).glow}aa, ${(positionPalette[player.position] ?? neutralPalette).wash} 75%)`,
+                                      }}
+                                    >
                                       {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                         <Image
                                           src={getPlayerImageUrl(player)}
                                           alt={player.name}
-                                          width={160}
-                                          height={160}
-                                          className="w-full h-full object-contain object-bottom"
+                                          width={192}
+                                          height={192}
+                                          className="h-full w-full object-cover object-top"
                                           onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                         />
                                       ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground/40">
+                                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-muted-foreground/50">
                                           {player.name.split(' ').map((n) => n[0]).join('')}
                                         </div>
                                       )}
@@ -966,7 +980,7 @@ export function DraftBoardTab({
 
                                   {/* Position */}
                                   <div className="flex items-center justify-center">
-                                    <span className="text-xs font-mono font-bold text-primary">{player.position}</span>
+                                    <PositionBadge position={player.position} />
                                   </div>
 
                                   {/* Consensus Rank — heat cell */}
@@ -1113,6 +1127,11 @@ export function DraftBoardTab({
                                     >
                                       {player.physical > 0 ? player.physical : '—'}
                                     </div>
+                                  </div>
+
+                                  {/* Community rank + 7-day trend */}
+                                  <div className="flex items-center justify-center px-1">
+                                    <CrowdRank trend={communityTrends?.[`prospect:${prospect.id}`]} />
                                   </div>
 
                                   {/* KTC Sparkline */}

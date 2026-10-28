@@ -1,11 +1,12 @@
 // Plain module (no 'use client'), so the server metrics route can load the same inputs.
 import type { TeamData } from './types'
+import { sleeperLeague, sleeperMatchups } from '@/lib/sleeper-shared'
 
 /** Playoff settings and the remaining schedule; the inputs to the playoff simulation. */
 export async function fetchStandingsSettings(leagueId: string, teams: TeamData[]) {
-  const response = await fetch(`https://api.sleeper.app/v1/league/${leagueId}`)
-  if (!response.ok) throw new Error('League settings unavailable')
-  const league = await response.json()
+  const league = await sleeperLeague(leagueId).catch(() => {
+    throw new Error('League settings unavailable')
+  })
   const end = Number(league.settings?.playoff_week_start) - 1
   const spots = Number(league.settings?.playoff_teams)
   if (!Number.isInteger(end) || end < 1 || end > 18 || !Number.isInteger(spots))
@@ -19,9 +20,12 @@ export async function fetchStandingsSettings(leagueId: string, teams: TeamData[]
   await Promise.all(
     Array.from({ length: end - completed }, async (_, index) => {
       const week = completed + index + 1
-      const r = await fetch(`https://api.sleeper.app/v1/league/${leagueId}/matchups/${week}`)
-      if (!r.ok) throw new Error('Remaining schedule unavailable')
-      const rows: { roster_id: number; matchup_id: number | null }[] = await r.json()
+      const rows: { roster_id: number; matchup_id: number | null }[] = await sleeperMatchups(
+        leagueId,
+        week
+      ).catch(() => {
+        throw new Error('Remaining schedule unavailable')
+      })
       schedule[week] = {}
       for (const row of rows) {
         const opponent = rows.find(

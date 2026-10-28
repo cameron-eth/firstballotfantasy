@@ -204,7 +204,7 @@ export function RosterSection({
               <p className="text-xs text-emerald-300">Best projected lineup</p>
             ) : null}
           </div>
-          <div className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2">
+          <div className="-mx-3 -my-3 flex snap-x gap-3 overflow-x-auto px-3 py-4">
             {starterPlayers.map((player) => (
               <div key={player.playerId} className="w-40 shrink-0 snap-start">
                 <PlayerTradingCard

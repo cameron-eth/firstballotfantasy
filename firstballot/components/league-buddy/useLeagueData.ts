@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import useSWR from 'swr'
 import { leagueCache } from '@/lib/league-cache'
 import { teamScores } from '@/lib/team-score'
+import { resolveLeagueContext, type LeagueContext } from '@/lib/league-metrics/context'
 import { getCacheVersion, useCacheVersion } from '@/lib/cache-version'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import type {
@@ -38,6 +39,8 @@ interface UseLeagueDataReturn {
   allPlayers: Record<string, any>
   playerRankings: Record<string, any>
   rosterPositionsRaw: string[]
+  /** League format (superflex or 1QB), resolved once for every metric. */
+  leagueContext: LeagueContext
   leagueTransactions: SleeperTransaction[]
   refetch: () => Promise<void>
 }
@@ -101,6 +104,7 @@ interface LeagueDataBundle {
   playerRankings: Record<string, any>
   defaultSelectedRosterId: number | null
   rosterPositionsRaw: string[]
+  leagueContext: LeagueContext
   leagueTransactions: SleeperTransaction[]
 }
 
@@ -273,14 +277,9 @@ export async function fetchLeagueDataBundle(
     )
   }
 
-  const isSuperflex =
-    Array.isArray(league?.roster_positions) &&
-    (league.roster_positions.some(
-      (slot: string) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE'
-    ) ||
-      league.roster_positions.filter((slot: string) => slot === 'QB').length > 1)
+  const leagueContext = resolveLeagueContext(league)
   const rankingsMap =
-    (rankingsResult as TierResponse)?.players?.[isSuperflex ? 'sf' : 'one_qb'] ?? {}
+    (rankingsResult as TierResponse)?.players?.[leagueContext.superflex ? 'sf' : 'one_qb'] ?? {}
 
   const enhancedPlayers = { ...allPlayersData }
   Object.entries(rosterStatsMap).forEach(([sleeperId, stats]) => {
@@ -454,7 +453,7 @@ export async function fetchLeagueDataBundle(
         })
         .filter(Boolean) as PlayerData[]
 
-      const rawScore = calculateRawScore(players)
+      const rawScore = calculateRawScore(players, leagueContext)
 
       return {
         rosterId: roster.roster_id,
@@ -472,7 +471,7 @@ export async function fetchLeagueDataBundle(
         gradeScore: rawScore,
         players,
         starters: roster.starters || [],
-        positionStrengths: calculatePositionStrengths(players),
+        positionStrengths: calculatePositionStrengths(players, leagueContext),
         waiverPosition: roster.settings?.waiver_position || 0,
         totalMoves: roster.settings?.total_moves || 0,
         recentForm: calculateRecentForm(roster, matchups),
@@ -561,6 +560,7 @@ export async function fetchLeagueDataBundle(
     playerRankings: rankingsMap,
     defaultSelectedRosterId: userRoster?.roster_id || teamsData[0]?.rosterId || null,
     rosterPositionsRaw: Array.isArray(league?.roster_positions) ? league.roster_positions : [],
+    leagueContext,
     leagueTransactions,
   }
 }
@@ -618,8 +618,8 @@ export function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
 }
 
 /** Re-score every team once its values are known, so the grade reflects quality, not roster size. */
-export function withTeamScores(teams: TeamData[]): TeamData[] {
-  const scores = teamScores(teams)
+export function withTeamScores(teams: TeamData[], ctx: LeagueContext): TeamData[] {
+  const scores = teamScores(teams, ctx)
   const all = teams.map((t) => scores.get(t.rosterId)?.composite ?? 0)
   return teams.map((team) => {
     const gradeScore = scores.get(team.rosterId)?.composite ?? 0
@@ -642,6 +642,9 @@ export function ktcNamesFor(teams: TeamData[]): string[] {
     .sort()
 }
 
+/** Until the league loads, the format of Sleeper's default lineup (no teams are valued yet). */
+const DEFAULT_LEAGUE_CONTEXT = resolveLeagueContext(null)
+
 export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataReturn {
   const [selectedRosterId, setSelectedRosterId] = useState<number | null>(null)
 
@@ -659,9 +662,13 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
     { revalidateOnFocus: false, dedupingInterval: 300_000, keepPreviousData: true }
   )
 
+  const leagueContext = data?.leagueContext ?? DEFAULT_LEAGUE_CONTEXT
   const teams = useMemo(
-    () => (data?.teams ? withTeamScores(ktcMaps ? applyKtc(data.teams, ktcMaps) : data.teams) : []),
-    [data?.teams, ktcMaps]
+    () =>
+      data?.teams
+        ? withTeamScores(ktcMaps ? applyKtc(data.teams, ktcMaps) : data.teams, leagueContext)
+        : [],
+    [data?.teams, ktcMaps, leagueContext]
   )
   const leagueOverview = data?.leagueOverview ?? null
   const currentMatchups = data?.currentMatchups ?? []
@@ -703,6 +710,7 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
     allPlayers,
     playerRankings,
     rosterPositionsRaw,
+    leagueContext,
     leagueTransactions,
     refetch,
   }

@@ -5,6 +5,7 @@ import {
   type CompetitiveStateKey,
 } from '@/components/league-buddy/competitiveState'
 import { describeTier, isHot } from '@/lib/player-signals'
+import { resolveLeagueContext } from '@/lib/league-metrics/context'
 
 /**
  * Every threshold the trade engine uses lives here so the logic is auditable and a
@@ -87,7 +88,11 @@ function profile(team: TeamData, rawSlots: string[]) {
  */
 export function tradeSignals(mine: TeamData, teams: TeamData[], rawSlots: string[]): TradeSignal[] {
   const inSeason = teams.some((t) => t.wins + t.losses > 0)
-  const { placements } = calculateLeaguePlacements(teams, inSeason)
+  const { placements } = calculateLeaguePlacements(
+    teams,
+    inSeason,
+    resolveLeagueContext({ roster_positions: rawSlots })
+  )
   const stateOf = (t: TeamData) => placements[t.rosterId]?.state
   const myState = stateOf(mine)
   const iAmRebuilding = !!myState && TRADE_RULES.rebuildingStates.includes(myState)

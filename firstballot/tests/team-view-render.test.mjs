@@ -36,6 +36,7 @@ test('My Team renders the hero, starters rail and roster rows', () => {
       null,
       React.createElement(RosterSection, {
         leagueId: '1', isDynasty: true, selectedTeam: team, sortedTeams: [team], teams: [team],
+        leagueContext: { superflex: true },
       })
     )
   )

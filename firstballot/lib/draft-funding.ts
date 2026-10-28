@@ -1,3 +1,4 @@
+import { ktcValue } from '@/lib/sleeper-sdk'
 import type { TeamData, PlayerData } from '@/components/league-buddy/types'
 import type { OwnedPick } from './sleeper-sdk/pick-inventory'
 import { buildSlotLineup } from '../components/league-buddy/builder/slotLineup'
@@ -98,7 +99,7 @@ export function draftFundingIdeas({
   excludedPicks?: string[]
 }) {
   if (!year || !rank || rank < 1) return []
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb) ?? 0
+  const value = (p: PlayerData) => ktcValue(p, { superflex }) ?? 0
   const pickValue = (p: OwnedPick) => {
     const name = pickBenchmark(p, slots, teams.length)
     const q = quotes.find((q) => q.player_name === name)

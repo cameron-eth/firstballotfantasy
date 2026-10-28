@@ -23,7 +23,7 @@
     ],
     "superflex": {
       "powerRankings": false,
-      "isSuperflexLineup": false,
+      "leagueContext": false,
       "tradeInventory": false
     },
     "ktcNamesMatched": 149
@@ -37,8 +37,8 @@
       ],
       "pointsFor": 957,
       "grade": "A+",
-      "gradeScore": 100,
-      "teamValueScore": 48471,
+      "gradeScore": 96,
+      "teamValueScore": 49823,
       "ktcSfTotal": 74791,
       "tieredPlayers": 15,
       "power": {
@@ -47,16 +47,16 @@
       },
       "placement": {
         "state": "juggernaut",
-        "now": 98,
+        "now": 80,
         "future": 69,
         "coreAge": 25
       },
       "positionRanks": {
-        "QB": 3,
+        "QB": 4,
         "RB": 3,
-        "WR": 7,
+        "WR": 6,
         "TE": 6,
-        "FLEX": 4
+        "FLEX": 3
       },
       "maxPointsFor": 1105.48,
       "projectedMaxPointsFor": 2134.4,
@@ -69,9 +69,9 @@
         0
       ],
       "pointsFor": 873,
-      "grade": "C",
-      "gradeScore": 74,
-      "teamValueScore": 34408,
+      "grade": "C-",
+      "gradeScore": 76,
+      "teamValueScore": 38966,
       "ktcSfTotal": 58700,
       "tieredPlayers": 15,
       "power": {
@@ -80,7 +80,7 @@
       },
       "placement": {
         "state": "purgatory",
-        "now": 10,
+        "now": 8,
         "future": 0,
         "coreAge": 28.58
       },
@@ -104,7 +104,7 @@
       "pointsFor": 970,
       "grade": "A+",
       "gradeScore": 97,
-      "teamValueScore": 48723,
+      "teamValueScore": 52847,
       "ktcSfTotal": 81783,
       "tieredPlayers": 18,
       "power": {
@@ -135,8 +135,8 @@
         0
       ],
       "pointsFor": 862,
-      "grade": "B",
-      "gradeScore": 88,
+      "grade": "B-",
+      "gradeScore": 83,
       "teamValueScore": 42065,
       "ktcSfTotal": 61980,
       "tieredPlayers": 14,
@@ -146,7 +146,7 @@
       },
       "placement": {
         "state": "purgatory",
-        "now": 58,
+        "now": 29,
         "future": 18,
         "coreAge": 27.67
       },
@@ -169,8 +169,8 @@
       ],
       "pointsFor": 894,
       "grade": "C",
-      "gradeScore": 74,
-      "teamValueScore": 32769,
+      "gradeScore": 77,
+      "teamValueScore": 37713,
       "ktcSfTotal": 53271,
       "tieredPlayers": 13,
       "power": {
@@ -186,9 +186,9 @@
       "positionRanks": {
         "QB": 10,
         "RB": 6,
-        "WR": 6,
+        "WR": 7,
         "TE": 10,
-        "FLEX": 7
+        "FLEX": 6
       },
       "maxPointsFor": 1033.34,
       "projectedMaxPointsFor": 2059.35,
@@ -201,9 +201,9 @@
         0
       ],
       "pointsFor": 1032,
-      "grade": "A+",
-      "gradeScore": 97,
-      "teamValueScore": 46989,
+      "grade": "A",
+      "gradeScore": 95,
+      "teamValueScore": 49521,
       "ktcSfTotal": 69009,
       "tieredPlayers": 14,
       "power": {
@@ -212,15 +212,15 @@
       },
       "placement": {
         "state": "contender",
-        "now": 89,
-        "future": 37,
-        "coreAge": 26.67
+        "now": 78,
+        "future": 44,
+        "coreAge": 26.33
       },
       "positionRanks": {
         "QB": 5,
         "RB": 2,
         "WR": 5,
-        "TE": 4,
+        "TE": 5,
         "FLEX": 2
       },
       "maxPointsFor": 1228.48,
@@ -236,7 +236,7 @@
       "pointsFor": 984,
       "grade": "B+",
       "gradeScore": 93,
-      "teamValueScore": 44788,
+      "teamValueScore": 48489,
       "ktcSfTotal": 71435,
       "tieredPlayers": 15,
       "power": {
@@ -245,15 +245,15 @@
       },
       "placement": {
         "state": "juggernaut",
-        "now": 75,
+        "now": 71,
         "future": 73,
         "coreAge": 24.83
       },
       "positionRanks": {
-        "QB": 7,
+        "QB": 6,
         "RB": 8,
         "WR": 1,
-        "TE": 5,
+        "TE": 4,
         "FLEX": 9
       },
       "maxPointsFor": 1106.48,
@@ -268,8 +268,8 @@
       ],
       "pointsFor": 859,
       "grade": "C+",
-      "gradeScore": 82,
-      "teamValueScore": 40108,
+      "gradeScore": 81,
+      "teamValueScore": 42455,
       "ktcSfTotal": 64248,
       "tieredPlayers": 15,
       "power": {
@@ -278,12 +278,12 @@
       },
       "placement": {
         "state": "purgatory",
-        "now": 46,
+        "now": 31,
         "future": 26,
         "coreAge": 27.25
       },
       "positionRanks": {
-        "QB": 6,
+        "QB": 7,
         "RB": 1,
         "WR": 10,
         "TE": 7,
@@ -300,9 +300,9 @@
         0
       ],
       "pointsFor": 838,
-      "grade": "B-",
-      "gradeScore": 84,
-      "teamValueScore": 40488,
+      "grade": "B",
+      "gradeScore": 85,
+      "teamValueScore": 44342,
       "ktcSfTotal": 66813,
       "tieredPlayers": 15,
       "power": {
@@ -311,16 +311,16 @@
       },
       "placement": {
         "state": "purgatory",
-        "now": 48,
-        "future": 53,
-        "coreAge": 25.83
+        "now": 44,
+        "future": 47,
+        "coreAge": 26.17
       },
       "positionRanks": {
-        "QB": 4,
+        "QB": 2,
         "RB": 9,
         "WR": 4,
         "TE": 2,
-        "FLEX": 6
+        "FLEX": 7
       },
       "maxPointsFor": 968.2,
       "projectedMaxPointsFor": 2012.75,
@@ -334,8 +334,8 @@
       ],
       "pointsFor": 850,
       "grade": "A-",
-      "gradeScore": 95,
-      "teamValueScore": 48712,
+      "gradeScore": 94,
+      "teamValueScore": 51443,
       "ktcSfTotal": 74787,
       "tieredPlayers": 15,
       "power": {
@@ -344,16 +344,16 @@
       },
       "placement": {
         "state": "juggernaut",
-        "now": 100,
+        "now": 91,
         "future": 100,
         "coreAge": 23.42
       },
       "positionRanks": {
-        "QB": 2,
+        "QB": 3,
         "RB": 7,
         "WR": 2,
         "TE": 3,
-        "FLEX": 3
+        "FLEX": 4
       },
       "maxPointsFor": 973,
       "projectedMaxPointsFor": 2063.93,

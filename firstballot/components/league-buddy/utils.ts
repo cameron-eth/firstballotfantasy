@@ -1,9 +1,6 @@
 // Utility functions for LeagueBuddy component
 import type { PlayerData, PositionStrengths, TeamData, SleeperTransaction } from './types'
-import { CORE_POSITIONS, playerValue, type ValuationContext } from '@/lib/sleeper-sdk'
-
-/** This app is dynasty-superflex first, so QB scarcity is priced into every valuation. */
-const VALUATION_CTX: ValuationContext = { superflex: true }
+import { CORE_POSITIONS, ktcValue, playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 
 /** Top N assets that define a roster's value profile. */
 const CORE_DEPTH = 12
@@ -20,10 +17,10 @@ export const getTierFromRank = (rank: number): string => {
 }
 
 /** Core assets that define a roster's value, best first. */
-const coreAssets = (players: PlayerData[], depth = CORE_DEPTH): PlayerData[] =>
+const coreAssets = (players: PlayerData[], ctx: LeagueContext, depth = CORE_DEPTH): PlayerData[] =>
   players
     .filter((p) => (CORE_POSITIONS as readonly string[]).includes(p.position?.toUpperCase() ?? ''))
-    .sort((a, b) => playerValue(b, VALUATION_CTX) - playerValue(a, VALUATION_CTX))
+    .sort((a, b) => playerValue(b, ctx) - playerValue(a, ctx))
     .slice(0, depth)
 
 /**
@@ -31,9 +28,9 @@ const coreAssets = (players: PlayerData[], depth = CORE_DEPTH): PlayerData[] =>
  * core assets, divided by 100 so the number reads like a score rather than a KTC total.
  * Feeds the percentile grade, so only the relative ordering matters.
  */
-export const calculateRawScore = (players: PlayerData[]): number => {
+export const calculateRawScore = (players: PlayerData[], ctx: LeagueContext): number => {
   if (!players || players.length === 0) return 0
-  const total = coreAssets(players).reduce((sum, p) => sum + playerValue(p, VALUATION_CTX), 0)
+  const total = coreAssets(players, ctx).reduce((sum, p) => sum + playerValue(p, ctx), 0)
   return Math.round(total / 100)
 }
 
@@ -68,14 +65,17 @@ export const calculateGradeFromPercentile = (
  * actually start there, measured against an elite asset. A team whose top two RBs are
  * both consensus RB1s scores near 100; a team starting waiver bodies scores near 0.
  */
-export const calculatePositionStrengths = (players: PlayerData[]): PositionStrengths => {
+export const calculatePositionStrengths = (
+  players: PlayerData[],
+  ctx: LeagueContext
+): PositionStrengths => {
   // How many players carry the position in a dynasty superflex lineup.
   const starterSlots: Record<string, number> = { QB: 2, RB: 4, WR: 4, TE: 2 }
 
   function positionScore(pos: string): number {
     const posPlayers = players
       .filter((p) => p.position?.toUpperCase() === pos)
-      .map((p) => playerValue(p, VALUATION_CTX))
+      .map((p) => playerValue(p, ctx))
       .sort((a, b) => b - a)
       .slice(0, starterSlots[pos] ?? 3)
 
@@ -142,10 +142,10 @@ export const getRankColor = (rank: number): string => {
 const POSITION_GROUP_DEPTH: Record<string, number> = { QB: 1, RB: 2, WR: 2, TE: 2 }
 
 /** Values at a position, best first. */
-function positionValues(team: TeamData, position: string): number[] {
+function positionValues(team: TeamData, position: string, ctx: LeagueContext): number[] {
   return (team.players ?? [])
     .filter((p) => p?.position?.toUpperCase() === position)
-    .map((p) => playerValue(p, VALUATION_CTX))
+    .map((p) => playerValue(p, ctx))
     .sort((a, b) => b - a)
 }
 
@@ -156,7 +156,8 @@ function positionValues(team: TeamData, position: string): number[] {
  * group's starters are accounted for, which is exactly who fills the slot.
  */
 export const calculateLeaguePositionRankings = (
-  sortedTeams: TeamData[]
+  sortedTeams: TeamData[],
+  ctx: LeagueContext
 ): Record<string, Record<string, number>> => {
   if (!sortedTeams || sortedTeams.length === 0) return {}
 
@@ -168,7 +169,7 @@ export const calculateLeaguePositionRankings = (
     const scores: Record<string, number> = {}
 
     for (const position of positions) {
-      const values = positionValues(team, position)
+      const values = positionValues(team, position, ctx)
       scores[position] = values
         .slice(0, POSITION_GROUP_DEPTH[position])
         .reduce((sum, value) => sum + value, 0)
@@ -177,7 +178,7 @@ export const calculateLeaguePositionRankings = (
     scores.FLEX = Math.max(
       0,
       ...['RB', 'WR', 'TE'].map(
-        (position) => positionValues(team, position)[POSITION_GROUP_DEPTH[position]] ?? 0
+        (position) => positionValues(team, position, ctx)[POSITION_GROUP_DEPTH[position]] ?? 0
       )
     )
 
@@ -294,13 +295,14 @@ export interface PositionalMedians {
 
 /** League-wide KTC value and fantasy PPG medians per position, for normalizing P/E ratios. */
 export const calculatePositionalMedians = (
-  players: PlayerData[]
+  players: PlayerData[],
+  ctx: LeagueContext
 ): Record<string, PositionalMedians> => {
   const result: Record<string, PositionalMedians> = {}
   for (const pos of AUDIT_POSITIONS) {
     const atPos = players.filter((p) => p.position === pos)
     const ktcValues = atPos
-      .map((p) => p.ktcValueSf)
+      .map((p) => ktcValue(p, ctx))
       .filter((v): v is number => typeof v === 'number' && v > 0)
     const ffpgValues = atPos
       .map((p) => p.fantasy_ppg)
@@ -318,13 +320,15 @@ export const calculatePositionalMedians = (
  */
 export const calculatePERatio = (
   player: PlayerData,
-  medians: Record<string, PositionalMedians>
+  medians: Record<string, PositionalMedians>,
+  ctx: LeagueContext
 ): number | null => {
   const posMedians = medians[player.position]
   if (!posMedians || posMedians.medianKtc <= 0 || posMedians.medianFfpg <= 0) return null
-  if (!player.ktcValueSf || !player.fantasy_ppg || player.fantasy_ppg <= 0) return null
+  const price = ktcValue(player, ctx)
+  if (!price || !player.fantasy_ppg || player.fantasy_ppg <= 0) return null
 
-  const priceMultiple = player.ktcValueSf / posMedians.medianKtc
+  const priceMultiple = price / posMedians.medianKtc
   const earningsMultiple = player.fantasy_ppg / posMedians.medianFfpg
   if (earningsMultiple <= 0) return null
 

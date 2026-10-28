@@ -8,6 +8,12 @@
 // asset sits near the ceiling. When a player has no KTC value we derive one from their
 // consensus rank on the same scale (see rankToValue) so mixed rosters stay comparable.
 
+import {
+  DEFAULT_ROSTER_POSITIONS,
+  effectiveRosterPositions,
+  isSuperflexFormat,
+  type LeagueContext,
+} from '../league-metrics/context'
 import { CORE_POSITIONS, type CorePosition } from './types'
 
 /** Structural shape this module needs; any richer player object satisfies it. */
@@ -21,11 +27,6 @@ export interface ValuablePlayer {
   ktcValue1qb?: number
   espn_id?: string
   headshot_url?: string | null
-}
-
-export interface ValuationContext {
-  /** League starts a SUPER_FLEX slot, so QB scarcity is priced in. */
-  superflex: boolean
 }
 
 /** Top of the KTC value scale — a consensus 1.01-caliber dynasty asset. */
@@ -44,9 +45,28 @@ export function rankToValue(rank: number | undefined): number {
   return Math.round(VALUE_CEILING * Math.exp(-(rank - 1) / RANK_DECAY))
 }
 
+/**
+ * The player's KTC value for this league's format, or undefined when KTC has none. This is
+ * the only place that picks between the superflex and 1QB values.
+ */
+export function ktcValue(
+  player: { ktcValueSf?: number; ktcValue1qb?: number },
+  ctx: LeagueContext
+): number | undefined {
+  return ctx.superflex ? player.ktcValueSf : player.ktcValue1qb
+}
+
+/** One point of a player's KTC history, in this league's format. */
+export function ktcHistoryValue(
+  point: { value_sf: number; value_1qb: number },
+  ctx: LeagueContext
+): number {
+  return ctx.superflex ? point.value_sf : point.value_1qb
+}
+
 /** A single player's dynasty value, KTC first and consensus rank as the fallback. */
-export function playerValue(player: ValuablePlayer, ctx: ValuationContext): number {
-  const ktc = ctx.superflex ? player.ktcValueSf : (player.ktcValue1qb ?? player.ktcValueSf)
+export function playerValue(player: ValuablePlayer, ctx: LeagueContext): number {
+  const ktc = ktcValue(player, ctx)
   if (typeof ktc === 'number' && ktc > 0) return ktc
   return rankToValue(player.rank)
 }
@@ -114,11 +134,6 @@ export function parseRosterSlots(rosterPositions: string[] | undefined): RosterS
   })
 }
 
-/** A league is superflex if any starting slot can hold a second QB. */
-export function isSuperflexLineup(slots: RosterSlot[]): boolean {
-  return slots.some((slot) => slot.kind === 'superflex')
-}
-
 // ---------------------------------------------------------------------------
 // Team valuation
 // ---------------------------------------------------------------------------
@@ -164,7 +179,7 @@ export function valuateTeam(
   rosterId: number,
   players: ValuablePlayer[],
   slots: RosterSlot[],
-  ctx: ValuationContext
+  ctx: LeagueContext
 ): TeamValuation {
   const valued = players
     .filter((p) => (CORE_POSITIONS as readonly string[]).includes(p.position?.toUpperCase() ?? ''))
@@ -304,16 +319,13 @@ function categoryValue(valuation: TeamValuation, category: CategoryKey): number 
  */
 export function buildPowerRankings(
   teams: RankableTeam[],
-  rosterPositions: string[] | undefined,
-  options: { fallbackSlots?: RosterSlot[] } = {}
+  rosterPositions: string[] | undefined
 ): PowerRankings {
-  const slots =
-    parseRosterSlots(rosterPositions).length > 0
-      ? parseRosterSlots(rosterPositions)
-      : (options.fallbackSlots ?? DEFAULT_SLOTS)
-
-  const superflex = isSuperflexLineup(slots)
-  const ctx: ValuationContext = { superflex }
+  const positions = effectiveRosterPositions(rosterPositions)
+  const parsed = parseRosterSlots([...positions])
+  const slots = parsed.length > 0 ? parsed : DEFAULT_SLOTS
+  const superflex = isSuperflexFormat(positions)
+  const ctx: LeagueContext = { superflex }
 
   const valuations = teams.map((team) => valuateTeam(team.rosterId, team.players, slots, ctx))
   const bestPower = Math.max(0, ...valuations.map((v) => v.powerScore))
@@ -370,17 +382,7 @@ export function buildPowerRankings(
 }
 
 /** Sleeper's most common dynasty superflex shape, used when a league omits its slots. */
-export const DEFAULT_SLOTS: RosterSlot[] = parseRosterSlots([
-  'QB',
-  'RB',
-  'RB',
-  'WR',
-  'WR',
-  'WR',
-  'TE',
-  'FLEX',
-  'SUPER_FLEX',
-])
+export const DEFAULT_SLOTS: RosterSlot[] = parseRosterSlots([...DEFAULT_ROSTER_POSITIONS])
 
 /** Ordinal suffix for rank labels: 1 → 1st, 2 → 2nd, 11 → 11th. */
 export function ordinal(rank: number): string {

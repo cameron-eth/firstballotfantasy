@@ -1,4 +1,5 @@
 'use client'
+import { ktcValue } from '@/lib/sleeper-sdk'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { MatchupData, OverviewActions, TeamData } from './types'
@@ -113,7 +114,7 @@ export function OverviewHeader({
     const value = (t: TeamData) =>
       t.players
         .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-        .reduce((sum, p) => sum + ((superflex ? p.ktcValueSf : p.ktcValue1qb) ?? 0), 0)
+        .reduce((sum, p) => sum + (ktcValue(p, { superflex }) ?? 0), 0)
     const ranked = [...teams].sort((a, b) => value(b) - value(a))
     return ranked.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
   }, [teams, selectedTeam, superflex])

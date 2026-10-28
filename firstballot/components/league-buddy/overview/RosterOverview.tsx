@@ -1,3 +1,4 @@
+import { ktcValue } from '@/lib/sleeper-sdk'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { RANK_TEXT, rankTone } from '@/lib/design/tones'
@@ -30,7 +31,7 @@ export function RosterOverview({
   onOpen: () => void
   openLabel: string
 }) {
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb) ?? 0
+  const value = (p: PlayerData) => ktcValue(p, { superflex }) ?? 0
   return (
     <section aria-label="Roster overview">
       <SectionHeader

@@ -1,3 +1,4 @@
+import { resolveLeagueContext } from '../league-metrics/context'
 import { pickInventory, type OwnedPick } from './pick-inventory'
 import type { SleeperLeague, SleeperRoster, SleeperTradedPick } from './types'
 export interface TradeInventory {
@@ -56,9 +57,7 @@ export async function loadTradeInventory(leagueId: string): Promise<TradeInvento
       ])
     ),
     dynasty,
-    superflex:
-      league.roster_positions?.includes('SUPER_FLEX') === true ||
-      (league.roster_positions?.filter((p) => p === 'QB').length ?? 0) > 1,
+    superflex: resolveLeagueContext(league).superflex,
     updatedAt: new Date().toISOString(),
   }
 }

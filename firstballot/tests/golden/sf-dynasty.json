@@ -28,7 +28,7 @@
     ],
     "superflex": {
       "powerRankings": true,
-      "isSuperflexLineup": true,
+      "leagueContext": true,
       "tradeInventory": true
     },
     "ktcNamesMatched": 308

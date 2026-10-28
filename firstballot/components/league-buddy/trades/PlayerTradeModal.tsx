@@ -13,7 +13,8 @@ import { useAuth } from '@/lib/auth'
 import { tradeOpportunities } from '@/lib/sleeper-sdk/trade-opportunities'
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import type { PlayerData, TeamData } from '../types'
-import { TradeAssetList, emptySide, sideSummary, pickLabel, type OfferSide } from './TradeAssetList'
+import { TradeAssetList, emptySide, pickLabel, type OfferSide } from './TradeAssetList'
+import { OfferComparison } from './OfferComparison'
 const button =
   'rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-40'
 export function PlayerTradeModal({
@@ -155,10 +156,10 @@ export function PlayerTradeModal({
         <DialogHeader>
           <DialogTitle>
             {review
-              ? 'Confirm suggested trade'
+              ? 'Confirm trade'
               : `Trade opportunities${player ? ` · ${player.playerName}` : ''}`}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className={review ? 'sr-only' : undefined}>
             Explore players and owned picks, build an offer, then review before sending to Sleeper.
           </DialogDescription>
         </DialogHeader>
@@ -327,20 +328,20 @@ export function PlayerTradeModal({
                       </div>
                     )}
                     {review && (
-                      <div className="space-y-2 rounded-lg border border-blue-400/30 bg-blue-400/5 p-4 text-sm">
-                        <p>
-                          <strong>You send:</strong>{' '}
-                          {sideSummary(give, team.players, inventory.picks, teams)}
+                      <>
+                        <OfferComparison
+                          give={give}
+                          receive={receive}
+                          team={team}
+                          other={other}
+                          picks={inventory.picks}
+                          teams={teams}
+                          superflex={inventory.superflex}
+                        />
+                        <p className="text-center text-xs text-slate-500">
+                          Sends a real offer to {other.teamName} on Sleeper.
                         </p>
-                        <p>
-                          <strong>You receive:</strong>{' '}
-                          {sideSummary(receive, other.players, inventory.picks, teams)}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          This sends a real offer to {other.teamName}. Sleeper checks league
-                          restrictions; ownership and FAAB are rechecked before submission.
-                        </p>
-                      </div>
+                      </>
                     )}
                     {!canSend && (
                       <p className="text-sm text-slate-400">

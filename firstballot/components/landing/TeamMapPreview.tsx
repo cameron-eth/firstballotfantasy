@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import useSWR from 'swr'
 import { describeTier, plainTierName } from '@/lib/player-signals'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { COLLEGE_LOGOS } from '@/lib/college-logos'
 import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
@@ -157,24 +157,33 @@ const SCENES = [
     roster: ROSTER.map((p) => (p.id === 'olave' ? ROOKIE : p.id === 'lamb' ? TRADE : p)),
   },
 ]
-const SCENE_MS = 3200
+const SCENE_MS = 4800
+/** One easing curve for everything: quick to start, long soft landing. */
+const EASE = [0.22, 1, 0.36, 1] as const
+const FLIP_SPRING = { type: 'spring', stiffness: 180, damping: 22, mass: 0.9 } as const
 /** Stable ids for the five lineup slots (the card in a slot changes; the slot does not). */
 const SLOT_IDS = ['qb', 'rb', 'wr1', 'wr2', 'te'] as const
 
-function CountUp({ to, decimals }: { to: number; decimals: number }) {
+/** Glides from whatever it last showed to the new value, so a change never resets to zero. */
+function CountUp({ to, decimals, from }: { to: number; decimals: number; from?: number }) {
   const reduced = useReducedMotion()
-  const [value, setValue] = useState(reduced ? to : 0)
+  const shown = useRef(reduced ? to : (from ?? to))
+  const [value, setValue] = useState(shown.current)
   useEffect(() => {
-    if (reduced) return setValue(to)
-    let frame = 0
-    const start = performance.now()
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / 900)
-      setValue(to * (1 - (1 - t) ** 3))
-      if (t < 1) frame = requestAnimationFrame(tick)
+    if (reduced) {
+      shown.current = to
+      setValue(to)
+      return
     }
-    frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
+    const controls = animate(shown.current, to, {
+      duration: 0.9,
+      ease: EASE,
+      onUpdate: (v) => {
+        shown.current = v
+        setValue(v)
+      },
+    })
+    return () => controls.stop()
   }, [to, reduced])
   return (
     <>
@@ -186,7 +195,15 @@ function CountUp({ to, decimals }: { to: number; decimals: number }) {
   )
 }
 
-function DemoCard({ player }: { player: DemoPlayer }) {
+function DemoCard({
+  player,
+  highlight,
+  countFrom,
+}: {
+  player: DemoPlayer
+  highlight: boolean
+  countFrom?: number
+}) {
   const [failed, setFailed] = useState(false)
   const color = positionPalette[player.position] ?? neutralPalette
   const logo =
@@ -197,6 +214,15 @@ function DemoCard({ player }: { player: DemoPlayer }) {
       className="relative isolate flex aspect-[3/4] w-full flex-col overflow-hidden rounded-[20px] border border-white/15 shadow-[0_24px_60px_-24px_#000]"
       style={{ background: `linear-gradient(155deg, ${color.wash}, #10141e 70%)` }}
     >
+      {highlight && (
+        <motion.span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-30 rounded-[20px] ring-2 ring-blue-300/70"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 1.6, delay: 0.5, ease: EASE }}
+        />
+      )}
       <div
         aria-hidden="true"
         className="absolute inset-0 opacity-70"
@@ -251,7 +277,7 @@ function DemoCard({ player }: { player: DemoPlayer }) {
             className="text-xl font-semibold tabular-nums"
             style={{ color: prospect ? color.ink : '#fcd34d' }}
           >
-            <CountUp to={player.metric} decimals={prospect ? 1 : 0} />
+            <CountUp to={player.metric} decimals={prospect ? 1 : 0} from={countFrom} />
           </span>
         </div>
       </div>
@@ -259,15 +285,47 @@ function DemoCard({ player }: { player: DemoPlayer }) {
   )
 }
 
-/** Landing demo of the Team Builder: one surface, five lineup cards, a short animated story. */
+/** True while at least 30% of the element is visible; true when the browser can't tell us. */
+function useOnScreen(ref: RefObject<HTMLElement | null>) {
+  const [visible, setVisible] = useState(true)
+  useEffect(() => {
+    const node = ref.current
+    if (!node || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+      threshold: 0.3,
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [ref])
+  return visible
+}
+
+/** Landing demo of the Team Builder: one surface, five lineup cards, a short story on a calm loop. */
 export function TeamMapPreview() {
   const reduced = useReducedMotion()
+  const root = useRef<HTMLDivElement>(null)
+  const inView = useOnScreen(root)
   const [scene, setScene] = useState(0)
+  const [hovered, setHovered] = useState(false)
+  const [tabVisible, setTabVisible] = useState(true)
+  const [entered, setEntered] = useState(false)
+  const playing = !reduced && inView && !hovered && tabVisible
+
   useEffect(() => {
-    if (reduced) return
-    const timer = setInterval(() => setScene((s) => (s + 1) % SCENES.length), SCENE_MS)
-    return () => clearInterval(timer)
-  }, [reduced])
+    const update = () => setTabVisible(document.visibilityState === 'visible')
+    document.addEventListener('visibilitychange', update)
+    return () => document.removeEventListener('visibilitychange', update)
+  }, [])
+  useEffect(() => {
+    if (inView) setEntered(true)
+  }, [inView])
+  // A fresh timer per scene: pausing (hover, off screen, hidden tab) simply holds the current scene.
+  useEffect(() => {
+    if (!playing) return
+    const timer = setTimeout(() => setScene((s) => (s + 1) % SCENES.length), SCENE_MS)
+    return () => clearTimeout(timer)
+  }, [playing, scene])
+
   const { data: tiers } = useSWR('/api/dynasty-tiers', fetchTiers, { revalidateOnFocus: false })
   const byName = useMemo(
     () =>
@@ -283,25 +341,39 @@ export function TeamMapPreview() {
     roster: SCENES[scene].roster.map((p) => withLiveValues(p, byName)),
   }
   return (
-    <div className="relative">
+    <div
+      ref={root}
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <ol className="flex flex-wrap items-center gap-2 text-xs" aria-label="Demo steps">
           {SCENES.map((s, i) => (
             <li
               key={s.label}
               className={cn(
-                'flex items-center gap-2 rounded-full border px-3 py-1 transition-colors',
-                i === scene
-                  ? 'border-blue-300/50 bg-blue-400/15 text-white'
-                  : 'border-white/10 text-slate-500'
+                'relative isolate overflow-hidden rounded-full border px-3 py-1 transition-colors duration-500',
+                i === scene ? 'border-blue-300/40 text-white' : 'border-white/10 text-slate-500'
               )}
             >
-              <span
-                className={cn(
-                  'h-1.5 w-1.5 rounded-full',
-                  i === scene ? 'bg-blue-300' : 'bg-slate-600'
-                )}
-              />
+              {i === scene && (
+                <motion.span
+                  layoutId="demo-step"
+                  className="absolute inset-0 -z-10 bg-blue-400/15"
+                  transition={{ duration: reduced ? 0 : 0.5, ease: EASE }}
+                />
+              )}
+              {i === scene && playing && (
+                <motion.span
+                  key={`progress-${scene}`}
+                  aria-hidden="true"
+                  className="absolute bottom-0 left-0 h-px bg-blue-300/70"
+                  initial={{ width: '0%' }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: SCENE_MS / 1000, ease: 'linear' }}
+                />
+              )}
               {s.label}
             </li>
           ))}
@@ -311,33 +383,60 @@ export function TeamMapPreview() {
           aria-hidden="true"
         >
           {['Now', '2027', '2028'].map((y) => (
-            <span
-              key={y}
-              className={cn(
-                'rounded-lg px-3 py-1.5 transition-colors',
-                current.year === y ? 'bg-blue-400/20 text-white' : 'text-slate-500'
+            <span key={y} className="relative rounded-lg px-3 py-1.5">
+              {current.year === y && (
+                <motion.span
+                  layoutId="demo-year"
+                  className="absolute inset-0 rounded-lg bg-blue-400/20"
+                  transition={{ duration: reduced ? 0 : 0.5, ease: EASE }}
+                />
               )}
-            >
-              {y}
+              <span
+                className={cn(
+                  'relative transition-colors duration-500',
+                  current.year === y ? 'text-white' : 'text-slate-500'
+                )}
+              >
+                {y}
+              </span>
             </span>
           ))}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {current.roster.map((player, slot) => (
-          <div key={SLOT_IDS[slot]} className={cn('relative', slot === 4 && 'hidden sm:block')}>
-            <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={SLOT_IDS[slot]}
+            className={cn('relative', slot === 4 && 'hidden sm:block')}
+            style={{ perspective: 1200 }}
+            initial={reduced ? false : { opacity: 0, y: 18 }}
+            animate={entered || reduced ? { opacity: 1, y: 0 } : undefined}
+            transition={{ duration: 0.7, delay: slot * 0.08, ease: EASE }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={player.id}
-                initial={reduced ? false : { opacity: 0, y: 24, rotateY: -12 }}
-                animate={{ opacity: 1, y: 0, rotateY: 0 }}
-                exit={reduced ? undefined : { opacity: 0, transition: { duration: 0.12 } }}
-                transition={{ duration: 0.4, delay: 0.1 }}
+                style={{ transformStyle: 'preserve-3d', backfaceVisibility: 'hidden' }}
+                initial={reduced ? false : { rotateY: -90, opacity: 0.4 }}
+                animate={{ rotateY: 0, opacity: 1, transition: FLIP_SPRING }}
+                exit={
+                  reduced
+                    ? undefined
+                    : {
+                        rotateY: 90,
+                        opacity: 0.4,
+                        transition: { duration: 0.28, ease: [0.55, 0, 1, 0.45] },
+                      }
+                }
               >
-                <DemoCard player={player} />
+                <DemoCard
+                  player={player}
+                  highlight={scene !== 0 && SCENES[0].roster[slot].id !== player.id}
+                  countFrom={entered ? undefined : 0}
+                />
               </motion.div>
             </AnimatePresence>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

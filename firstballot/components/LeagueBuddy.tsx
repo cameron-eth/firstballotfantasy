@@ -84,13 +84,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   } = useLeagueData(leagueId, user)
 
   // Memoized sorted teams to prevent unnecessary re-sorting
-  const sortedTeams = useMemo(() => {
-    return [...teams].sort((a, b) => {
-      // Sort by wins first, then by points
-      if (a.wins !== b.wins) return b.wins - a.wins
-      return b.pointsFor - a.pointsFor
-    })
-  }, [teams])
+  const sortedTeams = useMemo(() => recordOrder(teams), [teams])
 
   // Memoized league position rankings
   const leaguePositionRankings = useMemo(() => {

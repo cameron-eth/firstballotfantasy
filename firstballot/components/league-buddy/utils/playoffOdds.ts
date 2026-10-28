@@ -1,4 +1,5 @@
 import type { TeamData } from '../types'
+import { compareStandings, standingsOrder } from '@/lib/league-metrics/standings'
 
 interface PlayoffOddsResult {
   rosterId: number
@@ -25,6 +26,11 @@ interface ScheduleMap {
  * @param schedule - Map of remaining schedule: { week: { rosterId: opponentRosterId } }
  * @param simulations - Number of Monte Carlo simulations to run (default 10000)
  */
+/** A tie is a game played: without it a team with a tie looks a game behind everyone. */
+function gamesPlayedBy(team: TeamData): number {
+  return team.wins + team.losses + (team.ties ?? 0)
+}
+
 /** mulberry32: small, fast and reproducible; the simulation only needs a stable stream. */
 function seededRandom(seed: number): () => number {
   let a = seed >>> 0
@@ -90,13 +96,13 @@ export function calculatePlayoffOdds(
   // there is nothing to simulate from (0 / 0), so there are no odds yet. Showing none is
   // honest; the old behaviour made every simulated game a loss and printed 100%/0% in
   // roster order.
-  if (!teams.some((t) => t.wins + t.losses > 0 && t.pointsFor > 0)) return []
+  if (!teams.some((t) => gamesPlayedBy(t) > 0 && t.pointsFor > 0)) return []
   const random = seededRandom(playoffOddsSeed(teams, currentWeek, totalWeeks, spots, schedule))
 
   // Detect games per week by looking at max games played vs weeks
   // If teams have ~2x games as weeks, it's a 2-game-per-week league (H2H + Median)
-  const maxGamesPlayed = Math.max(...teams.map((t) => t.wins + t.losses))
-  const minGamesPlayed = Math.min(...teams.map((t) => t.wins + t.losses))
+  const maxGamesPlayed = Math.max(...teams.map(gamesPlayedBy))
+  const minGamesPlayed = Math.min(...teams.map(gamesPlayedBy))
   const gamesPerWeek = maxGamesPlayed > currentWeek * 1.5 ? 2 : 1
 
   // Calculate total expected games for the season
@@ -112,10 +118,7 @@ export function calculatePlayoffOdds(
 
   // If no remaining games possible, use final standings
   if (remainingWeeks <= 0 && !weekInProgress) {
-    const sortedTeams = [...teams].sort((a, b) => {
-      if (a.wins !== b.wins) return b.wins - a.wins
-      return b.pointsFor - a.pointsFor
-    })
+    const sortedTeams = standingsOrder(teams)
     return sortedTeams.map((team, index) => ({
       rosterId: team.rosterId,
       teamName: team.teamName,
@@ -129,13 +132,13 @@ export function calculatePlayoffOdds(
 
   // Calculate each team's remaining games individually
   const teamRemainingGames = teams.map((team) => {
-    const gamesPlayed = team.wins + team.losses
+    const gamesPlayed = gamesPlayedBy(team)
     return Math.max(0, totalExpectedGames - gamesPlayed)
   })
 
   // Calculate average points per game and standard deviation for each team
   const teamStats = teams.map((team) => {
-    const gamesPlayed = team.wins + team.losses
+    const gamesPlayed = gamesPlayedBy(team)
     const avgPointsPerGame =
       gamesPlayed > 0 ? team.pointsFor / gamesPlayed : team.pointsFor / currentWeek
 
@@ -159,10 +162,7 @@ export function calculatePlayoffOdds(
   // Check if any team has remaining games
   const anyRemainingGames = teamRemainingGames.some((g) => g > 0)
   if (!anyRemainingGames) {
-    const sortedTeams = [...teams].sort((a, b) => {
-      if (a.wins !== b.wins) return b.wins - a.wins
-      return b.pointsFor - a.pointsFor
-    })
+    const sortedTeams = standingsOrder(teams)
     return sortedTeams.map((team, index) => ({
       rosterId: team.rosterId,
       teamName: team.teamName,
@@ -275,16 +275,14 @@ export function calculatePlayoffOdds(
         teamName: team.teamName,
         wins: simulatedWins,
         losses: simulatedLosses,
+        ties: team.ties ?? 0,
         pointsFor: simulatedPF,
         rosterId: team.rosterId,
       }
     })
 
-    // Sort by wins, then points for (tiebreaker)
-    simulatedRecords.sort((a, b) => {
-      if (a.wins !== b.wins) return b.wins - a.wins
-      return b.pointsFor - a.pointsFor
-    })
+    // The same standings order as every other page.
+    simulatedRecords.sort(compareStandings)
 
     // Count teams that made playoffs
     simulatedRecords.slice(0, spots).forEach((record) => {
@@ -296,10 +294,7 @@ export function calculatePlayoffOdds(
   }
 
   // Calculate probabilities and sort by current rank
-  const sortedTeams = [...teams].sort((a, b) => {
-    if (a.wins !== b.wins) return b.wins - a.wins
-    return b.pointsFor - a.pointsFor
-  })
+  const sortedTeams = standingsOrder(teams)
 
   return sortedTeams.map((team, index) => {
     const teamIndex = teams.findIndex((t) => t.rosterId === team.rosterId)

@@ -3,6 +3,7 @@ import useSWR from 'swr'
 import { leagueCache } from '@/lib/league-cache'
 import { teamScores } from '@/lib/team-score'
 import { resolveLeagueContext, type LeagueContext } from '@/lib/league-metrics/context'
+import { sleeperPoints } from '@/lib/league-metrics/standings'
 import { getCacheVersion, useCacheVersion } from '@/lib/cache-version'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import type {
@@ -55,7 +56,9 @@ interface SleeperRoster {
     losses?: number
     ties?: number
     fpts?: number
+    fpts_decimal?: number
     fpts_against?: number
+    fpts_against_decimal?: number
     waiver_position?: number
     total_moves?: number
   }
@@ -461,8 +464,11 @@ export async function fetchLeagueDataBundle(
         wins: roster.settings?.wins || 0,
         losses: roster.settings?.losses || 0,
         ties: roster.settings?.ties || 0,
-        pointsFor: roster.settings?.fpts || 0,
-        pointsAgainst: roster.settings?.fpts_against || 0,
+        pointsFor: sleeperPoints(roster.settings?.fpts, roster.settings?.fpts_decimal),
+        pointsAgainst: sleeperPoints(
+          roster.settings?.fpts_against,
+          roster.settings?.fpts_against_decimal
+        ),
         rank: roster.rank || 0,
         grade: '',
         gradeScore: 0,
@@ -491,18 +497,18 @@ export async function fetchLeagueDataBundle(
     // Non-fatal
   }
 
-  const totalPoints = validRosters.reduce((sum, roster) => sum + (roster.settings?.fpts || 0), 0)
+  const pointsOf = (roster: SleeperRoster | null) =>
+    sleeperPoints(roster?.settings?.fpts, roster?.settings?.fpts_decimal)
+  const totalPoints = validRosters.reduce((sum, roster) => sum + pointsOf(roster), 0)
   const avgPoints = validRosters.length > 0 ? totalPoints / validRosters.length : 0
   const highestScoring = validRosters.reduce(
     (highest: SleeperRoster | null, roster) =>
-      (roster.settings?.fpts || 0) > (highest?.settings?.fpts || 0) ? roster : highest,
+      pointsOf(roster) > pointsOf(highest) ? roster : highest,
     null
   )
   const lowestScoring = validRosters.reduce(
     (lowest: SleeperRoster | null, roster) =>
-      lowest === null || (roster.settings?.fpts || 0) < (lowest.settings?.fpts || 0)
-        ? roster
-        : lowest,
+      lowest === null || pointsOf(roster) < pointsOf(lowest) ? roster : lowest,
     null
   )
 

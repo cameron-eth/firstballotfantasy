@@ -6,6 +6,7 @@
  * best players can't buy you the 1.01.
  */
 import type { TeamData } from '../types'
+import { compareStandings, winPct } from '@/lib/league-metrics/standings'
 import type { MaxPointsForEntry } from './maxPointsFor'
 
 export type DraftOrderMetric = 'record' | 'maxpf' | 'projected'
@@ -59,12 +60,6 @@ export function pickLabel(pick: number): string {
   return `1.${String(pick).padStart(2, '0')}`
 }
 
-function winPctOf(team: TeamData): number {
-  const ties = team.ties ?? 0
-  const games = team.wins + team.losses + ties
-  return games > 0 ? (team.wins + ties * 0.5) / games : 0
-}
-
 interface Scored {
   team: TeamData
   winPct: number
@@ -76,9 +71,9 @@ interface Scored {
 /**
  * Reverse-standings comparator: the worst team sorts first.
  *
- * Record ties break on points scored (Sleeper's own tiebreaker — fewer points is the
- * worse team, so it drafts earlier). Max PF ties break on record, which effectively
- * never happens with two decimal places of scoring.
+ * The record order is the standings order (lib/league-metrics/standings) reversed, so a
+ * team drafts exactly where it finishes. Max PF ties break on that same order, which
+ * effectively never happens with two decimal places of scoring.
  */
 function comparatorFor(metric: DraftOrderMetric) {
   return (a: Scored, b: Scored): number => {
@@ -90,12 +85,10 @@ function comparatorFor(metric: DraftOrderMetric) {
     }
     if (metric === 'maxpf') {
       if (a.maxPointsFor !== b.maxPointsFor) return a.maxPointsFor - b.maxPointsFor
-      if (a.winPct !== b.winPct) return a.winPct - b.winPct
-      return a.pointsFor - b.pointsFor
+      return compareStandings(b.team, a.team)
     }
-    if (a.winPct !== b.winPct) return a.winPct - b.winPct
-    if (a.pointsFor !== b.pointsFor) return a.pointsFor - b.pointsFor
-    return a.maxPointsFor - b.maxPointsFor
+    // Exactly the reverse of the standings order on every page.
+    return compareStandings(b.team, a.team)
   }
 }
 
@@ -109,10 +102,9 @@ export function buildDraftOrder(
     const entry = maxPointsForByRoster[team.rosterId]
     return {
       team,
-      winPct: winPctOf(team),
-      // Prefer the week-by-week sum: Sleeper's roster `fpts` drops the decimal into a
-      // separate field, so it reads a fraction of a point low.
-      pointsFor: entry?.actualPointsFor ?? team.pointsFor,
+      winPct: winPct(team),
+      // Season points with Sleeper's decimals, the same number the standings sort on.
+      pointsFor: team.pointsFor,
       maxPointsFor: entry?.maxPointsFor ?? 0,
       projectedMaxPointsFor: projectedByRoster[team.rosterId] ?? entry?.maxPointsFor ?? 0,
     }

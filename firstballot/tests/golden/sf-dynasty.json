@@ -40,7 +40,7 @@
         1,
         0
       ],
-      "pointsFor": 1149,
+      "pointsFor": 1149.18,
       "grade": "A+",
       "gradeScore": 100,
       "teamValueScore": 60864,
@@ -77,7 +77,7 @@
         9,
         0
       ],
-      "pointsFor": 767,
+      "pointsFor": 767.7,
       "grade": "C+",
       "gradeScore": 56,
       "teamValueScore": 30615,
@@ -106,7 +106,7 @@
       },
       "maxPointsFor": 951.58,
       "projectedMaxPointsFor": 1928.41,
-      "playoffOdds": 4.51
+      "playoffOdds": 4.74
     },
     "3": {
       "record": [
@@ -114,7 +114,7 @@
         7,
         0
       ],
-      "pointsFor": 810,
+      "pointsFor": 810.34,
       "grade": "C-",
       "gradeScore": 49,
       "teamValueScore": 26302,
@@ -143,7 +143,7 @@
       },
       "maxPointsFor": 928.04,
       "projectedMaxPointsFor": 1889.61,
-      "playoffOdds": 30.6
+      "playoffOdds": 29.77
     },
     "4": {
       "record": [
@@ -151,7 +151,7 @@
         3,
         0
       ],
-      "pointsFor": 1007,
+      "pointsFor": 1007.36,
       "grade": "A",
       "gradeScore": 79,
       "teamValueScore": 46485,
@@ -180,7 +180,7 @@
       },
       "maxPointsFor": 1162.86,
       "projectedMaxPointsFor": 2306.69,
-      "playoffOdds": 99.64
+      "playoffOdds": 99.72
     },
     "5": {
       "record": [
@@ -188,7 +188,7 @@
         1,
         0
       ],
-      "pointsFor": 1124,
+      "pointsFor": 1124.82,
       "grade": "A+",
       "gradeScore": 89,
       "teamValueScore": 52432,
@@ -225,7 +225,7 @@
         13,
         0
       ],
-      "pointsFor": 751,
+      "pointsFor": 751.22,
       "grade": "C",
       "gradeScore": 51,
       "teamValueScore": 30820,
@@ -262,7 +262,7 @@
         11,
         0
       ],
-      "pointsFor": 700,
+      "pointsFor": 700.7,
       "grade": "D",
       "gradeScore": 41,
       "teamValueScore": 22016,
@@ -291,7 +291,7 @@
       },
       "maxPointsFor": 841.02,
       "projectedMaxPointsFor": 1592.15,
-      "playoffOdds": 0.14
+      "playoffOdds": 0.13
     },
     "8": {
       "record": [
@@ -299,7 +299,7 @@
         13,
         0
       ],
-      "pointsFor": 791,
+      "pointsFor": 791.64,
       "grade": "B-",
       "gradeScore": 61,
       "teamValueScore": 37449,
@@ -328,7 +328,7 @@
       },
       "maxPointsFor": 932.44,
       "projectedMaxPointsFor": 1974.51,
-      "playoffOdds": 0.13
+      "playoffOdds": 0.25
     },
     "9": {
       "record": [
@@ -336,7 +336,7 @@
         9,
         0
       ],
-      "pointsFor": 859,
+      "pointsFor": 859.54,
       "grade": "B",
       "gradeScore": 66,
       "teamValueScore": 39106,
@@ -365,7 +365,7 @@
       },
       "maxPointsFor": 1017.08,
       "projectedMaxPointsFor": 2095.85,
-      "playoffOdds": 21.51
+      "playoffOdds": 21.52
     },
     "10": {
       "record": [
@@ -373,7 +373,7 @@
         5,
         0
       ],
-      "pointsFor": 985,
+      "pointsFor": 985.78,
       "grade": "A-",
       "gradeScore": 77,
       "teamValueScore": 46508,
@@ -402,7 +402,7 @@
       },
       "maxPointsFor": 1141.42,
       "projectedMaxPointsFor": 2312.17,
-      "playoffOdds": 97.77
+      "playoffOdds": 97.47
     },
     "11": {
       "record": [
@@ -410,7 +410,7 @@
         7,
         0
       ],
-      "pointsFor": 855,
+      "pointsFor": 855.14,
       "grade": "B",
       "gradeScore": 72,
       "teamValueScore": 43662,
@@ -439,7 +439,7 @@
       },
       "maxPointsFor": 976.06,
       "projectedMaxPointsFor": 2082.96,
-      "playoffOdds": 49.91
+      "playoffOdds": 50.24
     },
     "12": {
       "record": [
@@ -447,7 +447,7 @@
         5,
         0
       ],
-      "pointsFor": 958,
+      "pointsFor": 958.56,
       "grade": "A-",
       "gradeScore": 77,
       "teamValueScore": 43146,
@@ -476,7 +476,7 @@
       },
       "maxPointsFor": 1083.04,
       "projectedMaxPointsFor": 2179.45,
-      "playoffOdds": 95.73
+      "playoffOdds": 96.1
     }
   },
   "standingsOrder": [

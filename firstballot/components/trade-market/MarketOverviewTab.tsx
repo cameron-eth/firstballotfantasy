@@ -7,6 +7,7 @@ import { TradePlayerCard } from './TradePlayerCard'
 
 export function MarketOverviewTab({
   rosterKPIs,
+  todayNetByRoster,
   topBuyLows,
   topSellHighs,
   allPlayers,
@@ -15,6 +16,8 @@ export function MarketOverviewTab({
   velocity,
 }: {
   rosterKPIs: RosterKPI[]
+  /** D4: each roster's net at today's prices, shown beside the trade-date net. */
+  todayNetByRoster?: Record<number, number>
   topBuyLows: { name: string; playerId?: string; delta: number; ownerName: string }[]
   topSellHighs: { name: string; playerId?: string; delta: number; ownerName: string }[]
   allPlayers: Record<string, any>
@@ -93,7 +96,8 @@ export function MarketOverviewTab({
                 <th className="text-right px-4 py-3">Trades</th>
                 <th className="text-right px-4 py-3">KTC Gained</th>
                 <th className="text-right px-4 py-3">KTC Lost</th>
-                <th className="text-right px-4 py-3">Net</th>
+                <th className="text-right px-4 py-3">{todayNetByRoster ? 'Net (trade date)' : 'Net'}</th>
+                {todayNetByRoster && <th className="text-right px-4 py-3">Net today</th>}
                 <th className="text-right px-4 py-3">Win %</th>
                 <th className="text-center px-4 py-3">Grade</th>
                 <th className="text-left px-4 py-3">Best Buy Low</th>
@@ -121,6 +125,13 @@ export function MarketOverviewTab({
                   >
                     {formatValue(r.netKtc)}
                   </td>
+                  {todayNetByRoster && (
+                    <td className="text-right px-4 py-3 text-muted-foreground">
+                      {todayNetByRoster[r.rosterId] != null
+                        ? formatValue(todayNetByRoster[r.rosterId])
+                        : '—'}
+                    </td>
+                  )}
                   <td className="text-right px-4 py-3">{r.winRate}%</td>
                   <td className="text-center px-4 py-3">
                     <span

@@ -7,7 +7,8 @@ import { Activity } from 'lucide-react'
 import { Header } from '@/components/header'
 import { leagueCache } from '@/lib/league-cache'
 import { useLeagueContext } from '@/lib/league-context'
-import { processPlayerForTrade, type PlayerValue } from '@/lib/trade-utils'
+import { processPlayerForTrade, rankingNameKeys, type PlayerValue } from '@/lib/trade-utils'
+import { rankingsAtTradeDate } from '@/lib/trade-market/trade-date-values'
 import { computeTradeAnalytics } from '@/components/trade-market/analytics'
 import {
   INITIAL_MARKET_FILTERS,
@@ -31,7 +32,13 @@ interface TradeMarketData {
   allPlayers: Record<string, any>
   transactions: any[]
   dynastyRankings: Record<string, any>
+  /** transaction_id → player id → KTC value on the trade date (D4); absent before history. */
+  tradeDateKtc?: Record<string, Record<string, number>>
+  /** First day KTC prices exist; older trades can only be valued at today's prices. */
+  priceHistoryFrom?: string | null
 }
+
+export type ValueBasis = 'tradeDate' | 'today'
 
 async function fetchTradeMarket(url: string): Promise<TradeMarketData> {
   const response = await fetch(url, { cache: 'no-store' })
@@ -56,6 +63,8 @@ function TradeMarketContent() {
   const [leagueId, setLeagueId] = useState<string>('')
   const [activeTab, setActiveTab] = useState<MarketTab>('overview')
   const [filters, dispatchFilter] = useReducer(marketFiltersReducer, INITIAL_MARKET_FILTERS)
+  // D4: value each trade on its date; today's prices stay available as the second basis.
+  const [basis, setBasis] = useState<ValueBasis>('tradeDate')
 
   const {
     data: tradeData,
@@ -70,6 +79,8 @@ function TradeMarketContent() {
   const allPlayers = tradeData?.allPlayers ?? {}
   const transactions = tradeData?.transactions ?? []
   const dynastyRankings = tradeData?.dynastyRankings ?? {}
+  const tradeDateKtc = tradeData?.tradeDateKtc
+  const priceHistoryFrom = tradeData?.priceHistoryFrom ?? null
 
   const getTeamMeta = useCallback(
     (leagueIdFromTrade: string | undefined, rosterId: number) => {
@@ -127,6 +138,39 @@ function TradeMarketContent() {
     return cache
   }, [filteredTransactions, allPlayers, dynastyRankings])
 
+  const todayAnalytics = useMemo(
+    () =>
+      computeTradeAnalytics(filteredTransactions, allPlayers, getTeamMeta, playerValuationCache),
+    [filteredTransactions, allPlayers, getTeamMeta, playerValuationCache]
+  )
+
+  // Trades on or after the first KTC day have a price on their date; older ones don't.
+  const datedTransactions = useMemo(
+    () => filteredTransactions.filter((tx) => tradeDateKtc?.[tx.transaction_id]),
+    [filteredTransactions, tradeDateKtc]
+  )
+  const tradeDateAnalytics = useMemo(() => {
+    const cache = new Map<string, PlayerValue | null>()
+    const valueOnTradeDate = (trade: any, pid: string): PlayerValue | null => {
+      const key = `${trade.transaction_id}:${pid}`
+      if (!cache.has(key)) {
+        const player = allPlayers[pid]
+        const name = player ? `${player.first_name} ${player.last_name}` : ''
+        const ktc = tradeDateKtc?.[trade.transaction_id]?.[pid] ?? null
+        const rankings = rankingsAtTradeDate(name, ktc, dynastyRankings, rankingNameKeys)
+        cache.set(key, processPlayerForTrade(pid, allPlayers, rankings))
+      }
+      return cache.get(key) ?? null
+    }
+    return computeTradeAnalytics(
+      datedTransactions,
+      allPlayers,
+      getTeamMeta,
+      playerValuationCache,
+      valueOnTradeDate
+    )
+  }, [datedTransactions, allPlayers, dynastyRankings, tradeDateKtc, getTeamMeta, playerValuationCache])
+
   const {
     rosterKPIs,
     counterpartyPairs,
@@ -135,16 +179,7 @@ function TradeMarketContent() {
     velocity,
     mostTradedPlayers,
     pnlSeries,
-  } = useMemo(
-    () =>
-      computeTradeAnalytics(
-        filteredTransactions,
-        allPlayers,
-        getTeamMeta,
-        playerValuationCache
-      ),
-    [filteredTransactions, allPlayers, dynastyRankings, getTeamMeta, playerValuationCache]
-  )
+  } = basis === 'tradeDate' ? tradeDateAnalytics : todayAnalytics
 
   if (loading) {
     return (
@@ -183,6 +218,10 @@ function TradeMarketContent() {
         seasonOptions={seasonOptions}
         teams={teams}
         tradeCount={filteredTransactions.length}
+        basis={basis}
+        onBasisChange={setBasis}
+        datedTradeCount={datedTransactions.length}
+        priceHistoryFrom={priceHistoryFrom}
         onBack={() => router.push(`/league-buddy?leagueId=${leagueId}`)}
       />
 
@@ -192,6 +231,11 @@ function TradeMarketContent() {
         {activeTab === 'overview' && (
           <MarketOverviewTab
             rosterKPIs={rosterKPIs}
+            todayNetByRoster={
+              basis === 'tradeDate'
+                ? Object.fromEntries(todayAnalytics.rosterKPIs.map((r) => [r.rosterId, r.netKtc]))
+                : undefined
+            }
             topBuyLows={topBuyLows}
             topSellHighs={topSellHighs}
             allPlayers={allPlayers}
@@ -206,7 +250,7 @@ function TradeMarketContent() {
             pnlSeries={pnlSeries}
             counterpartyPairs={counterpartyPairs}
             rosterKPIs={rosterKPIs}
-            totalTrades={filteredTransactions.length}
+            totalTrades={basis === 'tradeDate' ? datedTransactions.length : filteredTransactions.length}
             allPlayers={allPlayers}
             dynastyRankings={dynastyRankings}
           />

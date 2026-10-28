@@ -12,6 +12,11 @@ interface MarketHeaderBarProps {
   teams: { rosterId: number; ownerName: string }[]
   /** Trades left after the current filters, shown as live feedback. */
   tradeCount: number
+  /** D4: which prices value the trades, and how many trades have a trade-date price. */
+  basis: 'tradeDate' | 'today'
+  onBasisChange: (basis: 'tradeDate' | 'today') => void
+  datedTradeCount: number
+  priceHistoryFrom: string | null
   onBack: () => void
 }
 
@@ -22,8 +27,20 @@ export function MarketHeaderBar({
   seasonOptions,
   teams,
   tradeCount,
+  basis,
+  onBasisChange,
+  datedTradeCount,
+  priceHistoryFrom,
   onBack,
 }: MarketHeaderBarProps) {
+  const since = priceHistoryFrom
+    ? new Date(`${priceHistoryFrom}T00:00:00Z`).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'UTC',
+      })
+    : null
   return (
     <div className="bg-card border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -49,6 +66,13 @@ export function MarketHeaderBar({
             </Button>
           </div>
               </div>
+
+        {basis === 'tradeDate' && since && datedTradeCount < tradeCount && (
+          <p className="mt-2 text-[11px] font-mono text-amber-300">
+            {tradeCount - datedTradeCount} trades before {since} have no price history, so they
+            count only under today&apos;s prices.
+          </p>
+        )}
 
         {/* Filter chips */}
         <div className="mt-3 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -96,6 +120,15 @@ export function MarketHeaderBar({
             <option value="players">Players</option>
             <option value="picks">Picks</option>
             <option value="faab">FAAB</option>
+          </select>
+          <select
+            aria-label="Value trades at"
+            value={basis}
+            onChange={(e) => onBasisChange(e.target.value as 'tradeDate' | 'today')}
+            className="h-9 px-2 bg-secondary/40 border border-border rounded text-xs font-mono"
+          >
+            <option value="tradeDate">At trade date ({datedTradeCount} trades)</option>
+            <option value="today">Today&apos;s prices ({tradeCount} trades)</option>
           </select>
           <div className="h-9 px-2 flex items-center text-[11px] text-muted-foreground font-mono border border-border rounded bg-secondary/20">
             {tradeCount} trades after filters

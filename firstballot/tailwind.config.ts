@@ -8,6 +8,8 @@ const config: Config = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    // Class recipes live in lib/design/tones.ts and must be scanned too.
+    './lib/**/*.{ts,tsx}',
     '*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
@@ -43,6 +45,19 @@ const config: Config = {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        action: 'hsl(var(--action) / <alpha-value>)',
+        value: 'hsl(var(--value) / <alpha-value>)',
+        elite: 'hsl(var(--elite) / <alpha-value>)',
+        production: 'hsl(var(--production) / <alpha-value>)',
+        positive: 'hsl(var(--positive) / <alpha-value>)',
+        negative: 'hsl(var(--negative) / <alpha-value>)',
+        warning: 'hsl(var(--warning) / <alpha-value>)',
+        cold: 'hsl(var(--cold) / <alpha-value>)',
+        pick: 'hsl(var(--pick) / <alpha-value>)',
+        surface: 'hsl(var(--surface) / <alpha-value>)',
+        raised: 'hsl(var(--raised) / <alpha-value>)',
+        overlay: 'hsl(var(--overlay) / <alpha-value>)',
+        line: 'hsl(var(--line) / <alpha-value>)',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -64,7 +79,25 @@ const config: Config = {
           ring: 'hsl(var(--sidebar-ring))',
         },
       },
+      fontFamily: {
+        // Inter is loaded in app/layout.tsx; without this, font-sans fell back to system-ui.
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      fontSize: {
+        // 11px is the floor for text; 10px is for badges only.
+        '2xs': ['11px', '14px'],
+        badge: ['10px', '12px'],
+      },
+      maxWidth: {
+        app: '1440px',
+      },
+      boxShadow: {
+        card: '0 16px 40px -20px #000',
+        overlay: '0 24px 60px -24px #000',
+      },
       borderRadius: {
+        card: '20px',
+        'card-inner': '14px',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',

@@ -2,13 +2,21 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...props} />
-    </div>
-  )
-)
+const Table = React.forwardRef<
+  HTMLTableElement,
+  React.HTMLAttributes<HTMLTableElement> & {
+    containerClassName?: string
+    /** Labels the scroll container as a focusable region, so keyboard users can scroll it. */
+    region?: string
+  }
+>(({ className, containerClassName, region, ...props }, ref) => (
+  <div
+    className={cn('relative w-full overflow-auto', containerClassName)}
+    {...(region ? { role: 'region', 'aria-label': region, tabIndex: 0 } : {})}
+  >
+    <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...props} />
+  </div>
+))
 Table.displayName = 'Table'
 
 const TableHeader = React.forwardRef<
@@ -53,14 +61,27 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
 )
 TableRow.displayName = 'TableRow'
 
+/** Cell options shared by heads and cells: right-aligned tabular numbers, a sticky left column. */
+interface CellOptions {
+  numeric?: boolean
+  sticky?: boolean
+}
+const cellOptions = ({ numeric, sticky }: CellOptions) =>
+  cn(
+    numeric && 'text-right tabular-nums',
+    sticky &&
+      'sticky left-0 z-[1] bg-background after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-line/60'
+  )
+
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
-  React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.ThHTMLAttributes<HTMLTableCellElement> & CellOptions
+>(({ className, numeric, sticky, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
       'h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
+      cellOptions({ numeric, sticky }),
       className
     )}
     {...props}
@@ -70,11 +91,15 @@ TableHead.displayName = 'TableHead'
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.TdHTMLAttributes<HTMLTableCellElement> & CellOptions
+>(({ className, numeric, sticky, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
+    className={cn(
+      'p-4 align-middle [&:has([role=checkbox])]:pr-0',
+      cellOptions({ numeric, sticky }),
+      className
+    )}
     {...props}
   />
 ))

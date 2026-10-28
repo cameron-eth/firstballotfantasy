@@ -88,7 +88,7 @@ Legend: **M** = has a DB migration. **F** = behind a flag or compatibility layer
 | **PR-16** ⏸D4 | R3-2: Trade Market rebuild | `app/api/trade-market/route.ts` (no `allPlayers`, ids only, auth), materialized per league season, value on trade date | Payload under 1 MB; KPIs match the fixture | Payload size and time, before/after | Snapshot rows | Revert the route (old contract kept behind `?v=1`) |
 | **PR-17** **M** | R3-3: incremental community ratings | `lib/community/*`; `community_ratings` table updated on each ballot write | Reads take constant time; ratings equal a batch recompute on the fixture | Request time vs ballot count | **M** new table | Readers fall back to the batch path |
 | **PR-18** | R3-4: dashboard request consolidation | `useLeagueData.ts`, `useDraftOrder.ts`, `useStandingsOdds.ts` (shared SWR keys for league, state and matchups) | Fewer requests on first load | Request count and time to interactive | — | Revert |
-| → **G3** | | | | | | |
+| → **G3** **Passed 2026-10-29** (GATE_G3.md): every Phase D path measured before/after; goldens unchanged; PR-12 and PR-15b flags still off | | | | | | |
 
 ### Phase E: consolidation
 

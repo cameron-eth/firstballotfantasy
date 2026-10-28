@@ -43,15 +43,10 @@ export function ScoutingExperience({ players }: { players: Player[] }) {
           </div>
         </div>
         <div>
-          <figure className="mt-7 overflow-hidden rounded-2xl border border-blue-300/25 bg-[#0b1224] shadow-[0_24px_100px_-30px_rgba(59,130,246,0.36)] ring-1 ring-white/5">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-slate-950/50 px-5 py-3 text-xs">
-              <span className="font-semibold text-white">The Team Builder · plan across three seasons</span>
-              <span className="text-slate-400">Built from the player-card system</span>
-            </div>
+          <figure className="mt-8">
             <TeamMapPreview />
-            <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-5 py-3 text-xs text-slate-400">
-              <span>Illustrative roster · your connected league supplies your own team and data</span>
-              <span>Team Builder works in desktop browsers</span>
+            <figcaption className="mt-3 text-xs text-slate-500">
+              Illustrative roster. Connect a league to plan yours in Team Builder on desktop.
             </figcaption>
           </figure>
         </div>

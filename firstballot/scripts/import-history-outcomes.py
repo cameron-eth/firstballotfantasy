@@ -1,5 +1,5 @@
 """Reproducible public-data snapshot. Never substitutes ranks/KTC for missing ADP."""
-import csv, datetime, io, json, os, re, subprocess, concurrent.futures, collections
+import csv, datetime, hashlib, io, json, os, re, subprocess, concurrent.futures, collections, urllib.request
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = Path(os.environ.get('OUTCOME_CACHE_DIR', '/tmp/firstballot-outcomes'))
@@ -25,7 +25,13 @@ else:
 ids = list(csv.DictReader(io.StringIO(fetch('https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv','playerids.csv',True))))
 identity_candidates = {r['sleeper_id']: {'espnId':r['espn_id'],'name':r['name'],'position':r['position']} for r in ids if r['sleeper_id'].isdigit() and r['espn_id'].isdigit()}
 alias_counts = collections.Counter(r['espnId'] for r in identity_candidates.values())
-identity_output = {k:v for k,v in identity_candidates.items() if alias_counts[v['espnId']]==1}
+# Quarantine (data/identity-quarantine.json): provider aliases known to conflict stay out of
+# the runtime map and the outcome join until someone verifies them.
+quarantine = json.loads((ROOT/'data/identity-quarantine.json').read_text())
+quarantined_sleeper = set(quarantine['conflicts'])
+quarantined_espn = {c['espnId'] for c in quarantine['conflicts'].values()}
+identity_output = {k:v for k,v in identity_candidates.items()
+                   if alias_counts[v['espnId']]==1 and k not in quarantined_sleeper and v['espnId'] not in quarantined_espn}
 
 players = {}
 identity = {}
@@ -35,7 +41,8 @@ for row in ids:
     if not 2010 <= year <= season or row['position'] not in ['QB','RB','WR','TE'] or not re.fullmatch(r'00-\d+',row['gsis_id']): continue
     key = (norm(row['name']), row['position'], year)
     identity.setdefault(key, set()).add(row['gsis_id'])
-    players[row['gsis_id']] = dict(id=row['gsis_id'], espnId=row['espn_id'] if row['espn_id'].isdigit() else None, name=row['name'], position=row['position'], year=year, adp=None, adpCount=0, adpWindow=None, seasons={})
+    espn_id = row['espn_id'] if row['espn_id'].isdigit() and row['espn_id'] not in quarantined_espn else None
+    players[row['gsis_id']] = dict(id=row['gsis_id'], espnId=espn_id, name=row['name'], position=row['position'], year=year, adp=None, adpCount=0, adpWindow=None, seasons={})
 coverage=[];unmatched=[]
 def adp(y):
     url=f'https://fantasyfootballcalculator.com/api/v1/adp/rookie?teams=12&year={y}'
@@ -93,4 +100,39 @@ if out.exists():
     if (season,week)<(old['season'],old['week']):raise ValueError('Refusing coverage regression')
 out.write_text(json.dumps(result,separators=(',',':'))+'\n')
 (ROOT/'data/nfl-player-identities.json').write_text(json.dumps(identity_output,separators=(',',':'))+'\n')
+
+def publish_snapshot(key, payload, ttl_days, season=None):
+    """Store the result in data_snapshots so the app reads it without a PR merge (PR-13).
+    Same row shape and ingestion_runs entry as lib/platform/snapshots.ts writeSnapshot()."""
+    base = os.environ.get('SUPABASE_URL') or os.environ.get('NEXT_PUBLIC_SUPABASE_URL')
+    secret = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    if not base or not secret:
+        print(f'Supabase credentials not set; {key} written to the bundled file only.')
+        return
+    now = datetime.datetime.now(datetime.timezone.utc)
+    def post(path, body, prefer):
+        request = urllib.request.Request(f"{base.rstrip('/')}/rest/v1/{path}", method='POST',
+                                         data=json.dumps(body).encode(),
+                                         headers={'apikey': secret, 'Authorization': f'Bearer {secret}',
+                                                  'Content-Type': 'application/json', 'Prefer': prefer})
+        urllib.request.urlopen(request, timeout=60).read()
+    post('data_snapshots?on_conflict=key', {
+        'key': key, 'source': 'dynastyprocess + nflverse + FantasyFootballCalculator', 'payload': payload,
+        'fetched_at': now.isoformat(), 'source_observed_at': None,
+        'expires_at': (now + datetime.timedelta(days=ttl_days)).isoformat(), 'quality': 'unverified',
+        'content_hash': hashlib.sha256(json.dumps(payload, separators=(',',':')).encode()).hexdigest(),
+        'season': season, 'week': None,
+    }, 'resolution=merge-duplicates,return=minimal')
+    run = os.environ.get('GITHUB_RUN_ID')
+    run_url = f"{os.environ.get('GITHUB_SERVER_URL')}/{os.environ.get('GITHUB_REPOSITORY')}/actions/runs/{run}" if run else None
+    try:
+        post('ingestion_runs', {'dataset': key, 'status': 'success', 'completed_at': now.isoformat(),
+                                'row_count': len(payload['players'] if 'players' in payload else payload),
+                                'source': 'script:import-history-outcomes', 'run_url': run_url}, 'return=minimal')
+    except OSError as error:
+        print(f'warning: could not log {key} to ingestion_runs: {error}')
+
+# The job runs weekly; nine days leaves room for one late or skipped run before health flags it.
+publish_snapshot('identities:v1', identity_output, ttl_days=9)
+publish_snapshot(f'history-outcomes:{season}', result, ttl_days=9, season=season)
 print(json.dumps({'players':len(players),'adpMatched':sum(p['adp'] is not None for p in players.values()),'asOf':[season,week],'coverage':coverage,'unmatched':unmatched},indent=2))

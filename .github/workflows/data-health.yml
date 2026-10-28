@@ -133,6 +133,11 @@ jobs:
           week=open('/tmp/current-week.txt').read().strip()
           if week:
               expected.append(f'sleeper:projections:{season}:{week}')
+          # Written weekly by history-outcomes.yml; the app falls back to the bundled files.
+          expected.append('identities:v1')
+          outcomes=sorted(k for k in keys if k.startswith('history-outcomes:'))
+          assert outcomes, 'Missing history-outcomes snapshot'
+          expected.append(outcomes[-1])
           missing=[key for key in expected if key not in keys]
           assert not missing, f'Missing monitored datasets: {missing}'
           expired=[key for key in expected if keys[key]['status']=='expired']

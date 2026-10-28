@@ -1,11 +1,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-server'
-import identities from '@/data/nfl-player-identities.json'
 import { espnSeasonKey, playerData } from '@/lib/platform/player-data'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, KTC_DAY_MARKER_PREFIX, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
 import { writeSnapshot } from '@/lib/platform/snapshots'
+import { identityMap } from '@/lib/platform/reference-data'
 import type { CurrentSeasonStat } from '@/lib/current-season-stats'
 
 export const dynamic = 'force-dynamic'
@@ -73,7 +73,7 @@ async function refresh() {
     .select('payload').eq('key', draftKey).maybeSingle()
   if (draftReadError) throw Error('DRAFT_CACHE_UNAVAILABLE')
   const draft: Record<string, DraftFact> = (draftStored?.payload ?? {}) as Record<string, DraftFact>
-  const ids = identities as Record<string, { espnId?: string }>
+  const ids: Record<string, { espnId?: string }> = (await identityMap()).data
   const missing = [...new Set(matched.map(({ id, player }) => String(player.espn_id ?? ids[id]?.espnId ?? '')))]
     .filter((id) => /^\d+$/.test(id) && !(id in draft))
   // Draft position is an immutable NFL fact. Cache successes and missing records so a daily

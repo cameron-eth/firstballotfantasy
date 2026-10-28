@@ -1,11 +1,11 @@
 import 'server-only'
-import identities from '@/data/nfl-player-identities.json'
 import {
   currentSeasonStats,
   type CurrentSeasonStat,
   type EspnFantasyPlayer,
 } from '@/lib/current-season-stats'
 import { snapshot, snapshotMetadata } from './snapshots'
+import { identityMap } from './reference-data'
 import { sleeperRead } from './teams'
 import { PlatformError } from './http'
 /** ESPN's season totals start here; earlier seasons return no players. */
@@ -109,9 +109,10 @@ export async function playerData(ids: string[], maxIds = 100) {
   if (!Number.isInteger(season) || season < 2020 || season > new Date().getUTCFullYear() + 1)
     throw new PlatformError(502, 'INVALID_SEASON', 'Season source is invalid.')
   // Past seasons load alongside the current one, so a cold cache costs one round trip, not two.
-  const [data, past] = await Promise.all([
+  const [data, past, identities] = await Promise.all([
     espnSeason(season, 900, STALE_CURRENT_SEASON_SECONDS),
     pastSeasons(season),
+    identityMap(),
   ])
   const career = past && careerTotals(past.payloads, data.payload)
   return {
@@ -119,6 +120,8 @@ export async function playerData(ids: string[], maxIds = 100) {
     scoring: 'PPR',
     rankPopulation: 'All NFL players with at least one game; ties share rank',
     freshness: snapshotMetadata(data),
+    /** Where the Sleeper → ESPN map came from: the weekly job's snapshot or the bundled file. */
+    identities: { source: identities.source, fetchedAt: identities.fetchedAt },
     /** Seasons behind career FPPG, or null when one is unavailable (career badges hide). */
     careerSeasons: past
       ? {
@@ -129,7 +132,7 @@ export async function playerData(ids: string[], maxIds = 100) {
         }
       : null,
     data: ids.map((id) => {
-      const identity = (identities as Record<string, { espnId: string; name: string }>)[id],
+      const identity = identities.data[id],
         s = identity ? data.payload[identity.espnId] : null
       return {
         sleeper_player_id: id,

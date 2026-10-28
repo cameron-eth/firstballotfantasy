@@ -11,7 +11,7 @@ import {
   applyKtc,
   fetchKtcMaps,
   fetchLeagueDataBundle,
-  ktcNamesFor,
+  ktcPlayerIdsFor,
   withTeamScores,
 } from '@/components/league-buddy/leagueDataBundle'
 import { fetchDraftOrderBundle } from '@/components/league-buddy/draft-order/draftOrderBundle'
@@ -38,7 +38,7 @@ const round = (n: number | null | undefined, places = 4) =>
 /** Everything the metrics read, fetched the way the dashboard fetches it. */
 export async function loadLeagueInputs(leagueId: string, apiBase = '') {
   const bundle = await fetchLeagueDataBundle(leagueId, null, 0, apiBase)
-  const ktc = await fetchKtcMaps(ktcNamesFor(bundle.teams), 0, apiBase)
+  const ktc = await fetchKtcMaps(ktcPlayerIdsFor(bundle.teams), 0, apiBase)
   const ctx = bundle.leagueContext
   const teams = withTeamScores(applyKtc(bundle.teams, ktc), ctx)
   const slots = bundle.rosterPositionsRaw
@@ -156,7 +156,7 @@ export function leagueMetrics(inputs: LeagueInputs) {
         leagueContext: ctx.superflex,
         tradeInventory: inventory?.superflex ?? null,
       },
-      ktcNamesMatched: Object.keys(ktc.latest).length,
+      ktcPlayersMatched: Object.keys(ktc.latest).length,
     },
     teams: Object.fromEntries(
       teams.map((t) => {

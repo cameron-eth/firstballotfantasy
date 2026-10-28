@@ -11,7 +11,15 @@ import { computeStartSit } from './projections/startSit'
 import type { ProjectionMap } from './projections/useProjections'
 import { TeamHero } from './TeamHero'
 import { PlayerFace } from './ui/PlayerFace'
-import { HeatBadge, InjuryBadge, PositionBadge, StatusBadge, TierBadge } from './ui/Badge'
+import {
+  HeatBadge,
+  InjuryBadge,
+  PositionBadge,
+  RankBadge,
+  StatusBadge,
+  TierBadge,
+  VALUE_TONE,
+} from './ui/Badge'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
 
@@ -113,7 +121,13 @@ export function RosterSection({
           a.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0)
       )
       .findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
+  const productionRank =
+    [...teams]
+      .sort((a, b) => b.pointsFor - a.pointsFor)
+      .findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
   const metricHelp: Record<string, string> = {
+    Production:
+      'Fantasy points scored this season (points for), ranked against every team in the league.',
     'Lineup projection':
       'Sum of available weekly Sleeper forecasts for your current starters, scored with this league’s rules. Partial coverage is labeled.',
     'Dynasty value':
@@ -154,8 +168,17 @@ export function RosterSection({
       label: 'Dynasty value',
       help: metricHelp['Dynasty value'],
       value: value ? value.toLocaleString() : '—',
-      detail: value ? `#${valueRank} of ${teams.length}` : undefined,
-      accent: 'text-white',
+      detail: value ? <RankBadge kind="value" rank={valueRank} of={teams.length} /> : undefined,
+      accent: 'text-amber-100',
+    },
+    {
+      label: 'Production',
+      help: metricHelp['Production'],
+      value: selectedTeam.pointsFor ? selectedTeam.pointsFor.toFixed(1) : '—',
+      detail: selectedTeam.pointsFor ? (
+        <RankBadge kind="production" rank={productionRank} of={teams.length} />
+      ) : undefined,
+      accent: 'text-sky-100',
     },
     {
       label: 'Roster grade',
@@ -206,7 +229,7 @@ export function RosterSection({
           </div>
           <div className="-mx-3 -my-3 flex snap-x gap-3 overflow-x-auto px-3 py-4">
             {starterPlayers.map((player) => (
-              <div key={player.playerId} className="w-40 shrink-0 snap-start">
+              <div key={player.playerId} className="w-48 shrink-0 snap-start">
                 <PlayerTradingCard
                   compact
                   imageHeight="h-28"
@@ -218,12 +241,31 @@ export function RosterSection({
                     `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`
                   }
                   tier={tierProp(player)}
+                  shoulderBadge={
+                    player.fppg_rank
+                      ? {
+                          label: `${player.fppg_position ?? player.position}${player.fppg_rank}`,
+                          description: `Production: ${player.fppg_position ?? player.position}${player.fppg_rank} by ${player.stats_season ?? ''} PPR points per game`,
+                        }
+                      : undefined
+                  }
                   label={
                     byes.has(player.playerId)
                       ? 'Bye week'
                       : `${points(projections?.week[player.playerId])} proj`
                   }
-                />
+                >
+                  {player.ktcValueSf != null && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400">Value</span>
+                      <span
+                        className={`rounded border px-1.5 py-0.5 font-semibold tabular-nums ${VALUE_TONE}`}
+                      >
+                        {player.ktcValueSf.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </PlayerTradingCard>
               </div>
             ))}
           </div>

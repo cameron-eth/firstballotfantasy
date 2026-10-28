@@ -157,7 +157,7 @@ export function PlayerTradingCard({
             tabIndex={0}
             title={shoulderBadge.description}
             aria-label={shoulderBadge.description}
-            className="absolute bottom-3 right-4 z-20 rounded-md border border-white/20 bg-slate-950/90 px-2 py-1 text-xs font-semibold tabular-nums text-white"
+            className="absolute bottom-3 right-4 z-20 rounded-md border border-sky-300/50 bg-slate-950/90 px-2 py-1 text-xs font-semibold tabular-nums text-sky-200"
           >
             {shoulderBadge.label}
           </span>

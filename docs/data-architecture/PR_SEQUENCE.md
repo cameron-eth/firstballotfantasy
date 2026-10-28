@@ -25,6 +25,7 @@ None of these will be chosen silently, because each one changes a scoring method
 |---|---|---|---|---|
 | **D1** | Canonical "dynasty value" for teams | (a) `teamValueScore`: quality-weighted and depth-decayed (current My Team definition); (b) lineup-slot power score; (c) linear KTC sum | (a). It was the most recent product decision. Power rankings would be relabelled "Lineup strength" and kept as a separate, clearly named metric | PR-6 |
 | **D2** | Default basis for draft slots | Record / Max PF / projected Max PF, with a per-league override | Projected Max PF when every team has data, otherwise Record, labelled everywhere | PR-8 |
+| **D5** | Roster-fit trade signal vs Market signal when they disagree | Hide one / rank one above the other / show both | Show both with their reasons and flag the disagreement (owner, 2026-10-28) | PR-9b |
 | **D3** | Prospect tier source | (a) derive from the grade cutoffs; (b) keep stored labels and flag disagreements | (b) first: show disagreements in data-health, then fix the data | PR-20 |
 | **D4** | Trade Market valuation | Today's values (current) vs value on the trade date from KTC history | Value on the trade date, with today's value as a second column | PR-16 |
 
@@ -64,7 +65,8 @@ Legend: **M** = has a DB migration. **F** = behind a flag or compatibility layer
 | **PR-7** | R1-4: one standings order, decimal PF | `utils.ts` `recordOrder` used in `LeagueBuddy.tsx:86`, `playoffOdds.ts`, `competitiveState.ts:183`, `draftOrderBoard.ts`; read `fpts_decimal` | Tie fixture gives a consistent order everywhere; PF shows real decimals | Golden + tie unit tests | — | Revert |
 | **PR-8** ⏸D2 | R1-3: one draft-slot policy | `lib/league-metrics/draft-slots.ts`; `OverviewHeader`, `usePickCapital`, `LeagueStandingsSection`, `TeamTimeline`, `DraftOrderPanel`; one `pickLabel` | The same basis gives the same slot on the header, Picks cards, board and Builder | Golden | — | Revert |
 | **PR-9** | R1-5: null-safe inputs | `competitiveState.ts` (unknown ages), `draftOrderBoard.ts` (missing Max PF), Overview value rank (missing KTC) | An "insufficient data" state is shown instead of an extreme value; no defaults that mislead | Golden + missing-data fixtures | — | Revert |
-| → **G1** | | | | | | |
+| **PR-9b** | G1 follow-up: inventory #8, #9, #16, #17, #18, #29/30 | `projections/projectedPoints.ts`; `startSit`; `calculateLeaguePositionRankings`; `tradeSignals(…, inSeason)`; `coreAvgAge`; Market signals shows roster-fit signals (D5) | Each metric has one implementation (`tests/g1-consolidation.test.mjs`) | Unit tests; goldens unchanged | — | Revert |
+| → **G1** | | | | | | | **Passed 2026-10-28** for the league dashboard (see GATE_G1.md); 7 D metrics carried to PR-16, PR-19, PR-20, PR-23 (metric 4 still unowned) |
 
 ### Phase C: reliability
 

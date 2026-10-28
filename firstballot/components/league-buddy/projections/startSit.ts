@@ -6,6 +6,7 @@
  * ("seat the highest-scoring legal lineup"), only the input changes from realized
  * points to projections. Nothing here re-implements the assignment.
  */
+import { startersProjection } from './projectedPoints'
 import { optimalLineup, parseScoringSlots } from '../draft-order/maxPointsFor'
 
 export interface StartSitPlayer {
@@ -102,7 +103,7 @@ export function computeStartSit(
     }
   }
 
-  const startersProjected = starters.reduce((sum, id) => sum + (projectionsForRoster[id] ?? 0), 0)
+  const startersProjected = startersProjection(starters, projectionsForRoster)
   const starterSet = new Set(starters)
 
   const incoming = best.seated

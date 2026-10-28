@@ -7,6 +7,7 @@
  * the standings have one.
  */
 import { optimalLineupPoints, parseScoringSlots } from './maxPointsFor'
+import { perGameProjections } from '../projections/projectedPoints'
 
 /**
  * Projected optimal lineups systematically read *below* realized Max PF, because a
@@ -77,10 +78,7 @@ export function computeProjectedMaxPointsFor({
 
   // A season projection covers a whole year; one week of it is that divided by the
   // games the player is projected to appear in.
-  const perGame: Record<string, number> = {}
-  for (const [playerId, entry] of Object.entries(seasonProjections)) {
-    if (entry.gp > 0) perGame[playerId] = entry.pts / entry.gp
-  }
+  const perGame = perGameProjections(seasonProjections)
 
   const perWeek: Record<number, number> = {}
   for (const team of teams) {

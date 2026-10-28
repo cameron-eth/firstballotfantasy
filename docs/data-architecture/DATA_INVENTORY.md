@@ -100,29 +100,29 @@ The **Class** column uses this denominator for every percentage in the executive
 | 5 | Tier label ("Elite WR1", "Fringe RB") | from 4 | `describeTier` (`lib/player-signals.ts:22-35`) | — | Render | C | |
 | 6 | Current-season FPPG and position rank | ESPN | `points/games`; rank among all players with ≥1 game (`lib/current-season-stats.ts:28-74`) | `espn:ppr:{season}` | Hourly + read-through (15 min) | K | **D:** `master_player_stats` (2025 only), NGS sum (`app/api/ngs-stats/player-fantasy-stats/route.ts:48-77`) |
 | 7 | Career FPPG ("Career", "Since 2018") | ESPN | Σ points / Σ games over 2018…now (`player-data.ts:73-92`) | `espn:ppr:*` | Hourly + 30 d past seasons | K | Players with no current-season games are dropped before the join (`useLeagueData.ts:252`) |
-| 8 | Weekly and season projections | Sleeper | Re-scored with league scoring (`lib/projections/scoring.ts:32-44`) | `sleeper:projections:*` | Hourly + read-through | K | **D:** `projectedPpg` (`LeagueBuddy.tsx:149`) vs `useProjections().ppg` |
-| 9 | Projected this week (Overview) and its league rank | from 8 | Σ starters `?? 0` (`OverviewHeader.tsx:122-126`) | — | Render | C | **D:** `startSit.startersProjected` (`projections/startSit.ts:105`) |
+| 8 | Weekly and season projections | Sleeper | Re-scored with league scoring (`lib/projections/scoring.ts:32-44`) | `sleeper:projections:*` | Hourly + read-through | K | **D:** `projectedPpg` (`LeagueBuddy.tsx:149`) vs `useProjections().ppg` · **Resolved (PR-9b):** one `perGameProjections` map |
+| 9 | Projected this week (Overview) and its league rank | from 8 | Σ starters `?? 0` (`OverviewHeader.tsx:122-126`) | — | Render | C | **D:** `startSit.startersProjected` (`projections/startSit.ts:105`) · **Resolved (PR-9b):** one `startersProjection` |
 | 10 | Lineup projection (My Team) | from 8 | Optimal start/sit (`startSit.ts`) | — | Render | C | |
-| 11 | Dynasty rank (Overview) | from 1 | Linear Σ raw KTC over QB/RB/WR/TE, missing = 0 (`OverviewHeader.tsx:112-119`) | — | Render | C | **D: 6 definitions of team value** (11–14, placements, `calculateRawScore`) |
-| 12 | Team value rank (My Team) | from 1 | Convex, depth-decayed, always SF (`lib/team-score.ts:29-56`) | — | Render, unmemoized | C | Same as 11 |
-| 13 | Power score and category ranks | from 1 | Optimal lineup + 0.25 × bench (`values.ts:163-353`) | — | useMemo | C | Same as 11 |
-| 14 | Team grade (A–D) | from 1 + 6 | 0.7 value + 0.3 production, then percentile (`team-score.ts:71-96`, `utils.ts:40-64`) | — | useMemo | C | Dead initial grade (`useLeagueData.ts:457`, overwritten at :662) |
+| 11 | Dynasty rank (Overview) | from 1 | Linear Σ raw KTC over QB/RB/WR/TE, missing = 0 (`OverviewHeader.tsx:112-119`) | — | Render | C | **D: 6 definitions of team value** (11–14, placements, `calculateRawScore`) · **Resolved (PR-6):** `leagueTeamValues` |
+| 12 | Team value rank (My Team) | from 1 | Convex, depth-decayed, always SF (`lib/team-score.ts:29-56`) | — | Render, unmemoized | C | Same as 11 · **Resolved (PR-5, PR-6)** |
+| 13 | Power score and category ranks | from 1 | Optimal lineup + 0.25 × bench (`values.ts:163-353`) | — | useMemo | C | Same as 11 · **Resolved (PR-6):** kept as its own metric, "Lineup strength" |
+| 14 | Team grade (A–D) | from 1 + 6 | 0.7 value + 0.3 production, then percentile (`team-score.ts:71-96`, `utils.ts:40-64`) | — | useMemo | C | Dead initial grade (`useLeagueData.ts:457`, overwritten at :662) · **Resolved (PR-6):** dead initial grade removed |
 | 15 | Production rank | Sleeper | Sort by integer `settings.fpts` (`RosterSection.tsx:123`) | — | Render | C | Draft order uses decimal matchup sums |
-| 16 | Position-group rank (Roster overview) | from 1 | Top QB1/RB2/WR2/TE2, always SF, ties broken by index (`utils.ts:142-204`) | — | useMemo | C | **D:** power `categoryRanks` use real slots and shared ranks |
-| 17 | Franchise state (header badge, Outlook) | from 1 + ages | Now = team value min–max; Future = −core age; split at medians (`competitiveState.ts:192-258`) | — | useMemo, gated on values | C | **D:** recomputed in `tradeSignals` with a different in-season rule (`trade-signals.ts:89`) |
-| 18 | Core age (header) | Sleeper ages | Mean age of top 12 by value (`competitiveState.ts:164`) | — | useMemo | C | **D:** "Average age" on My Team = all skill players (`RosterSection.tsx:198`) |
-| 19 | Record and standings order (header "#10 of 12", tables) | Sleeper | `recordOrder` (`utils.ts:377`) | — | Render | C | **D: 5 orderings** (`sortedTeams`, playoff-odds wins-only, placements, draft record) |
-| 20 | Points for/against and vs average | Sleeper | Integer `fpts` shown `.toFixed(1)` | — | Render | C | `fpts_decimal` never read |
+| 16 | Position-group rank (Roster overview) | from 1 | Top QB1/RB2/WR2/TE2, always SF, ties broken by index (`utils.ts:142-204`) | — | useMemo | C | **D:** power `categoryRanks` use real slots and shared ranks · **Resolved (PR-5, PR-9b):** format-aware, ties share a rank; the Lineup-strength card is "Lineup by position" |
+| 17 | Franchise state (header badge, Outlook) | from 1 + ages | Now = team value min–max; Future = −core age; split at medians (`competitiveState.ts:192-258`) | — | useMemo, gated on values | C | **D:** recomputed in `tradeSignals` with a different in-season rule (`trade-signals.ts:89`) · **Resolved (PR-9b):** `tradeSignals` takes the dashboard in-season rule |
+| 18 | Core age (header) | Sleeper ages | Mean age of top 12 by value (`competitiveState.ts:164`) | — | useMemo | C | **D:** "Average age" on My Team = all skill players (`RosterSection.tsx:198`) · **Resolved (PR-9b):** My Team shows the same core age |
+| 19 | Record and standings order (header "#10 of 12", tables) | Sleeper | `recordOrder` (`utils.ts:377`) | — | Render | C | **D: 5 orderings** (`sortedTeams`, playoff-odds wins-only, placements, draft record) · **Resolved (PR-7):** `compareStandings` |
+| 20 | Points for/against and vs average | Sleeper | Integer `fpts` shown `.toFixed(1)` | — | Render | C | `fpts_decimal` never read · **Resolved (PR-7):** `fpts_decimal` read |
 | 21 | Playoff odds | Sleeper + sim | 10,000-run Monte Carlo, unseeded (`utils/playoffOdds.ts:28-272`) | — | useMemo per mount | C | Preseason NaN bug (P0-3) |
 | 22 | Max PF | Sleeper matchups | Exact optimal lineup per week (`draft-order/maxPointsFor.ts:116-245`) | — | On load | C | |
 | 23 | Projected Max PF | 22 + 8 | Realized + remaining × calibrated per-week (`projectedMaxPointsFor.ts:65-113`) | — | useMemo | C | |
-| 24 | Draft order and pick slots (1.03, slot by Max PF) | 19, 22, 23 | `buildDraftOrder` (`draftOrderBoard.ts:83-163`) | — | Render | C | **D: 5 call sites with different metrics and gates**; two functions named `pickLabel` |
+| 24 | Draft order and pick slots (1.03, slot by Max PF) | 19, 22, 23 | `buildDraftOrder` (`draftOrderBoard.ts:83-163`) | — | Render | C | **D: 5 call sites with different metrics and gates**; two functions named `pickLabel` · **Resolved (PR-8):** `draftSlots`, one `slotLabel` |
 | 25 | Pick ownership | Sleeper | `pickInventory` (`lib/sleeper-sdk/pick-inventory.ts`) via `/api/trade-inventory` (no-store) | — | Per request | S | **D:** `/api/draft-capital` computes the same thing; no consumer since PR #78 |
 | 26 | Draft capital by year (header, Picks) | 25 | `picksByYear` (`lib/picks-overview.ts`) via shared `usePickCapital` | — | Render | C | Single implementation |
 | 27 | League pick ownership table | 25 | `leagueCapital` | — | Render | C | |
 | 28 | Trade suggestions | 1 + rosters | `suggestedTeamTrades` (`trade-opportunities.ts:55-109`) | — | Every render (P1) | C | Shared hook (My Team + Overview) |
-| 29 | "Consider trading" signal on cards | 4 + 17 | `tradeSignals` (`trade-signals.ts:88-172`) | — | useMemo | C | **D:** sell rule conflicts with 30 |
-| 30 | Market signals (sell / hold / buy) | 1 (SF) + 6 | P/E vs positional medians + daily move (`TradeIntelligencePanel.tsx:19-126`) | — | Render | C | Same as 29 |
+| 29 | "Consider trading" signal on cards | 4 + 17 | `tradeSignals` (`trade-signals.ts:88-172`) | — | useMemo | C | **D:** sell rule conflicts with 30 · **Resolved (PR-9b, D5):** both signals shown with reasons; disagreement flagged |
+| 30 | Market signals (sell / hold / buy) | 1 (SF) + 6 | P/E vs positional medians + daily move (`TradeIntelligencePanel.tsx:19-126`) | — | Render | C | Same as 29 · **Resolved (PR-9b, D5):** see 29 |
 | 31 | Live matchup score | Sleeper | — | — | 15 min poll | X | |
 | 32 | League activity feed | Sleeper transactions | Formatting only | — | 15 min poll | X | |
 | 33 | Prospect grade and tier label | Manual / ETL | Stored label returned as-is; grade cutoffs used only when the label is blank (`lib/scouting-grade-tier.ts:39-59`) | `dynasty_prospects` | Manual | P | **D: 4 prospect tier systems** (see PERFORMANCE_ACCURACY A-4) |
@@ -146,5 +146,7 @@ The **Class** column uses this denominator for every percentage in the executive
 | S, server on demand | 25, 34, 36, 37, 38, 43 | 6 (14%) |
 | C, client on demand | 5, 9–24, 26–30, 39, 40 | 24 (56%) |
 | X, external live | 31, 32 | 2 (5%) |
+
+**Status after gate G1 (2026-10-28):** 13 of the 20 D metrics are resolved (8, 9, 11–14, 16–19, 24, 29, 30); the remaining 7 (1, 2, 4, 6, 25, 33, 34) are carried to later PRs (GATE_G1.md).
 
 **Metrics with a competing definition or duplicate implementation (marked D):** 1, 2, 4, 6, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 24, 25, 29, 30, 33, 34. That is **20 of 43 (47%)**. Four of them (11–14) are one concept, team value, with six definitions.

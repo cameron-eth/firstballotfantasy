@@ -6,6 +6,7 @@ import type { MatchupData, OverviewActions, TeamData } from './types'
 import type { LeaguePlacements } from './competitiveState'
 import { BASIS_PHRASE, draftSlots, type DraftSlotInputs } from '@/lib/league-metrics/draft-slots'
 import { firstRoundLabel } from './draft-order/draftOrderBoard'
+import { startersProjection } from './projections/projectedPoints'
 import { UserAvatar } from '@/components/user-avatar'
 import { useStandingsOdds } from './useStandingsOdds'
 import { recordOrder } from './utils'
@@ -110,8 +111,7 @@ export function OverviewHeader({
   )
 
   // This week's starter projection for every team, so ours can be ranked.
-  const projected = (t: TeamData) =>
-    (t.starters ?? []).reduce((sum, id) => sum + (weekProjections[id] ?? 0), 0)
+  const projected = (t: TeamData) => startersProjection(t.starters, weekProjections)
   const projectedThisWeek = projected(selectedTeam)
   const projectedRank =
     projectedThisWeek > 0 ? teams.filter((t) => projected(t) > projectedThisWeek).length + 1 : 0

@@ -166,19 +166,21 @@ export const calculateLeaguePositionRankings = (
   }
 
   // Rank each category, highest value first (1 = best position group in the league).
+  // Equal groups share a rank, the same rule as Lineup strength and dynasty rank; ranking
+  // ties by list position made two identical groups read as different.
   const positionRankings: Record<string, Record<string, number>> = {}
 
   for (const category of [...positions, 'FLEX']) {
-    const ordered = Object.entries(teamScores)
-      .map(([rosterId, scores]) => ({ rosterId, score: scores[category] ?? 0 }))
-      .sort((a, b) => b.score - a.score)
-
-    ordered.forEach((entry, index) => {
+    const entries = Object.entries(teamScores).map(([rosterId, scores]) => ({
+      rosterId,
+      score: scores[category] ?? 0,
+    }))
+    for (const entry of entries) {
       positionRankings[entry.rosterId] = {
         ...(positionRankings[entry.rosterId] ?? {}),
-        [category]: index + 1,
+        [category]: entries.filter((other) => other.score > entry.score).length + 1,
       }
-    })
+    }
   }
 
   return positionRankings

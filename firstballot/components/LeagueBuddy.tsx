@@ -11,6 +11,7 @@ import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { useSearchParams } from 'next/navigation'
 
 import { isOffSeason } from '@/lib/season-utils'
+import { tradeSignals } from '@/lib/trade-signals'
 
 // Import extracted types and components
 import type {
@@ -86,6 +87,21 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   // Memoized sorted teams to prevent unnecessary re-sorting
   const sortedTeams = useMemo(() => recordOrder(teams), [teams])
 
+  // The Builder's "Consider trading" signals, shown beside Market signals so both answers
+  // are visible with their reasons (G1, inventory #29/#30).
+  const rosterSignals = useMemo(
+    () =>
+      new Map(
+        selectedTeam && valuesReady
+          ? tradeSignals(selectedTeam, teams, rosterPositionsRaw, !isOffSeason()).map((s) => [
+              s.playerId,
+              s,
+            ])
+          : []
+      ),
+    [selectedTeam, teams, rosterPositionsRaw, valuesReady]
+  )
+
   // Memoized league position rankings
   const leaguePositionRankings = useMemo(() => {
     try {
@@ -133,30 +149,14 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   const {
     season: seasonProjections,
     week: weekProjectionEntries,
+    ppgByPlayer: projectedPpg,
+    weekByPlayer: weekProjections,
     exact: projectionsExact,
     loading: projectionsLoading,
     error: projectionsError,
     byes: projectionByes,
     updatedAt: projectionsUpdatedAt,
   } = useProjections(leagueId, currentWeek)
-
-  /** playerId → projected points per game, from season totals. */
-  const projectedPpg = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const [playerId, entry] of Object.entries(seasonProjections)) {
-      if (entry.gp) map[playerId] = entry.pts / entry.gp
-    }
-    return map
-  }, [seasonProjections])
-
-  /** playerId → this week's projected points. */
-  const weekProjections = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const [playerId, entry] of Object.entries(weekProjectionEntries)) {
-      map[playerId] = entry.pts
-    }
-    return map
-  }, [weekProjectionEntries])
 
   const {
     maxPointsFor,
@@ -433,6 +433,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             players={selectedTeam.players}
             leaguePlayerPool={teams.flatMap((t) => t.players)}
             leagueContext={leagueContext}
+            rosterSignals={rosterSignals}
           />
         </div>
       )}

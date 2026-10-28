@@ -28,22 +28,34 @@ jobs:
         run: |
           echo "Failing on purpose (simulate_failure)."
           exit 1
+      # The scraper code is pinned (audit R2-3): it only changes through a PR that bumps
+      # this SHA. Bump it after reviewing the SDK diff.
       - uses: actions/checkout@v4
         with:
           repository: cameron-eth/sleeper-sdk
+          ref: 1e057a0e88d6e3c17ec7ac8144f35da33332d60d
           path: sdk-source
+      # The SDK also commits each day's snapshot. Those JSON files are read from its main
+      # branch, data only: no code runs from this checkout, and the import validates them.
+      - uses: actions/checkout@v4
+        with:
+          repository: cameron-eth/sleeper-sdk
+          path: sdk-data
+          sparse-checkout: data/ktc
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -e ./sdk-source/python
       - name: Scrape today's board with SDK validation
-        run: python sdk-source/python/scripts/snapshot_ktc.py --out-dir sdk-source/data/ktc
+        run: python sdk-source/python/scripts/snapshot_ktc.py --out-dir sdk-data/data/ktc
       - name: Import full archive
-        run: python firstballot/scripts/import-ktc-history.py sdk-source/data/ktc firstballot/data/ktc-history.json
+        run: python firstballot/scripts/import-ktc-history.py sdk-data/data/ktc firstballot/data/ktc-history.json
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Persist all snapshots
+      # Writes only days not yet marked complete, oldest first, and marks each one after
+      # verifying its row count. The tier build reads only marked days.
+      - name: Persist new KTC days
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

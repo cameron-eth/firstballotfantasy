@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import identities from '@/data/nfl-player-identities.json'
 import { espnSeasonKey, playerData } from '@/lib/platform/player-data'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
-import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
+import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, KTC_DAY_MARKER_PREFIX, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
 import { writeSnapshot } from '@/lib/platform/snapshots'
 import type { CurrentSeasonStat } from '@/lib/current-season-stats'
 
@@ -21,10 +21,15 @@ type DraftFact = { selection: number; year: number } | null
 
 async function refresh() {
   const generatedAt = new Date()
-  const { data: latest, error: dateError } = await supabaseAdmin.from('ktc_player_values')
-    .select('scraped_date').order('scraped_date', { ascending: false }).limit(1).single()
-  if (dateError || !latest || !sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS))
-    throw Error('KTC_SOURCE_STALE')
+  // Build from the newest KTC day the sync marked complete, never from a day it is still
+  // writing (or left partial when interrupted).
+  const { data: marker, error: markerError } = await supabaseAdmin.from('ingestion_runs')
+    .select('dataset,row_count').eq('status', 'success').like('dataset', `${KTC_DAY_MARKER_PREFIX}%`)
+    .order('dataset', { ascending: false }).limit(1).maybeSingle()
+  if (markerError) throw Error('KTC_DAY_MARKERS_UNAVAILABLE')
+  if (!marker) throw Error('KTC_NO_COMPLETE_DAY')
+  const latest = { scraped_date: marker.dataset.slice(KTC_DAY_MARKER_PREFIX.length) }
+  if (!sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS)) throw Error('KTC_SOURCE_STALE')
   const [ktc, sleeperResponse, stats] = await Promise.all([
     supabaseAdmin.from('ktc_player_values')
       .select('player_name,position,value_sf,value_1qb,scraped_date')
@@ -32,7 +37,8 @@ async function refresh() {
     fetch('https://api.sleeper.app/v1/players/nfl', { cache: 'no-store', signal: AbortSignal.timeout(30000) }),
     playerData(['8144']), // Revalidates the shared ESPN current-season snapshot before reading it.
   ])
-  if (ktc.error || !ktc.data || ktc.data.length < 250 || !sleeperResponse.ok)
+  if (ktc.error || !ktc.data || ktc.data.length < 250 || ktc.data.length < (marker.row_count ?? 0) ||
+      !sleeperResponse.ok)
     throw Error('INCOMPLETE_TIER_INPUT')
   // 30-day change: the newest scrape on or before 30 days before the latest one.
   const cutoff = new Date(Date.parse(`${latest.scraped_date}T00:00:00Z`) - 30 * 86400000).toISOString().slice(0, 10)

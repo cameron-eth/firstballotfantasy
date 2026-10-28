@@ -1,4 +1,4 @@
-import { ClipboardList, Eye, Target, Trophy, Users, type LucideIcon } from 'lucide-react'
+import { Eye, Target, Trophy, Users, type LucideIcon } from 'lucide-react'
 import type { LeagueSection } from './types'
 
 export interface LeagueSectionNavItem {
@@ -15,18 +15,10 @@ export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: Target },
   { id: 'roster', label: 'My Team', shortLabel: 'Team', icon: Users },
   { id: 'league', label: 'Standings', shortLabel: 'Standings', icon: Trophy },
-  { id: 'audit', label: 'Audit', shortLabel: 'Audit', icon: ClipboardList },
 ]
 
 export function resolveLeagueSection(tab: string | null, desktopBuilder = true): LeagueSection {
-  if (
-    tab === 'overview' ||
-    tab === 'builder' ||
-    tab === 'roster' ||
-    tab === 'league' ||
-    tab === 'audit'
-  )
-    return tab
+  if (tab === 'overview' || tab === 'builder' || tab === 'roster' || tab === 'league') return tab
   if (tab === 'matchup') return 'league'
   return desktopBuilder ? 'builder' : 'overview'
 }

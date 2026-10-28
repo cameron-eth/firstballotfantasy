@@ -1,10 +1,8 @@
 'use client'
 import { useMemo } from 'react'
-import useSWR from 'swr'
 import { cn } from '@/lib/utils'
 import { SELECTED_ROW, STICKY_HOVER, STICKY_SELECTED } from '@/lib/design/tones'
-import { leagueCapital, pickLabel, picksByYear } from '@/lib/picks-overview'
-import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
+import { leagueCapital, pickLabel } from '@/lib/picks-overview'
 import { Button } from '@/components/ui/button'
 import { SectionHeader } from '@/components/ui/section-header'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,16 +17,10 @@ import {
 } from '@/components/ui/table'
 import type { TeamData } from './types'
 import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
-import { buildDraftOrder } from './draft-order/draftOrderBoard'
 import { DraftOrderPanel } from './draft-order/DraftOrderPanel'
 import { PickChip } from './ui/PickChip'
 import { TeamIdentity } from './ui/TeamIdentity'
-
-const fetchInventory = async (url: string): Promise<TradeInventory> => {
-  const r = await fetch(url)
-  if (!r.ok) throw new Error('Pick ownership unavailable.')
-  return r.json()
-}
+import { usePickCapital } from './usePickCapital'
 
 /** Draft capital: your picks by year, who holds what across the league, and the draft order. */
 export function PicksSection({
@@ -49,29 +41,19 @@ export function PicksSection({
     loading: boolean
   }
 }) {
-  const { data, error, isLoading, mutate } = useSWR<TradeInventory>(
-    `/api/trade-inventory?leagueId=${leagueId}`,
-    fetchInventory
-  )
-  const picks = useMemo(() => data?.picks ?? [], [data])
+  const {
+    picks,
+    years,
+    nextSeason,
+    slotByRoster,
+    slotsFor,
+    hasProjection,
+    error,
+    isLoading,
+    retry,
+  } = usePickCapital(leagueId, teams, selectedTeam.rosterId, draftOrder)
   const teamName = (rosterId: number) =>
     teams.find((t) => t.rosterId === rosterId)?.teamName ?? `Team ${rosterId}`
-
-  // Slots for the upcoming draft follow the projected order (the shared planning baseline),
-  // or the record order until projections arrive.
-  const hasProjection = Object.keys(draftOrder.projectedMaxPointsFor).length > 0
-  const slotByRoster = useMemo(() => {
-    if (draftOrder.loading) return {}
-    const rows = buildDraftOrder(
-      teams,
-      draftOrder.maxPointsFor,
-      draftOrder.projectedMaxPointsFor,
-      hasProjection ? 'projected' : 'record'
-    )
-    return Object.fromEntries(rows.map((r) => [r.rosterId, r.pick]))
-  }, [teams, draftOrder, hasProjection])
-
-  const years = useMemo(() => picksByYear(picks, selectedTeam.rosterId), [picks, selectedTeam])
   const capital = useMemo(
     () =>
       leagueCapital(
@@ -81,8 +63,6 @@ export function PicksSection({
     [picks, teams]
   )
   const seasons = years.map((y) => y.season)
-  const nextSeason = seasons[0]
-  const slotsFor = (season: string) => (season === nextSeason ? slotByRoster : {})
   const owned = years.flatMap((y) => y.owned)
   const tradedAway = years.flatMap((y) => y.tradedAway)
   const firsts = owned.filter((p) => p.round === 1).length
@@ -108,7 +88,7 @@ export function PicksSection({
         {error ? (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-line/60 px-4 py-3 text-sm text-slate-400">
             Pick ownership is unavailable right now.
-            <Button variant="subtle" size="xs" onClick={() => mutate()}>
+            <Button variant="subtle" size="xs" onClick={retry}>
               Retry
             </Button>
           </div>

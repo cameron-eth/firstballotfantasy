@@ -24,12 +24,13 @@ export interface PlayerRankingSummary {
 export type PlayerRankingsMap = Record<string, PlayerRankingSummary>
 
 export interface OverviewActions {
-  onTradeMarketClick: () => void
-  onScoutingPortalClick: () => void
-  onDraftBuddyClick: () => void
-  onPlayoffOddsClick?: () => void
-  /** Opens the Picks tab; dynasty leagues only. */
-  onPicksClick?: () => void
+  /** Switches dashboard tab; Overview links into Builder, My Team, Standings and Picks. */
+  openSection: (section: LeagueSection) => void
+  /** The league's trade history and manager performance (its own route). */
+  openTradeMarket: () => void
+  /** Team Builder only exists on desktop; elsewhere roster links go to My Team. */
+  desktopBuilder: boolean
+  isDynasty: boolean
 }
 
 export interface SleeperTransaction {

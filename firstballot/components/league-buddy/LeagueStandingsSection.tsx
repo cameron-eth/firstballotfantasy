@@ -4,6 +4,7 @@ import type { TeamData } from './types'
 import { buildDraftOrder, formatRecord } from './draft-order/draftOrderBoard'
 import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
 import { useStandingsOdds } from './useStandingsOdds'
+import { recordOrder } from './utils'
 import { cn } from '@/lib/utils'
 import { SELECTED_ROW, STICKY_HOVER, STICKY_SELECTED, probabilityText } from '@/lib/design/tones'
 import { SectionHeader } from '@/components/ui/section-header'
@@ -72,12 +73,7 @@ export function LeagueStandingsSection({
         : [],
     [teams, draftOrder, projectedComplete]
   )
-  const record = [...teams].sort(
-    (a, b) =>
-      (b.wins + (b.ties ?? 0) / 2) / Math.max(1, b.wins + b.losses + (b.ties ?? 0)) -
-        (a.wins + (a.ties ?? 0) / 2) / Math.max(1, a.wins + a.losses + (a.ties ?? 0)) ||
-      b.pointsFor - a.pointsFor
-  )
+  const record = recordOrder(teams)
   const probability = (id: number) => odds.find((o) => o.rosterId === id)?.playoffProbability
   const rows = [...record].sort((a, b) =>
     sort === 'odds'

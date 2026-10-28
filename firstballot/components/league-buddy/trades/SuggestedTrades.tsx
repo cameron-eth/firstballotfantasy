@@ -1,10 +1,6 @@
 'use client'
-import { useMemo, useRef, useState } from 'react'
-import useSWR from 'swr'
-import { useAuth } from '@/lib/auth'
-import { useTradeDismissals } from './useTradeDismissals'
-import { suggestedTeamTrades } from '@/lib/sleeper-sdk/trade-opportunities'
-import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
+import { useRef, useState } from 'react'
+import { useSuggestedTrades } from './useSuggestedTrades'
 import type { TeamData, PlayerData } from '../types'
 import { PlayerTradeModal } from './PlayerTradeModal'
 function Portrait({ player }: { player: PlayerData }) {
@@ -28,27 +24,16 @@ export function SuggestedTrades({
   teams: TeamData[]
 }) {
   const rail = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
   const [expanded, setExpanded] = useState(false)
-  const { dismissed, dismiss } = useTradeDismissals(
-    `${user?.id ?? 'guest'}:${leagueId}:${team.rosterId}`
-  )
   const [chosen, setChosen] = useState<{
     give: PlayerData
     receive: PlayerData
     partnerId: number
   } | null>(null)
-  const { data, error, isLoading, mutate } = useSWR<TradeInventory>(
-    `/api/trade-inventory?leagueId=${leagueId}`,
-    async (url: string) => {
-      const r = await fetch(url)
-      if (!r.ok) throw new Error('Trade context unavailable.')
-      return r.json()
-    }
-  )
-  const suggestions = useMemo(
-    () => (data ? suggestedTeamTrades(team, teams, data.superflex, dismissed) : []),
-    [data, team, teams, dismissed]
+  const { suggestions, superflex, error, isLoading, retry, dismiss } = useSuggestedTrades(
+    leagueId,
+    team,
+    teams
   )
   return (
     <section aria-label="Suggested trades" className="space-y-3">
@@ -64,15 +49,15 @@ export function SuggestedTrades({
           </span>
         </button>
         <p hidden={!expanded} className="text-xs text-slate-400">
-          Specific swaps based on positional depth and {data?.superflex ? 'superflex' : '1QB'} KTC
-          value. Send opens a confirmation; nothing is sent on selection.
+          Specific swaps based on positional depth and {superflex ? 'superflex' : '1QB'} KTC value.
+          Send opens a confirmation; nothing is sent on selection.
         </p>
       </div>
       {expanded &&
         (isLoading ? (
           <p className="text-sm text-slate-400">Finding opportunities…</p>
         ) : error ? (
-          <button className="text-sm text-blue-300" onClick={() => mutate()}>
+          <button className="text-sm text-blue-300" onClick={retry}>
             Suggestions unavailable · Retry
           </button>
         ) : !suggestions.length ? (

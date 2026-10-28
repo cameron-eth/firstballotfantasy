@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
+import { AppTooltip } from '@/components/ui/app-tooltip'
 import { useRefreshAll } from '@/lib/use-refresh-all'
 import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
 import { UserAvatar } from '@/components/user-avatar'
@@ -69,19 +70,20 @@ export function DashboardLayout({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-blue-300">
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={refreshing}
-            title="Clear cached stats, values and photos, then reload everything"
-            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:border-white/30 hover:text-white disabled:opacity-60"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
-              aria-hidden="true"
-            />
-            {refreshing ? 'Refreshing…' : 'Refresh data'}
-          </button>
+          <AppTooltip content="Refresh data: clears cached stats, values and photos">
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+              aria-label="Refresh data"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-300 transition-colors hover:border-white/30 hover:text-white disabled:opacity-60"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+          </AppTooltip>
           {isDynasty && (
             <>
               <Link href={withLeagueId('/scouting-portal', leagueId)} className="hover:text-white">

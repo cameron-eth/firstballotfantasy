@@ -28,7 +28,6 @@ import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
 import { DashboardLayout } from './league-buddy/DashboardLayout'
 import { OverviewHeader, type OverviewRankings } from './league-buddy/OverviewHeader'
 import { TradeIntelligencePanel } from './league-buddy/TradeIntelligencePanel'
-import { AuditSection } from './league-buddy/AuditSection'
 import { LeagueActivityBanner } from './league-buddy/LeagueActivityBanner'
 import { PowerRankingsView } from './league-buddy/power-rankings/PowerRankingsView'
 import { usePowerRankings } from './league-buddy/power-rankings/usePowerRankings'
@@ -439,9 +438,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       )}
 
       {/* AUDIT SECTION */}
-      {activeSection === 'audit' && selectedTeam && (
-        <AuditSection placement={leaguePlacements.placements[selectedTeam.rosterId]} />
-      )}
     </DashboardLayout>
   )
 }

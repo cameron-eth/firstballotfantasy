@@ -17,7 +17,7 @@
 //
 import { playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from './types'
-import { teamValueScore } from '@/lib/team-score'
+import { leagueTeamValues } from '@/lib/league-metrics/team-value'
 
 const CORE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 const CORE_DEPTH = 12 // top N assets that define a roster's value & age profile
@@ -134,7 +134,7 @@ export interface TeamPlacement {
   rosterId: number
   nowScore: number // 0–100, relative to league
   futureScore: number // 0–100, relative to league
-  valueTotal: number // raw KTC SF total of core
+  valueTotal: number // team dynasty value (lib/league-metrics/team-value)
   avgAge: number // core avg age (0 if unknown)
   state: CompetitiveStateKey
 }
@@ -151,11 +151,6 @@ function coreAssets(team: TeamData, ctx: LeagueContext): PlayerData[] {
     .filter((p) => CORE_POSITIONS.includes(p.position))
     .sort((a, b) => playerValue(b, ctx) - playerValue(a, ctx))
     .slice(0, CORE_DEPTH)
-}
-
-/** Quality-weighted, so a deep bench of low-value players cannot outrank a few stars. */
-function rosterValue(team: TeamData, ctx: LeagueContext): number {
-  return teamValueScore(team.players, ctx)
 }
 
 function coreAvgAge(team: TeamData, ctx: LeagueContext): number {
@@ -195,9 +190,12 @@ export function calculateLeaguePlacements(
     return { placements: {}, nowMedian: 50, futureMedian: 50 }
   }
 
+  // Win-now is the league's dynasty value (quality-weighted), so it orders teams exactly
+  // like the Overview and My Team dynasty ranks.
+  const teamValues = leagueTeamValues(teams, ctx)
   const raw = teams.map((t) => ({
     rosterId: t.rosterId,
-    value: rosterValue(t, ctx),
+    value: teamValues.get(t.rosterId)?.value ?? 0,
     // youth: younger core → higher future score, so we invert age
     youth: (() => {
       const age = coreAvgAge(t, ctx)

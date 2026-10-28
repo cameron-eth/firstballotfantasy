@@ -10,7 +10,7 @@ import { SleeperActions, type SleeperConnection } from './SleeperActions'
 import { computeStartSit } from './projections/startSit'
 import type { ProjectionMap } from './projections/useProjections'
 import { TeamHero } from './TeamHero'
-import { teamValueScore } from '@/lib/team-score'
+import { leagueTeamValues } from '@/lib/league-metrics/team-value'
 import { ktcValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import { PlayerFace } from './ui/PlayerFace'
 import {
@@ -117,12 +117,9 @@ export function RosterSection({
   const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
   const ages = skill.filter((p) => p.age > 0)
   // Quality-weighted team value: stars count more than depth, the deep bench barely counts.
-  const value = teamValueScore(selectedTeam.players, leagueContext)
-  const valueRank =
-    [...teams]
-      .map((t) => ({ id: t.rosterId, v: teamValueScore(t.players, leagueContext) }))
-      .sort((a, b) => b.v - a.v)
-      .findIndex((t) => t.id === selectedTeam.rosterId) + 1
+  const teamValue = leagueTeamValues(teams, leagueContext).get(selectedTeam.rosterId)
+  const value = teamValue?.value ?? 0
+  const valueRank = teamValue?.rank ?? 0
   const productionRank =
     [...teams]
       .sort((a, b) => b.pointsFor - a.pointsFor)

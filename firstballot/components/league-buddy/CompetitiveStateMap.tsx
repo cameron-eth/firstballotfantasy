@@ -66,7 +66,7 @@ interface CompetitiveStateMapProps {
   placements: LeaguePlacements
   teams: TeamData[]
   selectedRosterId: number
-  /** Power-ranking score per roster (0–100, league best = 100). Drives the default sort. */
+  /** Lineup-strength (power) score per roster (0–100, league best = 100). Drives the default sort. */
   powerScores: Record<number, number>
 }
 
@@ -116,7 +116,7 @@ export function CompetitiveStateMap({
                 value={sortKey}
                 onChange={setSortKey}
                 options={[
-                  { value: 'power', label: 'Power' },
+                  { value: 'power', label: 'Lineup' },
                   { value: 'now', label: 'Win-now' },
                   { value: 'future', label: 'Future' },
                 ]}
@@ -146,7 +146,7 @@ export function CompetitiveStateMap({
                 Team
               </TableHead>
               <TableHead numeric className={head('power')}>
-                Power
+                Lineup
               </TableHead>
               <TableHead numeric className={head('now')}>
                 Win-now

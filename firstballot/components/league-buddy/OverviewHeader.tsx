@@ -1,5 +1,5 @@
 'use client'
-import { ktcValue } from '@/lib/sleeper-sdk'
+import { leagueTeamValues } from '@/lib/league-metrics/team-value'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { MatchupData, OverviewActions, TeamData } from './types'
@@ -109,15 +109,11 @@ export function OverviewHeader({
     odds.find((o) => o.rosterId === rosterId)?.playoffProbability
   const order = useMemo(() => recordOrder(teams), [teams])
 
-  // Dynasty rank: core-position KTC total against the league.
-  const valueRank = useMemo(() => {
-    const value = (t: TeamData) =>
-      t.players
-        .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-        .reduce((sum, p) => sum + (ktcValue(p, { superflex }) ?? 0), 0)
-    const ranked = [...teams].sort((a, b) => value(b) - value(a))
-    return ranked.findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
-  }, [teams, selectedTeam, superflex])
+  // Dynasty rank: the league's one team-value definition (lib/league-metrics/team-value).
+  const valueRank = useMemo(
+    () => leagueTeamValues(teams, { superflex }).get(selectedTeam.rosterId)?.rank ?? 0,
+    [teams, selectedTeam, superflex]
+  )
 
   // This week's starter projection for every team, so ours can be ranked.
   const projected = (t: TeamData) =>

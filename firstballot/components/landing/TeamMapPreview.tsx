@@ -158,6 +158,8 @@ const SCENES = [
   },
 ]
 const SCENE_MS = 3200
+/** Stable ids for the five lineup slots (the card in a slot changes; the slot does not). */
+const SLOT_IDS = ['qb', 'rb', 'wr1', 'wr2', 'te'] as const
 
 function CountUp({ to, decimals }: { to: number; decimals: number }) {
   const reduced = useReducedMotion()
@@ -323,7 +325,7 @@ export function TeamMapPreview() {
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {current.roster.map((player, slot) => (
-          <div key={slot} className={cn('relative', slot === 4 && 'hidden sm:block')}>
+          <div key={SLOT_IDS[slot]} className={cn('relative', slot === 4 && 'hidden sm:block')}>
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
                 key={player.id}

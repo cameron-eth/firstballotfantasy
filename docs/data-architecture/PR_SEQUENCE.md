@@ -13,7 +13,11 @@ This plan turns [REMEDIATION_PLAN.md](REMEDIATION_PLAN.md) into small PRs that c
 | **G3: Performance phase done** (after PR-18) | Each optimized path shows a measured improvement on the benchmark harness, with no regression in the golden fixtures | Benchmark tables in the PR bodies |
 | **G4: Consolidation done** (after PR-23) | INFRASTRUCTURE_AUDIT has no class-D rows left | Updated doc |
 
-## Decisions the owner must make (they block the PRs named)
+## Status
+
+- **G0: passed 2026-10-28.** The owner approved this sequence and the recommended option for each of D1–D4 below.
+
+## Decisions (approved 2026-10-28; each blocked the PRs named)
 
 None of these will be chosen silently, because each one changes a scoring method.
 

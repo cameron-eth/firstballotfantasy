@@ -2,7 +2,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { MatchupData, OverviewActions, TeamData } from './types'
-import { COMPETITIVE_STATES, type LeaguePlacements } from './competitiveState'
+import type { LeaguePlacements } from './competitiveState'
 import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
 import { buildDraftOrder } from './draft-order/draftOrderBoard'
 import { UserAvatar } from '@/components/user-avatar'
@@ -101,7 +101,7 @@ export function OverviewHeader({
   actions,
   rankings,
 }: OverviewHeaderProps) {
-  const { placements, positionRankings = {}, weekProjections, draftOrder, superflex } = rankings
+  const { positionRankings = {}, weekProjections, draftOrder, superflex } = rankings
   const leagueSize = teams.length
   const { odds, data: oddsMeta } = useStandingsOdds(leagueId, teams)
   const probability = (rosterId: number) =>
@@ -135,7 +135,6 @@ export function OverviewHeader({
     ).find((r) => r.rosterId === selectedTeam.rosterId)?.label
   }, [teams, draftOrder, selectedTeam])
 
-  const placement = placements.placements[selectedTeam.rosterId]
   const matchup = currentMatchups.find((m) => m.rosterId === selectedTeam.rosterId)
   const avg = (pick: (t: TeamData) => number) =>
     teams.reduce((sum, t) => sum + pick(t), 0) / (leagueSize || 1)
@@ -147,7 +146,6 @@ export function OverviewHeader({
           m={{
             leagueSize,
             valueRank,
-            state: placement ? COMPETITIVE_STATES[placement.state] : null,
             playoffOdds: probability(selectedTeam.rosterId),
             playoffSpots: oddsMeta?.spots,
             pointsFor: selectedTeam.pointsFor,

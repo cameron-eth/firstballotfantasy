@@ -27,6 +27,8 @@ import { LeagueStandingsSection } from './league-buddy/LeagueStandingsSection'
 import { PicksSection } from './league-buddy/PicksSection'
 import { DraftCapitalSummary } from './league-buddy/overview/DraftCapitalSummary'
 import { CompetitiveStateMap } from './league-buddy/CompetitiveStateMap'
+import { COMPETITIVE_STATES } from './league-buddy/competitiveState'
+import { AppTooltip } from '@/components/ui/app-tooltip'
 import { usePickCapital } from './league-buddy/usePickCapital'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
@@ -240,11 +242,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   )
 
   const isDynasty = leagueOverview?.isDynasty === true
+  const [picksFocus, setPicksFocus] = useState<string | null>(null)
   const pickCapital = usePickCapital(leagueId, teams, selectedTeam?.rosterId, draftOrder, isDynasty)
   const standing = selectedTeam
     ? recordOrder(teams).findIndex((t) => t.rosterId === selectedTeam.rosterId) + 1
     : 0
-  const coreAge = selectedTeam ? leaguePlacements.placements[selectedTeam.rosterId]?.avgAge : 0
+  const placement = selectedTeam ? leaguePlacements.placements[selectedTeam.rosterId] : undefined
+  const coreAge = placement?.avgAge ?? 0
+  // Franchise classification lives in the shared header, so no tab repeats it.
+  const headerState = isDynasty && placement ? COMPETITIVE_STATES[placement.state] : null
 
   const overviewRankings = useMemo<OverviewRankings>(
     () => ({
@@ -351,6 +357,15 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             </span>
           )}
           {coreAge ? <span className="tabular-nums">Core age {coreAge.toFixed(1)}</span> : null}
+          {headerState && (
+            <AppTooltip content={headerState.description}>
+              <span
+                className={`rounded-md border px-1.5 py-0.5 text-badge font-semibold leading-none ${headerState.border} ${headerState.bg} ${headerState.text}`}
+              >
+                {headerState.label}
+              </span>
+            </AppTooltip>
+          )}
         </>
       }
       aside={
@@ -358,7 +373,10 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           <DraftCapitalSummary
             years={pickCapital.years}
             loading={pickCapital.isLoading}
-            onOpen={() => changeSection('picks')}
+            onOpen={(season) => {
+              setPicksFocus(season)
+              changeSection('picks')
+            }}
           />
         ) : null
       }
@@ -392,7 +410,6 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           <TeamBuilder
             rosterPositions={rosterPositionsRaw}
             draftOrder={draftOrder}
-            placement={leaguePlacements.placements[selectedTeam.rosterId]}
             key={`${leagueId}:${selectedTeam.rosterId}`}
             team={selectedTeam}
             teams={teams}
@@ -438,6 +455,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
             selectedTeam={selectedTeam}
             leagueId={leagueId}
             draftOrder={draftOrder}
+            focusSeason={picksFocus}
           />
         ) : (
           <p className="rounded-xl border border-dashed border-line/60 px-4 py-6 text-sm text-slate-400">

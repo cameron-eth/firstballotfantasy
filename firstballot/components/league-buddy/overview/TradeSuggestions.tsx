@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { ArrowRight, X } from 'lucide-react'
+import { ArrowRight, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SectionHeader } from '@/components/ui/section-header'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,6 +11,14 @@ import { PlayerFace } from '../ui/PlayerFace'
 import { PositionBadge } from '../ui/Badge'
 
 const SHOWN = 3
+
+/** The engine joins reasons with " · "; the partner is named on the card, so say "They". */
+const reasons = (reason: string, partner: string) =>
+  reason
+    .split(' · ')
+    .map((why) =>
+      why.replace(`${partner} has `, 'They have ').replace(`${partner} is `, 'They are ')
+    )
 
 /**
  * The top swaps from the existing trade engine (`suggestedTeamTrades`), each with its own
@@ -82,6 +90,7 @@ export function TradeSuggestions({
         <div className="grid gap-3 md:grid-cols-3">
           {suggestions.slice(0, SHOWN).map((s) => {
             const targetValue = value(s.target)
+            const giveValue = value(s.give)
             return (
               <article
                 key={`${s.give.playerId}:${s.target.playerId}`}
@@ -96,7 +105,9 @@ export function TradeSuggestions({
                     <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
                       <PositionBadge position={s.target.position} />
                       <span>{s.target.team}</span>
-                      <span className="truncate text-slate-500">· {s.team.teamName}</span>
+                    </div>
+                    <div className="mt-1 truncate text-2xs text-slate-500">
+                      From {s.team.teamName}
                     </div>
                   </div>
                   <button
@@ -110,15 +121,21 @@ export function TradeSuggestions({
                     <X className="size-4" aria-hidden />
                   </button>
                 </div>
-                <p className="line-clamp-2 text-xs text-slate-400">{s.reason}</p>
+                <ul className="space-y-1">
+                  {reasons(s.reason, s.team.teamName).map((why) => (
+                    <li key={why} className="flex gap-2 text-xs text-slate-300">
+                      <Check className="mt-0.5 size-3.5 shrink-0 text-positive" aria-hidden />
+                      <span>{why}</span>
+                    </li>
+                  ))}
+                </ul>
                 <div className="mt-auto flex items-center justify-between gap-3 border-t border-line/40 pt-3">
-                  <div className="min-w-0 text-xs">
-                    <div className="truncate text-slate-400">
-                      For <span className="text-slate-200">{s.give.playerName}</span>
-                    </div>
-                    {targetValue ? (
-                      <div className="tabular-nums text-value">
-                        KTC {targetValue.toLocaleString()}
+                  <div className="min-w-0">
+                    <div className="text-2xs text-slate-500">You give</div>
+                    <div className="truncate text-sm text-slate-200">{s.give.playerName}</div>
+                    {giveValue && targetValue ? (
+                      <div className="text-2xs tabular-nums text-value">
+                        KTC {giveValue.toLocaleString()} → {targetValue.toLocaleString()}
                       </div>
                     ) : null}
                   </div>

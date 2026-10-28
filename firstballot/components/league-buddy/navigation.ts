@@ -1,4 +1,12 @@
-import { Eye, Target, Ticket, Trophy, Users, type LucideIcon } from 'lucide-react'
+import {
+  Eye,
+  LayoutDashboard,
+  Map as MapIcon,
+  Ticket,
+  Trophy,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import type { LeagueSection } from './types'
 
 export interface LeagueSectionNavItem {
@@ -11,8 +19,8 @@ export interface LeagueSectionNavItem {
 
 /** Single source of truth for the section tabs — the shared dashboard navigation reads it. */
 export const LEAGUE_SECTIONS: LeagueSectionNavItem[] = [
-  { id: 'builder', label: 'Team Builder', shortLabel: 'Builder', icon: Users },
-  { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: Target },
+  { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: LayoutDashboard },
+  { id: 'builder', label: 'Team Builder', shortLabel: 'Builder', icon: MapIcon },
   { id: 'roster', label: 'My Team', shortLabel: 'Team', icon: Users },
   { id: 'league', label: 'Standings', shortLabel: 'Standings', icon: Trophy },
   // Dynasty only: DashboardLayout hides it for redraft leagues, which have no future picks.

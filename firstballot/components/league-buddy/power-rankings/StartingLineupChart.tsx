@@ -33,7 +33,7 @@ export function StartingLineupChart({ slots, slotRanks, leagueSize }: StartingLi
         return (
           <div key={slot.id} className="flex-1 min-w-[42px] flex flex-col items-center h-full">
             <div className="flex-1 w-full flex flex-col justify-end">
-              <span className={`text-[10px] font-mono font-bold text-center mb-1 ${tone.text}`}>
+              <span className={`text-2xs font-semibold tabular-nums text-center mb-1 ${tone.text}`}>
                 {ranked ? `#${ranked.rank}` : '—'}
               </span>
               <div
@@ -56,12 +56,15 @@ export function StartingLineupChart({ slots, slotRanks, leagueSize }: StartingLi
                 </div>
               </div>
             </div>
-            <span className="text-[10px] font-mono text-slate-400 mt-1.5">{slot.label}</span>
+            <span className="text-2xs text-slate-400 mt-1.5">{slot.label}</span>
             <span
-              className="text-[9px] text-slate-500 truncate max-w-[64px]"
+              className="text-2xs text-slate-500 truncate max-w-[64px]"
               title={slot.player?.playerName}
             >
-              {slot.player?.playerName.replace(/\s+(?:Jr\.?|Sr\.?|II|III|IV)$/i, '').split(' ').slice(-1)[0] ?? '—'}
+              {slot.player?.playerName
+                .replace(/\s+(?:Jr\.?|Sr\.?|II|III|IV)$/i, '')
+                .split(' ')
+                .slice(-1)[0] ?? '—'}
             </span>
           </div>
         )

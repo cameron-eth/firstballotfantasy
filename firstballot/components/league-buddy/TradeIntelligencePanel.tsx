@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import type React from 'react'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { TONE, VALUE_TONE } from '@/lib/design/tones'
 import { KtcSparkline } from '@/components/scouting/KtcSparkline'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { PlayerData } from './types'
@@ -218,30 +218,31 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
   }[] = [
     {
       signal: 'sell',
-      label: 'SELL HIGH',
-      accentColor: 'text-orange-400',
-      borderColor: 'border-orange-500/30',
-      badgeClass: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
+      label: 'Sell high',
+      // Section color is the action (DESIGN_SYSTEM.md §1); the arrow is the price move.
+      accentColor: 'text-value',
+      borderColor: 'border-value/30',
+      badgeClass: VALUE_TONE,
       icon: <TrendingUp className="h-3.5 w-3.5" />,
       players: sellPlayers,
       emptyMsg: 'No sell candidates',
     },
     {
       signal: 'hold',
-      label: 'HOLD',
-      accentColor: 'text-yellow-400',
-      borderColor: 'border-yellow-500/30',
-      badgeClass: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
+      label: 'Hold',
+      accentColor: 'text-slate-300',
+      borderColor: 'border-line/60',
+      badgeClass: TONE.neutral,
       icon: <Minus className="h-3.5 w-3.5" />,
       players: holdPlayers,
       emptyMsg: 'No hold recommendations',
     },
     {
       signal: 'buy',
-      label: 'BUY LOW',
-      accentColor: 'text-emerald-400',
-      borderColor: 'border-emerald-500/30',
-      badgeClass: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+      label: 'Buy low',
+      accentColor: 'text-action',
+      borderColor: 'border-action/30',
+      badgeClass: 'border-action/40 bg-action/10 text-blue-100',
       icon: <TrendingDown className="h-3.5 w-3.5" />,
       players: buyPlayers,
       emptyMsg: 'No buy candidates',
@@ -259,29 +260,31 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
           <div className={`flex items-center gap-2 px-4 py-3 border-b ${col.borderColor}`}>
             <span className={col.accentColor}>{col.icon}</span>
             <span className={`text-sm font-semibold ${col.accentColor}`}>{col.label}</span>
-            <Badge
-              variant="outline"
-              className={`ml-auto text-[10px] px-1.5 py-0 border ${col.badgeClass}`}
+            <span
+              className={`ml-auto rounded-md border px-1.5 py-0.5 text-badge font-semibold leading-none tabular-nums ${col.badgeClass}`}
             >
               {col.players.length}
-            </Badge>
+            </span>
           </div>
 
           {/* Player list — draft-board style rows */}
           {col.players.length > 0 ? (
-            <div
-              className="flex gap-3 overflow-x-auto py-4"
-              tabIndex={0}
-              aria-label={`${col.label} players`}
-            >
-              {col.players.map((c) => (
-                <div key={c.player.playerId} className="w-60 shrink-0">
-                  <PlayerRow classified={c} />
-                </div>
-              ))}
+            // The right-edge fade hints that the rail scrolls when cards run past the edge.
+            <div className="relative after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-12 after:bg-gradient-to-l after:from-background">
+              <div
+                className="flex snap-x gap-3 overflow-x-auto py-4 pr-12"
+                tabIndex={0}
+                aria-label={`${col.label} players`}
+              >
+                {col.players.map((c) => (
+                  <div key={c.player.playerId} className="w-60 shrink-0 snap-start">
+                    <PlayerRow classified={c} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="text-muted-foreground text-xs text-center py-8">{col.emptyMsg}</div>
+            <div className="py-8 text-center text-xs text-slate-400">{col.emptyMsg}</div>
           )}
         </Card>
       ))}

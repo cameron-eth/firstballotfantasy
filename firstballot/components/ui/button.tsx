@@ -15,10 +15,14 @@ const buttonVariants = cva(
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
+        // Team Builder recipes (DESIGN_SYSTEM.md §7): hairline + tint, sentence case.
+        tint: 'border border-action/30 bg-action/10 text-blue-100 hover:bg-action/20',
+        subtle: 'border border-line/60 bg-surface/40 text-slate-200 hover:bg-white/5',
       },
       size: {
         default: 'h-10 px-4 py-2',
         sm: 'h-9 rounded-md px-3',
+        xs: 'h-8 rounded-lg px-3 text-xs',
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
       },
@@ -31,8 +35,7 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 

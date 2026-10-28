@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart3 } from 'lucide-react'
+import { SectionHeader } from '@/components/ui/section-header'
 import { CORE_POSITIONS, ordinal, type CorePosition, type PowerRankings } from '@/lib/sleeper-sdk'
 import type { TeamData } from '../types'
 import { RankBarList, type RankBarRow } from './RankBarList'
@@ -93,7 +93,7 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
 
   if (leagueSize === 0) {
     return (
-      <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+      <Card className="rounded-xl border border-line/60 bg-surface/40 shadow-none">
         <CardContent className="py-12 text-center text-slate-400">
           No rosters available for this league yet.
         </CardContent>
@@ -103,29 +103,22 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-          <BarChart3 className="h-5 w-5 text-yellow-400" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-white">Power Rankings</h2>
-          <p className="text-xs text-slate-400">
-            {rankings.superflex ? 'Superflex' : '1QB'} dynasty values ·{' '}
-            {selectedEntry
-              ? `${selectedTeam?.teamName} ranks ${ordinal(selectedEntry.rank)} of ${leagueSize}`
-              : `${leagueSize} teams`}
-          </p>
-        </div>
-      </div>
+      <SectionHeader
+        title="Power rankings"
+        subtitle={`${rankings.superflex ? 'Superflex' : '1QB'} dynasty values · ${
+          selectedEntry
+            ? `${selectedTeam?.teamName} ranks ${ordinal(selectedEntry.rank)} of ${leagueSize}`
+            : `${leagueSize} teams`
+        }`}
+        className="mb-0"
+      />
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+        <Card className="rounded-xl border border-line/60 bg-surface/40 shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
-              Positional Rankings
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold text-white">Positional ranks</CardTitle>
           </CardHeader>
-          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
+          <CardContent className="px-4 pb-4">
             <RankBarList
               rows={positionalRows}
               leagueSize={leagueSize}
@@ -135,13 +128,11 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+        <Card className="rounded-xl border border-line/60 bg-surface/40 shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
-              Starter Rankings
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold text-white">Starter ranks</CardTitle>
           </CardHeader>
-          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
+          <CardContent className="px-4 pb-4">
             <RankBarList
               rows={starterRows}
               leagueSize={leagueSize}
@@ -150,24 +141,20 @@ export function PowerRankingsView({ rankings, selectedTeam, leagueSize }: PowerR
             />
           </CardContent>
         </Card>
-        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+        <Card className="rounded-xl border border-line/60 bg-surface/40 shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
-              Position Strength
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold text-white">Position strength</CardTitle>
           </CardHeader>
-          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
+          <CardContent className="h-[270px] px-4 pb-4">
             <PositionStrengthRadar data={radarData} />
           </CardContent>
         </Card>
 
-        <Card className="rounded-xl border border-white/10 bg-slate-900/40 shadow-none">
+        <Card className="rounded-xl border border-line/60 bg-surface/40 shadow-none">
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-mono text-slate-200 uppercase tracking-wider">
-              Starting Lineup
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold text-white">Starting lineup</CardTitle>
           </CardHeader>
-          <CardContent className="h-[270px] overflow-auto px-4 pb-4">
+          <CardContent className="h-[270px] px-4 pb-4">
             {selectedEntry ? (
               <StartingLineupChart
                 slots={selectedEntry.valuation.slots}

@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Users, AlertCircle, TrendingUp } from 'lucide-react'
+import { Users, AlertCircle } from 'lucide-react'
+import { SectionHeader } from '@/components/ui/section-header'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useDesktopBuilder } from '@/hooks/use-desktop-builder'
@@ -373,12 +374,11 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
           {/* Trade Intelligence — Sell High / Hold / Buy Low */}
           <div className="mt-6">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-yellow-400" />
-              <h3 className="text-yellow-400 font-mono text-sm font-bold uppercase tracking-wider">
-                Trade Intelligence
-              </h3>
-            </div>
+            <SectionHeader
+              title="Trade intelligence"
+              subtitle="Sell high, hold or buy low, from today's KTC moves"
+              className="mb-0"
+            />
             <TradeIntelligencePanel
               players={selectedTeam.players}
               leaguePlayerPool={teams.flatMap((t) => t.players)}

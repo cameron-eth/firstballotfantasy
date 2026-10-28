@@ -37,7 +37,8 @@ export interface CompetitiveStateMeta {
   label: string
   tagline: string
   description: string
-  accent: string // hex, used for SVG fills/strokes
+  /** Hex of the state's semantic token (DESIGN_SYSTEM.md §1), for SVG fills and strokes. */
+  accent: string
   text: string // tailwind text color
   border: string // tailwind border color
   bg: string // tailwind background tint
@@ -51,10 +52,10 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     tagline: 'Best of both worlds',
     description:
       'Elite roster, young enough to dominate now and keep the window open. Press your advantage.',
-    accent: '#fbbf24',
-    text: 'text-yellow-400',
-    border: 'border-yellow-400/40',
-    bg: 'bg-yellow-400/10',
+    accent: '#fcd34d',
+    text: 'text-elite',
+    border: 'border-elite/40',
+    bg: 'bg-elite/10',
     plan: [
       "Press the advantage — target other contenders' aging vets while your window is wide open",
       "Avoid trading future picks away; you don't need to mortgage the future to win now",
@@ -68,10 +69,10 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     tagline: 'Win-now window open',
     description:
       'Strong roster with an aging core. The window is open — push your chips in before it closes.',
-    accent: '#60a5fa',
-    text: 'text-blue-400',
-    border: 'border-blue-400/40',
-    bg: 'bg-blue-400/10',
+    accent: '#34d399',
+    text: 'text-positive',
+    border: 'border-positive/40',
+    bg: 'bg-positive/10',
     plan: [
       'Sell future picks for proven win-now production — your aging core has a shrinking shelf life',
       "Target rebuilding teams' aging starters at a discount before their value cliff hits",
@@ -85,10 +86,10 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     tagline: 'Punching above your roster',
     description:
       'Your record is outrunning your roster value. Everything from here is a bonus — sell high or ride it.',
-    accent: '#c084fc',
-    text: 'text-purple-400',
-    border: 'border-purple-400/40',
-    bg: 'bg-purple-400/10',
+    accent: '#fb923c',
+    text: 'text-warning',
+    border: 'border-warning/40',
+    bg: 'bg-warning/10',
     plan: [
       'Sell high on any player whose value has spiked past what their long-term outlook supports',
       'Be honest about roster construction — a good record can mask real depth problems',
@@ -102,10 +103,10 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     tagline: 'Young and ascending',
     description:
       'Light on win-now value but rich in youth. Stockpile picks, develop, and time the leap.',
-    accent: '#22d3ee',
-    text: 'text-cyan-400',
-    border: 'border-cyan-400/40',
-    bg: 'bg-cyan-400/10',
+    accent: '#c4b5fd',
+    text: 'text-pick',
+    border: 'border-pick/40',
+    bg: 'bg-pick/10',
     plan: [
       'Trade aging win-now vets to contenders while their value is still high',
       "Stockpile future draft picks — they're your cheapest path to more young assets",
@@ -119,10 +120,10 @@ export const COMPETITIVE_STATES: Record<CompetitiveStateKey, CompetitiveStateMet
     tagline: 'Stuck in the middle',
     description:
       'Not strong enough to contend, not young enough to rebuild. Pick a direction and commit.',
-    accent: '#f87171',
-    text: 'text-red-400',
-    border: 'border-red-400/40',
-    bg: 'bg-red-400/10',
+    accent: '#fb7185',
+    text: 'text-negative',
+    border: 'border-negative/40',
+    bg: 'bg-negative/10',
     plan: [
       'Pick a direction — half-measures keep you stuck here longest',
       "Audit your core's remaining window; if it's under 2 years, lean toward rebuilding",

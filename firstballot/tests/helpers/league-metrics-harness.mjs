@@ -28,7 +28,6 @@ import { teamValueScore } from '../../lib/team-score.ts'
 import { suggestedTeamTrades } from '../../lib/sleeper-sdk/trade-opportunities.ts'
 import { tradeSignals } from '../../lib/trade-signals.ts'
 import { picksByYear, leagueCapital } from '../../lib/picks-overview.ts'
-import { seedRandom } from './replay-fetch.mjs'
 
 const r = (n, places = 4) => (Number.isFinite(n) ? Number(n.toFixed(places)) : (n ?? null))
 
@@ -52,21 +51,17 @@ export async function computeLeagueMetrics(leagueId) {
   const settings = await fetchStandingsSettings(leagueId, teams).catch((e) => ({
     error: e.message,
   }))
-  let odds = []
-  if (settings.spots) {
-    const restore = seedRandom(42)
-    try {
-      odds = calculatePlayoffOdds(
+  // The simulation seeds itself from the league state, so no Math.random patching here:
+  // the golden test's double run proves the odds are deterministic.
+  const odds = settings.spots
+    ? calculatePlayoffOdds(
         teams,
         settings.completed,
         settings.end,
         settings.spots,
         settings.schedule
       )
-    } finally {
-      restore()
-    }
-  }
+    : []
 
   const power = buildPowerRankings(
     teams.map((t) => ({ rosterId: t.rosterId, players: t.players })),

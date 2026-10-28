@@ -446,18 +446,19 @@ export function DraftBoardTab({
   return (
     <main className="min-h-[70vh] bg-background">
       <ScoutingSectionHeader title="Draft Board" description={`${selectedYear} class · Your ranked prospects`}>
-      <div className="flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-          <div className="flex items-center gap-1 rounded-md border border-border bg-background/50 p-1" aria-label="Draft class">
-            {availableYears.map((year) => <button key={year} type="button" onClick={() => onSelectYear(year)} aria-pressed={selectedYear === year} className={cn('min-h-9 rounded px-3 text-xs font-semibold tabular-nums', selectedYear === year ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{year}</button>)}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
+          <div className="flex w-full items-center gap-1 rounded-md border border-border bg-background/50 p-1 sm:w-auto" aria-label="Draft class">
+            {availableYears.map((year) => <button key={year} type="button" onClick={() => onSelectYear(year)} aria-pressed={selectedYear === year} className={cn('min-h-9 flex-1 rounded px-3 text-xs font-semibold tabular-nums sm:flex-none', selectedYear === year ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{year}</button>)}
           </div>
+          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0" aria-label="Position">
           {positionTabs.map((pos) => (
             <button
               key={pos}
               type="button"
               onClick={() => setPosition(pos)}
               className={cn(
-                'min-h-9 px-2.5 text-xs font-semibold rounded-md transition-colors active:scale-[0.98]',
+                'min-h-9 shrink-0 px-2.5 text-xs font-semibold rounded-md transition-colors active:scale-[0.98]',
                 position === pos
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -466,11 +467,12 @@ export function DraftBoardTab({
               {pos !== 'ALL' ? <>{pos} <span className="ml-1 tabular-nums opacity-70">{draftBoard.filter((p) => p.draft_year === selectedYear && p.position === pos).length}</span></> : 'All'}
             </button>
           ))}
+          </div>
           <span className="hidden sm:block w-px h-5 bg-border mx-1" />
           <button
             type="button"
             onClick={addTopAvailable}
-            className="min-h-9 px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors active:scale-[0.98]"
+            className="min-h-9 w-full px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors active:scale-[0.98] sm:w-auto"
           >
             Add Next
           </button>
@@ -666,25 +668,26 @@ export function DraftBoardTab({
                                 <>
                                 <div className="lg:hidden px-2 py-1.5 touch-manipulation">
                                   <div className="flex gap-1.5 items-stretch">
-                                    <div
-                                      className="flex items-center justify-center w-11 shrink-0 rounded-lg bg-slate-800/50 active:bg-slate-700/55"
-                                      aria-hidden
-                                    >
-                                      <GripVertical className="w-5 h-5 text-muted-foreground/70" />
+                                    <div className="flex w-4 shrink-0 items-center justify-center" aria-hidden>
+                                      <GripVertical className="h-4 w-4 text-muted-foreground/50" />
                                     </div>
-                                    <div className="relative w-11 h-[3.25rem] shrink-0 rounded-md overflow-hidden bg-slate-800/40">
-                                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent z-[1]" />
+                                    <div
+                                      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl"
+                                      style={{
+                                        background: `radial-gradient(ellipse at 60% 25%, ${(positionPalette[player.position] ?? neutralPalette).glow}aa, ${(positionPalette[player.position] ?? neutralPalette).wash} 75%)`,
+                                      }}
+                                    >
                                       {!imageErrors.has(player.name) && getPlayerImageUrl(player) ? (
                                         <Image
                                           src={getPlayerImageUrl(player)}
                                           alt={player.name}
-                                          width={88}
-                                          height={88}
-                                          className="w-full h-full object-contain object-bottom"
+                                          width={112}
+                                          height={112}
+                                          className="h-full w-full object-cover object-top"
                                           onError={() => setImageErrors((prev) => new Set(prev).add(player.name))}
                                         />
                                       ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted-foreground/40">
+                                        <div className="flex h-full w-full items-center justify-center text-xs font-bold text-muted-foreground/50">
                                           {player.name
                                             .split(' ')
                                             .map((n) => n[0])
@@ -710,11 +713,8 @@ export function DraftBoardTab({
                                               {player.tier}
                                             </span>
                                           </div>
-                                          <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
-                                            <span className="font-mono font-semibold text-primary">
-                                              {player.position}
-                                            </span>
-                                            <span className="opacity-50"> · </span>
+                                          <p className="mt-1 truncate text-[11px] leading-tight text-muted-foreground">
+                                            <PositionBadge position={player.position} />{' '}
                                             {player.school}
                                           </p>
                                         </div>
@@ -728,9 +728,9 @@ export function DraftBoardTab({
                                           <X className="h-5 w-5" strokeWidth={2.25} />
                                         </button>
                                       </div>
-                                      <div className="flex gap-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x pb-0.5">
+                                      <div className="mt-1 grid grid-cols-3 gap-1">
                                         <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 text-left min-w-[3.25rem]"
+                                          className="rounded-md px-2 py-1 text-left"
                                           style={{ backgroundColor: rankHeat.bg }}
                                         >
                                           <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
@@ -744,7 +744,7 @@ export function DraftBoardTab({
                                           </div>
                                         </div>
                                         <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
+                                          className="rounded-md px-2 py-1"
                                           style={{ backgroundColor: gradeHeat.bg }}
                                         >
                                           <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
@@ -758,7 +758,7 @@ export function DraftBoardTab({
                                           </div>
                                         </div>
                                         <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[3rem]"
+                                          className="rounded-md px-2 py-1"
                                           style={
                                             filmGrade !== null && !editingFilm
                                               ? { backgroundColor: filmHeat.bg }
@@ -797,7 +797,7 @@ export function DraftBoardTab({
                                           )}
                                         </div>
                                         <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[3rem]"
+                                          className="rounded-md px-2 py-1"
                                           style={
                                             talentGrade !== null && !editingTalent
                                               ? { backgroundColor: talentHeat.bg }
@@ -836,7 +836,7 @@ export function DraftBoardTab({
                                           )}
                                         </div>
                                         <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
+                                          className="rounded-md px-2 py-1"
                                           style={
                                             myGrade !== null
                                               ? { backgroundColor: myGradeHeat.bg }
@@ -859,7 +859,7 @@ export function DraftBoardTab({
                                           </div>
                                         </div>
                                         <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.75rem]"
+                                          className="rounded-md px-2 py-1"
                                           style={{ backgroundColor: myRankHeat.bg }}
                                         >
                                           <div className="text-[7px] text-muted-foreground/90 uppercase leading-none">
@@ -872,65 +872,29 @@ export function DraftBoardTab({
                                             #{myRank}
                                           </div>
                                         </div>
-                                        <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
-                                          style={
-                                            player.fortyTime
-                                              ? { backgroundColor: fortyHeat.bg, color: fortyHeat.color }
-                                              : { color: 'rgb(100,100,110)' }
-                                          }
-                                        >
-                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
-                                            40
-                                          </div>
-                                          {player.fortyTime ? player.fortyTime.toFixed(2) : '—'}
-                                        </div>
-                                        <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
-                                          style={
-                                            player.height
-                                              ? { backgroundColor: heightHeat.bg, color: heightHeat.color }
-                                              : { color: 'rgb(100,100,110)' }
-                                          }
-                                        >
-                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
-                                            Ht
-                                          </div>
-                                          {formatHeight(player.height)}
-                                        </div>
-                                        <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
-                                          style={
-                                            player.weight > 0
-                                              ? { backgroundColor: weightHeat.bg, color: weightHeat.color }
-                                              : { color: 'rgb(100,100,110)' }
-                                          }
-                                        >
-                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
-                                            Wt
-                                          </div>
-                                          {player.weight > 0 ? player.weight : '—'}
-                                        </div>
-                                        <div
-                                          className="shrink-0 rounded-md px-2 py-0.5 min-w-[2.5rem] text-[11px] font-mono font-bold tabular-nums leading-tight"
-                                          style={
-                                            player.physical > 0
-                                              ? { backgroundColor: physicalHeat.bg, color: physicalHeat.color }
-                                              : { color: 'rgb(100,100,110)' }
-                                          }
-                                        >
-                                          <div className="text-[7px] text-muted-foreground/90 uppercase leading-none font-sans font-normal">
-                                            Phys
-                                          </div>
-                                          {player.physical > 0 ? player.physical : '—'}
-                                        </div>
                                       </div>
-                                      <KtcSparkline
-                                        playerName={player.name}
-                                        history={ktcHistoryMap[player.name]}
-                                        useSf={true}
-                                        layout="bar"
-                                      />
+                                      <p className="mt-1 flex flex-wrap gap-x-3 text-[10px] tabular-nums text-slate-400">
+                                        {player.height ? <span>{formatHeight(player.height)}</span> : null}
+                                        {player.weight > 0 ? <span>{player.weight} lb</span> : null}
+                                        {player.fortyTime ? <span>40 {player.fortyTime.toFixed(2)}</span> : null}
+                                        {player.physical > 0 ? <span>Phys {player.physical}</span> : null}
+                                        {communityTrends?.[`prospect:${prospect.id}`]?.rank ? (
+                                          <span className="text-violet-200">
+                                            Crowd #{communityTrends?.[`prospect:${prospect.id}`]!.rank}
+                                            {communityTrends?.[`prospect:${prospect.id}`]!.rankDelta
+                                              ? ` ${communityTrends?.[`prospect:${prospect.id}`]!.rankDelta! > 0 ? '▲' : '▼'}${Math.abs(communityTrends?.[`prospect:${prospect.id}`]!.rankDelta!)}`
+                                              : ''}
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                      {ktcHistoryMap[player.name]?.length ? (
+                                        <KtcSparkline
+                                          playerName={player.name}
+                                          history={ktcHistoryMap[player.name]}
+                                          useSf={true}
+                                          layout="bar"
+                                        />
+                                      ) : null}
                                     </div>
                                   </div>
                                 </div>

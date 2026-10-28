@@ -45,3 +45,21 @@ test('My Team renders the hero, starters rail and roster rows', () => {
   assert.match(html, /Elite WR1/)
   assert.match(html, /Scout your next class/)
 })
+
+test('trade review shows both sides as cards with the value gap', async () => {
+  const { OfferComparison } = await import('../components/league-buddy/trades/OfferComparison.tsx')
+  const mk = (id, name, v) => ({ ...player(id, 'WR'), playerName: name, ktcValueSf: v, ktcValue1qb: v })
+  const mine = { ...team, players: [mk('s', 'Sender Guy', 4000)] }
+  const theirs = { ...team, rosterId: 2, teamName: 'Them', players: [mk('r', 'Receiver Guy', 4500)] }
+  const html = renderToStaticMarkup(
+    React.createElement(OfferComparison, {
+      give: { players: ['s'], picks: [], faab: 0 },
+      receive: { players: ['r'], picks: [], faab: 0 },
+      team: mine, other: theirs, picks: [], teams: [mine, theirs], superflex: true,
+    })
+  )
+  assert.match(html, /Sender Guy/)
+  assert.match(html, /Receiver Guy/)
+  assert.match(html, /You gain/)
+  assert.match(html, /500 KTC/)
+})

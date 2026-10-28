@@ -10,7 +10,7 @@ export interface LeagueBuddyProps {
   onLeagueChange?: (leagueId: string) => void
 }
 
-export type LeagueSection = 'overview' | 'roster' | 'league' | 'audit' | 'builder'
+export type LeagueSection = 'overview' | 'roster' | 'league' | 'builder'
 
 export interface PlayerRankingSummary {
   rank: number

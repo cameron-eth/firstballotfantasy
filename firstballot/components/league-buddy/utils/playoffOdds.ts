@@ -1,7 +1,7 @@
 import type { TeamData } from '../types'
 import { compareStandings, standingsOrder } from '@/lib/league-metrics/standings'
 
-interface PlayoffOddsResult {
+export interface PlayoffOddsResult {
   rosterId: number
   teamName: string
   wins: number

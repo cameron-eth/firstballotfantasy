@@ -25,7 +25,29 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= 'test'
 const { installReplay, installStorage, loadFixture } = await import('../../tests/helpers/replay-fetch.mjs')
 installStorage()
 const fixture = loadFixture('sf-dynasty')
+// BENCH_SERVER_METRICS=1 turns NEXT_PUBLIC_SERVER_LEAGUE_METRICS on (PR-15b) and answers
+// /api/league/{id}/metrics with the server computation for this fixture, already cached.
+const serverMetrics = process.env.BENCH_SERVER_METRICS === '1'
+let metricsBody = null
+if (serverMetrics) {
+  process.env.NEXT_PUBLIC_SERVER_LEAGUE_METRICS = '1'
+  installReplay(fixture)
+  const { leagueMetrics, loadLeagueInputs } = await import('../../lib/league-metrics/compute.ts')
+  const inputs = await loadLeagueInputs(fixture.leagueId)
+  metricsBody = JSON.stringify({ version: 1, inputHash: 'bench', computedAt: '', metrics: leagueMetrics(inputs) })
+  const { clearPlayersMemo } = await import('../../components/league-buddy/leagueDataBundle.ts')
+  const { clearPlayoffOddsCache } = await import('../../components/league-buddy/utils/playoffOdds.ts')
+  clearPlayersMemo()
+  clearPlayoffOddsCache()
+}
 const misses = installReplay(fixture)
+if (metricsBody) {
+  const replay = globalThis.fetch
+  globalThis.fetch = (input, init) =>
+    String(input).startsWith(`/api/league/${fixture.leagueId}/metrics`)
+      ? Promise.resolve(new Response(metricsBody, { headers: { 'Content-Type': 'application/json' } }))
+      : replay(input, init)
+}
 
 const React = await import('react')
 const { createRoot } = await import('react-dom/client')
@@ -76,7 +98,7 @@ const rows = [
   await measure('switch to Overview', () => click('Overview')),
   await measure('window focus again', () => act(async () => window.dispatchEvent(new window.Event('focus')))),
 ]
-console.log(`Node ${process.version} · fixture sf-dynasty · replay misses ${misses.length}`)
+console.log(`Node ${process.version} · fixture sf-dynasty · server metrics ${serverMetrics ? 'on' : 'off'} · replay misses ${misses.length}`)
 if (process.env.BENCH_DEBUG) console.log(misses)
 console.log('| Interaction | Commits | Render ms |')
 console.log('|---|---|---|')

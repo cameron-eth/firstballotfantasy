@@ -6,9 +6,11 @@ Ordered by priority and dependency. "Complexity": S < ½ day, M ≈ 1–2 days, 
 
 | ID | Item | Severity | Affected | Root cause | Solution | Impact | Cx | Depends | Regression risk | Validation |
 |---|---|---|---|---|---|---|---|---|---|---|
-| R0-1 | Lock down anon writes | P0 | All valuation and prospect data | RLS off + broad grants on 5 tables | Migration: enable RLS, `select` policy for anon/authenticated, revoke INSERT/UPDATE/DELETE/TRUNCATE from anon | Closes public write access | S | — | Low (writers use the service role) | Catalog query shows no anon write grants; KTC sync and college job still succeed; anon REST insert returns 401/403 |
+| R0-1 ✅ done 2026-10-28 | Lock down anon writes | P0 | All valuation and prospect data | RLS off + broad grants on 5 tables | Migration: enable RLS, `select` policy for anon/authenticated, revoke INSERT/UPDATE/DELETE/TRUNCATE from anon | Closes public write access | S | — | Low (writers use the service role) | Catalog query shows no anon write grants; KTC sync and college job still succeed; anon REST insert returns 401/403 |
 | R0-2 | Fix preseason playoff odds | P0 | Standings, Overview | NaN average with 0 games | Use a prior (projection- or league-average-based) when `completed = 0`; guard NaN; seed the RNG | Correct odds at rollover | S | — | Low | Unit test with a 0-game league; seeded runs produce identical output |
 | R0-3 | Unfreeze college refresh | P0 | Scouting | Hard-coded years; schedule not firing | Derive classes from the Sleeper season; replace `Math.max(2027, …)` with one helper; add a `workflow_dispatch` fallback and an alert step; remove the `season < 2027` guard | Stats keep updating past 2027 | S | — | Low | Dry run with season = 2027; health shows `lastCheckedAt` < 3 days |
+
+| R0-4 | Remove legacy self-service membership writes | P1 | `user_profiles`, `subscriptions` | Self-update policies on billing fields; definer function callable by anon | Drop or limit the policies; revoke `execute` on `check_membership_status` | Prevents future privilege escalation | S | — | Low (no app reader) | Authenticated PATCH of `membership_status` is denied |
 
 ## Phase 1: one definition per metric (dashboard correctness)
 

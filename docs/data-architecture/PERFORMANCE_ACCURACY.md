@@ -30,6 +30,25 @@ Evidence: `information_schema.role_table_grants` and `pg_class.relrowsecurity`, 
 
 **Fix:** enable RLS, add read-only `select` policies for anon, and revoke write grants. All writers are service-role (`scripts/sync-ktc-values.mjs`, college script).
 
+**Status (2026-10-28):** fixed in production by `firstballot/supabase/migrations/20261028_lock_down_public_data.sql`. It enabled RLS, added a read-only policy and revoked client write grants on the five tables, and revoked writes on the view `nfl_player_combined_stats`. That view ran with its owner's rights, so its anon write grants could have bypassed RLS.
+
+Verified after applying:
+- 0 client write grants remain, and no public table has RLS off.
+- An anon PATCH returns `42501 permission denied`.
+- Anon reads still return 200.
+- Service-role writes still return 204.
+- The app endpoints using the anon key still return 200: ktc-values, prospects, rankings, dynasty-tiers, data-health.
+
+### P1-9. Legacy self-service membership policies [V]
+
+- `user_profiles` has an UPDATE policy "Users can update own membership status" (`auth_id = auth.uid()`), so users can edit their own `membership_status` and `feature_access`.
+- `subscriptions` lets users insert and update their own rows.
+- The SECURITY DEFINER function `check_membership_status(email)` reports any email's membership.
+
+**Current impact is low.** No app code reads these columns or that table for access decisions: entitlements come from `account_billing`, which has no client write policies (grep found no `membership_status`, `subscriptions` or `check_membership_status` usage). It becomes a privilege escalation the moment anything starts trusting those fields.
+
+**Fix:** drop the self-update policies for billing columns (column-level grants or a trigger), remove client writes to `subscriptions`, and revoke `execute` on `check_membership_status` from anon and authenticated.
+
 ### P0-2. Preseason playoff odds are wrong [C]
 
 With 0 completed games, the weekly average is NaN (`components/league-buddy/utils/playoffOdds.ts:94-95,164`). Every simulated game is then a loss, and the NaN sort comparator keeps roster order. The first N roster IDs show 100% and everyone else 0%. This hits every dynasty league after the season rolls over.

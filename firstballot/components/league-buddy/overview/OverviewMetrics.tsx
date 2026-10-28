@@ -6,6 +6,8 @@ export interface OverviewMetricValues {
   leagueSize: number
   /** Dynasty value rank (lib/league-metrics/team-value); 0 when there are no teams. */
   valueRank: number
+  /** Core players valued from consensus rank because KTC has no value for them. */
+  valueEstimated: number
   playoffOdds?: number
   playoffSpots?: number
   pointsFor: number
@@ -33,7 +35,11 @@ export function OverviewMetrics({ m }: { m: OverviewMetricValues }) {
         label="Dynasty rank"
         value={m.valueRank > 0 ? `#${m.valueRank}` : '—'}
         valueClassName={m.valueRank > 0 ? RANK_TEXT[rankTone(m.valueRank, m.leagueSize)] : ''}
-        detail={`of ${m.leagueSize} by team value`}
+        detail={
+          m.valueEstimated > 0
+            ? `of ${m.leagueSize} · ${m.valueEstimated} estimated from rank`
+            : `of ${m.leagueSize} by team value`
+        }
       />
       <StatTile
         size="lg"

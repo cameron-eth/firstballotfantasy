@@ -104,8 +104,8 @@ export function OverviewHeader({
   const order = useMemo(() => recordOrder(teams), [teams])
 
   // Dynasty rank: the league's one team-value definition (lib/league-metrics/team-value).
-  const valueRank = useMemo(
-    () => leagueTeamValues(teams, { superflex }).get(selectedTeam.rosterId)?.rank ?? 0,
+  const teamValue = useMemo(
+    () => leagueTeamValues(teams, { superflex }).get(selectedTeam.rosterId),
     [teams, selectedTeam, superflex]
   )
 
@@ -133,7 +133,8 @@ export function OverviewHeader({
         <OverviewMetrics
           m={{
             leagueSize,
-            valueRank,
+            valueRank: teamValue?.rank ?? 0,
+            valueEstimated: teamValue?.estimated ?? 0,
             playoffOdds: probability(selectedTeam.rosterId),
             playoffSpots: oddsMeta?.spots,
             pointsFor: selectedTeam.pointsFor,

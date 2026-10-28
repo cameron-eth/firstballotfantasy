@@ -38,9 +38,10 @@ export interface DraftOrderRow {
   winPct: number
   /** Season points actually scored. */
   pointsFor: number
-  maxPointsFor: number
-  /** Projected season-end Max PF. */
-  projectedMaxPointsFor: number
+  /** Null when this team has no Max PF yet; such teams sort after every team with data. */
+  maxPointsFor: number | null
+  /** Projected season-end Max PF; null when the team has no projection. */
+  projectedMaxPointsFor: number | null
   /** Where this team would pick under the comparison metric. */
   altPick: number
   altLabel: string
@@ -65,8 +66,17 @@ interface Scored {
   team: TeamData
   winPct: number
   pointsFor: number
-  maxPointsFor: number
-  projectedMaxPointsFor: number
+  maxPointsFor: number | null
+  projectedMaxPointsFor: number | null
+}
+
+/**
+ * Worst first, but a team with no value for the metric sorts last: missing data is not
+ * a bad season, so it must never claim the 1.01 (it used to count as 0).
+ */
+function ascendingKnownFirst(a: number | null, b: number | null): number {
+  if (a == null || b == null) return a == null ? (b == null ? 0 : 1) : -1
+  return a - b
 }
 
 /**
@@ -79,14 +89,14 @@ interface Scored {
 function comparatorFor(metric: DraftOrderMetric) {
   return (a: Scored, b: Scored): number => {
     if (metric === 'projected') {
-      if (a.projectedMaxPointsFor !== b.projectedMaxPointsFor) {
-        return a.projectedMaxPointsFor - b.projectedMaxPointsFor
-      }
-      return a.maxPointsFor - b.maxPointsFor
+      return (
+        ascendingKnownFirst(a.projectedMaxPointsFor, b.projectedMaxPointsFor) ||
+        ascendingKnownFirst(a.maxPointsFor, b.maxPointsFor) ||
+        compareStandings(b.team, a.team)
+      )
     }
     if (metric === 'maxpf') {
-      if (a.maxPointsFor !== b.maxPointsFor) return a.maxPointsFor - b.maxPointsFor
-      return compareStandings(b.team, a.team)
+      return ascendingKnownFirst(a.maxPointsFor, b.maxPointsFor) || compareStandings(b.team, a.team)
     }
     // Exactly the reverse of the standings order on every page.
     return compareStandings(b.team, a.team)
@@ -106,8 +116,10 @@ export function buildDraftOrder(
       winPct: winPct(team),
       // Season points with Sleeper's decimals, the same number the standings sort on.
       pointsFor: team.pointsFor,
-      maxPointsFor: entry?.maxPointsFor ?? 0,
-      projectedMaxPointsFor: projectedByRoster[team.rosterId] ?? entry?.maxPointsFor ?? 0,
+      maxPointsFor: entry ? entry.maxPointsFor : null,
+      projectedMaxPointsFor: Number.isFinite(projectedByRoster[team.rosterId])
+        ? projectedByRoster[team.rosterId]
+        : null,
     }
   })
 
@@ -120,20 +132,27 @@ export function buildDraftOrder(
     if (metric === 'maxpf') return s.maxPointsFor
     return s.winPct
   }
-  const top = ordered.length > 0 ? valueOf(ordered[0]) : 0
-  const bottom = ordered.length > 0 ? valueOf(ordered[ordered.length - 1]) : 0
-  const spread = bottom - top
+  // The race is measured among teams that have a value; the rest sort last with no gap.
+  const known = ordered.flatMap((s) => {
+    const value = valueOf(s)
+    return value == null ? [] : [value]
+  })
+  const top = known[0] ?? 0
+  const spread = (known[known.length - 1] ?? 0) - top
 
   return ordered.map((s, index) => {
     const pick = index + 1
     const altPick = altPickOf.get(s.team.rosterId) ?? pick
     const gamesPlayed = s.team.wins + s.team.losses + (s.team.ties ?? 0)
+    const value = valueOf(s)
     const gapToTop =
-      metric !== 'record'
-        ? valueOf(s) - top
-        : // Win percentage differences are hard to read; convert back to wins so the
-          // gap says "you are two wins away from the 1.01".
-          (s.winPct - top) * gamesPlayed
+      value == null
+        ? 0
+        : metric !== 'record'
+          ? value - top
+          : // Win percentage differences are hard to read; convert back to wins so the
+            // gap says "you are two wins away from the 1.01".
+            (s.winPct - top) * gamesPlayed
 
     return {
       pick,
@@ -150,7 +169,7 @@ export function buildDraftOrder(
       altPick,
       altLabel: firstRoundLabel(altPick),
       gapToTop,
-      raceShare: spread > 0 ? 1 - (valueOf(s) - top) / spread : 0,
+      raceShare: value != null && spread > 0 ? 1 - (value - top) / spread : 0,
     }
   })
 }

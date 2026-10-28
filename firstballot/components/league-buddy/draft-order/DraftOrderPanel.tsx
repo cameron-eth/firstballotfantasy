@@ -71,17 +71,27 @@ function columnsFor(
   const altLabel = `By ${METRIC_LABELS[alternateMetric(metric)]}`
   const maxPf: NumericColumn = {
     label: 'Max PF',
-    render: (row) => (maxPfReady ? row.maxPointsFor.toFixed(1) : '—'),
+    render: (row) => (maxPfReady && row.maxPointsFor != null ? row.maxPointsFor.toFixed(1) : '—'),
     emphasis: metric === 'maxpf',
   }
-  const comparison: NumericColumn = { label: altLabel, render: (row) => row.altLabel }
+  const alternate = alternateMetric(metric)
+  const altReady =
+    alternate === 'maxpf' ? maxPfReady : alternate === 'projected' ? projectedReady : true
+  // A comparison slot from incomplete data would be a guess, so it reads '—'.
+  const comparison: NumericColumn = {
+    label: altLabel,
+    render: (row) => (altReady ? row.altLabel : '—'),
+  }
 
   if (metric === 'projected') {
     return [
       maxPf,
       {
         label: 'Proj',
-        render: (row) => (projectedReady ? row.projectedMaxPointsFor.toFixed(0) : '—'),
+        render: (row) =>
+          projectedReady && row.projectedMaxPointsFor != null
+            ? row.projectedMaxPointsFor.toFixed(0)
+            : '—',
         emphasis: true,
       },
       comparison,

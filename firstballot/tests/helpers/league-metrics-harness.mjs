@@ -105,6 +105,7 @@ export async function computeLeagueMetrics(leagueId) {
           grade: t.grade,
           gradeScore: r(t.gradeScore),
           teamValueScore: r(teamValues.get(t.rosterId).value),
+          valueEstimated: teamValues.get(t.rosterId).estimated,
           dynastyRank: { teamValue: teamValues.get(t.rosterId).rank, outlook: outlookRank(t.rosterId) },
           ktcSfTotal: t.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0),
           tieredPlayers: t.players.filter((p) => p.tierNumber).length,
@@ -115,7 +116,13 @@ export async function computeLeagueMetrics(leagueId) {
           placement: (() => {
             const p = placements.placements[t.rosterId]
             return p
-              ? { state: p.state, now: p.nowScore, future: p.futureScore, coreAge: r(p.avgAge, 2) }
+              ? {
+                  state: p.state,
+                  now: p.nowScore,
+                  future: p.futureScore,
+                  coreAge: r(p.avgAge, 2),
+                  ageKnown: p.ageKnown,
+                }
               : null
           })(),
           positionRanks: positionRanks[t.rosterId] ?? null,

@@ -51,3 +51,17 @@ test('the college job logs its snapshot write like writeSnapshot does', () => {
   assert.match(script, /"data_snapshots\?on_conflict=key"/)
   assert.match(script, /"ingestion_runs", "POST"/)
 })
+
+test('every snapshot read or write takes its key from lib/platform/snapshot-keys', () => {
+  // A key written as a string or template literal at the call site is the drift PR-10 removed.
+  const literal = /\b(snapshot|writeSnapshot|readSnapshot|latestSnapshot)\(\s*[`'"]/
+  const offenders = files.filter((file) => file !== 'lib/platform/snapshots.ts' && literal.test(read(file)))
+  assert.deepEqual(offenders, [])
+  const keyLiterals = files.filter(
+    (file) =>
+      file !== 'lib/platform/snapshot-keys.ts' &&
+      /['`](espn:ppr:|sleeper:projections:|sleeper:rosters:|prospects:%)/.test(read(file))
+  )
+  assert.deepEqual(keyLiterals, [])
+})
+

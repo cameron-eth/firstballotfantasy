@@ -6,13 +6,13 @@ import {
 } from '@/lib/current-season-stats'
 import { snapshot, snapshotMetadata } from './snapshots'
 import { identityMap } from './reference-data'
+import { espnSeasonKey } from './snapshot-keys'
 import { sleeperRead } from './teams'
 import { PlatformError } from './http'
 /** ESPN's season totals start here; earlier seasons return no players. */
 export const FIRST_ESPN_SEASON = 2018
 
-/** Snapshot key for one season of ESPN PPR totals. */
-export const espnSeasonKey = (season: number) => `espn:ppr:${season}`
+export { espnSeasonKey } from './snapshot-keys'
 
 /**
  * How long past expiry a season may be served, flagged stale, while ESPN is failing

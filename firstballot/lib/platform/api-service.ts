@@ -2,6 +2,7 @@ import 'server-only'
 import type { Principal } from './auth'
 import { requireTeam, sleeperRead, teamsFor } from './teams'
 import { snapshot, snapshotMetadata } from './snapshots'
+import { sleeperRostersKey } from './snapshot-keys'
 import { PlatformError } from './http'
 function requireRead(p: Principal) {
   if (!p.scopes.includes('teams:read'))
@@ -15,7 +16,7 @@ export async function teamRoster(p: Principal, id: string) {
   requireRead(p)
   const team = await requireTeam(p, id)
   const data = await snapshot(
-    `sleeper:rosters:${team.league_id}`,
+    sleeperRostersKey(team.league_id),
     'Sleeper',
     120,
     async () => ({

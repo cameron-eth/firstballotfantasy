@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { snapshot, snapshotMetadata } from '@/lib/platform/snapshots'
+import { projectionsKey } from '@/lib/platform/snapshot-keys'
 import { analyzeCoverage, type ScoringSettings } from '@/lib/projections/scoring'
 
 import { normalizeProjection, type SleeperProjectionRow } from '@/lib/projections/normalize'
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     const [projectionResponse, league] = await Promise.all([
       snapshot(
-        `sleeper:projections:${season}:${week ?? 'season'}`,
+        projectionsKey(season, week ?? 'season'),
         'Sleeper',
         week ? 900 : 21600,
         async () => {

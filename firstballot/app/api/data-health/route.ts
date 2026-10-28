@@ -2,13 +2,22 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import { freshness, KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { failure, json } from '@/lib/platform/http'
 import ktcArchive from '@/data/ktc-history.json'
-import { espnSeasonKey, FIRST_ESPN_SEASON } from '@/lib/platform/player-data'
-import { TIER_KEY } from '@/lib/dynasty-tiers'
-import { HISTORY_OUTCOMES_PREFIX, IDENTITIES_KEY } from '@/lib/reference-data'
+import { FIRST_ESPN_SEASON } from '@/lib/platform/player-data'
+import {
+  DRAFT_CAPITAL_KEY,
+  ESPN_PPR_PREFIX,
+  espnSeasonKey,
+  HISTORY_OUTCOMES_PREFIX,
+  IDENTITIES_KEY,
+  PROJECTIONS_PREFIX,
+  projectionsKey,
+  PROSPECT_STATS_PATTERN,
+  TIER_KEY,
+} from '@/lib/platform/snapshot-keys'
 
 /** Completed ESPN seasons behind career FPPG; an expired one hides career badges. */
 const isCareerSeason = (key: string, currentSeason: number | null) => {
-  const year = Number(/^espn:ppr:(\d{4})$/.exec(key)?.[1])
+  const year = key.startsWith(ESPN_PPR_PREFIX) ? Number(key.slice(ESPN_PPR_PREFIX.length)) : NaN
   return currentSeason != null && year >= FIRST_ESPN_SEASON && year < currentSeason
 }
 
@@ -23,7 +32,14 @@ export async function GET() {
           .select('key,source,fetched_at,source_observed_at,expires_at,quality,season,week')
           // Only publish shared provider datasets. Per-league roster cache keys are private.
           .or(
-            `key.like.espn:%,key.like.sleeper:projections:%,key.eq.${TIER_KEY},key.eq.${IDENTITIES_KEY},key.like.${HISTORY_OUTCOMES_PREFIX}%`
+            [
+              `key.like.${ESPN_PPR_PREFIX}%`,
+              `key.like.${PROJECTIONS_PREFIX}%`,
+              `key.eq.${TIER_KEY}`,
+              `key.eq.${DRAFT_CAPITAL_KEY}`,
+              `key.eq.${IDENTITIES_KEY}`,
+              `key.like.${HISTORY_OUTCOMES_PREFIX}%`,
+            ].join(',')
           )
           .order('key')
           .limit(100),
@@ -46,7 +62,7 @@ export async function GET() {
         supabaseAdmin
           .from('data_snapshots')
           .select('key,source,fetched_at,source_observed_at,expires_at,season,payload')
-          .like('key', 'prospects:%:espn')
+          .like('key', PROSPECT_STATS_PATTERN)
           .limit(20),
       ])
     if (snapshotResult.error) throw snapshotResult.error
@@ -171,9 +187,10 @@ export async function GET() {
           dataset.key === TIER_KEY ||
           dataset.key === IDENTITIES_KEY ||
           dataset.key === newestOutcomes ||
-          dataset.key === `sleeper:projections:${currentSeason}:season` ||
+          (currentSeason != null && dataset.key === projectionsKey(currentSeason, 'season')) ||
           (currentWeek !== null &&
-            dataset.key === `sleeper:projections:${currentSeason}:${currentWeek}`)
+            currentSeason != null &&
+            dataset.key === projectionsKey(currentSeason, currentWeek))
       ),
       ktc,
       ...prospectYears,

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 export const DISMISSAL_TTL = 24 * 60 * 60 * 1000
 export function activeDismissals(value: unknown, now = Date.now()): Record<string, number> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
@@ -20,12 +20,20 @@ export function useTradeDismissals(scope: string) {
       try {
         const entries = activeDismissals(JSON.parse(localStorage.getItem(key) || '{}'))
         localStorage.setItem(key, JSON.stringify(entries))
-        setCache({ key, entries })
+        // Keep the same object when nothing expired or arrived, so the 30 s refresh and
+        // window focus don't re-run the trade engine for an unchanged list (PR-14).
+        setCache((previous) =>
+          previous.key === key && sameEntries(previous.entries, entries)
+            ? previous
+            : { key, entries }
+        )
       } catch {
-        setCache((previous) => ({
-          key,
-          entries: previous.key === key ? activeDismissals(previous.entries) : {},
-        }))
+        setCache((previous) => {
+          const entries = previous.key === key ? activeDismissals(previous.entries) : NONE
+          return previous.key === key && sameEntries(previous.entries, entries)
+            ? previous
+            : { key, entries }
+        })
       }
     }
     refresh()
@@ -38,10 +46,10 @@ export function useTradeDismissals(scope: string) {
       window.removeEventListener('storage', refresh)
     }
   }, [key])
-  const entries = cache.key === key ? cache.entries : {}
-  return {
-    dismissed: Object.keys(entries),
-    dismiss: (id: string) => {
+  const entries = cache.key === key ? cache.entries : NONE
+  const dismissed = useMemo(() => Object.keys(entries), [entries])
+  const dismiss = useCallback(
+    (id: string) => {
       const next = { ...activeDismissals(entries), [id]: Date.now() }
       try {
         localStorage.setItem(key, JSON.stringify(next))
@@ -50,5 +58,14 @@ export function useTradeDismissals(scope: string) {
       }
       setCache({ key, entries: next })
     },
-  }
+    [entries, key]
+  )
+  return { dismissed, dismiss }
+}
+
+const NONE: Record<string, number> = {}
+
+function sameEntries(a: Record<string, number>, b: Record<string, number>) {
+  const keys = Object.keys(a)
+  return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k])
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { memo, useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Users, AlertCircle } from 'lucide-react'
@@ -33,6 +33,13 @@ import { AppTooltip } from '@/components/ui/app-tooltip'
 import { usePickCapital } from './league-buddy/usePickCapital'
 import { useLeagueData } from './league-buddy/useLeagueData'
 import { TeamBuilder } from './league-buddy/builder/TeamBuilder'
+
+/**
+ * The Builder stays mounted (hidden) on other tabs so unsaved plans and the leave-page
+ * warning survive a tab switch. Memo keeps it from re-rendering, and re-running its trade
+ * and draft-funding work, on every dashboard update unrelated to its props (PR-14).
+ */
+const PersistentTeamBuilder = memo(TeamBuilder)
 import { DashboardLayout } from './league-buddy/DashboardLayout'
 import { OverviewHeader, type OverviewRankings } from './league-buddy/OverviewHeader'
 import { TradeIntelligencePanel } from './league-buddy/TradeIntelligencePanel'
@@ -86,6 +93,8 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
 
   // Memoized sorted teams to prevent unnecessary re-sorting
   const sortedTeams = useMemo(() => recordOrder(teams), [teams])
+  // Stable, so Market signals' positional medians don't recompute on every render.
+  const leaguePlayerPool = useMemo(() => teams.flatMap((t) => t.players), [teams])
 
   // The Builder's "Consider trading" signals, shown beside Market signals so both answers
   // are visible with their reasons (G1, inventory #29/#30).
@@ -398,7 +407,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       )}
       {selectedTeam && desktopBuilder && (
         <div hidden={activeSection !== 'builder'}>
-          <TeamBuilder
+          <PersistentTeamBuilder
             rosterPositions={rosterPositionsRaw}
             draftOrder={draftOrder}
             key={`${leagueId}:${selectedTeam.rosterId}`}
@@ -434,7 +443,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           />
           <TradeIntelligencePanel
             players={selectedTeam.players}
-            leaguePlayerPool={teams.flatMap((t) => t.players)}
+            leaguePlayerPool={leaguePlayerPool}
             leagueContext={leagueContext}
             rosterSignals={rosterSignals}
           />

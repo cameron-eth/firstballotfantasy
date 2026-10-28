@@ -14,7 +14,7 @@ import {
   clearPlayersMemo,
 } from '../../components/league-buddy/useLeagueData.ts'
 import { fetchStandingsSettings } from '../../components/league-buddy/useStandingsOdds.ts'
-import { calculatePlayoffOdds } from '../../components/league-buddy/utils/playoffOdds.ts'
+import { calculatePlayoffOdds, clearPlayoffOddsCache } from '../../components/league-buddy/utils/playoffOdds.ts'
 import { calculateLeaguePlacements } from '../../components/league-buddy/competitiveState.ts'
 import { calculateLeaguePositionRankings } from '../../components/league-buddy/utils.ts'
 import { buildPowerRankings } from '../../lib/sleeper-sdk/values.ts'
@@ -49,15 +49,18 @@ for (const name of ['sf-dynasty', '1qb-dynasty', 'redraft-1qb']) {
   const settings = await fetchStandingsSettings(fixture.leagueId, teams)
   const viewer = teams[0]
   const cases = {
+    // Cleared each run so this times the simulation, not the PR-14 cache.
     'playoff odds (10k sims)': [
-      () =>
-        calculatePlayoffOdds(
+      () => {
+        clearPlayoffOddsCache()
+        return calculatePlayoffOdds(
           teams,
           settings.completed,
           settings.end,
           settings.spots,
           settings.schedule
-        ),
+        )
+      },
       10,
     ],
     'power rankings': [

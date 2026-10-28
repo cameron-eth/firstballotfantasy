@@ -231,7 +231,25 @@ def refresh_year(base, key, year, args):
                     "content_hash": hashlib.sha256(json.dumps(summary, sort_keys=True).encode()).hexdigest()}
         supabase_json(base, key, "data_snapshots?on_conflict=key", "POST", snapshot,
                       "resolution=merge-duplicates,return=minimal")
+        # Same log entry the app's writeSnapshot() leaves (lib/platform/snapshots.ts), so a
+        # class refresh shows up in ingestion_runs like every other snapshot write.
+        # Logging must never fail a refresh whose data is already written.
+        try:
+            supabase_json(base, key, "ingestion_runs", "POST",
+                          {"dataset": snapshot["key"], "status": "success",
+                           "completed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+                           "row_count": len(accepted), "source": "script:refresh-college-prospects",
+                           "run_url": run_url()},
+                          "return=minimal")
+        except (urllib.error.URLError, OSError) as error:
+            print(f"warning: could not log {snapshot['key']} to ingestion_runs: {error}")
     return summary
+
+
+def run_url():
+    """Link to the GitHub Actions run when the script runs in a workflow."""
+    server, repo, run = (os.environ.get(k) for k in ("GITHUB_SERVER_URL", "GITHUB_REPOSITORY", "GITHUB_RUN_ID"))
+    return f"{server}/{repo}/actions/runs/{run}" if server and repo and run else None
 
 
 def main():

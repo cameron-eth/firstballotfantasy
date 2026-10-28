@@ -1,5 +1,13 @@
 export const DYNASTY_TIER_VERSION = 1
 
+/**
+ * Snapshot keys (PR-10, audit R2-6). Readers and writers import these, so bumping
+ * DYNASTY_TIER_VERSION moves every reader to the new key with the writer.
+ */
+export const TIER_KEY = `dynasty:tiers:v${DYNASTY_TIER_VERSION}`
+/** ESPN draft position by athlete id; an immutable fact cached for the tier build. */
+export const DRAFT_CAPITAL_KEY = 'nfl:draft-capital:v1'
+
 export const DYNASTY_TIERS = [
   { number: 1, name: 'Elite', minimum: 82, emphasis: 'strong' },
   { number: 2, name: 'Star', minimum: 72, emphasis: 'strong' },

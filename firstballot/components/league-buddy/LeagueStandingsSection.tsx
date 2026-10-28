@@ -168,7 +168,10 @@ export function LeagueStandingsSection({
               p = projected.find((r) => r.rosterId === t.rosterId),
               prob = probability(t.rosterId),
               selected = selectedTeam.rosterId === t.rosterId,
-              gap = d && draft[0] ? d.maxPointsFor - draft[0].maxPointsFor : null
+              gap =
+                d?.maxPointsFor != null && draft[0]?.maxPointsFor != null
+                  ? d.maxPointsFor - draft[0].maxPointsFor
+                  : null
             return (
               <TableRow
                 key={t.rosterId}
@@ -210,7 +213,7 @@ export function LeagueStandingsSection({
                 {isDynasty && (
                   <>
                     <TableCell numeric className={cell('maxpf', true)}>
-                      {d?.maxPointsFor.toFixed(1) ?? '—'}
+                      {d?.maxPointsFor?.toFixed(1) ?? '—'}
                     </TableCell>
                     <TableCell className={cell('maxpfSlot')}>
                       {d ? <PickChip label={d.label} /> : '—'}
@@ -219,7 +222,7 @@ export function LeagueStandingsSection({
                       {gap == null ? '—' : gap === 0 ? 'Leads' : `+${gap.toFixed(1)}`}
                     </TableCell>
                     <TableCell numeric className={cell('projected', true)}>
-                      {p?.projectedMaxPointsFor.toFixed(1) ?? '—'}
+                      {p?.projectedMaxPointsFor?.toFixed(1) ?? '—'}
                     </TableCell>
                     <TableCell className={cell('projectedSlot')}>
                       {p ? <PickChip label={p.label} /> : '—'}

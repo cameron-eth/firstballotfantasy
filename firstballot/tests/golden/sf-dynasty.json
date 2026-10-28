@@ -44,6 +44,7 @@
       "grade": "A+",
       "gradeScore": 100,
       "teamValueScore": 60864,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 1,
         "outlook": 1
@@ -58,7 +59,8 @@
         "state": "juggernaut",
         "now": 100,
         "future": 64,
-        "coreAge": 24.83
+        "coreAge": 24.83,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 5,
@@ -81,6 +83,7 @@
       "grade": "C+",
       "gradeScore": 56,
       "teamValueScore": 30615,
+      "valueEstimated": 1,
       "dynastyRank": {
         "teamValue": 10,
         "outlook": 10
@@ -95,7 +98,8 @@
         "state": "purgatory",
         "now": 22,
         "future": 10,
-        "coreAge": 26.58
+        "coreAge": 26.58,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 12,
@@ -118,6 +122,7 @@
       "grade": "C-",
       "gradeScore": 49,
       "teamValueScore": 26302,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 11,
         "outlook": 11
@@ -132,7 +137,8 @@
         "state": "purgatory",
         "now": 11,
         "future": 21,
-        "coreAge": 26.25
+        "coreAge": 26.25,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 9,
@@ -155,6 +161,7 @@
       "grade": "A",
       "gradeScore": 79,
       "teamValueScore": 46485,
+      "valueEstimated": 1,
       "dynastyRank": {
         "teamValue": 4,
         "outlook": 4
@@ -169,7 +176,8 @@
         "state": "contender",
         "now": 63,
         "future": 0,
-        "coreAge": 26.92
+        "coreAge": 26.92,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 1,
@@ -192,6 +200,7 @@
       "grade": "A+",
       "gradeScore": 89,
       "teamValueScore": 52432,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 2,
         "outlook": 2
@@ -206,7 +215,8 @@
         "state": "juggernaut",
         "now": 78,
         "future": 64,
-        "coreAge": 24.83
+        "coreAge": 24.83,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 4,
@@ -229,6 +239,7 @@
       "grade": "C",
       "gradeScore": 51,
       "teamValueScore": 30820,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 9,
         "outlook": 9
@@ -243,7 +254,8 @@
         "state": "rebuild",
         "now": 23,
         "future": 100,
-        "coreAge": 23.67
+        "coreAge": 23.67,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 10,
@@ -266,6 +278,7 @@
       "grade": "D",
       "gradeScore": 41,
       "teamValueScore": 22016,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 12,
         "outlook": 12
@@ -280,7 +293,8 @@
         "state": "purgatory",
         "now": 0,
         "future": 38,
-        "coreAge": 25.67
+        "coreAge": 25.67,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 11,
@@ -303,6 +317,7 @@
       "grade": "B-",
       "gradeScore": 61,
       "teamValueScore": 37449,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 8,
         "outlook": 8
@@ -317,7 +332,8 @@
         "state": "rebuild",
         "now": 40,
         "future": 44,
-        "coreAge": 25.5
+        "coreAge": 25.5,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 6,
@@ -340,6 +356,7 @@
       "grade": "B",
       "gradeScore": 66,
       "teamValueScore": 39106,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 7,
         "outlook": 7
@@ -354,7 +371,8 @@
         "state": "rebuild",
         "now": 44,
         "future": 44,
-        "coreAge": 25.5
+        "coreAge": 25.5,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 8,
@@ -377,6 +395,7 @@
       "grade": "A-",
       "gradeScore": 77,
       "teamValueScore": 46508,
+      "valueEstimated": 1,
       "dynastyRank": {
         "teamValue": 3,
         "outlook": 3
@@ -391,7 +410,8 @@
         "state": "juggernaut",
         "now": 63,
         "future": 49,
-        "coreAge": 25.33
+        "coreAge": 25.33,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 3,
@@ -414,6 +434,7 @@
       "grade": "B",
       "gradeScore": 72,
       "teamValueScore": 43662,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 5,
         "outlook": 5
@@ -428,7 +449,8 @@
         "state": "juggernaut",
         "now": 56,
         "future": 82,
-        "coreAge": 24.25
+        "coreAge": 24.25,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 7,
@@ -451,6 +473,7 @@
       "grade": "A-",
       "gradeScore": 77,
       "teamValueScore": 43146,
+      "valueEstimated": 0,
       "dynastyRank": {
         "teamValue": 6,
         "outlook": 6
@@ -465,7 +488,8 @@
         "state": "contender",
         "now": 54,
         "future": 13,
-        "coreAge": 26.5
+        "coreAge": 26.5,
+        "ageKnown": true
       },
       "positionRanks": {
         "QB": 2,

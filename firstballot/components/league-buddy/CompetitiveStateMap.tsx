@@ -217,7 +217,7 @@ export function CompetitiveStateMap({
                     {p.nowScore}
                   </TableCell>
                   <TableCell numeric className={cell('future')}>
-                    {p.futureScore}
+                    {p.ageKnown ? p.futureScore : '—'}
                   </TableCell>
                   <TableCell numeric className="px-3 py-2 text-sm text-slate-400">
                     {p.avgAge > 0 ? p.avgAge.toFixed(1) : '—'}
@@ -378,8 +378,12 @@ export function CompetitiveStateMap({
               />
               <StatTile
                 label="Future"
-                value={`${selected.futureScore}/100`}
-                detail={selected.avgAge > 0 ? `Core age ${selected.avgAge.toFixed(1)}` : undefined}
+                value={selected.ageKnown ? `${selected.futureScore}/100` : '—'}
+                detail={
+                  selected.ageKnown
+                    ? `Core age ${selected.avgAge.toFixed(1)}`
+                    : 'Not enough age data; placed at the league median'
+                }
               />
             </div>
           </div>

@@ -129,7 +129,11 @@ export function RosterSection({
       'Fantasy points scored this season (points for), ranked against every team in the league.',
     'Lineup projection':
       'Sum of available weekly Sleeper forecasts for your current starters, scored with this league’s rules. Partial coverage is labeled.',
-    'Team value': `Quality-weighted KTC ${leagueContext.superflex ? 'superflex' : '1QB'} value: each player counts more than proportionally to their value, your best nine count fully and deeper bench players count less, so a pile of depth cannot outrank a few stars.`,
+    'Team value': `Quality-weighted KTC ${leagueContext.superflex ? 'superflex' : '1QB'} value: each player counts more than proportionally to their value, your best nine count fully and deeper bench players count less, so a pile of depth cannot outrank a few stars.${
+      teamValue?.estimated
+        ? ` ${teamValue.estimated} of your players have no KTC value and are estimated from consensus rank.`
+        : ''
+    }`,
     'Average age':
       'Average known age of quarterbacks, running backs, receivers and tight ends on this roster.',
     'Roster grade':

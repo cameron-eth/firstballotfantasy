@@ -60,6 +60,36 @@ const VARIANTS = {
   },
 }
 
+// Missing inputs (R1-5): one team has no known ages, one has no matchups (so no Max PF),
+// and players named A–C have no KTC value. Each must show as missing, not as an extreme.
+const SF = loadFixture('sf-dynasty').requests
+const NO_AGES = new Set(
+  SF['https://api.sleeper.app/v1/league/fixture-sf-dynasty/rosters'].body.find(
+    (r) => r.roster_id === 3
+  ).players
+)
+const NO_MAX_PF = 5
+const noKtc = (name) => /^[A-C]/.test(name)
+VARIANTS['missing-data'] = {
+  base: 'sf-dynasty',
+  transform: (key, body) => {
+    if (key === 'https://api.sleeper.app/v1/players/nfl')
+      return Object.fromEntries(
+        Object.entries(body).map(([id, p]) => [id, NO_AGES.has(id) ? { ...p, age: null } : p])
+      )
+    if (key.includes('/matchups/')) return body.filter((m) => m.roster_id !== NO_MAX_PF)
+    if (key.startsWith('/api/ktc-values'))
+      return {
+        ...body,
+        data: body.data.filter((row) => !noKtc(row.player_name)),
+        historyMap: Object.fromEntries(
+          Object.entries(body.historyMap ?? {}).filter(([name]) => !noKtc(name))
+        ),
+      }
+    return body
+  },
+}
+
 const goldenDir = new URL('./golden/', import.meta.url)
 
 for (const [name, { base, transform }] of Object.entries(VARIANTS)) {

@@ -1,0 +1,712 @@
+{
+  "league": {
+    "currentWeek": 8,
+    "isDynasty": true,
+    "rosterPositions": [
+      "QB",
+      "RB",
+      "RB",
+      "WR",
+      "WR",
+      "WR",
+      "TE",
+      "FLEX",
+      "SUPER_FLEX",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN",
+      "BN"
+    ],
+    "superflex": {
+      "powerRankings": true,
+      "leagueContext": true,
+      "tradeInventory": true
+    },
+    "ktcNamesMatched": 250
+  },
+  "teams": {
+    "1": {
+      "record": [
+        13,
+        1,
+        0
+      ],
+      "pointsFor": 1149.18,
+      "grade": "A+",
+      "gradeScore": 100,
+      "teamValueScore": 60718,
+      "valueEstimated": 5,
+      "dynastyRank": {
+        "teamValue": 1,
+        "outlook": 1
+      },
+      "ktcSfTotal": 99715,
+      "tieredPlayers": 26,
+      "power": {
+        "rank": 1,
+        "score": 100
+      },
+      "placement": {
+        "state": "juggernaut",
+        "now": 100,
+        "future": 68,
+        "coreAge": 24.83,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 4,
+        "RB": 3,
+        "WR": 1,
+        "TE": 11,
+        "FLEX": 3
+      },
+      "maxPointsFor": 1244.42,
+      "projectedMaxPointsFor": 2322.36,
+      "playoffOdds": 100
+    },
+    "2": {
+      "record": [
+        5,
+        9,
+        0
+      ],
+      "pointsFor": 767.7,
+      "grade": "C+",
+      "gradeScore": 53,
+      "teamValueScore": 27988,
+      "valueEstimated": 7,
+      "dynastyRank": {
+        "teamValue": 9,
+        "outlook": 9
+      },
+      "ktcSfTotal": 59028,
+      "tieredPlayers": 26,
+      "power": {
+        "rank": 9,
+        "score": 62
+      },
+      "placement": {
+        "state": "purgatory",
+        "now": 16,
+        "future": 43,
+        "coreAge": 25.83,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 12,
+        "RB": 8,
+        "WR": 7,
+        "TE": 7,
+        "FLEX": 9
+      },
+      "maxPointsFor": 951.58,
+      "projectedMaxPointsFor": 1825.56,
+      "playoffOdds": 4.73
+    },
+    "3": {
+      "record": [
+        7,
+        7,
+        0
+      ],
+      "pointsFor": 810.34,
+      "grade": "C",
+      "gradeScore": 49,
+      "teamValueScore": 26280,
+      "valueEstimated": 3,
+      "dynastyRank": {
+        "teamValue": 10,
+        "outlook": 10
+      },
+      "ktcSfTotal": 69171,
+      "tieredPlayers": 27,
+      "power": {
+        "rank": 10,
+        "score": 59
+      },
+      "placement": {
+        "state": "rebuild",
+        "now": 12,
+        "future": 47,
+        "coreAge": 0,
+        "ageKnown": false
+      },
+      "positionRanks": {
+        "QB": 9,
+        "RB": 9,
+        "WR": 11,
+        "TE": 9,
+        "FLEX": 11
+      },
+      "maxPointsFor": 928.04,
+      "projectedMaxPointsFor": 1788.36,
+      "playoffOdds": 29.64
+    },
+    "4": {
+      "record": [
+        11,
+        3,
+        0
+      ],
+      "pointsFor": 1007.36,
+      "grade": "B+",
+      "gradeScore": 72,
+      "teamValueScore": 40506,
+      "valueEstimated": 6,
+      "dynastyRank": {
+        "teamValue": 6,
+        "outlook": 6
+      },
+      "ktcSfTotal": 65734,
+      "tieredPlayers": 24,
+      "power": {
+        "rank": 6,
+        "score": 76
+      },
+      "placement": {
+        "state": "contender",
+        "now": 48,
+        "future": 0,
+        "coreAge": 27.5,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 1,
+        "RB": 6,
+        "WR": 5,
+        "TE": 8,
+        "FLEX": 6
+      },
+      "maxPointsFor": 1162.86,
+      "projectedMaxPointsFor": 2186.26,
+      "playoffOdds": 99.74
+    },
+    "5": {
+      "record": [
+        13,
+        1,
+        0
+      ],
+      "pointsFor": 1124.82,
+      "grade": "A+",
+      "gradeScore": 89,
+      "teamValueScore": 51565,
+      "valueEstimated": 4,
+      "dynastyRank": {
+        "teamValue": 2,
+        "outlook": 2
+      },
+      "ktcSfTotal": 85442,
+      "tieredPlayers": 26,
+      "power": {
+        "rank": 2,
+        "score": 92
+      },
+      "placement": {
+        "state": "juggernaut",
+        "now": 77,
+        "future": 68,
+        "coreAge": 24.83,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 7,
+        "RB": 4,
+        "WR": 4,
+        "TE": 4,
+        "FLEX": 2
+      },
+      "maxPointsFor": null,
+      "projectedMaxPointsFor": null,
+      "playoffOdds": 100
+    },
+    "6": {
+      "record": [
+        1,
+        13,
+        0
+      ],
+      "pointsFor": 751.22,
+      "grade": "C-",
+      "gradeScore": 44,
+      "teamValueScore": 25036,
+      "valueEstimated": 8,
+      "dynastyRank": {
+        "teamValue": 11,
+        "outlook": 11
+      },
+      "ktcSfTotal": 53434,
+      "tieredPlayers": 27,
+      "power": {
+        "rank": 11,
+        "score": 57
+      },
+      "placement": {
+        "state": "rebuild",
+        "now": 9,
+        "future": 100,
+        "coreAge": 23.58,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 10,
+        "RB": 10,
+        "WR": 12,
+        "TE": 3,
+        "FLEX": 12
+      },
+      "maxPointsFor": 895.84,
+      "projectedMaxPointsFor": 1615.87,
+      "playoffOdds": 0.08
+    },
+    "7": {
+      "record": [
+        3,
+        11,
+        0
+      ],
+      "pointsFor": 700.7,
+      "grade": "D",
+      "gradeScore": 40,
+      "teamValueScore": 21590,
+      "valueEstimated": 1,
+      "dynastyRank": {
+        "teamValue": 12,
+        "outlook": 12
+      },
+      "ktcSfTotal": 54792,
+      "tieredPlayers": 22,
+      "power": {
+        "rank": 12,
+        "score": 51
+      },
+      "placement": {
+        "state": "purgatory",
+        "now": 0,
+        "future": 40,
+        "coreAge": 25.92,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 11,
+        "RB": 12,
+        "WR": 10,
+        "TE": 5,
+        "FLEX": 10
+      },
+      "maxPointsFor": 841.02,
+      "projectedMaxPointsFor": 1513.06,
+      "playoffOdds": 0.08
+    },
+    "8": {
+      "record": [
+        1,
+        13,
+        0
+      ],
+      "pointsFor": 791.64,
+      "grade": "B-",
+      "gradeScore": 61,
+      "teamValueScore": 37006,
+      "valueEstimated": 5,
+      "dynastyRank": {
+        "teamValue": 8,
+        "outlook": 8
+      },
+      "ktcSfTotal": 70885,
+      "tieredPlayers": 25,
+      "power": {
+        "rank": 8,
+        "score": 71
+      },
+      "placement": {
+        "state": "rebuild",
+        "now": 39,
+        "future": 47,
+        "coreAge": 25.67,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 5,
+        "RB": 1,
+        "WR": 9,
+        "TE": 12,
+        "FLEX": 7
+      },
+      "maxPointsFor": 932.44,
+      "projectedMaxPointsFor": 1864.79,
+      "playoffOdds": 0.2
+    },
+    "9": {
+      "record": [
+        5,
+        9,
+        0
+      ],
+      "pointsFor": 859.54,
+      "grade": "B",
+      "gradeScore": 64,
+      "teamValueScore": 37403,
+      "valueEstimated": 3,
+      "dynastyRank": {
+        "teamValue": 7,
+        "outlook": 7
+      },
+      "ktcSfTotal": 76639,
+      "tieredPlayers": 27,
+      "power": {
+        "rank": 7,
+        "score": 74
+      },
+      "placement": {
+        "state": "purgatory",
+        "now": 40,
+        "future": 43,
+        "coreAge": 25.83,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 8,
+        "RB": 7,
+        "WR": 6,
+        "TE": 2,
+        "FLEX": 4
+      },
+      "maxPointsFor": 1017.08,
+      "projectedMaxPointsFor": 1982.26,
+      "playoffOdds": 22.14
+    },
+    "10": {
+      "record": [
+        9,
+        5,
+        0
+      ],
+      "pointsFor": 985.78,
+      "grade": "A-",
+      "gradeScore": 73,
+      "teamValueScore": 43024,
+      "valueEstimated": 5,
+      "dynastyRank": {
+        "teamValue": 4,
+        "outlook": 4
+      },
+      "ktcSfTotal": 66788,
+      "tieredPlayers": 25,
+      "power": {
+        "rank": 3,
+        "score": 80
+      },
+      "placement": {
+        "state": "juggernaut",
+        "now": 55,
+        "future": 53,
+        "coreAge": 25.42,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 3,
+        "RB": 2,
+        "WR": 8,
+        "TE": 6,
+        "FLEX": 5
+      },
+      "maxPointsFor": 1141.42,
+      "projectedMaxPointsFor": 2188.9,
+      "playoffOdds": 97.23
+    },
+    "11": {
+      "record": [
+        7,
+        7,
+        0
+      ],
+      "pointsFor": 855.14,
+      "grade": "B",
+      "gradeScore": 69,
+      "teamValueScore": 40752,
+      "valueEstimated": 5,
+      "dynastyRank": {
+        "teamValue": 5,
+        "outlook": 5
+      },
+      "ktcSfTotal": 66744,
+      "tieredPlayers": 26,
+      "power": {
+        "rank": 5,
+        "score": 77
+      },
+      "placement": {
+        "state": "juggernaut",
+        "now": 49,
+        "future": 72,
+        "coreAge": 24.67,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 6,
+        "RB": 11,
+        "WR": 3,
+        "TE": 1,
+        "FLEX": 8
+      },
+      "maxPointsFor": 976.06,
+      "projectedMaxPointsFor": 1966.41,
+      "playoffOdds": 50.16
+    },
+    "12": {
+      "record": [
+        9,
+        5,
+        0
+      ],
+      "pointsFor": 958.56,
+      "grade": "A",
+      "gradeScore": 78,
+      "teamValueScore": 43796,
+      "valueEstimated": 8,
+      "dynastyRank": {
+        "teamValue": 3,
+        "outlook": 3
+      },
+      "ktcSfTotal": 52813,
+      "tieredPlayers": 26,
+      "power": {
+        "rank": 4,
+        "score": 80
+      },
+      "placement": {
+        "state": "contender",
+        "now": 57,
+        "future": 21,
+        "coreAge": 26.67,
+        "ageKnown": true
+      },
+      "positionRanks": {
+        "QB": 2,
+        "RB": 5,
+        "WR": 2,
+        "TE": 10,
+        "FLEX": 1
+      },
+      "maxPointsFor": 1083.04,
+      "projectedMaxPointsFor": 2064.01,
+      "playoffOdds": 96
+    }
+  },
+  "standingsOrder": [
+    1,
+    5,
+    4,
+    10,
+    12,
+    11,
+    3,
+    9,
+    2,
+    7,
+    8,
+    6
+  ],
+  "draftOrder": {
+    "record": {
+      "1": "1.12",
+      "2": "1.04",
+      "3": "1.06",
+      "4": "1.10",
+      "5": "1.11",
+      "6": "1.01",
+      "7": "1.03",
+      "8": "1.02",
+      "9": "1.05",
+      "10": "1.09",
+      "11": "1.07",
+      "12": "1.08"
+    },
+    "maxpf": {
+      "1": "1.11",
+      "2": "1.05",
+      "3": "1.03",
+      "4": "1.10",
+      "5": "1.12",
+      "6": "1.02",
+      "7": "1.01",
+      "8": "1.04",
+      "9": "1.07",
+      "10": "1.09",
+      "11": "1.06",
+      "12": "1.08"
+    },
+    "projected": {
+      "1": "1.11",
+      "2": "1.04",
+      "3": "1.03",
+      "4": "1.09",
+      "5": "1.12",
+      "6": "1.02",
+      "7": "1.01",
+      "8": "1.05",
+      "9": "1.07",
+      "10": "1.10",
+      "11": "1.06",
+      "12": "1.08"
+    },
+    "weeksCounted": 7,
+    "policy": {
+      "basis": "record",
+      "slots": {
+        "1": 12,
+        "2": 4,
+        "3": 6,
+        "4": 10,
+        "5": 11,
+        "6": 1,
+        "7": 3,
+        "8": 2,
+        "9": 5,
+        "10": 9,
+        "11": 7,
+        "12": 8
+      }
+    }
+  },
+  "viewer": {
+    "rosterId": 1,
+    "tradeSuggestions": [
+      {
+        "give": "9511",
+        "target": "7600",
+        "partner": 9,
+        "reason": "Adds TE depth · Team 11 has below-median RB depth · KTC values within 15%"
+      },
+      {
+        "give": "13402",
+        "target": "10235",
+        "partner": 11,
+        "reason": "Adds RB depth · Team 12 has below-median WR depth · KTC values within 15%"
+      },
+      {
+        "give": "13298",
+        "target": "8131",
+        "partner": 2,
+        "reason": "Adds TE depth · Team 9 has below-median WR depth · KTC values within 15%"
+      },
+      {
+        "give": "7525",
+        "target": "7588",
+        "partner": 5,
+        "reason": "Adds RB depth · Team 4 has below-median WR depth · KTC values within 15%"
+      }
+    ],
+    "tradeSignals": [],
+    "picksByYear": [
+      {
+        "season": "2027",
+        "owned": [
+          "2027:1:3",
+          "2027:3:11"
+        ],
+        "tradedAway": [
+          "2027:1:1",
+          "2027:2:1",
+          "2027:3:1",
+          "2027:4:1"
+        ]
+      },
+      {
+        "season": "2028",
+        "owned": [
+          "2028:1:1"
+        ],
+        "tradedAway": [
+          "2028:2:1",
+          "2028:3:1",
+          "2028:4:1"
+        ]
+      },
+      {
+        "season": "2029",
+        "owned": [
+          "2029:1:1",
+          "2029:2:11",
+          "2029:3:1",
+          "2029:4:1"
+        ],
+        "tradedAway": [
+          "2029:2:1"
+        ]
+      }
+    ]
+  },
+  "leagueCapital": [
+    {
+      "rosterId": 6,
+      "firsts": 12,
+      "total": 23
+    },
+    {
+      "rosterId": 7,
+      "firsts": 5,
+      "total": 17
+    },
+    {
+      "rosterId": 8,
+      "firsts": 3,
+      "total": 14
+    },
+    {
+      "rosterId": 4,
+      "firsts": 3,
+      "total": 12
+    },
+    {
+      "rosterId": 1,
+      "firsts": 3,
+      "total": 7
+    },
+    {
+      "rosterId": 5,
+      "firsts": 2,
+      "total": 9
+    },
+    {
+      "rosterId": 11,
+      "firsts": 2,
+      "total": 9
+    },
+    {
+      "rosterId": 9,
+      "firsts": 2,
+      "total": 8
+    },
+    {
+      "rosterId": 3,
+      "firsts": 1,
+      "total": 23
+    },
+    {
+      "rosterId": 2,
+      "firsts": 1,
+      "total": 9
+    },
+    {
+      "rosterId": 10,
+      "firsts": 1,
+      "total": 8
+    },
+    {
+      "rosterId": 12,
+      "firsts": 1,
+      "total": 5
+    }
+  ]
+}

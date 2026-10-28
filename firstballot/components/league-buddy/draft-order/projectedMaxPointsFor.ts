@@ -103,9 +103,13 @@ export function computeProjectedMaxPointsFor({
       ? confidence * observed + (1 - confidence) * DEFAULT_CEILING_CALIBRATION
       : DEFAULT_CEILING_CALIBRATION
 
+  // A team with scored weeks but no Max PF has no starting point; projecting it from 0
+  // would make it the league's worst team. It is left out, so the projection reads as
+  // incomplete (lib/league-metrics/draft-slots) instead.
   const projected: Record<number, number> = {}
   for (const team of teams) {
-    const realized = realizedMaxPointsFor[team.rosterId] ?? 0
+    const realized = realizedMaxPointsFor[team.rosterId] ?? (weeksPlayed > 0 ? undefined : 0)
+    if (realized === undefined) continue
     projected[team.rosterId] = realized + remainingWeeks * perWeek[team.rosterId] * calibration
   }
 

@@ -137,6 +137,8 @@ export interface TeamPlacement {
   futureScore: number // 0–100, relative to league
   valueTotal: number // team dynasty value (lib/league-metrics/team-value)
   avgAge: number // core avg age (0 if unknown)
+  /** False when no core player has a known age; the future score then sits at the league median. */
+  ageKnown: boolean
   state: CompetitiveStateKey
 }
 
@@ -189,15 +191,17 @@ export function calculateLeaguePlacements(
   // Win-now is the league's dynasty value (quality-weighted), so it orders teams exactly
   // like the Overview and My Team dynasty ranks.
   const teamValues = leagueTeamValues(teams, ctx)
-  const raw = teams.map((t) => ({
+  const ages = teams.map((t) => coreAvgAge(t, ctx))
+  // A team with no known ages takes the league's median core age. Scoring it as age 0 made
+  // it the youngest roster in the league and pushed it into Juggernaut or Rebuild.
+  const knownAges = ages.filter((age) => age > 0)
+  const medianAge = knownAges.length > 0 ? median(knownAges) : 0
+  const raw = teams.map((t, i) => ({
     rosterId: t.rosterId,
     value: teamValues.get(t.rosterId)?.value ?? 0,
     // youth: younger core → higher future score, so we invert age
-    youth: (() => {
-      const age = coreAvgAge(t, ctx)
-      return age > 0 ? -age : 0
-    })(),
-    avgAge: coreAvgAge(t, ctx),
+    youth: -(ages[i] > 0 ? ages[i] : medianAge),
+    avgAge: ages[i],
   }))
 
   const values = raw.map((r) => r.value)
@@ -213,6 +217,7 @@ export function calculateLeaguePlacements(
     futureScore: normalize(r.youth, minY, maxY),
     valueTotal: r.value,
     avgAge: r.avgAge,
+    ageKnown: r.avgAge > 0,
   }))
 
   const nowMedian = median(scored.map((s) => s.nowScore))
@@ -245,6 +250,7 @@ export function calculateLeaguePlacements(
       futureScore: s.futureScore,
       valueTotal: s.valueTotal,
       avgAge: s.avgAge,
+      ageKnown: s.ageKnown,
       state,
     }
   }

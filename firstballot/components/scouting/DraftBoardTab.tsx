@@ -75,11 +75,11 @@ const positionTabs = ['ALL', 'QB', 'RB', 'WR', 'TE'] as const
 /**
  * Column widths for the desktop board. The header and every row share this, so
  * it lives in one place — two copies of the string drift the moment one changes.
- * Order: drag · player · pos · rank · grade · film · talent · my grade · my # ·
+ * Order: drag · player (with position + tier) · rank · grade · film · talent · my grade · my # ·
  *        40 · ht · wt · phy · crowd · ktc · remove
  */
 const BOARD_GRID_TEMPLATE =
-  '20px minmax(220px,1fr) 44px 50px 56px 46px 46px 54px 50px 48px 44px 48px 46px 84px 96px 24px'
+  '20px minmax(260px,1fr) 50px 56px 46px 46px 54px 50px 48px 44px 48px 46px 84px 96px 24px'
 const ReorderAny = Reorder as unknown as {
   Group: React.ComponentType<Record<string, unknown>>
   Item: React.ComponentType<Record<string, unknown>>
@@ -523,7 +523,6 @@ export function DraftBoardTab({
               >
                 <span />
                 <span className="pl-1.5">Player</span>
-                <span className="text-center">Pos</span>
                 <span className="text-center">Rank</span>
                 <span className="text-center">Grade</span>
                 <span className="text-center text-sky-400/80">Film</span>
@@ -933,18 +932,24 @@ export function DraftBoardTab({
                                       )}
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="text-sm font-semibold text-foreground leading-tight">
+                                      <div className="text-sm font-semibold leading-tight text-foreground">
                                         {player.name}
                                       </div>
-                                      <div className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
-                                        {player.school}
+                                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs leading-tight text-muted-foreground">
+                                        <PositionBadge position={player.position} />
+                                        <span
+                                          className={cn(
+                                            'shrink-0 rounded border px-1 py-px text-[9px] font-bold uppercase leading-none',
+                                            tierColor.bg,
+                                            tierColor.text,
+                                            tierColor.border
+                                          )}
+                                        >
+                                          {player.tier}
+                                        </span>
+                                        <span className="truncate">{player.school}</span>
                                       </div>
                                     </div>
-                                  </div>
-
-                                  {/* Position */}
-                                  <div className="flex items-center justify-center">
-                                    <PositionBadge position={player.position} />
                                   </div>
 
                                   {/* Consensus Rank — heat cell */}

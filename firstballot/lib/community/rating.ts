@@ -20,32 +20,71 @@ export type CommunityRating = Candidate & {
   wins: number
   rank: number | null
 }
-/** Regularized Bradley–Terry fit: simultaneous updates, independent of ballot order.
- * Neutral prior prevents a single win from producing an extreme rating.
- */
+/** Ballots for one pair of players: `a` sorts before `b`; `winsA` of `n` went to `a`. */
+export type PairTally = { a: string; b: string; n: number; winsA: number }
+/** One pool's tally for one pair on one day, as stored in community_ballot_tallies. */
+export type DailyTally = PairTally & { pool: Ballot['pool']; day: string }
+
+/** Per-day pair tallies from ballots; the same rows saveBallot adds to (PR-17). */
+export function dailyTallies(ballots: Ballot[]): DailyTally[] {
+  const rows = new Map<string, DailyTally>()
+  for (const vote of ballots) {
+    const [a, b] = [...vote.pair].sort()
+    if (a === b || !vote.pair.includes(vote.winner)) continue
+    const id = `${vote.pool}|${vote.day}|${a}|${b}`
+    const row = rows.get(id) ?? { pool: vote.pool, day: vote.day, a, b, n: 0, winsA: 0 }
+    row.n++
+    row.winsA += Number(vote.winner === a)
+    rows.set(id, row)
+  }
+  return [...rows.values()]
+}
+
+/** Sum tallies across days into one row per pair. */
+export function pairTallies(rows: PairTally[]): PairTally[] {
+  const pairs = new Map<string, PairTally>()
+  for (const row of rows) {
+    const id = `${row.a}|${row.b}`
+    const pair = pairs.get(id) ?? { a: row.a, b: row.b, n: 0, winsA: 0 }
+    pair.n += row.n
+    pair.winsA += row.winsA
+    pairs.set(id, pair)
+  }
+  return [...pairs.values()]
+}
+
+/** Regularized Bradley–Terry fit over ballots; see communityRatingsFromTallies. */
 export function communityRatings(candidates: Candidate[], ballots: Ballot[]): CommunityRating[] {
+  return communityRatingsFromTallies(candidates, dailyTallies(ballots))
+}
+
+/** Regularized Bradley–Terry fit: simultaneous updates, independent of ballot order.
+ * Neutral prior prevents a single win from producing an extreme rating. It reads only
+ * per-pair tallies, so ratings from stored tallies equal ratings from every ballot.
+ */
+export function communityRatingsFromTallies(
+  candidates: Candidate[],
+  tallies: PairTally[]
+): CommunityRating[] {
   const keys = new Set(candidates.map((p) => p.key))
   const skills = new Map(candidates.map((p) => [p.key, 0]))
   const count = new Map<string, number>(),
     wins = new Map<string, number>()
-  const pairs = new Map<string, { a: string; b: string; n: number; wins: number }>()
-  for (const vote of ballots) {
-    const [a, b] = [...vote.pair].sort()
-    if (a === b || !keys.has(a) || !keys.has(b) || !vote.pair.includes(vote.winner)) continue
-    const id = `${a}|${b}`,
-      edge = pairs.get(id) ?? { a, b, n: 0, wins: 0 }
-    edge.n++
-    edge.wins += Number(vote.winner === a)
-    pairs.set(id, edge)
-    count.set(a, (count.get(a) ?? 0) + 1)
-    count.set(b, (count.get(b) ?? 0) + 1)
-    wins.set(vote.winner, (wins.get(vote.winner) ?? 0) + 1)
+  // Sorted, so the floating-point sums run in the same order whichever way tallies arrive.
+  const pairs = pairTallies(tallies)
+    .filter((edge) => keys.has(edge.a) && keys.has(edge.b))
+    .sort((x, y) => x.a.localeCompare(y.a) || x.b.localeCompare(y.b))
+  for (const edge of pairs) {
+    count.set(edge.a, (count.get(edge.a) ?? 0) + edge.n)
+    count.set(edge.b, (count.get(edge.b) ?? 0) + edge.n)
+    wins.set(edge.a, (wins.get(edge.a) ?? 0) + edge.winsA)
+    wins.set(edge.b, (wins.get(edge.b) ?? 0) + edge.n - edge.winsA)
   }
   for (let i = 0; i < 150; i++) {
     const gradient = new Map([...skills].map(([key, value]) => [key, -2 * value]))
-    for (const edge of pairs.values()) {
+    for (const edge of pairs) {
       const probability = 1 / (1 + Math.exp(skills.get(edge.b)! - skills.get(edge.a)!))
-      const residual = edge.wins - edge.n * probability
+      const residual = edge.winsA - edge.n * probability
       gradient.set(edge.a, gradient.get(edge.a)! + residual)
       gradient.set(edge.b, gradient.get(edge.b)! - residual)
     }

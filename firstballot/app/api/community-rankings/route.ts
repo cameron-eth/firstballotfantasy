@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { candidates, dailySeed, readBallots, readToday, saveBallot } from '@/lib/community/store'
+import { candidates, dailySeed, readTallies, readToday, saveBallot } from '@/lib/community/store'
 import { parseBallotRound, MAX_DAILY_BALLOTS } from '@/lib/community/rounds'
-import { communityRatings, dailyPair, type Ballot } from '@/lib/community/rating'
+import { communityRatingsFromTallies, dailyPair, type Ballot } from '@/lib/community/rating'
 export const dynamic = 'force-dynamic'
 const reply = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
@@ -67,8 +67,8 @@ async function handle(request: NextRequest) {
       voted = true
       winner = ballot.winner
     }
-    const history = (await readBallots()).filter((v) => v.pool === pool)
-    const rated = communityRatings(
+    const history = (await readTallies()).filter((t) => t.pool === pool)
+    const rated = communityRatingsFromTallies(
       pool === 'nfl' ? players.filter((p) => p.kind === 'nfl') : players,
       history
     )
@@ -88,7 +88,7 @@ async function handle(request: NextRequest) {
       winner,
       choices,
       rankings,
-      totalVotes: history.length,
+      totalVotes: history.reduce((sum, t) => sum + t.n, 0),
       method: 'Regularized Bradley–Terry',
       choiceRatings: rated.filter((p) => choices.some((c) => c.key === p.key)),
     })

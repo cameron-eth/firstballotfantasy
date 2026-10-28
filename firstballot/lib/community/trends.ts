@@ -1,4 +1,10 @@
-import { communityRatings, type Ballot, type Candidate } from './rating'
+import {
+  communityRatingsFromTallies,
+  dailyTallies,
+  type Ballot,
+  type Candidate,
+  type DailyTally,
+} from './rating'
 
 export type CommunityTrend = {
   /** Current community rank among prospects (null until five comparisons). */
@@ -30,11 +36,21 @@ export function communityTrends(
   today: string,
   days = 7
 ): Record<string, CommunityTrend> {
-  const prospects = ballots.filter((b) => b.pool === 'dynasty')
+  return communityTrendsFromTallies(candidates, dailyTallies(ballots), today, days)
+}
+
+/** communityTrends from stored per-day tallies (PR-17): the same days, the same fit. */
+export function communityTrendsFromTallies(
+  candidates: Candidate[],
+  tallies: DailyTally[],
+  today: string,
+  days = 7
+): Record<string, CommunityTrend> {
+  const prospects = tallies.filter((t) => t.pool === 'dynasty')
   const snapshots = trailingDays(today, days).map((day) => {
-    const rated = communityRatings(
+    const rated = communityRatingsFromTallies(
       candidates,
-      prospects.filter((b) => b.day <= day)
+      prospects.filter((t) => t.day <= day)
     ).filter((p) => p.kind === 'prospect')
     let rank = 0
     return new Map(

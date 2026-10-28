@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { candidates, readBallots } from '@/lib/community/store'
-import { communityTrends } from '@/lib/community/trends'
+import { candidates, readTallies } from '@/lib/community/store'
+import { communityTrendsFromTallies } from '@/lib/community/trends'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, max-age=300' }
@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabaseServer.auth.getUser(jwt)
   if (error || !data.user) return NextResponse.json({ error: 'Sign in again.' }, { status: 401 })
   try {
-    const [pool, ballots] = await Promise.all([candidates(), readBallots()])
+    const [pool, tallies] = await Promise.all([candidates(), readTallies()])
     const today = new Date().toISOString().slice(0, 10)
     return NextResponse.json(
-      { asOf: today, trends: communityTrends(pool, ballots, today) },
+      { asOf: today, trends: communityTrendsFromTallies(pool, tallies, today) },
       { headers }
     )
   } catch {

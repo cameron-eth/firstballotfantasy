@@ -1,7 +1,7 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { createHash } from 'node:crypto'
-import type { Ballot, Candidate } from './rating'
+import { dailyTallies, type Ballot, type Candidate, type DailyTally } from './rating'
 import { nextDraftClass } from '@/lib/draft-years'
 const bucket = 'community-ballots'
 export const ballotPath = (userId: string, day: string, round = 0) =>
@@ -35,6 +35,63 @@ export async function saveBallot(userId: string, ballot: Ballot, round = 0) {
       'Vote could not be saved. Refresh to check whether today’s pick is already recorded.'
     )
   historyCache = null
+  // The ballot file is the record; the tally is an index readers verify (readTallies), so a
+  // failed tally write is logged and repaired on the next read rather than failing the vote.
+  const [a, b] = [...ballot.pair].sort()
+  const { error: tallyError } = await supabaseAdmin.rpc('record_community_ballot', {
+    p_pool: ballot.pool,
+    p_day: ballot.day,
+    p_a: a,
+    p_b: b,
+    p_a_won: ballot.winner === a,
+  })
+  if (tallyError) console.error(JSON.stringify({ event: 'community_tally_write_failed' }))
+}
+
+/**
+ * Per-day pair tallies for every ballot (PR-17): one query instead of downloading each
+ * ballot. If the tallies don't account for every ballot file (a tally write failed, or
+ * they predate a ballot), the ballots are read in full and the tallies rebuilt from them.
+ */
+export async function readTallies(): Promise<DailyTally[]> {
+  const { data: state, error } = await supabaseAdmin.rpc('community_tally_state').single<{
+    ballots: number
+    tallied: number
+  }>()
+  if (error || !state) throw new Error('Community votes unavailable')
+  if (Number(state.ballots) !== Number(state.tallied)) {
+    historyCache = null // rebuild from the bucket as it is now, not a cached list
+    const tallies = dailyTallies(await readBallots())
+    const { error: rebuildError } = await supabaseAdmin.rpc('replace_community_tallies', {
+      p_rows: tallies.map((t) => ({
+        pool: t.pool,
+        day: t.day,
+        a: t.a,
+        b: t.b,
+        n: t.n,
+        wins_a: t.winsA,
+      })),
+    })
+    if (rebuildError) console.error(JSON.stringify({ event: 'community_tally_rebuild_failed' }))
+    return tallies
+  }
+  const rows: DailyTally[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error: readError } = await supabaseAdmin
+      .from('community_ballot_tallies')
+      .select('pool,day,a,b,n,wins_a')
+      .order('pool')
+      .order('day')
+      .order('a')
+      .order('b')
+      .range(from, from + 999)
+    if (readError) throw new Error('Community votes unavailable')
+    rows.push(
+      ...data.map((r) => ({ pool: r.pool, day: r.day, a: r.a, b: r.b, n: r.n, winsA: r.wins_a }))
+    )
+    if (data.length < 1000) break
+  }
+  return rows
 }
 let historyCache: { until: number; votes: Ballot[] } | null = null
 export async function readBallots(): Promise<Ballot[]> {

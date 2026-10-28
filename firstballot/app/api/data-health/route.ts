@@ -4,6 +4,7 @@ import { failure, json } from '@/lib/platform/http'
 import ktcArchive from '@/data/ktc-history.json'
 import { espnSeasonKey, FIRST_ESPN_SEASON } from '@/lib/platform/player-data'
 import { TIER_KEY } from '@/lib/dynasty-tiers'
+import { HISTORY_OUTCOMES_PREFIX, IDENTITIES_KEY } from '@/lib/reference-data'
 
 /** Completed ESPN seasons behind career FPPG; an expired one hides career badges. */
 const isCareerSeason = (key: string, currentSeason: number | null) => {
@@ -21,7 +22,9 @@ export async function GET() {
           .from('data_snapshots')
           .select('key,source,fetched_at,source_observed_at,expires_at,quality,season,week')
           // Only publish shared provider datasets. Per-league roster cache keys are private.
-          .or(`key.like.espn:%,key.like.sleeper:projections:%,key.eq.${TIER_KEY}`)
+          .or(
+            `key.like.espn:%,key.like.sleeper:projections:%,key.eq.${TIER_KEY},key.eq.${IDENTITIES_KEY},key.like.${HISTORY_OUTCOMES_PREFIX}%`
+          )
           .order('key')
           .limit(100),
         fetch('https://api.sleeper.app/v1/state/nfl', {
@@ -154,12 +157,20 @@ export async function GET() {
     if (ktcResult.error && !ktcArchive.dates.length) throw ktcResult.error
     if (prospectResult.error) throw prospectResult.error
 
+    // Identities and career outcomes come from the weekly history job (PR-13).
+    const newestOutcomes = snapshots
+      .map((dataset) => dataset.key)
+      .filter((key) => key.startsWith(HISTORY_OUTCOMES_PREFIX))
+      .sort()
+      .at(-1)
     const monitored = [
       ...snapshots.filter(
         (dataset) =>
           (currentSeason != null && dataset.key === espnSeasonKey(currentSeason)) ||
           isCareerSeason(dataset.key, currentSeason) ||
           dataset.key === TIER_KEY ||
+          dataset.key === IDENTITIES_KEY ||
+          dataset.key === newestOutcomes ||
           dataset.key === `sleeper:projections:${currentSeason}:season` ||
           (currentWeek !== null &&
             dataset.key === `sleeper:projections:${currentSeason}:${currentWeek}`)

@@ -63,6 +63,26 @@ export async function snapshot<T>(
   }
 }
 
+/** A snapshot row as stored, or null; for data a job publishes on its own schedule. */
+export async function readSnapshot(key: string) {
+  const { data, error } = await store.read(key)
+  if (error) throw new PlatformError(503, 'DATA_STORE_UNAVAILABLE', 'Data storage unavailable.')
+  return data
+}
+
+/** The newest snapshot under a key prefix such as `history-outcomes:` (keys sort by season). */
+export async function latestSnapshot(prefix: string) {
+  const { data, error } = await supabaseAdmin
+    .from('data_snapshots')
+    .select('*')
+    .like('key', `${prefix}%`)
+    .order('key', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new PlatformError(503, 'DATA_STORE_UNAVAILABLE', 'Data storage unavailable.')
+  return data
+}
+
 /**
  * Store a snapshot and log the run in ingestion_runs. `snapshot()` calls this after a
  * read-through load. Writers that publish on their own schedule call it directly, so

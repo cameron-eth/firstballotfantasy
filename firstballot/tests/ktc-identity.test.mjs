@@ -27,8 +27,21 @@ test('suffixes are ignored; a match that stays ambiguous is left out, not guesse
   assert.deepEqual(matched.map((m) => m.id), ['7000'])
 })
 
-test('a position mismatch never matches', () => {
-  assert.deepEqual(matchKtcToSleeper([row('Patrick Mahomes', 'WR', 'KCC')], sleeper), [])
+test('a position mismatch matches only the one same-named player on the same team', () => {
+  const players = { ...sleeper, 12530: { full_name: 'Travis Hunter', position: 'DB', team: 'JAX' } }
+  // KTC lists Travis Hunter as a WR on JAC (Jacksonville); Sleeper lists him as a DB.
+  assert.deepEqual(matchKtcToSleeper([row('Travis Hunter', 'WR', 'JAC')], players).map((m) => m.id), ['12530'])
+  // A different team, or no team, is not enough.
+  assert.deepEqual(matchKtcToSleeper([row('Travis Hunter', 'WR', 'DAL')], players), [])
+  assert.deepEqual(matchKtcToSleeper([row('Patrick Mahomes', 'WR', null)], players), [])
+})
+
+test('no reader asks KTC by name, and the route refuses to', () => {
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8')
+  assert.match(read('components/scouting/DraftBoardTab.tsx'), /ktc-values\?espnIds=/)
+  assert.doesNotMatch(read('components/scouting/DraftBoardTab.tsx'), /ktc-values\?names=/)
+  assert.doesNotMatch(read('components/scouting/KtcSparkline.tsx'), /ktc-values/)
+  assert.match(read('app/api/ktc-values/route.ts'), /params\.has\('names'\) \|\| params\.has\('player'\)/)
 })
 
 test('the dashboard asks KTC by Sleeper id', () => {

@@ -5,6 +5,8 @@
  * A KTC row matches the Sleeper player with the same normalized name and position. When
  * several Sleeper players share that name (a retired namesake, say), the team breaks the
  * tie; if that still leaves more than one, the row stays unmatched rather than guessed.
+ * When no one at that position has the name (Travis Hunter: a WR to KTC, a DB to Sleeper),
+ * the one same-named player on the same team is the match.
  */
 
 /** KTC's team codes where they differ from Sleeper's. */
@@ -36,15 +38,26 @@ export function matchKtcToSleeper<R extends KtcRow, P extends SleeperPlayer>(
   sleeper: Record<string, P>
 ): { id: string; row: R; player: P }[] {
   const byName = new Map<string, string[]>()
+  const byNameAnyPosition = new Map<string, string[]>()
   for (const [id, player] of Object.entries(sleeper)) {
-    if (!player.full_name || !['QB', 'RB', 'WR', 'TE'].includes(player.position ?? '')) continue
-    const key = `${normalizePlayerName(player.full_name)}:${player.position}`
+    if (!player.full_name) continue
+    const name = normalizePlayerName(player.full_name)
+    byNameAnyPosition.set(name, [...(byNameAnyPosition.get(name) ?? []), id])
+    if (!['QB', 'RB', 'WR', 'TE'].includes(player.position ?? '')) continue
+    const key = `${name}:${player.position}`
     byName.set(key, [...(byName.get(key) ?? []), id])
   }
   return rows.flatMap((row) => {
-    const named = byName.get(`${normalizePlayerName(row.player_name)}:${row.position}`) ?? []
+    const name = normalizePlayerName(row.player_name)
+    const named = byName.get(`${name}:${row.position}`) ?? []
     const team = sleeperTeam(row.team)
-    const ids = named.length > 1 && team ? named.filter((id) => sleeper[id].team === team) : named
+    const onTeam = (ids: string[]) => (team ? ids.filter((id) => sleeper[id].team === team) : [])
+    const ids =
+      named.length === 1
+        ? named
+        : named.length > 1
+          ? onTeam(named)
+          : onTeam(byNameAnyPosition.get(name) ?? [])
     return ids.length === 1 ? [{ id: ids[0], row, player: sleeper[ids[0]] }] : []
   })
 }

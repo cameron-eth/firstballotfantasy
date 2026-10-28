@@ -1,7 +1,6 @@
 'use client'
 
 import { useId, useMemo } from 'react'
-import useSWR from 'swr'
 import {
   Area,
   AreaChart,
@@ -21,8 +20,13 @@ interface KtcDataPoint {
 }
 
 interface KtcSparklineProps {
-  playerName: string
-  history?: KtcDataPoint[]
+  /**
+   * The player's KTC history, fetched by the caller by player id (PR-19). The sparkline
+   * never looks KTC up itself: a name lookup could draw a namesake's history.
+   */
+  history: KtcDataPoint[]
+  /** The caller is still fetching the history. */
+  loading?: boolean
   useSf?: boolean
   width?: number
   height?: number
@@ -180,25 +184,13 @@ function KtcStackSparkline({
 }
 
 export function KtcSparkline({
-  playerName,
-  history: historyProp,
+  history,
+  loading = false,
   useSf = true,
   width = 88,
   height = 44,
   layout = 'stack',
 }: KtcSparklineProps) {
-  const { data, isLoading } = useSWR<{ history?: KtcDataPoint[] }>(
-    historyProp === undefined ? `/api/ktc-values?player=${encodeURIComponent(playerName)}` : null,
-    (url: string) =>
-      fetch(url).then((r) => {
-        if (!r.ok) throw new Error(`KTC fetch failed: ${r.status}`)
-        return r.json()
-      }),
-    { revalidateOnFocus: false, errorRetryCount: 3 }
-  )
-  const history = historyProp ?? data?.history ?? []
-  const loading = historyProp === undefined && isLoading
-
   const valueKey = useSf ? 'value_sf' : 'value_1qb'
 
   if (loading) {

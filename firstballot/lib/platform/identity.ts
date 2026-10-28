@@ -53,6 +53,17 @@ export async function resolvePlayers(sleeperIds: string[]): Promise<PlayerIdenti
   })
 }
 
+/** Sleeper ids for these ESPN ids, through the quarantined identity map (PR-13). */
+export async function sleeperIdsForEspn(espnIds: string[]): Promise<Map<string, string>> {
+  const { data } = await identityMap()
+  const wanted = new Set(espnIds)
+  return new Map(
+    Object.entries(data).flatMap(([sleeperId, entry]) =>
+      wanted.has(entry.espnId) ? [[entry.espnId, sleeperId] as const] : []
+    )
+  )
+}
+
 /** Sleeper id → KTC id for every KTC-listed player (the reverse of the tier match). */
 export async function ktcIdsBySleeper(): Promise<Map<string, number>> {
   const tiers = await tierIdentity()

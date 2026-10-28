@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import archive from '@/data/ktc-history.json'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
-import { resolvePlayers } from '@/lib/platform/identity'
-const normalize = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '')
-    .replace(/[^a-z0-9]/g, '')
+import { resolvePlayers, sleeperIdsForEspn } from '@/lib/platform/identity'
 const assets = Object.entries(archive.players).map(([id, player]) => ({ id, ...player }))
 type Point = {
   scraped_date: string
@@ -60,18 +55,39 @@ async function bySleeperIds(sleeperIds: string[]) {
   return { latestDate, history, latest }
 }
 
+function rekey<T>(bySleeper: Record<string, T>, espnToSleeper: Map<string, string>) {
+  return Object.fromEntries(
+    [...espnToSleeper].flatMap(([espnId, sleeperId]) =>
+      sleeperId in bySleeper ? [[espnId, bySleeper[sleeperId]]] : []
+    )
+  )
+}
+
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
-  const sleeperIds = params
-    .get('sleeperIds')
-    ?.split(',')
-    .map((id) => id.trim())
-    .filter((id) => /^\w{1,30}$/.test(id))
-  if (sleeperIds) {
-    if (sleeperIds.length > 100)
+  const ids = (key: string) =>
+    params
+      .get(key)
+      ?.split(',')
+      .map((id) => id.trim())
+      .filter((id) => /^\w{1,30}$/.test(id))
+  const sleeperIds = ids('sleeperIds')
+  const espnIds = ids('espnIds')
+  if (sleeperIds || espnIds) {
+    if ((sleeperIds ?? espnIds)!.length > 100)
       return NextResponse.json({ error: 'Maximum 100 players' }, { status: 400 })
     try {
-      const result = await bySleeperIds(sleeperIds)
+      // ESPN ids (prospects) resolve to Sleeper ids first; results come back keyed the
+      // way they were asked for.
+      const espnToSleeper = espnIds ? await sleeperIdsForEspn(espnIds) : null
+      const bySleeper = await bySleeperIds(sleeperIds ?? [...espnToSleeper!.values()])
+      const result = espnToSleeper
+        ? {
+            ...bySleeper,
+            history: rekey(bySleeper.history, espnToSleeper),
+            latest: rekey(bySleeper.latest, espnToSleeper),
+          }
+        : bySleeper
       if (!sourceWithinBudget(result.latestDate, KTC_MAX_AGE_MS))
         return NextResponse.json(
           { error: 'Current KTC values are unavailable.', code: 'STALE_SOURCE' },
@@ -88,19 +104,14 @@ export async function GET(request: NextRequest) {
       )
     }
   }
-  const names = (params.get('names') || params.get('player'))
-    ?.split(',')
-    .map((n) => n.trim())
-    .filter(Boolean)
-  if (names && names.length > 100)
-    return NextResponse.json({ error: 'Maximum 100 names' }, { status: 400 })
-  const selected = (names ?? assets.map((p) => p.name)).flatMap((name) => {
-    const exact = assets.filter((p) => p.names.includes(name))
-    const candidates = exact.length
-      ? exact
-      : assets.filter((p) => p.names.some((n) => normalize(n) === normalize(name)))
-    return candidates.length === 1 ? [{ name, asset: candidates[0] }] : []
-  })
+  // Without ids: today's value of every KTC asset (players and draft picks), one row per
+  // KTC id. The name and player lookups are gone (PR-19); ask by sleeperIds or espnIds.
+  if (params.has('names') || params.has('player'))
+    return NextResponse.json(
+      { error: 'Look players up by sleeperIds or espnIds.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } }
+    )
+  const selected = assets.map((asset) => ({ name: asset.name, asset }))
   const byId: Record<string, Point[]> = {}
   let latestDate: string = archive.dates.at(-1)!
   let source = 'sdk-archive'
@@ -122,7 +133,7 @@ export async function GET(request: NextRequest) {
           .order('scraped_date', { ascending: true })
           .order('ktc_player_id', { ascending: true })
           .range(offset, offset + 999)
-        if (!names) query = query.eq('scraped_date', latest.data.scraped_date)
+        query = query.eq('scraped_date', latest.data.scraped_date)
         const result = await query
         if (result.error) throw result.error
         for (const row of result.data ?? []) (byId[String(row.ktc_player_id)] ??= []).push(row)
@@ -141,7 +152,6 @@ export async function GET(request: NextRequest) {
       { status: 503, headers: { 'Cache-Control': 'no-store' } }
     )
   }
-  const historyMap: Record<string, Point[]> = {}
   const rows: object[] = []
   for (const { name, asset: p } of selected) {
     const history =
@@ -156,7 +166,6 @@ export async function GET(request: NextRequest) {
           }))
         : [])
     if (!history.length) continue
-    historyMap[name] = history
     if (!sourceWithinBudget(history.at(-1)?.scraped_date, KTC_MAX_AGE_MS)) continue
     rows.push({
       ktc_player_id: p.id,
@@ -167,9 +176,7 @@ export async function GET(request: NextRequest) {
     })
   }
   return NextResponse.json(
-    params.get('player')
-      ? { player: params.get('player'), history: historyMap[params.get('player')!] ?? [], source }
-      : { data: rows, historyMap: names ? historyMap : undefined, latestDate, source },
+    { data: rows, latestDate, source },
     { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
   )
 }

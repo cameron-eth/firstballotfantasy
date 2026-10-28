@@ -53,34 +53,41 @@ function espnSeason(season: number, ttlSeconds: number) {
   )
 }
 
+/** Past seasons are final, so they cache for 30 days; the hourly refresh job re-warms them. */
+export const PAST_SEASON_TTL = 30 * 24 * 3600
+
 /**
- * Career PPR points per game since FIRST_ESPN_SEASON: total points over total games.
- * All seasons or none: a missing season would silently understate a career, so any failure
- * returns null and the card shows only the current season.
+ * Every completed season since FIRST_ESPN_SEASON, or null if any one fails: a missing season
+ * would silently understate a career, so the card then shows only the current season.
  */
-async function careerTotals(
-  season: number,
-  current: Record<string, CurrentSeasonStat>
-): Promise<Record<string, { ppg: number; games: number }> | null> {
+async function pastSeasons(season: number) {
   try {
     const past = await Promise.all(
       Array.from({ length: season - FIRST_ESPN_SEASON }, (_, i) =>
-        espnSeason(FIRST_ESPN_SEASON + i, 30 * 24 * 3600)
+        espnSeason(FIRST_ESPN_SEASON + i, PAST_SEASON_TTL)
       )
     )
-    const totals: Record<string, { points: number; games: number }> = {}
-    for (const year of [...past.map((p) => p.payload), current])
-      for (const [id, s] of Object.entries(year)) {
-        const t = (totals[id] ??= { points: 0, games: 0 })
-        t.points += s.points
-        t.games += s.games
-      }
-    return Object.fromEntries(
-      Object.entries(totals).map(([id, t]) => [id, { ppg: t.points / t.games, games: t.games }])
-    )
+    return past.map((p) => p.payload)
   } catch {
     return null
   }
+}
+
+/** Career PPR points per game: total points over total games, past seasons plus this one. */
+function careerTotals(
+  past: Record<string, CurrentSeasonStat>[],
+  current: Record<string, CurrentSeasonStat>
+): Record<string, { ppg: number; games: number }> {
+  const totals: Record<string, { points: number; games: number }> = {}
+  for (const year of [...past, current])
+    for (const [id, s] of Object.entries(year)) {
+      const t = (totals[id] ??= { points: 0, games: 0 })
+      t.points += s.points
+      t.games += s.games
+    }
+  return Object.fromEntries(
+    Object.entries(totals).map(([id, t]) => [id, { ppg: t.points / t.games, games: t.games }])
+  )
 }
 
 export async function playerData(ids: string[], maxIds = 100) {
@@ -90,13 +97,16 @@ export async function playerData(ids: string[], maxIds = 100) {
     season = Number(state.season)
   if (!Number.isInteger(season) || season < 2020 || season > new Date().getUTCFullYear() + 1)
     throw new PlatformError(502, 'INVALID_SEASON', 'Season source is invalid.')
-  const data = await espnSeason(season, 900)
-  const career = await careerTotals(season, data.payload)
+  // Past seasons load alongside the current one, so a cold cache costs one round trip, not two.
+  const [data, past] = await Promise.all([espnSeason(season, 900), pastSeasons(season)])
+  const career = past && careerTotals(past, data.payload)
   return {
     season,
     scoring: 'PPR',
     rankPopulation: 'All NFL players with at least one game; ties share rank',
     freshness: snapshotMetadata(data),
+    /** Seasons behind career FPPG, or null when one is unavailable (career badges hide). */
+    careerSeasons: past ? { from: FIRST_ESPN_SEASON, to: season } : null,
     data: ids.map((id) => {
       const identity = (identities as Record<string, { espnId: string; name: string }>)[id],
         s = identity ? data.payload[identity.espnId] : null

@@ -15,7 +15,7 @@ const draftKey = DRAFT_CAPITAL_KEY
 /** Draft position never changes, so the cache keeps for five years. */
 const DRAFT_CAPITAL_TTL_SECONDS = 5 * 365 * 86400
 const normalize = (value: string) => value.toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b\.?/g, '').replace(/[^a-z0-9]/g, '')
-type KtcRow = { player_name: string; position: string; value_sf: number; value_1qb: number; scraped_date: string }
+type KtcRow = { ktc_player_id: number; player_name: string; position: string; value_sf: number; value_1qb: number; scraped_date: string }
 type SleeperPlayer = { full_name?: string; position?: string; team?: string; age?: number; years_exp?: number; espn_id?: string; metadata?: { rookie_year?: string } }
 type DraftFact = { selection: number; year: number } | null
 
@@ -32,7 +32,7 @@ async function refresh() {
   if (!sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS)) throw Error('KTC_SOURCE_STALE')
   const [ktc, sleeperResponse, stats] = await Promise.all([
     supabaseAdmin.from('ktc_player_values')
-      .select('player_name,position,value_sf,value_1qb,scraped_date')
+      .select('ktc_player_id,player_name,position,value_sf,value_1qb,scraped_date')
       .eq('scraped_date', latest.scraped_date).limit(2000),
     fetch('https://api.sleeper.app/v1/players/nfl', { cache: 'no-store', signal: AbortSignal.timeout(30000) }),
     playerData(['8144']), // Revalidates the shared ESPN current-season snapshot before reading it.
@@ -44,11 +44,12 @@ async function refresh() {
   const cutoff = new Date(Date.parse(`${latest.scraped_date}T00:00:00Z`) - 30 * 86400000).toISOString().slice(0, 10)
   const { data: priorDate } = await supabaseAdmin.from('ktc_player_values')
     .select('scraped_date').lte('scraped_date', cutoff).order('scraped_date', { ascending: false }).limit(1).maybeSingle()
-  const prior = new Map<string, { value_sf: number; value_1qb: number }>()
+  // Keyed by KTC's own id, so the 30-day change compares the same KTC asset (PR-19).
+  const prior = new Map<number, { value_sf: number; value_1qb: number }>()
   if (priorDate) {
     const { data: priorRows } = await supabaseAdmin.from('ktc_player_values')
-      .select('player_name,position,value_sf,value_1qb').eq('scraped_date', priorDate.scraped_date).limit(2000)
-    for (const row of (priorRows ?? []) as KtcRow[]) prior.set(`${normalize(row.player_name)}:${row.position}`, row)
+      .select('ktc_player_id,value_sf,value_1qb').eq('scraped_date', priorDate.scraped_date).limit(2000)
+    for (const row of priorRows ?? []) prior.set(Number(row.ktc_player_id), row)
   }
   const nflKtc = (ktc.data as KtcRow[]).filter((row) => ['QB', 'RB', 'WR', 'TE'].includes(row.position))
   const sleeper = await sleeperResponse.json() as Record<string, SleeperPlayer>
@@ -103,7 +104,7 @@ async function refresh() {
   const players: TierPlayer[] = matched.map(({ id, row, player }) => {
     const espnId = String(player.espn_id ?? ids[id]?.espnId ?? '')
     const season = espn[espnId]
-    const before = prior.get(`${normalize(row.player_name)}:${row.position}`)
+    const before = prior.get(Number(row.ktc_player_id))
     return {
       id, name: player.full_name ?? row.player_name, position: row.position,
       age: Number(player.age) || null, experience: Number.isFinite(player.years_exp) ? Number(player.years_exp) : null,
@@ -121,7 +122,10 @@ async function refresh() {
     coverage: { ktcNflPlayers: nflKtc.length, matched: players.length, excludedDraftPicks: ktc.data.length - nflKtc.length,
       production: players.filter((p) => p.ppgRank && (p.games ?? 0) >= 3).length,
       adp: players.filter((p) => p.adp).length, draft: players.filter((p) => p.draftSelection).length },
-    identity: Object.fromEntries(matched.map(({ id, player }) => [id, {
+    // KTC ↔ Sleeper is resolved here, once per publish (unique name + position match);
+    // readers join KTC by these ids, never by display name (PR-19).
+    identity: Object.fromEntries(matched.map(({ id, row, player }) => [id, {
+      ktcId: Number(row.ktc_player_id),
       name: player.full_name, position: player.position, team: player.team,
       age: Number(player.age) || null, espnId: String(player.espn_id ?? ids[id]?.espnId ?? ''),
       draftYear: draft[String(player.espn_id ?? ids[id]?.espnId ?? '')]?.year ?? null,

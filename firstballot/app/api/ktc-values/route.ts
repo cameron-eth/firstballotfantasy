@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import archive from '@/data/ktc-history.json'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
+import { resolvePlayers } from '@/lib/platform/identity'
 const normalize = (name: string) =>
   name
     .toLowerCase()
@@ -15,8 +16,78 @@ type Point = {
   rank_sf: number
   rank_1qb: number
 }
+/**
+ * KTC values and history by Sleeper id (PR-19): ids resolve through the tier snapshot's
+ * KTC ↔ Sleeper match, so two players who share a name can't be confused. A player KTC
+ * doesn't list is simply absent.
+ */
+async function bySleeperIds(sleeperIds: string[]) {
+  const identities = (await resolvePlayers(sleeperIds)).filter((p) => p.ktcId != null)
+  const sleeperByKtc = new Map(identities.map((p) => [p.ktcId!, p.sleeperId]))
+  const history: Record<string, Point[]> = {}
+  const latestQuery = await supabaseServer
+    .from('ktc_player_values')
+    .select('scraped_date')
+    .order('scraped_date', { ascending: false })
+    .limit(1)
+    .single()
+  if (latestQuery.error || !latestQuery.data) throw Error('No stored history')
+  const ktcIds = [...sleeperByKtc.keys()]
+  for (let offset = 0; ktcIds.length; offset += 1000) {
+    const result = await supabaseServer
+      .from('ktc_player_values')
+      .select('ktc_player_id,scraped_date,value_sf,value_1qb,rank_sf,rank_1qb')
+      .in('ktc_player_id', ktcIds)
+      .order('scraped_date', { ascending: true })
+      .order('ktc_player_id', { ascending: true })
+      .range(offset, offset + 999)
+    if (result.error) throw result.error
+    for (const row of result.data ?? []) {
+      const sleeperId = sleeperByKtc.get(Number(row.ktc_player_id))
+      if (sleeperId) (history[sleeperId] ??= []).push(row)
+    }
+    if ((result.data?.length ?? 0) < 1000) break
+  }
+  const latestDate = latestQuery.data.scraped_date
+  const latest = Object.fromEntries(
+    Object.entries(history).flatMap(([sleeperId, points]) => {
+      const last = points.at(-1)
+      return last && sourceWithinBudget(last.scraped_date, KTC_MAX_AGE_MS)
+        ? [[sleeperId, { value_sf: last.value_sf, value_1qb: last.value_1qb }]]
+        : []
+    })
+  )
+  return { latestDate, history, latest }
+}
+
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
+  const sleeperIds = params
+    .get('sleeperIds')
+    ?.split(',')
+    .map((id) => id.trim())
+    .filter((id) => /^\w{1,30}$/.test(id))
+  if (sleeperIds) {
+    if (sleeperIds.length > 100)
+      return NextResponse.json({ error: 'Maximum 100 players' }, { status: 400 })
+    try {
+      const result = await bySleeperIds(sleeperIds)
+      if (!sourceWithinBudget(result.latestDate, KTC_MAX_AGE_MS))
+        return NextResponse.json(
+          { error: 'Current KTC values are unavailable.', code: 'STALE_SOURCE' },
+          { status: 503, headers: { 'Cache-Control': 'no-store' } }
+        )
+      return NextResponse.json(
+        { ...result, source: 'supabase' },
+        { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
+      )
+    } catch {
+      return NextResponse.json(
+        { error: 'KTC values are unavailable.' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
+  }
   const names = (params.get('names') || params.get('player'))
     ?.split(',')
     .map((n) => n.trim())

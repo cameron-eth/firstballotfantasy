@@ -76,7 +76,8 @@ Legend: **M** = has a DB migration. **F** = behind a flag or compatibility layer
 | **PR-11** | R2-2 + R2-3: incremental, ordered KTC sync; pinned scraper | `scripts/sync-ktc-values.mjs`, `scripts/import-ktc-history.py`, `ktc-history.yml` (`ref:` SHA); tier build requires a complete latest date | An interrupted sync can't publish tiers; job time is measured | — | Revert the workflow |
 | **PR-12** **F** | R2-5: stale-while-error snapshots | `lib/platform/snapshots.ts` (`allowStale` option, `stale: true` in responses); enabled first for `espn:ppr:*` and projections | A simulated provider outage serves labelled stale data instead of a 503 | — | Turn the flag off |
 | **PR-13** **M** | R2-4: runtime identity map and history outcomes | Job writes `identities:v1` and `history-outcomes:{season}` snapshots; readers use the snapshot first, then the bundled JSON; quarantine applied | data-health shows identity and outcome freshness; no PR merge needed | Additive (snapshot rows) | Readers fall back to the JSON |
-| → **G2** | | | | | |
+| **PR-13b** | G2 follow-up: snapshot key constants and data-health coverage | `lib/platform/snapshot-keys.ts`; projections, roster and prospect-stats keys; draft capital listed in data-health | No key written at a call site (guard test); data-health lists every shared key | Guard test; forced-failure runs | Revert |
+| → **G2** **Passed 2026-10-28** (GATE_G2.md): all four scheduled jobs opened and closed a failure issue; every key is a constant | | | | |
 
 ### Phase D: performance (benchmarks required before and after)
 

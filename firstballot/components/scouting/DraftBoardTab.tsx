@@ -131,6 +131,23 @@ function GradeCellInput({
   )
 }
 
+
+type KtcPoint = { scraped_date: string; value_sf: number; value_1qb: number }
+
+/** KTC history keyed by ESPN id, 100 ids per request (the endpoint's limit). */
+async function fetchKtcHistoryByEspn(espnIds: string[]): Promise<Record<string, KtcPoint[]>> {
+  const chunks: string[][] = []
+  for (let i = 0; i < espnIds.length; i += 100) chunks.push(espnIds.slice(i, i + 100))
+  const parts = await Promise.all(
+    chunks.map(async (chunk) => {
+      const r = await fetch(`/api/ktc-values?espnIds=${chunk.join(',')}`)
+      if (!r.ok) throw new Error(`KTC fetch failed: ${r.status}`)
+      return ((await r.json()).history ?? {}) as Record<string, KtcPoint[]>
+    })
+  )
+  return Object.assign({}, ...parts)
+}
+
 export function DraftBoardTab({
   loading,
   searchTerm: _searchTerm,
@@ -169,25 +186,18 @@ export function DraftBoardTab({
 
   const canGrade = isLoggedIn && Boolean(onSetGrade)
 
-  // Bulk-fetch KTC history via SWR (automatic retry on error, revalidation)
-  const ktcNamesKey = useMemo(() => {
-    const names = draftBoard.map((p) => p.name).filter(Boolean)
-    if (names.length === 0) return null
-    return names.map(encodeURIComponent).join(',')
+  // KTC history by ESPN id (PR-19): a prospect only gets KTC history through his own
+  // identity. A name match gave the curated QB Malik Washington the Dolphins WR's.
+  const ktcEspnKey = useMemo(() => {
+    const ids = [...new Set(draftBoard.flatMap((p) => (p.espn_id ? [String(p.espn_id)] : [])))]
+    return ids.length ? ids.sort().join(',') : null
   }, [draftBoard])
 
-  const { data: ktcBulkData } = useSWR<{
-    historyMap?: Record<string, { scraped_date: string; value_sf: number; value_1qb: number }[]>
-  }>(
-    ktcNamesKey ? `/api/ktc-values?names=${ktcNamesKey}` : null,
-    (url: string) =>
-      fetch(url).then((r) => {
-        if (!r.ok) throw new Error(`KTC fetch failed: ${r.status}`)
-        return r.json()
-      }),
+  const { data: ktcHistoryMap = {}, isLoading: ktcLoading } = useSWR(
+    ktcEspnKey ? ['ktc-by-espn', ktcEspnKey] : null,
+    () => fetchKtcHistoryByEspn(ktcEspnKey!.split(',')),
     { revalidateOnFocus: false, errorRetryCount: 3 }
   )
-  const ktcHistoryMap = ktcBulkData?.historyMap ?? {}
 
   const sortByRankThenGrade = (a: Prospect, b: Prospect) => {
     const rankA = overallRankOf(a)
@@ -887,10 +897,9 @@ export function DraftBoardTab({
                                           </span>
                                         ) : null}
                                       </p>
-                                      {ktcHistoryMap[player.name]?.length ? (
+                                      {player.espnId && ktcHistoryMap[String(player.espnId)]?.length ? (
                                         <KtcSparkline
-                                          playerName={player.name}
-                                          history={ktcHistoryMap[player.name]}
+                                          history={ktcHistoryMap[String(player.espnId)]}
                                           useSf={true}
                                           layout="bar"
                                         />
@@ -1107,8 +1116,12 @@ export function DraftBoardTab({
                                   {/* KTC Sparkline */}
                                   <div className="flex items-center justify-center py-2 px-1">
                                     <KtcSparkline
-                                      playerName={player.name}
-                                      history={ktcHistoryMap[player.name]}
+                                      history={
+                                        player.espnId
+                                          ? (ktcHistoryMap[String(player.espnId)] ?? [])
+                                          : []
+                                      }
+                                      loading={ktcLoading}
                                       useSf={true}
                                       width={72}
                                       height={44}

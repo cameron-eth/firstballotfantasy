@@ -172,8 +172,7 @@ function PlayerRow({
       {(player.ktcHistory?.length ?? 0) >= 2 && (
         <div className="mt-2">
           <KtcSparkline
-            playerName={player.playerName}
-            history={player.ktcHistory}
+            history={player.ktcHistory ?? []}
             useSf={ctx.superflex}
             width={170}
             height={32}

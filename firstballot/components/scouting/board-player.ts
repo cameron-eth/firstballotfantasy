@@ -6,6 +6,7 @@ import {
 import { computeMyGrade } from '@/lib/user-grade'
 import type { UserProspectGrade } from '@/types/prospect-grades'
 import type { Prospect } from './types'
+import { nextDraftClass } from '@/lib/draft-years'
 
 /**
  * The flattened, display-ready shape every draft board surface renders from.
@@ -36,7 +37,8 @@ export type GradeField = 'film' | 'talent'
 
 export const BOARD_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 /** Earliest class the draft board will show — classes before this are history. */
-export const DRAFT_BOARD_MIN_YEAR = Math.max(2027, new Date().getFullYear() + 1)
+/** The board starts at the next class to be drafted (lib/draft-years). */
+export const DRAFT_BOARD_MIN_YEAR = nextDraftClass()
 
 export function getTierLabel(gradeTier: string | null, grade: number): string {
   return normalizeScoutingGradeTier(gradeTier, grade)

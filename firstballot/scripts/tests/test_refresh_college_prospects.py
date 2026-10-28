@@ -59,5 +59,22 @@ class FindEspnIdTest(unittest.TestCase):
         self.assertEqual(refresh.find_espn_id({"id": 1, "name": "Dia Bell", "school": "Texas"})["reason"], "ambiguous")
 
 
+class DraftClassYearTest(unittest.TestCase):
+    def test_class_stays_upcoming_through_april(self):
+        import datetime
+        d = datetime.date.fromisoformat
+        self.assertEqual(refresh.next_draft_class(d("2026-10-28")), 2027)
+        self.assertEqual(refresh.next_draft_class(d("2027-01-15")), 2027)
+        self.assertEqual(refresh.next_draft_class(d("2027-04-30")), 2027)
+        self.assertEqual(refresh.next_draft_class(d("2027-05-01")), 2028)
+
+    def test_offsets_roll_with_the_calendar(self):
+        import datetime
+        d = datetime.date.fromisoformat
+        self.assertEqual(refresh.upcoming_classes([0], d("2026-10-28")), [2027])
+        self.assertEqual(refresh.upcoming_classes([1, 2], d("2026-10-28")), [2028, 2029])
+        self.assertEqual(refresh.upcoming_classes([0, 1, 2], d("2027-06-01")), [2028, 2029, 2030])
+
+
 if __name__ == "__main__":
     unittest.main()

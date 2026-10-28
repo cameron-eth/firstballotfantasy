@@ -133,14 +133,17 @@ jobs:
           assert not missing, f'Missing monitored datasets: {missing}'
           expired=[key for key in expected if keys[key]['status']=='expired']
           assert not expired, f'Dataset freshness budget exceeded: {expired}'
-          if int(season) < 2027:
-              prospects=keys.get('prospects:2027')
-              assert prospects, 'Missing 2027 prospect class'
-              count=prospects.get('recordCount') or 0
-              checked=prospects.get('currentSeasonStatCount') or 0
-              assert prospects.get('lastCheckedAt'), '2027 ESPN check has not run'
-              assert checked/count >= 0.95, f'2027 current-season stat coverage is {checked}/{count}'
-              assert prospects['status'] != 'expired', '2027 ESPN check is overdue'
+          # The next class to be drafted (same rule as lib/draft-years.ts): upcoming through April.
+          import datetime
+          today=datetime.datetime.now(datetime.timezone.utc).date()
+          next_class=today.year if today.month < 5 else today.year + 1
+          prospects=keys.get(f'prospects:{next_class}')
+          assert prospects, f'Missing {next_class} prospect class'
+          count=prospects.get('recordCount') or 0
+          checked=prospects.get('currentSeasonStatCount') or 0
+          assert prospects.get('lastCheckedAt'), f'{next_class} ESPN check has not run'
+          assert checked/count >= 0.95, f'{next_class} current-season stat coverage is {checked}/{count}'
+          assert prospects['status'] != 'expired', f'{next_class} ESPN check is overdue'
           unknown=[d['key'] for d in data.get('monitored',[]) if d['status']=='source-time-unknown']
           if unknown:
               print('Source observation timestamps are not provided by: ' + ', '.join(unknown))

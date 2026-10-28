@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react'
 import { type ReactNode } from 'react'
 import type { CardProspect } from './ProspectTradingCard'
 import { TeamMapPreview } from './TeamMapPreview'
+import { upcomingDraftClasses } from '@/lib/draft-years'
 
 type Player = CardProspect
 
@@ -16,7 +17,7 @@ export function ScrollReveal({ children, className = '' }: { children: ReactNode
 
 export function ScoutingExperience({ players }: { players: Player[] }) {
   const reduced = useReducedMotion()
-  const years = [2027, 2028, 2029]
+  const years = upcomingDraftClasses(3)
   const classes = years.map((year) => {
     const cohort = players.filter((player) => player.draft_year === year)
     return { year, total: cohort.length, positions: ['QB', 'RB', 'WR', 'TE'].map((position) => ({ position, count: cohort.filter((player) => player.position === position).length })) }

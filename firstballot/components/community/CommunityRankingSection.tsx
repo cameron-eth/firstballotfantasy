@@ -170,14 +170,14 @@ export function CommunityRankingSection() {
   const [selected, setSelected] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const endpoint = `/api/community-rankings?round=${round}${selectedLeagueId ? `&leagueId=${selectedLeagueId}` : ''}`
-  const { data, error, isLoading, mutate } = useSWR<DailyBallot>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<DailyBallot>(
     user && !leagueLoading ? [endpoint, user.id] : null,
     async ([url]: [string, string]) => {
       const response = await fetch(url)
       if (!response.ok) throw new Error('Community rankings are unavailable. Please try again.')
       return response.json()
     },
-    { revalidateOnFocus: true, shouldRetryOnError: false }
+    { revalidateOnFocus: true, shouldRetryOnError: false, keepPreviousData: true }
   )
   async function vote(winner: string) {
     if (!data || saving || data.voted) return
@@ -222,7 +222,7 @@ export function CommunityRankingSection() {
             Your football instincts. A board built together.
           </p>
         </div>
-        {loading || leagueLoading || isLoading ? (
+        {loading || leagueLoading || (isLoading && !data) ? (
           <p role="status" className="text-slate-400">
             Loading comparisons…
           </p>
@@ -248,17 +248,22 @@ export function CommunityRankingSection() {
             </button>
           </div>
         ) : data ? (
-          <CommunityBallotPanel
-            key={`${selectedLeagueId}:${data.day}:${round}`}
-            data={data}
-            round={round}
-            saving={saving}
-            selected={selected}
-            error={message}
-            onVote={vote}
-            onNext={() => move(round + 1)}
-            onPrevious={() => move(round - 1)}
-          />
+          <div
+            aria-busy={isValidating}
+            className={`transition-opacity ${isValidating ? 'pointer-events-none opacity-60' : ''}`}
+          >
+            <CommunityBallotPanel
+              key={`${selectedLeagueId}:${data.day}`}
+              data={data}
+              round={round}
+              saving={saving}
+              selected={selected}
+              error={message}
+              onVote={vote}
+              onNext={() => move(round + 1)}
+              onPrevious={() => move(round - 1)}
+            />
+          </div>
         ) : null}
       </main>
     </>

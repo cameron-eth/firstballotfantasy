@@ -41,7 +41,7 @@ Screenshots were taken at 1400×900 and 375×812 with the same league and sessio
 | One meaning per color | Grade gold/green/rose, picks violet, selection blue, odds positive/negative | Amber still appears on A grades and on value, both "meaningful tier/value" per decision 1 |
 | Images carry identity | Owner avatars | The map's player faces have no team-level equivalent; avatars are the closest |
 | Tight slate ramp, quiet secondary text | White / slate-200 / slate-400 / slate-500 | — |
-| Density | 12 rows fit at 1400×900 with owner names | Extra width spreads between Slot and Gap; fixed column widths would tighten it |
+| Density | 12 rows fit at 1400×900 with owner names. Number columns shrink to content and the team column takes the slack; each group starts with a divider | — |
 
 **Team Builder after the font change:** the layout, cards, truncation and badges are unchanged; only the glyphs differ (Inter vs SF). Compare `after/team-builder-desktop.jpg` with `before/team-builder-desktop.jpg`.
 
@@ -53,5 +53,4 @@ Screenshots were taken at 1400×900 and 375×812 with the same league and sessio
 ## Before migrating the next surface
 
 1. Decide whether the Map's builder summary bar (`2027 picks` row) should switch to `PickChip` now, or wait for the Picks tab.
-2. Fixed column widths for Standings, if the extra space bothers you at wide screens.
-3. Next surface by impact: **Overview** (P1/P2), then the new **Picks tab** (P4).
+2. Next surface by impact: **Overview** (P1/P2), then the new **Picks tab** (P4).

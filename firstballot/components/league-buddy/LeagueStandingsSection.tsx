@@ -97,11 +97,19 @@ export function LeagueStandingsSection({
     odds: 'odds',
   }
   const active = columnFor[sort]
+  // The first column of each group carries a divider, so the groups read in the body too.
+  const groupStart = isDynasty ? ['record', 'maxpf', 'projected', 'odds'] : []
+  const divider = (column: string) => groupStart.includes(column) && 'border-l border-line/60'
   const head = (column: string) =>
-    cn('h-10 whitespace-nowrap px-3 text-xs', active === column ? 'text-white' : 'text-slate-400')
+    cn(
+      'h-10 whitespace-nowrap px-3 text-xs',
+      divider(column),
+      active === column ? 'text-white' : 'text-slate-400'
+    )
   const cell = (column: string, secondary = false) =>
     cn(
       'whitespace-nowrap px-3 py-2.5 text-sm',
+      divider(column),
       active === column
         ? 'font-semibold text-white'
         : secondary
@@ -156,7 +164,7 @@ export function LeagueStandingsSection({
             </TableRow>
           )}
           <TableRow className="hover:bg-transparent">
-            <TableHead sticky className={cn(head('team'), 'w-44 sm:w-auto sm:min-w-56')}>
+            <TableHead sticky className={cn(head('team'), 'w-44 sm:w-full sm:min-w-56')}>
               Team
             </TableHead>
             <TableHead numeric className={head('record')}>

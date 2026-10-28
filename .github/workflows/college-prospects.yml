@@ -3,13 +3,30 @@ on:
   schedule:
     - cron: "45 11 * * 1,3,5"
   workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: Fail on purpose to test the job report and alert path
+        type: boolean
+        default: false
 permissions:
   contents: read
+  issues: write
+# One run at a time per job; a scheduled run waits instead of overlapping a manual one.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Record start
+        run: echo "STARTED_AT=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
+      - name: Simulate failure
+        if: inputs.simulate_failure
+        run: |
+          echo "Failing on purpose (simulate_failure)."
+          exit 1
       - name: Check ESPN parser safeguards
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s firstballot/scripts/tests -p 'test_*.py'
       - name: Update the 2027, 2028 and 2029 classes from ESPN
@@ -24,3 +41,15 @@ jobs:
           # The next class must verify almost fully; younger classes include redshirts with no current season.
           python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --years 2027
           python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --years 2028 2029 --min-coverage 0.8
+      - name: Report run
+        if: always()
+        uses: ./.github/actions/job-report
+        with:
+          job: College prospect production
+          dataset: job:college-prospects
+          status: ${{ job.status }}
+          started-at: ${{ env.STARTED_AT }}
+          supabase-url: ${{ secrets.SUPABASE_URL }}
+          supabase-key: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          github-token: ${{ github.token }}
+          alert: 'true'

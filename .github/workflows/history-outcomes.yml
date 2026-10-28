@@ -3,14 +3,31 @@ on:
   schedule:
     - cron: '20 12 * * 3'
   workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: Fail on purpose to test the job report and alert path
+        type: boolean
+        default: false
 permissions:
   contents: write
   pull-requests: write
+  issues: write
+# One run at a time per job; a scheduled run waits instead of overlapping a manual one.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Record start
+        run: echo "STARTED_AT=$(date -u +%FT%TZ)" >> "$GITHUB_ENV"
+      - name: Simulate failure
+        if: inputs.simulate_failure
+        run: |
+          echo "Failing on purpose (simulate_failure)."
+          exit 1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -28,3 +45,15 @@ jobs:
           git commit -m 'Refresh historical career outcomes'
           git push origin "$BRANCH"
           gh pr create --base main --head "$BRANCH" --title 'Refresh historical career outcomes' --body 'Validated public rookie ADP and completed-week NFL production snapshot. Missing baselines remain unrated.'
+      - name: Report run
+        if: always()
+        uses: ./.github/actions/job-report
+        with:
+          job: Historical career outcomes
+          dataset: job:history-outcomes
+          status: ${{ job.status }}
+          started-at: ${{ env.STARTED_AT }}
+          supabase-url: ${{ secrets.SUPABASE_URL }}
+          supabase-key: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          github-token: ${{ github.token }}
+          alert: 'true'

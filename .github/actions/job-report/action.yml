@@ -1,0 +1,84 @@
+name: Scheduled job report
+description: >
+  Logs a scheduled job run to Supabase ingestion_runs, opens (or updates) one issue per job
+  while it is failing, and closes that issue when the job next succeeds. Call it as the last
+  step with `if: always()` so failed runs report too (docs/data-architecture PR-3).
+inputs:
+  job:
+    description: Human name of the job, used in the issue title
+    required: true
+  dataset:
+    description: ingestion_runs.dataset value, e.g. job:ktc-history
+    required: true
+  status:
+    description: Pass `job.status`
+    required: true
+  started-at:
+    description: ISO timestamp recorded by the first step
+    required: true
+  supabase-url:
+    required: false
+    default: ''
+  supabase-key:
+    required: false
+    default: ''
+  github-token:
+    required: true
+  alert:
+    description: Open and close the failure issue (the freshness monitor has its own)
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - name: Log run to ingestion_runs
+      shell: bash
+      env:
+        SUPABASE_URL: ${{ inputs.supabase-url }}
+        SUPABASE_KEY: ${{ inputs.supabase-key }}
+        STATUS: ${{ inputs.status }}
+        DATASET: ${{ inputs.dataset }}
+        STARTED_AT: ${{ inputs.started-at }}
+        SOURCE: workflow:${{ github.workflow }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        EVENT: ${{ github.event_name }}
+        SHA: ${{ github.sha }}
+      run: |
+        if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+          echo "::warning::Supabase credentials missing; run not logged to ingestion_runs."
+          exit 0
+        fi
+        if [ "$STATUS" = "success" ]; then RESULT=success; ERROR=null; else RESULT=failed; ERROR="\"job_${STATUS}\""; fi
+        BODY=$(printf '{"dataset":"%s","status":"%s","started_at":"%s","completed_at":"%s","error_code":%s,"source":"%s","run_url":"%s","details":{"event":"%s","sha":"%s"}}' \
+          "$DATASET" "$RESULT" "$STARTED_AT" "$(date -u +%FT%TZ)" "$ERROR" "$SOURCE" "$RUN_URL" "$EVENT" "$SHA")
+        # Logging must never mask the job's own result, so failures here only warn.
+        curl --silent --show-error --max-time 30 --fail-with-body -X POST \
+          "$SUPABASE_URL/rest/v1/ingestion_runs" \
+          -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" \
+          -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+          -d "$BODY" || echo "::warning::Could not log run to ingestion_runs."
+    - name: Open or close the failure issue
+      if: inputs.alert == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        STATUS: ${{ inputs.status }}
+        TITLE: 'Scheduled job failure: ${{ inputs.job }}'
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        ISSUE=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" \
+          --json number,title --jq ".[] | select(.title == \"$TITLE\") | .number" | head -1)
+        if [ "$STATUS" = "success" ]; then
+          if [ -n "$ISSUE" ]; then
+            gh issue close "$ISSUE" --repo "$GITHUB_REPOSITORY" --comment "Recovered: $RUN_URL"
+          fi
+        elif [ -n "$ISSUE" ]; then
+          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "Still failing ($STATUS): $RUN_URL"
+        else
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" \
+            --body "The scheduled job **${{ inputs.job }}** ended with status \`$STATUS\`.
+
+        Run: $RUN_URL
+
+        This issue closes automatically on the next successful run. Background: docs/data-architecture/REFRESH_LIFECYCLE.md."
+        fi

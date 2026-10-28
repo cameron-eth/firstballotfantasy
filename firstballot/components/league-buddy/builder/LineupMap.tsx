@@ -283,11 +283,19 @@ export function LineupMap({
           {players
             .filter((p) => !p.target && !slots.some((s) => s.starter?.id === p.id))
             .map((p) => (
-              <div className="w-60" key={p.id}>
+              <div className="w-60 space-y-3" key={p.id}>
                 {card(
                   p,
                   p.target ? 'Planned arrival' : 'Bench',
                   slots.some((s) => fitsSlot(s.eligible, p)) ? 'bench' : undefined
+                )}
+                {p.roster && (
+                  <button
+                    className="w-full rounded-lg border border-blue-400/30 py-2 text-xs text-blue-200"
+                    onClick={() => onTrade(p.roster!)}
+                  >
+                    Show trade targets
+                  </button>
                 )}
               </div>
             ))}

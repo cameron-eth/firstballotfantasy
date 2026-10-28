@@ -298,20 +298,8 @@ export function TeamBuilder({
         </button>
       )}
       <fieldset disabled={busy} className="space-y-3 min-w-0">
-        <div
-          role="region"
-          ref={viewportRef}
-          aria-label="Team strategy map"
-          data-map-tour="lineup"
-          tabIndex={0}
-          className="h-[calc(100dvh-190px)] min-h-[560px] overflow-auto rounded-lg border border-white/10 bg-slate-950/40 p-5 pt-0 focus-visible:outline focus-visible:outline-blue-400"
-          style={{
-            touchAction: 'pan-x pan-y',
-            backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-          }}
-        >
-          <div className="sticky left-0 top-0 z-30 -mx-5 mb-4 border-b border-white/10 bg-slate-950/90 px-5 py-2 backdrop-blur">
+        <div className="relative overflow-hidden rounded-lg border border-white/10">
+          <div className="border-b border-white/10 bg-slate-950/90 px-5 py-2">
             <BuilderTeamSummary
               compact
               team={team}
@@ -350,131 +338,145 @@ export function TeamBuilder({
               />
             )}
           </div>
-          <div ref={spaceRef} className="relative overflow-hidden">
-            <div
-              ref={contentRef}
-              className="absolute left-0 top-0 origin-top-left will-change-transform"
-              style={{ width: Math.max(4, parseScoringSlots(rosterPositions).length) * 256 - 16 }}
-            >
-              {view.outgoing.length > 0 && (
-                <p className="mx-auto mb-4 w-fit rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200">
-                  Plan cost · {view.outgoing.length} outgoing players · {planLoss.toFixed(1)}{' '}
-                  starting FPPG removed from today’s baseline
-                  {baseline.missing || retained.missing ? ' · partial stats' : ''}. Rookie
-                  production and a new MaxPF order are not forecast.
-                </p>
-              )}
-              {timeline.funding.rejected.length > 0 && (
-                <p role="alert" className="mb-3 text-xs text-amber-300">
-                  A funding path no longer matches pick ownership. Undo it and choose a new path.
-                </p>
-              )}
-              <LineupMap
-                fits={timeline.fits}
+          <div
+            role="region"
+            ref={viewportRef}
+            aria-label="Team strategy map"
+            data-map-tour="lineup"
+            tabIndex={0}
+            className="h-[calc(100dvh-250px)] min-h-[520px] overflow-auto bg-slate-950/40 p-5 focus-visible:outline focus-visible:outline-blue-400"
+            style={{
+              touchAction: 'pan-x pan-y',
+              backgroundImage: 'radial-gradient(#334155 1px, transparent 1px)',
+              backgroundSize: '20px 20px',
+            }}
+          >
+            <div ref={spaceRef} className="relative overflow-hidden">
+              <div
+                ref={contentRef}
+                className="absolute left-0 top-0 origin-top-left will-change-transform"
+                style={{ width: Math.max(4, parseScoringSlots(rosterPositions).length) * 256 - 16 }}
+              >
+                {view.outgoing.length > 0 && (
+                  <p className="mx-auto mb-4 w-fit rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200">
+                    Plan cost · {view.outgoing.length} outgoing players · {planLoss.toFixed(1)}{' '}
+                    starting FPPG removed from today’s baseline
+                    {baseline.missing || retained.missing ? ' · partial stats' : ''}. Rookie
+                    production and a new MaxPF order are not forecast.
+                  </p>
+                )}
+                {timeline.funding.rejected.length > 0 && (
+                  <p role="alert" className="mb-3 text-xs text-amber-300">
+                    A funding path no longer matches pick ownership. Undo it and choose a new path.
+                  </p>
+                )}
+                <LineupMap
+                  fits={timeline.fits}
+                  team={team}
+                  teams={teams}
+                  rawSlots={rosterPositions}
+                  scenario={scenario}
+                  view={view}
+                  horizon={timeline.horizon}
+                  baseYear={timeline.baseYear}
+                  board={
+                    isDynasty &&
+                    board.user &&
+                    !board.error &&
+                    !prospectError &&
+                    !board.isLoading &&
+                    !prospectsLoading
+                      ? board.players
+                      : []
+                  }
+                  update={update}
+                  chosen={chosen}
+                  onChoose={choose}
+                  onTrade={(player) => {
+                    setPickFocus(null)
+                    setFocus({ kind: 'player', player })
+                  }}
+                  onFund={(target) =>
+                    setFocus({
+                      kind: 'draft',
+                      target,
+                      rank:
+                        prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
+                        undefined,
+                    })
+                  }
+                  onAdd={add}
+                />
+              </div>
+            </div>
+            {chosen.length > 0 && (
+              <div className="fixed bottom-6 left-1/2 z-40 flex w-fit -translate-x-1/2 items-center gap-3 rounded-xl border border-violet-300/40 bg-slate-950/95 px-4 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur">
+                <span className="font-semibold text-violet-100">{chosen.length} selected</span>
+                <button
+                  className="rounded-md bg-violet-300 px-3 py-1.5 font-semibold text-slate-950"
+                  onClick={() => {
+                    const players = team.players.filter((p) => chosen.includes(p.playerId))
+                    setPickFocus(null)
+                    setFocus({ kind: 'players', players })
+                  }}
+                >
+                  See trade opportunities
+                </button>
+                <button className="text-slate-400 hover:text-white" onClick={() => setChosen([])}>
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+          <AnimatePresence>
+            {pickFocus && !focus && !reviewOffer && (
+              <PickPanel
+                key={pickFocus.id}
+                pick={pickFocus}
                 team={team}
                 teams={teams}
+                leagueId={leagueId}
+                slots={timeline.slots}
+                scenario={scenario}
+                prospects={prospects}
+                onAssign={assignProspect}
+                onUnassign={unassignPick}
+                onReview={setReviewOffer}
+                onClose={() => setPickFocus(null)}
+              />
+            )}
+            {focus && !reviewOffer && (
+              <PlanningSuggestions
+                key={
+                  focus.kind === 'player'
+                    ? focus.player.playerId
+                    : focus.kind === 'players'
+                      ? focus.players.map((p) => p.playerId).join('+')
+                      : focus.target.id
+                }
+                focus={focus}
+                team={team}
+                teams={teams}
+                leagueId={leagueId}
+                slots={timeline.slots}
                 rawSlots={rosterPositions}
                 scenario={scenario}
-                view={view}
-                horizon={timeline.horizon}
-                baseYear={timeline.baseYear}
-                board={
-                  isDynasty &&
-                  board.user &&
-                  !board.error &&
-                  !prospectError &&
-                  !board.isLoading &&
-                  !prospectsLoading
-                    ? board.players
-                    : []
-                }
-                update={update}
-                chosen={chosen}
-                onChoose={choose}
-                onTrade={(player) => {
-                  setPickFocus(null)
-                  setFocus({ kind: 'player', player })
-                }}
-                onFund={(target) =>
-                  setFocus({
-                    kind: 'draft',
-                    target,
-                    rank:
-                      prospects.find((p) => `prospect:${p.id}` === target.id)?.overall_rank ??
-                      undefined,
+                onClose={() => setFocus(null)}
+                onReview={setReviewOffer}
+                onSimulate={(plan) => {
+                  update({
+                    fundingPlans: [
+                      ...(scenario.fundingPlans ?? []).filter((f) => f.targetId !== plan.targetId),
+                      plan,
+                    ],
                   })
-                }
-                onAdd={add}
-              />
-            </div>
-          </div>
-          {chosen.length > 0 && (
-            <div className="fixed bottom-6 left-1/2 z-40 flex w-fit -translate-x-1/2 items-center gap-3 rounded-xl border border-violet-300/40 bg-slate-950/95 px-4 py-2 text-xs text-slate-200 shadow-2xl backdrop-blur">
-              <span className="font-semibold text-violet-100">{chosen.length} selected</span>
-              <button
-                className="rounded-md bg-violet-300 px-3 py-1.5 font-semibold text-slate-950"
-                onClick={() => {
-                  const players = team.players.filter((p) => chosen.includes(p.playerId))
-                  setPickFocus(null)
-                  setFocus({ kind: 'players', players })
+                  setFocus(null)
                 }}
-              >
-                See trade opportunities
-              </button>
-              <button className="text-slate-400 hover:text-white" onClick={() => setChosen([])}>
-                Clear
-              </button>
-            </div>
-          )}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </fieldset>
-      <AnimatePresence>
-        {pickFocus && !focus && !reviewOffer && (
-          <PickPanel
-            key={pickFocus.id}
-            pick={pickFocus}
-            team={team}
-            teams={teams}
-            leagueId={leagueId}
-            slots={timeline.slots}
-            scenario={scenario}
-            prospects={prospects}
-            onAssign={assignProspect}
-            onUnassign={unassignPick}
-            onReview={setReviewOffer}
-            onClose={() => setPickFocus(null)}
-          />
-        )}
-        {focus && !reviewOffer && (
-          <PlanningSuggestions
-            key={
-              focus.kind === 'player'
-                ? focus.player.playerId
-                : focus.kind === 'players'
-                  ? focus.players.map((p) => p.playerId).join('+')
-                  : focus.target.id
-            }
-            focus={focus}
-            team={team}
-            teams={teams}
-            leagueId={leagueId}
-            slots={timeline.slots}
-            rawSlots={rosterPositions}
-            scenario={scenario}
-            onClose={() => setFocus(null)}
-            onReview={setReviewOffer}
-            onSimulate={(plan) => {
-              update({
-                fundingPlans: [
-                  ...(scenario.fundingPlans ?? []).filter((f) => f.targetId !== plan.targetId),
-                  plan,
-                ],
-              })
-              setFocus(null)
-            }}
-          />
-        )}
-      </AnimatePresence>
       {reviewOffer && (
         <PlayerTradeModal
           key={JSON.stringify(reviewOffer)}

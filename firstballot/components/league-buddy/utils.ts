@@ -1,6 +1,7 @@
 // Utility functions for LeagueBuddy component
 import type { PlayerData, PositionStrengths, TeamData, SleeperTransaction } from './types'
 import { ktcValue, playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
+import { standingsOrder } from '@/lib/league-metrics/standings'
 
 /** Top of the value scale a single position group is measured against. */
 const POSITION_VALUE_CEILING = 9999
@@ -358,7 +359,5 @@ export const buildActivityFeed = (
 
 /** League table order: win percentage (ties count half), then points for. */
 export function recordOrder(teams: TeamData[]): TeamData[] {
-  const pct = (t: TeamData) =>
-    (t.wins + (t.ties ?? 0) / 2) / Math.max(1, t.wins + t.losses + (t.ties ?? 0))
-  return [...teams].sort((a, b) => pct(b) - pct(a) || b.pointsFor - a.pointsFor)
+  return standingsOrder(teams)
 }

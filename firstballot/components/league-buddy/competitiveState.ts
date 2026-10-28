@@ -18,6 +18,7 @@
 import { playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from './types'
 import { leagueTeamValues } from '@/lib/league-metrics/team-value'
+import { winPct } from '@/lib/league-metrics/standings'
 
 const CORE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 const CORE_DEPTH = 12 // top N assets that define a roster's value & age profile
@@ -170,11 +171,6 @@ function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
-}
-
-function winPct(team: TeamData): number {
-  const games = team.wins + team.losses
-  return games > 0 ? team.wins / games : 0
 }
 
 /**

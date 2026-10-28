@@ -163,7 +163,7 @@ export function clearPlayersMemo() {
 
 const fresh = { cache: 'no-store' } as const
 
-async function fetchLeagueDataBundle(
+export async function fetchLeagueDataBundle(
   leagueId: string,
   user: unknown,
   version: number
@@ -565,13 +565,13 @@ async function fetchLeagueDataBundle(
   }
 }
 
-type KtcMaps = {
+export type KtcMaps = {
   history: Record<string, KtcHistoryPoint[]>
   latest: Record<string, { value_sf: number; value_1qb: number }>
 }
 
 /** KTC history is the heaviest payload, so it loads after first paint and chunks run in parallel. */
-async function fetchKtcMaps(names: string[], version: number): Promise<KtcMaps> {
+export async function fetchKtcMaps(names: string[], version: number): Promise<KtcMaps> {
   const chunkSize = 50
   const chunks: string[][] = []
   for (let i = 0; i < names.length; i += chunkSize) chunks.push(names.slice(i, i + chunkSize))
@@ -599,7 +599,7 @@ async function fetchKtcMaps(names: string[], version: number): Promise<KtcMaps> 
   return { history, latest }
 }
 
-function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
+export function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
   return teams.map((team) => ({
     ...team,
     players: team.players.map((player) => {
@@ -618,13 +618,28 @@ function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
 }
 
 /** Re-score every team once its values are known, so the grade reflects quality, not roster size. */
-function withTeamScores(teams: TeamData[]): TeamData[] {
+export function withTeamScores(teams: TeamData[]): TeamData[] {
   const scores = teamScores(teams)
   const all = teams.map((t) => scores.get(t.rosterId)?.composite ?? 0)
   return teams.map((team) => {
     const gradeScore = scores.get(team.rosterId)?.composite ?? 0
     return { ...team, gradeScore, grade: calculateGradeFromPercentile(gradeScore, all).letter }
   })
+}
+
+/** Core-position player names to look up in KTC, deduped and sorted (part of the SWR key). */
+export function ktcNamesFor(teams: TeamData[]): string[] {
+  return Array.from(
+    new Set(
+      teams.flatMap((team) =>
+        team.players
+          .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
+          .map((p) => p.playerName)
+      )
+    )
+  )
+    .filter(Boolean)
+    .sort()
 }
 
 export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataReturn {
@@ -637,21 +652,7 @@ export function useLeagueData(leagueId: string, user?: unknown): UseLeagueDataRe
     { revalidateOnFocus: true, focusThrottleInterval: 300_000, refreshInterval: 900_000 }
   )
 
-  const ktcNames = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (data?.teams ?? []).flatMap((team) =>
-            team.players
-              .filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-              .map((p) => p.playerName)
-          )
-        )
-      )
-        .filter(Boolean)
-        .sort(),
-    [data?.teams]
-  )
+  const ktcNames = useMemo(() => ktcNamesFor(data?.teams ?? []), [data?.teams])
   const { data: ktcMaps, error: ktcError } = useSWR(
     ktcNames.length > 0 ? ['league-buddy-ktc', leagueId, version, ktcNames.join('|')] : null,
     () => fetchKtcMaps(ktcNames, version),

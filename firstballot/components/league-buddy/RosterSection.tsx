@@ -32,6 +32,8 @@ export interface RosterProjections {
   entries?: ProjectionMap
   byes?: string[]
   updatedAt?: string
+  /** Sleeper is failing; these are the last good forecasts (PR-12). */
+  stale?: boolean
   error?: string | null
   rosterPositions: string[]
   currentWeek: number
@@ -370,6 +372,15 @@ export function RosterSection({
         {view === 'week' && (projections?.loading || projections?.error) && (
           <p role="status" className="text-[11px] text-slate-500">
             {projections.loading ? 'Updating forecasts…' : 'Forecasts unavailable'}
+          </p>
+        )}
+        {view === 'week' && !projections?.loading && projections?.stale && (
+          <p role="status" className="text-[11px] text-amber-300">
+            Sleeper forecasts are unavailable right now, so these are the last good ones
+            {projections.updatedAt
+              ? ` (${new Date(projections.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })})`
+              : ''}
+            .
           </p>
         )}
         <div

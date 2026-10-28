@@ -20,6 +20,8 @@ interface ProjectionResponse {
   unmatchedKeys: string[]
   generatedAt?: string
   byes?: string[]
+  /** `stale` is true when Sleeper failed and this is the last good copy (PR-12). */
+  freshness?: { stale?: boolean }
   points: ProjectionMap
 }
 
@@ -41,6 +43,8 @@ export interface UseProjectionsResult {
   error: string | null
   byes: string[]
   updatedAt?: string
+  /** Sleeper is failing and these are the last good projections, past their refresh time. */
+  stale: boolean
   loading: boolean
 }
 
@@ -105,6 +109,7 @@ export function useProjections(leagueId: string, week: number): UseProjectionsRe
         : null,
     byes: weekData?.byes ?? [],
     updatedAt: weekData?.generatedAt,
+    stale: !!(weekData?.freshness?.stale || seasonData?.freshness?.stale),
     loading: seasonLoading || weekLoading,
   }
 }

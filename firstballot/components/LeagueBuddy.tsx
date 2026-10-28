@@ -156,6 +156,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     error: projectionsError,
     byes: projectionByes,
     updatedAt: projectionsUpdatedAt,
+    stale: projectionsStale,
   } = useProjections(leagueId, currentWeek)
 
   const {
@@ -195,6 +196,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       byes: projectionByes,
       entries: weekProjectionEntries,
       updatedAt: projectionsUpdatedAt,
+      stale: projectionsStale,
       ppg: projectedPpg,
       week: weekProjections,
       rosterPositions: rosterPositionsRaw,
@@ -207,6 +209,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       projectionByes,
       weekProjectionEntries,
       projectionsUpdatedAt,
+      projectionsStale,
       projectedPpg,
       weekProjections,
       rosterPositionsRaw,

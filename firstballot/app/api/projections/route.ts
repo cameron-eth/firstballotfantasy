@@ -82,7 +82,9 @@ export async function GET(request: NextRequest) {
             week: week ? Number(week) : undefined,
           }
         },
-        (p) => Array.isArray(p) && p.length > 0
+        (p) => Array.isArray(p) && p.length > 0,
+        // Serve yesterday's projections, flagged stale, rather than none while Sleeper fails.
+        { maxStaleSeconds: 24 * 3600 }
       ),
       leagueId
         ? fetch(`https://api.sleeper.app/v1/league/${leagueId}`, {

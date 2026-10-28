@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { TIER_KEY } from '@/lib/dynasty-tiers'
+import { KTC_DAY_MARKER_PREFIX, TIER_KEY } from '@/lib/dynasty-tiers'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import { getCachedPlayers } from '@/lib/players-cache'
 import { snapshot } from '@/lib/platform/snapshots'
 import { tradeMarketSeasonKey } from '@/lib/platform/snapshot-keys'
 import { trimForTrades } from '@/lib/trade-market/payload'
+import { ktcDaysNeeded, normalizeKtcName, tradeDateKtc } from '@/lib/trade-market/trade-date-values'
 
 // Extend timeout for this route (fetching many weeks of transactions)
 export const maxDuration = 60 // 60 seconds
@@ -17,13 +18,58 @@ const PAST_SEASON_TTL = 30 * 24 * 3600
 const WEEKS = Array.from({ length: 21 }, (_, week) => week) // preseason (0) through week 20
 const BATCH_SIZE = 5
 
-type SeasonData = { teams: any[]; trades: any[]; picks: any[]; transactionsAnalyzed: number }
+type SeasonData = {
+  teams: any[]
+  trades: any[]
+  picks: any[]
+  transactionsAnalyzed: number
+  /** transaction_id → player id → KTC SF value on the trade date (D4); absent before history. */
+  tradeDateKtc: Record<string, Record<string, number>>
+}
+
+/** Complete KTC days, oldest first (marked by scripts/sync-ktc-values.mjs, PR-11). */
+async function completeKtcDays(): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from('ingestion_runs')
+    .select('dataset')
+    .eq('status', 'success')
+    .like('dataset', `${KTC_DAY_MARKER_PREFIX}%`)
+    .limit(5000)
+  if (error) throw new Error('KTC_DAYS_UNAVAILABLE')
+  return [...new Set((data ?? []).map((r) => r.dataset.slice(KTC_DAY_MARKER_PREFIX.length)))].sort()
+}
+
+/** Normalized player name → KTC SF value, for each requested day. */
+async function ktcValuesByDay(days: string[]) {
+  const byDay: Record<string, Record<string, number>> = {}
+  for (let i = 0; i < days.length; i += 8) {
+    await Promise.all(
+      days.slice(i, i + 8).map(async (day) => {
+        const { data, error } = await supabaseAdmin
+          .from('ktc_player_values')
+          .select('player_name,value_sf')
+          .eq('scraped_date', day)
+          .limit(2000)
+        if (error) throw new Error('KTC_HISTORY_UNAVAILABLE')
+        byDay[day] = Object.fromEntries(
+          (data ?? []).map((r) => [normalizeKtcName(r.player_name), Number(r.value_sf)])
+        )
+      })
+    )
+  }
+  return byDay
+}
 
 /**
  * One league season's teams, trades and traded picks, snapshotted (PR-16): about 25
  * Sleeper calls per season ran on every page load before.
  */
-function leagueSeason(league: { leagueId: string; season: string }, current: boolean) {
+function leagueSeason(
+  league: { leagueId: string; season: string },
+  current: boolean,
+  players: Record<string, any>,
+  ktcDays: string[]
+) {
   return snapshot<SeasonData>(
     tradeMarketSeasonKey(league.leagueId),
     'Sleeper',
@@ -69,17 +115,24 @@ function leagueSeason(league: { leagueId: string; season: string }, current: boo
         _leagueId: league.leagueId,
         _leagueSeason: league.season,
       })
+      const trades: any[] = transactions.filter((tx) => tx.type === 'trade').map(tag)
+      const ktcByDay = await ktcValuesByDay(ktcDaysNeeded(trades, ktcDays))
       return {
         payload: {
           teams,
-          trades: transactions.filter((tx) => tx.type === 'trade').map(tag),
+          trades,
           picks: picks.map(tag),
           transactionsAnalyzed: transactions.length,
+          tradeDateKtc: tradeDateKtc(trades, players, ktcByDay, ktcDays),
         },
         season: Number(league.season) || undefined,
       }
     },
-    (p) => Array.isArray(p?.teams) && Array.isArray(p.trades) && Array.isArray(p.picks)
+    (p) =>
+      Array.isArray(p?.teams) &&
+      Array.isArray(p.trades) &&
+      Array.isArray(p.picks) &&
+      typeof p.tradeDateKtc === 'object'
   )
 }
 
@@ -134,7 +187,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch critical data in parallel - include all players (6h TTL cache) + rankings once
-    const [allPlayers, rankingsResult, ktcResult] = (await Promise.all([
+    const [allPlayers, rankingsResult, ktcResult, ktcDays] = (await Promise.all([
       getCachedPlayers(),
       (async () => {
         try {
@@ -186,11 +239,12 @@ export async function GET(request: NextRequest) {
           return { data: [], error: err }
         }
       })(),
-    ])) as [Record<string, any>, any, any]
+      completeKtcDays(),
+    ])) as [Record<string, any>, any, any, string[]]
 
     // Each season comes from its snapshot; only the current one refetches from Sleeper.
     const seasons = await Promise.all(
-      leagueHistory.map((league, index) => leagueSeason(league, index === 0))
+      leagueHistory.map((league, index) => leagueSeason(league, index === 0, allPlayers, ktcDays))
     )
     const teamsByLeague: Record<string, any[]> = {}
     leagueHistory.forEach((league, index) => {
@@ -324,6 +378,9 @@ export async function GET(request: NextRequest) {
           : trimForTrades(trades, allPlayers, rankingsMap)),
         transactions: trades,
         tradedPicks,
+        // D4: trade-date KTC per trade and player, and the first day prices exist.
+        tradeDateKtc: Object.assign({}, ...seasons.map((season) => season.payload.tradeDateKtc)),
+        priceHistoryFrom: ktcDays[0] ?? null,
         totalTrades: trades.length,
         totalTradedPicks: tradedPicks.length,
         totalTeams: teamsData.length,

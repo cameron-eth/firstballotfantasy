@@ -17,7 +17,13 @@ export function computeTradeAnalytics(
   trades: any[],
   allPlayers: Record<string, any>,
   getTeamMeta: (leagueId: string | undefined, rosterId: number) => any,
-  valuationCache: Map<string, PlayerValue>
+  valuationCache: Map<string, PlayerValue>,
+  /**
+   * A player's value in one trade. Defaults to today's value from `valuationCache`; the
+   * trade-date view (D4) passes the value on the trade's date instead.
+   */
+  valueInTrade: (trade: any, pid: string) => PlayerValue | null = (_trade, pid) =>
+    valuationCache.get(pid) ?? null
 ) {
   const rosterMap: Record<
     number,
@@ -125,7 +131,7 @@ export function computeTradeAnalytics(
       const receivedPlayers: PlayerValue[] = []
       for (const pid of Object.keys(adds)) {
         if (adds[pid] !== rosterId) continue
-        const pv = getValuation(pid)
+        const pv = valueInTrade(trade, pid)
         if (pv) {
           valueIn += pv.value
           receivedPlayers.push(pv)
@@ -144,7 +150,7 @@ export function computeTradeAnalytics(
       const sentPlayers: PlayerValue[] = []
       for (const pid of Object.keys(drops)) {
         if (drops[pid] !== rosterId) continue
-        const pv = getValuation(pid)
+        const pv = valueInTrade(trade, pid)
         if (pv) {
           valueOut += pv.value
           sentPlayers.push(pv)

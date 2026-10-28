@@ -19,11 +19,7 @@ import {
   recordOrder,
 } from '../../components/league-buddy/utils.ts'
 import { calculateLeaguePlacements } from '../../components/league-buddy/competitiveState.ts'
-import {
-  buildPowerRankings,
-  parseRosterSlots,
-  isSuperflexLineup,
-} from '../../lib/sleeper-sdk/values.ts'
+import { buildPowerRankings } from '../../lib/sleeper-sdk/values.ts'
 import { teamValueScore } from '../../lib/team-score.ts'
 import { suggestedTeamTrades } from '../../lib/sleeper-sdk/trade-opportunities.ts'
 import { tradeSignals } from '../../lib/trade-signals.ts'
@@ -36,7 +32,8 @@ export async function computeLeagueMetrics(leagueId) {
   clearPlayersMemo()
   const bundle = await fetchLeagueDataBundle(leagueId, null, 0)
   const ktc = await fetchKtcMaps(ktcNamesFor(bundle.teams), 0)
-  const teams = withTeamScores(applyKtc(bundle.teams, ktc))
+  const ctx = bundle.leagueContext
+  const teams = withTeamScores(applyKtc(bundle.teams, ktc), ctx)
   const slots = bundle.rosterPositionsRaw
   const positions = Object.fromEntries(
     Object.entries(bundle.allPlayers).flatMap(([id, p]) => (p?.position ? [[id, p.position]] : []))
@@ -67,8 +64,8 @@ export async function computeLeagueMetrics(leagueId) {
     teams.map((t) => ({ rosterId: t.rosterId, players: t.players })),
     slots
   )
-  const placements = calculateLeaguePlacements(teams, true)
-  const positionRanks = calculateLeaguePositionRankings(teams)
+  const placements = calculateLeaguePlacements(teams, true, ctx)
+  const positionRanks = calculateLeaguePositionRankings(teams, ctx)
   const order = (metric) =>
     Object.fromEntries(
       buildDraftOrder(teams, draft.maxPointsFor, projection.projected, metric).map((row) => [
@@ -84,10 +81,11 @@ export async function computeLeagueMetrics(leagueId) {
       currentWeek: bundle.currentWeek,
       isDynasty: bundle.leagueOverview?.isDynasty ?? null,
       rosterPositions: slots,
-      // The competing superflex rules (COMPUTATION_AUDIT §2), recorded side by side.
+      // Every consumer of the league format, side by side (one rule since PR-5). The
+      // trade inventory is a recorded server response, so it reflects the recorded league.
       superflex: {
         powerRankings: power.superflex,
-        isSuperflexLineup: isSuperflexLineup(parseRosterSlots(slots)),
+        leagueContext: ctx.superflex,
         tradeInventory: inventory?.superflex ?? null,
       },
       ktcNamesMatched: Object.keys(ktc.latest).length,
@@ -100,7 +98,7 @@ export async function computeLeagueMetrics(leagueId) {
           pointsFor: r(t.pointsFor, 2),
           grade: t.grade,
           gradeScore: r(t.gradeScore),
-          teamValueScore: r(teamValueScore(t.players)),
+          teamValueScore: r(teamValueScore(t.players, ctx)),
           ktcSfTotal: t.players.reduce((s, p) => s + (p.ktcValueSf ?? 0), 0),
           tieredPlayers: t.players.filter((p) => p.tierNumber).length,
           power: (() => {

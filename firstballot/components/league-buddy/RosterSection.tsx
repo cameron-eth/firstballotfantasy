@@ -11,6 +11,7 @@ import { computeStartSit } from './projections/startSit'
 import type { ProjectionMap } from './projections/useProjections'
 import { TeamHero } from './TeamHero'
 import { teamValueScore } from '@/lib/team-score'
+import { ktcValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import { PlayerFace } from './ui/PlayerFace'
 import {
   HeatBadge,
@@ -59,6 +60,7 @@ export function RosterSection({
   selectedTeam,
   teams,
   projections,
+  leagueContext,
 }: {
   leagueId: string
   onActionComplete?: () => Promise<void>
@@ -67,6 +69,7 @@ export function RosterSection({
   sortedTeams: TeamData[]
   teams: TeamData[]
   projections?: RosterProjections
+  leagueContext: LeagueContext
 }) {
   const [connection, setConnection] = useState<SleeperConnection | null>(null)
   const [view, setView] = useState<'week' | 'dynasty'>('week')
@@ -114,10 +117,10 @@ export function RosterSection({
   const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
   const ages = skill.filter((p) => p.age > 0)
   // Quality-weighted team value: stars count more than depth, the deep bench barely counts.
-  const value = teamValueScore(selectedTeam.players)
+  const value = teamValueScore(selectedTeam.players, leagueContext)
   const valueRank =
     [...teams]
-      .map((t) => ({ id: t.rosterId, v: teamValueScore(t.players) }))
+      .map((t) => ({ id: t.rosterId, v: teamValueScore(t.players, leagueContext) }))
       .sort((a, b) => b.v - a.v)
       .findIndex((t) => t.id === selectedTeam.rosterId) + 1
   const productionRank =
@@ -129,8 +132,7 @@ export function RosterSection({
       'Fantasy points scored this season (points for), ranked against every team in the league.',
     'Lineup projection':
       'Sum of available weekly Sleeper forecasts for your current starters, scored with this league’s rules. Partial coverage is labeled.',
-    'Team value':
-      'Quality-weighted KTC superflex value: each player counts more than proportionally to their value, your best nine count fully and deeper bench players count less, so a pile of depth cannot outrank a few stars.',
+    'Team value': `Quality-weighted KTC ${leagueContext.superflex ? 'superflex' : '1QB'} value: each player counts more than proportionally to their value, your best nine count fully and deeper bench players count less, so a pile of depth cannot outrank a few stars.`,
     'Average age':
       'Average known age of quarterbacks, running backs, receivers and tight ends on this roster.',
     'Roster grade':
@@ -140,7 +142,8 @@ export function RosterSection({
     .filter((id) => id && id !== '0')
     .map((id) => selectedTeam.players.find((p) => p.playerId === id))
     .filter((p): p is PlayerData => !!p)
-  const faces = [...skill].sort((a, b) => (b.ktcValueSf ?? 0) - (a.ktcValueSf ?? 0)).slice(0, 5)
+  const valueOf = (p: PlayerData) => ktcValue(p, leagueContext)
+  const faces = [...skill].sort((a, b) => (valueOf(b) ?? 0) - (valueOf(a) ?? 0)).slice(0, 5)
   const swaps =
     startSit && complete && !startSit.noLineupSet
       ? startSit.swaps.filter((s) => s.start).slice(0, 3)
@@ -254,13 +257,13 @@ export function RosterSection({
                       : `${points(projections?.week[player.playerId])} proj`
                   }
                 >
-                  {player.ktcValueSf != null && (
+                  {valueOf(player) != null && (
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-slate-400">Value</span>
                       <span
                         className={`rounded border px-1.5 py-0.5 font-semibold tabular-nums ${VALUE_TONE}`}
                       >
-                        {player.ktcValueSf.toLocaleString()}
+                        {valueOf(player)?.toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -427,13 +430,13 @@ export function RosterSection({
                   ) : (
                     <>
                       <p className="text-xl font-semibold tabular-nums text-white">
-                        {player.ktcValueSf?.toLocaleString() ?? '—'}
+                        {valueOf(player)?.toLocaleString() ?? '—'}
                       </p>
                       <div className="flex items-center justify-end gap-2 text-[10px] text-slate-500">
                         <span>
                           #{player.rank || '—'} · {player.age || '—'}y
                         </span>
-                        <KtcTrend history={player.ktcHistory} />
+                        <KtcTrend history={player.ktcHistory} ctx={leagueContext} />
                       </div>
                     </>
                   )}

@@ -1,4 +1,4 @@
-import { CORE_POSITIONS, playerValue } from '@/lib/sleeper-sdk'
+import { CORE_POSITIONS, playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from '@/components/league-buddy/types'
 
 /**
@@ -46,10 +46,10 @@ const core = (players: PlayerData[]) =>
     (CORE_POSITIONS as readonly string[]).includes(p.position?.toUpperCase() ?? '')
   )
 
-export function teamValueScore(players: PlayerData[]) {
+export function teamValueScore(players: PlayerData[], ctx: LeagueContext) {
   return Math.round(
     qualityWeighted(
-      core(players).map((p) => playerValue(p, { superflex: true })),
+      core(players).map((p) => playerValue(p, ctx)),
       TEAM_SCORE_RULES.valueCeiling
     )
   )
@@ -68,10 +68,10 @@ export function teamProductionScore(players: PlayerData[]) {
  * 0-100 composite per team, relative to the league: 70% quality-weighted dynasty value,
  * 30% quality-weighted production. A league with no production yet scores on value alone.
  */
-export function teamScores(teams: TeamData[]) {
+export function teamScores(teams: TeamData[], ctx: LeagueContext) {
   const raw = teams.map((t) => ({
     rosterId: t.rosterId,
-    value: teamValueScore(t.players),
+    value: teamValueScore(t.players, ctx),
     production: teamProductionScore(t.players),
   }))
   const maxValue = Math.max(1, ...raw.map((r) => r.value))

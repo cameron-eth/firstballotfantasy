@@ -1,6 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
 import { tradeSignals } from '@/lib/trade-signals'
+import { ktcValue, resolveLeagueContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from '../types'
 import type { Scenario, Target } from '@/lib/team-scenarios'
 import type { Prospect } from '@/components/scouting/types'
@@ -89,11 +90,9 @@ export function LineupMap({
       ),
     [team, teams, rawSlots]
   )
-  const superflex =
-    rawSlots.some((slot) => slot === 'SUPER_FLEX' || slot === 'QB/RB/WR/TE') ||
-    rawSlots.filter((slot) => slot === 'QB').length > 1
-  const ktcValue = (p: MapPlayer) => {
-    const value = superflex ? p.roster?.ktcValueSf : p.roster?.ktcValue1qb
+  const ctx = resolveLeagueContext({ roster_positions: rawSlots })
+  const ktcLabel = (p: MapPlayer) => {
+    const value = p.roster ? ktcValue(p.roster, ctx) : undefined
     return value != null && Number.isFinite(value) ? value.toLocaleString('en-US') : '—'
   }
   const describe = (p: PlayerData): MapPlayer => ({
@@ -204,9 +203,9 @@ export function LineupMap({
         {p.roster && (
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
-              KTC · {superflex ? 'SF' : '1QB'}
+              KTC · {ctx.superflex ? 'SF' : '1QB'}
             </span>
-            <span className="text-base font-semibold tabular-nums text-white">{ktcValue(p)}</span>
+            <span className="text-base font-semibold tabular-nums text-white">{ktcLabel(p)}</span>
           </div>
         )}
       </StrategyCard>

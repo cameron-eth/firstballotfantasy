@@ -1,4 +1,5 @@
 'use client'
+import { ktcValue } from '@/lib/sleeper-sdk'
 import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
@@ -100,7 +101,7 @@ export function PlanningSuggestions({
     focus.kind === 'player' && inventory
       ? tradeOpportunities(focus.player, team, teams, inventory.superflex)
           .filter((c) => {
-            const own = inventory.superflex ? focus.player.ktcValueSf : focus.player.ktcValue1qb
+            const own = ktcValue(focus.player, inventory)
             return own && c.value && Math.abs(own - c.value) / Math.max(own, c.value) <= 0.3
           })
           .slice(0, 12)
@@ -267,7 +268,7 @@ export function PlanningSuggestions({
                         player.headshot_url ||
                         `https://sleepercdn.com/content/nfl/players/${player.playerId}.jpg`
                       }
-                      label={`KTC ${(inventory?.superflex ? player.ktcValueSf : player.ktcValue1qb)?.toLocaleString() ?? '—'}`}
+                      label={`KTC ${(inventory ? ktcValue(player, inventory) : undefined)?.toLocaleString() ?? '—'}`}
                     />
                   ))}
                   {f?.givePicks.map(renderPick)}

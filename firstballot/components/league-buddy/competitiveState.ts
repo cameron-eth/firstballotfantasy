@@ -15,12 +15,9 @@
 //   PURGATORY        │          CONTENDER
 //   weak + old       │          strong + aging
 //
-import { playerValue, type ValuationContext } from '@/lib/sleeper-sdk'
+import { playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import type { PlayerData, TeamData } from './types'
 import { teamValueScore } from '@/lib/team-score'
-
-/** Dynasty superflex pricing — QB scarcity is part of the value signal. */
-const VALUATION_CTX: ValuationContext = { superflex: true }
 
 const CORE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 const CORE_DEPTH = 12 // top N assets that define a roster's value & age profile
@@ -149,20 +146,20 @@ export interface LeaguePlacements {
 }
 
 /** Top-N core assets by dynasty value (SDK handles the KTC-or-rank fallback). */
-function coreAssets(team: TeamData): PlayerData[] {
+function coreAssets(team: TeamData, ctx: LeagueContext): PlayerData[] {
   return [...team.players]
     .filter((p) => CORE_POSITIONS.includes(p.position))
-    .sort((a, b) => playerValue(b, VALUATION_CTX) - playerValue(a, VALUATION_CTX))
+    .sort((a, b) => playerValue(b, ctx) - playerValue(a, ctx))
     .slice(0, CORE_DEPTH)
 }
 
 /** Quality-weighted, so a deep bench of low-value players cannot outrank a few stars. */
-function rosterValue(team: TeamData): number {
-  return teamValueScore(team.players)
+function rosterValue(team: TeamData, ctx: LeagueContext): number {
+  return teamValueScore(team.players, ctx)
 }
 
-function coreAvgAge(team: TeamData): number {
-  const aged = coreAssets(team).filter((p) => (p.age ?? 0) > 0)
+function coreAvgAge(team: TeamData, ctx: LeagueContext): number {
+  const aged = coreAssets(team, ctx).filter((p) => (p.age ?? 0) > 0)
   if (aged.length === 0) return 0
   return aged.reduce((sum, p) => sum + p.age, 0) / aged.length
 }
@@ -189,20 +186,24 @@ function winPct(team: TeamData): number {
  * Compute competitive-state placements for every team, relative to the league.
  * `inSeason` enables the House Money overlay (needs real games played).
  */
-export function calculateLeaguePlacements(teams: TeamData[], inSeason: boolean): LeaguePlacements {
+export function calculateLeaguePlacements(
+  teams: TeamData[],
+  inSeason: boolean,
+  ctx: LeagueContext
+): LeaguePlacements {
   if (!teams || teams.length === 0) {
     return { placements: {}, nowMedian: 50, futureMedian: 50 }
   }
 
   const raw = teams.map((t) => ({
     rosterId: t.rosterId,
-    value: rosterValue(t),
+    value: rosterValue(t, ctx),
     // youth: younger core → higher future score, so we invert age
     youth: (() => {
-      const age = coreAvgAge(t)
+      const age = coreAvgAge(t, ctx)
       return age > 0 ? -age : 0
     })(),
-    avgAge: coreAvgAge(t),
+    avgAge: coreAvgAge(t, ctx),
   }))
 
   const values = raw.map((r) => r.value)

@@ -27,8 +27,8 @@
       "BN"
     ],
     "superflex": {
-      "powerRankings": false,
-      "isSuperflexLineup": false,
+      "powerRankings": true,
+      "leagueContext": true,
       "tradeInventory": true
     },
     "ktcNamesMatched": 308
@@ -81,7 +81,7 @@
       "tieredPlayers": 26,
       "power": {
         "rank": 9,
-        "score": 72
+        "score": 65
       },
       "placement": {
         "state": "purgatory",
@@ -114,7 +114,7 @@
       "tieredPlayers": 27,
       "power": {
         "rank": 11,
-        "score": 65
+        "score": 58
       },
       "placement": {
         "state": "purgatory",
@@ -147,7 +147,7 @@
       "tieredPlayers": 24,
       "power": {
         "rank": 4,
-        "score": 85
+        "score": 84
       },
       "placement": {
         "state": "contender",
@@ -213,7 +213,7 @@
       "tieredPlayers": 27,
       "power": {
         "rank": 10,
-        "score": 69
+        "score": 65
       },
       "placement": {
         "state": "rebuild",
@@ -246,7 +246,7 @@
       "tieredPlayers": 22,
       "power": {
         "rank": 12,
-        "score": 57
+        "score": 52
       },
       "placement": {
         "state": "purgatory",
@@ -279,7 +279,7 @@
       "tieredPlayers": 25,
       "power": {
         "rank": 8,
-        "score": 75
+        "score": 71
       },
       "placement": {
         "state": "rebuild",
@@ -312,7 +312,7 @@
       "tieredPlayers": 27,
       "power": {
         "rank": 7,
-        "score": 79
+        "score": 76
       },
       "placement": {
         "state": "rebuild",
@@ -345,7 +345,7 @@
       "tieredPlayers": 25,
       "power": {
         "rank": 3,
-        "score": 86
+        "score": 84
       },
       "placement": {
         "state": "juggernaut",
@@ -378,7 +378,7 @@
       "tieredPlayers": 26,
       "power": {
         "rank": 5,
-        "score": 83
+        "score": 81
       },
       "placement": {
         "state": "juggernaut",
@@ -411,7 +411,7 @@
       "tieredPlayers": 26,
       "power": {
         "rank": 6,
-        "score": 82
+        "score": 80
       },
       "placement": {
         "state": "contender",

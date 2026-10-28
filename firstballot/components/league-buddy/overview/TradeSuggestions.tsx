@@ -1,4 +1,5 @@
 'use client'
+import { ktcValue } from '@/lib/sleeper-sdk'
 import { useState } from 'react'
 import { ArrowRight, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -47,7 +48,7 @@ export function TradeSuggestions({
     receive: PlayerData
     partnerId: number
   } | null>(null)
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const value = (p: PlayerData) => ktcValue(p, { superflex })
 
   return (
     <section aria-label="Trade suggestions" className="min-w-0">

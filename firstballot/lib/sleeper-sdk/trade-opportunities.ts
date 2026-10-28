@@ -1,3 +1,4 @@
+import { ktcValue } from './values'
 import type { PlayerData, TeamData } from '@/components/league-buddy/types'
 /** Selected-player version of SDK surplus/need matching; KTC is context, not acceptance odds. */
 export function tradeOpportunities(
@@ -6,7 +7,7 @@ export function tradeOpportunities(
   teams: TeamData[],
   superflex: boolean
 ) {
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const value = (p: PlayerData) => ktcValue(p, { superflex })
   const count = (team: TeamData, position: string) =>
     team.players.filter((p) => p.position === position).length
   const median = (position: string) => {
@@ -58,7 +59,7 @@ export function suggestedTeamTrades(
   superflex: boolean,
   dismissed: string[] = []
 ) {
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const value = (p: PlayerData) => ktcValue(p, { superflex })
   const counts = (team: TeamData, pos: string) =>
     team.players.filter((p) => p.position === pos).length
   const median = (pos: string) => {
@@ -124,7 +125,7 @@ export function valueOpportunities(
   superflex: boolean,
   tolerance = 0.25
 ) {
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const value = (p: PlayerData) => ktcValue(p, { superflex })
   if (!give.value) return []
   return teams
     .filter((t) => t.rosterId !== mine.rosterId)
@@ -164,7 +165,7 @@ export function packageOpportunities(
   teams: TeamData[],
   superflex: boolean
 ) {
-  const value = (p: PlayerData) => (superflex ? p.ktcValueSf : p.ktcValue1qb)
+  const value = (p: PlayerData) => ktcValue(p, { superflex })
   const total = players.reduce((sum, p) => sum + (value(p) ?? 0), 0)
   return valueOpportunities(
     { value: total, positions: [...new Set(players.map((p) => p.position))] },

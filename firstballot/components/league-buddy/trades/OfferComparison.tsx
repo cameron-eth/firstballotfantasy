@@ -1,3 +1,4 @@
+import { ktcValue } from '@/lib/sleeper-sdk'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import type { PlayerData, TeamData } from '../types'
@@ -23,7 +24,7 @@ const tierOf = (p: PlayerData) =>
 export function sideValue(side: OfferSide, players: PlayerData[], superflex: boolean) {
   return side.players.reduce((sum, id) => {
     const p = players.find((x) => x.playerId === id)
-    return sum + ((superflex ? p?.ktcValueSf : p?.ktcValue1qb) ?? 0)
+    return sum + ((p ? ktcValue(p, { superflex }) : undefined) ?? 0)
   }, 0)
 }
 
@@ -72,7 +73,7 @@ function Side({
             team={player.team || 'FA'}
             image={portrait(player)}
             tier={tierOf(player)}
-            label={`KTC ${(superflex ? player.ktcValueSf : player.ktcValue1qb)?.toLocaleString() ?? '—'}`}
+            label={`KTC ${ktcValue(player, { superflex })?.toLocaleString() ?? '—'}`}
           />
         ))}
         {sidePicks.map((pick) => (

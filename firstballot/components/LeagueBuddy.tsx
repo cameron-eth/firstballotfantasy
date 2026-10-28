@@ -77,6 +77,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     currentWeek,
     allPlayers,
     rosterPositionsRaw,
+    leagueContext,
     leagueTransactions,
     valuesReady,
     refetch: fetchLeagueData,
@@ -94,24 +95,24 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
   // Memoized league position rankings
   const leaguePositionRankings = useMemo(() => {
     try {
-      return calculateLeaguePositionRankings(sortedTeams)
+      return calculateLeaguePositionRankings(sortedTeams, leagueContext)
     } catch (error) {
       console.error('Error calculating position rankings:', error)
       return {}
     }
-  }, [sortedTeams])
+  }, [sortedTeams, leagueContext])
 
   // Memoized competitive-state placements (Now × Future), computed once per render tree
   const leaguePlacements = useMemo(() => {
     // Placements depend on KTC values; computing earlier shows a state that changes a moment later.
     if (!valuesReady) return { placements: {}, nowMedian: 50, futureMedian: 50 }
     try {
-      return calculateLeaguePlacements(teams, !isOffSeason())
+      return calculateLeaguePlacements(teams, !isOffSeason(), leagueContext)
     } catch (error) {
       console.error('Error calculating league placements:', error)
       return { placements: {}, nowMedian: 50, futureMedian: 50 }
     }
-  }, [teams, valuesReady])
+  }, [teams, valuesReady, leagueContext])
 
   // Memoized event handlers to prevent unnecessary re-renders
   const handleTeamSelect = useCallback((team: TeamData) => {
@@ -251,7 +252,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       powerScores,
       draftOrder,
       weekProjections,
-      superflex: powerRankings.superflex,
+      superflex: leagueContext.superflex,
     }),
     [
       leaguePlacements,
@@ -259,7 +260,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
       powerScores,
       draftOrder,
       weekProjections,
-      powerRankings.superflex,
+      leagueContext.superflex,
     ]
   )
 
@@ -421,6 +422,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           sortedTeams={sortedTeams}
           teams={teams}
           projections={rosterProjections}
+          leagueContext={leagueContext}
         />
       )}
 
@@ -435,6 +437,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
           <TradeIntelligencePanel
             players={selectedTeam.players}
             leaguePlayerPool={teams.flatMap((t) => t.players)}
+            leagueContext={leagueContext}
           />
         </div>
       )}

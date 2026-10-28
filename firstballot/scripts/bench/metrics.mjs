@@ -41,8 +41,10 @@ for (const name of ['sf-dynasty', '1qb-dynasty', 'redraft-1qb']) {
   installReplay(fixture)
   clearPlayersMemo()
   const bundle = await fetchLeagueDataBundle(fixture.leagueId, null, 0)
+  const ctx = bundle.leagueContext
   const teams = withTeamScores(
-    applyKtc(bundle.teams, await fetchKtcMaps(ktcNamesFor(bundle.teams), 0))
+    applyKtc(bundle.teams, await fetchKtcMaps(ktcNamesFor(bundle.teams), 0)),
+    ctx
   )
   const settings = await fetchStandingsSettings(fixture.leagueId, teams)
   const viewer = teams[0]
@@ -66,11 +68,11 @@ for (const name of ['sf-dynasty', '1qb-dynasty', 'redraft-1qb']) {
         ),
       50,
     ],
-    placements: [() => calculateLeaguePlacements(teams, true), 50],
-    'position rankings': [() => calculateLeaguePositionRankings(teams), 50],
-    'team scores + grades': [() => withTeamScores(teams), 50],
-    'team scores only': [() => teamScores(teams), 50],
-    'suggested trades': [() => suggestedTeamTrades(viewer, teams, true, []), 20],
+    placements: [() => calculateLeaguePlacements(teams, true, ctx), 50],
+    'position rankings': [() => calculateLeaguePositionRankings(teams, ctx), 50],
+    'team scores + grades': [() => withTeamScores(teams, ctx), 50],
+    'team scores only': [() => teamScores(teams, ctx), 50],
+    'suggested trades': [() => suggestedTeamTrades(viewer, teams, ctx.superflex, []), 20],
   }
   for (const [label, [fn, runs]] of Object.entries(cases))
     rows.push({ fixture: name, metric: label, runs, ...time(fn, runs) })

@@ -9,11 +9,13 @@ import { KtcSparkline } from '@/components/scouting/KtcSparkline'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { PlayerData } from './types'
 import { calculatePositionalMedians, calculatePERatio, type PositionalMedians } from './utils'
+import { ktcHistoryValue, ktcValue, type LeagueContext } from '@/lib/sleeper-sdk'
 
 interface TradeIntelligencePanelProps {
   players: PlayerData[]
   /** All rostered players league-wide, used to compute positional P/E medians. Falls back to `players` (within-team only) if omitted. */
   leaguePlayerPool?: PlayerData[]
+  leagueContext: LeagueContext
 }
 
 function getDynastyWindow(
@@ -47,10 +49,10 @@ interface ClassifiedPlayer {
 }
 
 /** Daily delta: last scraped value minus the one before it */
-function getDailyDelta(player: PlayerData): number {
+function getDailyDelta(player: PlayerData, ctx: LeagueContext): number {
   const hist = player.ktcHistory
   if (!hist || hist.length < 2) return 0
-  return hist[hist.length - 1].value_sf - hist[hist.length - 2].value_sf
+  return ktcHistoryValue(hist[hist.length - 1], ctx) - ktcHistoryValue(hist[hist.length - 2], ctx)
 }
 
 const PE_UNDERVALUED = 0.7
@@ -58,13 +60,14 @@ const PE_OVERVALUED = 1.5
 
 function classifyPlayer(
   player: PlayerData,
-  medians: Record<string, PositionalMedians>
+  medians: Record<string, PositionalMedians>,
+  ctx: LeagueContext
 ): ClassifiedPlayer {
-  const dailyDelta = getDailyDelta(player)
+  const dailyDelta = getDailyDelta(player, ctx)
   const age = player.age ?? 0
   const position = player.position ?? 'WR'
   const { label: dynastyWindow } = getDynastyWindow(age, position)
-  const peRatio = calculatePERatio(player, medians)
+  const peRatio = calculatePERatio(player, medians, ctx)
 
   // Primary signal: production vs price, when there's an actual production sample.
   if (peRatio !== null) {
@@ -125,7 +128,7 @@ function classifyPlayer(
   }
 }
 
-function PlayerRow({ classified }: { classified: ClassifiedPlayer }) {
+function PlayerRow({ classified, ctx }: { classified: ClassifiedPlayer; ctx: LeagueContext }) {
   const { player, dailyDelta, reason } = classified
   return (
     <PlayerTradingCard
@@ -144,8 +147,8 @@ function PlayerRow({ classified }: { classified: ClassifiedPlayer }) {
     >
       <div className="flex justify-between gap-2">
         <span>
-          KTC SF{' '}
-          <strong className="text-white">{player.ktcValueSf?.toLocaleString() ?? '—'}</strong>
+          KTC {ctx.superflex ? 'SF' : '1QB'}{' '}
+          <strong className="text-white">{ktcValue(player, ctx)?.toLocaleString() ?? '—'}</strong>
         </span>
         <span className={dailyDelta >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
           {dailyDelta > 0 ? '+' : ''}
@@ -157,7 +160,7 @@ function PlayerRow({ classified }: { classified: ClassifiedPlayer }) {
           <KtcSparkline
             playerName={player.playerName}
             history={player.ktcHistory}
-            useSf
+            useSf={ctx.superflex}
             width={170}
             height={32}
           />
@@ -167,17 +170,21 @@ function PlayerRow({ classified }: { classified: ClassifiedPlayer }) {
   )
 }
 
-export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntelligencePanelProps) {
+export function TradeIntelligencePanel({
+  players,
+  leaguePlayerPool,
+  leagueContext,
+}: TradeIntelligencePanelProps) {
   const medians = useMemo(
-    () => calculatePositionalMedians(leaguePlayerPool ?? players),
-    [leaguePlayerPool, players]
+    () => calculatePositionalMedians(leaguePlayerPool ?? players, leagueContext),
+    [leaguePlayerPool, players, leagueContext]
   )
 
   const classified = useMemo<ClassifiedPlayer[]>(() => {
     // Only include skill positions
     const skillPlayers = players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
-    return skillPlayers.map((p) => classifyPlayer(p, medians))
-  }, [players, medians])
+    return skillPlayers.map((p) => classifyPlayer(p, medians, leagueContext))
+  }, [players, medians, leagueContext])
 
   const sellPlayers = useMemo(
     () =>
@@ -278,7 +285,7 @@ export function TradeIntelligencePanel({ players, leaguePlayerPool }: TradeIntel
               >
                 {col.players.map((c) => (
                   <div key={c.player.playerId} className="w-60 shrink-0 snap-start">
-                    <PlayerRow classified={c} />
+                    <PlayerRow classified={c} ctx={leagueContext} />
                   </div>
                 ))}
               </div>

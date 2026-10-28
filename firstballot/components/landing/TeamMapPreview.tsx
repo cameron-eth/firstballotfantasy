@@ -329,8 +329,8 @@ export function TeamMapPreview() {
                 key={player.id}
                 initial={reduced ? false : { opacity: 0, y: 24, rotateY: -12 }}
                 animate={{ opacity: 1, y: 0, rotateY: 0 }}
-                exit={reduced ? undefined : { opacity: 0, y: -16 }}
-                transition={{ duration: 0.45 }}
+                exit={reduced ? undefined : { opacity: 0, transition: { duration: 0.12 } }}
+                transition={{ duration: 0.4, delay: 0.1 }}
               >
                 <DemoCard player={player} />
               </motion.div>

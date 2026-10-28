@@ -13,18 +13,16 @@ interface OffBoardPanelProps {
   /** Eligible prospects for the active position tab that are not on the board. */
   offBoardProspects: Prospect[]
   onAddToDraftBoard: (prospect: Prospect) => void
-  onAddNext: () => void
   onClearBoard: () => void
 }
 
 /**
- * The "Prospects Not On Board" list plus Quick Actions. Owns its own search box
+ * The "Not on your board" list, with a confirmed Clear board. Owns its own search box
  * and image-error set — nothing above it needs either.
  */
 export function OffBoardPanel({
   offBoardProspects,
   onAddToDraftBoard,
-  onAddNext,
   onClearBoard,
 }: OffBoardPanelProps) {
   const [search, setSearch] = useState('')
@@ -41,9 +39,19 @@ export function OffBoardPanel({
   return (
     <>
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <h3 className="font-mono font-bold text-foreground">Prospects Not On Board</h3>
-          <span className="text-xs text-muted-foreground">{filtered.length}</span>
+        <div className="flex items-center justify-between gap-3 border-b border-border p-4">
+          <h3 className="text-sm font-semibold text-white">
+            Not on your board <span className="ml-1 font-normal text-slate-500">{filtered.length}</span>
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Remove every prospect in this class from your board?')) onClearBoard()
+            }}
+            className="text-xs text-slate-500 transition-colors hover:text-rose-300"
+          >
+            Clear board
+          </button>
         </div>
 
         <div className="p-3 border-b border-border">
@@ -116,23 +124,6 @@ export function OffBoardPanel({
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-lg p-4">
-        <h3 className="font-mono font-bold text-foreground mb-3">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={onAddNext}
-            className="px-3 py-2 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
-          >
-            Add Next
-          </button>
-          <button
-            onClick={onClearBoard}
-            className="px-3 py-2 text-xs rounded bg-secondary text-secondary-foreground hover:bg-secondary/80"
-          >
-            Clear Board
-          </button>
-        </div>
-      </div>
     </>
   )
 }

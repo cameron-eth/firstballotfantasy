@@ -27,7 +27,8 @@ export async function PUT(request: NextRequest) {
   const body = await request.json().catch(() => null)
   const prospectId = Number(body?.prospect_id)
   const notes = body?.notes
-  if (!Number.isInteger(prospectId) || prospectId <= 0 || typeof notes !== 'string' || notes.length > 5000) {
+  // Curated prospects use negative ids, so any non-zero integer is a valid prospect id.
+  if (!Number.isInteger(prospectId) || prospectId === 0 || typeof notes !== 'string' || notes.length > 5000) {
     return NextResponse.json({ error: 'A prospect ID and notes of at most 5000 characters are required' }, { status: 400 })
   }
   const client = createAuthenticatedSupabaseClient(identity.jwt)

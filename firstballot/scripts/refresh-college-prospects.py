@@ -19,9 +19,21 @@ import urllib.parse
 import urllib.request
 
 
-YEARS = (2027, 2028, 2029)
-# A class smaller than this means the query came back partial, not that the class shrank.
-MIN_ROWS = {2027: 50}
+def next_draft_class(today=None):
+    """The next class to be drafted. Same rule as lib/draft-years.ts: the draft is in late
+    April, so a class is upcoming through April of its year (tests/draft-years.test.mjs)."""
+    today = today or dt.datetime.now(dt.timezone.utc).date()
+    return today.year if today.month < 5 else today.year + 1
+
+
+def upcoming_classes(offsets, today=None):
+    """Class years by offset from the next class: offset 0 is the next draft."""
+    first = next_draft_class(today)
+    return [first + offset for offset in offsets]
+
+
+# A next class smaller than this means the query came back partial, not that it shrank.
+NEXT_CLASS_MIN_ROWS = 50
 DEFAULT_MIN_ROWS = 10
 STAT_NAMES = {
     "passing": {
@@ -166,7 +178,7 @@ def refresh_year(base, key, year, args):
         rows = get_json(f"https://www.firstballotff.com/api/prospects?draft_year={year}")
     else:
         rows = supabase_json(base, key, f"dynasty_prospects?select=id,name,school,espn_id,headshot_url,college_stats&draft_year=eq.{year}&order=id&limit=1000")
-    if len(rows) < MIN_ROWS.get(year, DEFAULT_MIN_ROWS):
+    if len(rows) < (NEXT_CLASS_MIN_ROWS if year == next_draft_class() else DEFAULT_MIN_ROWS):
         raise RuntimeError(f"Unexpected {year} class size: {len(rows)}")
     checked_at = dt.datetime.now(dt.timezone.utc)
     ids = []
@@ -227,13 +239,21 @@ def main():
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--public-dry-run", action="store_true",
                         help="Inspect the public production prospect list without database credentials")
-    parser.add_argument("--season", type=int, default=YEARS[0] - 1)
-    parser.add_argument("--years", type=int, nargs="+", default=list(YEARS))
+    parser.add_argument("--season", type=int, default=None,
+                        help="College season to read; defaults to the season before the next draft")
+    parser.add_argument("--years", type=int, nargs="+", default=None,
+                        help="Explicit class years (overrides --offsets)")
+    parser.add_argument("--offsets", type=int, nargs="+", default=[0, 1, 2],
+                        help="Classes by offset from the next draft (0 = next class)")
     parser.add_argument("--find-ids", action="store_true",
                         help="Fill missing ESPN athlete ids from ESPN search before refreshing stats")
     parser.add_argument("--min-coverage", type=float, default=0.95,
                         help="Share of a class that must verify before its stats are written")
     args = parser.parse_args()
+    if args.years is None:
+        args.years = upcoming_classes(args.offsets)
+    if args.season is None:
+        args.season = next_draft_class() - 1
     if args.apply and args.public_dry_run:
         parser.error("--apply cannot be combined with --public-dry-run")
     base = os.environ.get("SUPABASE_URL") or os.environ.get("NEXT_PUBLIC_SUPABASE_URL")

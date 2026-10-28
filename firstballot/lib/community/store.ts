@@ -2,6 +2,7 @@ import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { createHash } from 'node:crypto'
 import type { Ballot, Candidate } from './rating'
+import { nextDraftClass } from '@/lib/draft-years'
 const bucket = 'community-ballots'
 export const ballotPath = (userId: string, day: string, round = 0) =>
   `${day}${round ? `-r${round}` : ''}-${createHash('sha256').update(userId).digest('hex')}.json`
@@ -80,7 +81,7 @@ export async function candidates(): Promise<Candidate[]> {
     supabaseAdmin
       .from('dynasty_prospects')
       .select('id,name,position,school,draft_year,headshot_url,rank')
-      .gte('draft_year', new Date().getUTCFullYear() + 1)
+      .gte('draft_year', nextDraftClass())
       .in('position', ['QB', 'RB', 'WR', 'TE'])
       .order('rank', { ascending: true })
       .limit(1000),

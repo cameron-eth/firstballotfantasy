@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 import type { SaveDraftboardRequest } from '@/types/draftboard'
+import { nextDraftClass } from '@/lib/draft-years'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
         .from('user_draftboards')
         .update({
           prospect_ids: body.prospect_ids,
-          draft_year: body.draft_year || Math.max(2027, new Date().getFullYear() + 1),
+          draft_year: body.draft_year || nextDraftClass(),
         })
         .eq('id', existingBoard.id)
         .eq('user_id', userId)
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         name: body.name,
-        draft_year: body.draft_year || Math.max(2027, new Date().getFullYear() + 1),
+        draft_year: body.draft_year || nextDraftClass(),
         prospect_ids: body.prospect_ids,
       })
       .select()

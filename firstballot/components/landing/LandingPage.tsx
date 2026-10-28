@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { ArrowRight, BookOpen, ClipboardList, Shield, Users } from 'lucide-react'
 import { ScoutingExperience, ScrollReveal } from './ScoutingExperience'
 import { ProspectTradingCard } from './ProspectTradingCard'
+import { nextDraftClass, upcomingDraftClasses } from '@/lib/draft-years'
 
 type Prospect = {
   id: number
@@ -31,7 +32,7 @@ async function loadProspects(): Promise<Prospect[]> {
 const paths = [
   { href: '/scouting-portal', title: 'Scout the player', detail: 'Compare college production, scouting grades, player profiles and pro projections across upcoming classes.', icon: BookOpen, action: 'Explore prospects', signal: 'COLLEGE → PRO' },
   { href: '/community-rankings', title: 'Add your voice', detail: 'Choose between two players in a quick daily matchup. Each vote helps shape the shared dynasty rankings.', icon: Users, action: 'See community rankings', signal: 'ONE PICK A DAY' },
-  { href: '/scouting-portal?tab=draftboard', title: 'Make your own board', detail: 'Keep a separate draft board for each class and rank prospects in the order you believe in.', icon: ClipboardList, action: 'Build a draft board', signal: '2027 · 2028 · 2029' },
+  { href: '/scouting-portal?tab=draftboard', title: 'Make your own board', detail: 'Keep a separate draft board for each class and rank prospects in the order you believe in.', icon: ClipboardList, action: 'Build a draft board', signal: upcomingDraftClasses(3).join(' · ') },
   { href: '/league-buddy', title: 'Read your league', detail: 'See weekly lineup projections, standings, playoff odds and the MaxPF race for draft position.', icon: Shield, action: 'Open league view', signal: 'ROSTER → SEASON' },
 ]
 
@@ -43,12 +44,11 @@ export function LandingPage() {
     revalidateOnFocus: true,
   })
   const prospects = data ?? []
-  const currentYear = new Date().getFullYear()
   const watchlist = watchlistOrder
     .map((name) => prospects.find((player) => player.draft_year === 2029 && player.name === name))
     .filter((player): player is Prospect => Boolean(player))
   const upcoming = prospects
-    .filter((player) => (player.draft_year ?? 0) >= Math.max(2027, currentYear + 1) && player.draft_year !== 2029 && player.overall_grade != null)
+    .filter((player) => (player.draft_year ?? 0) >= nextDraftClass() && player.draft_year !== 2029 && player.overall_grade != null)
     .sort((a, b) => (a.draft_year ?? 0) - (b.draft_year ?? 0) || (a.overall_rank ?? 999) - (b.overall_rank ?? 999))
     .slice(0, 6)
 

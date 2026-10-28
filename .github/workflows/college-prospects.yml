@@ -29,7 +29,7 @@ jobs:
           exit 1
       - name: Check ESPN parser safeguards
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s firstballot/scripts/tests -p 'test_*.py'
-      - name: Update the 2027, 2028 and 2029 classes from ESPN
+      - name: Update the next three draft classes from ESPN
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -39,8 +39,8 @@ jobs:
             exit 1
           fi
           # The next class must verify almost fully; younger classes include redshirts with no current season.
-          python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --years 2027
-          python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --years 2028 2029 --min-coverage 0.8
+          python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --offsets 0
+          python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --offsets 1 2 --min-coverage 0.8
       - name: Report run
         if: always()
         uses: ./.github/actions/job-report

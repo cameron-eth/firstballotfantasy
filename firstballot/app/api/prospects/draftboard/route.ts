@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
+import { nextDraftClass } from '@/lib/draft-years'
 
 export const dynamic = 'force-dynamic'
 
 /** Draft boards only cover classes that have not been drafted yet. */
-const MIN_DRAFT_YEAR = Math.max(2027, new Date().getFullYear() + 1)
 
 interface RawProspect {
   rank: number | null
@@ -82,6 +82,8 @@ function toPlayer(raw: RawProspect, rank: number): DraftboardPlayer {
 }
 
 export async function GET() {
+  // Per request, not at module load: a long-lived server would otherwise keep last year's class.
+  const minDraftYear = nextDraftClass()
   try {
     const { data, error } = await supabaseServer
       .from('dynasty_prospects')
@@ -104,7 +106,7 @@ export async function GET() {
       `
       )
       .in('position', ['QB', 'RB', 'WR', 'TE'])
-      .gte('draft_year', MIN_DRAFT_YEAR)
+      .gte('draft_year', minDraftYear)
       .not('overall_grade', 'is', null)
       .order('overall_grade', { ascending: false })
 
@@ -140,7 +142,7 @@ export async function GET() {
     ).sort()
 
     return NextResponse.json({
-      year: years.length ? years.join(' / ') : `${MIN_DRAFT_YEAR}+`,
+      year: years.length ? years.join(' / ') : `${minDraftYear}+`,
       totalProspects: players.length,
       allProspects: players,
       byPosition,

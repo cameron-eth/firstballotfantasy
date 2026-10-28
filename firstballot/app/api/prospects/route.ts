@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { missingCurated2028, missingCurated2029 } from '@/lib/curated-prospects'
+import { lastDraftedClass, nextDraftClass } from '@/lib/draft-years'
 
 export const dynamic = 'force-dynamic'
 
@@ -165,8 +166,7 @@ function deriveRanks(records: RankedRecord[]) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const draftYear =
-      searchParams.get('draft_year') || String(Math.max(2027, new Date().getFullYear() + 1))
+    const draftYear = searchParams.get('draft_year') || String(nextDraftClass())
     const isAllYears = draftYear === 'all'
     const history = searchParams.get('scope') === 'history'
     const yearNum = !isAllYears ? toNumberOrNull(draftYear) : null
@@ -182,8 +182,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (history) {
-      const today = new Date()
-      query = query.lte('draft_year', today.getFullYear() - (today.getMonth() < 4 ? 1 : 0))
+      query = query.lte('draft_year', lastDraftedClass())
     }
 
     // Sort by grade first so the best players surface regardless of class year

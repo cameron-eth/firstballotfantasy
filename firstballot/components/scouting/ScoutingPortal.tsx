@@ -23,6 +23,7 @@ import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
 import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
 import { sortProspectsForBrowse } from './sortProspectsForBrowse'
+import { DRAFT_BOARD_MIN_YEAR } from './board-player'
 
 interface RosterPlayer {
   id: string
@@ -237,9 +238,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
   // Draftboard persistence
   const { savedBoards, loading: boardsLoading, saving: savingBoard, error: boardError, saveBoard } = useDraftboard()
-  const boardYears = useMemo(() => [...new Set(prospects.filter((p) => (p.draft_year ?? 0) >= 2027).map((p) => p.draft_year as number))].sort(), [prospects])
+  const boardYears = useMemo(() => [...new Set(prospects.filter((p) => (p.draft_year ?? 0) >= DRAFT_BOARD_MIN_YEAR).map((p) => p.draft_year as number))].sort(), [prospects])
   const [selectedBoardYear, setSelectedBoardYear] = useState<number | null>(null)
-  const activeBoardYear = selectedBoardYear && boardYears.includes(selectedBoardYear) ? selectedBoardYear : boardYears[0] ?? 2027
+  const activeBoardYear = selectedBoardYear && boardYears.includes(selectedBoardYear) ? selectedBoardYear : boardYears[0] ?? DRAFT_BOARD_MIN_YEAR
   const savedBoard = savedBoards.find((board) => board.draft_year === activeBoardYear)
   const [initialBoardLoaded, setInitialBoardLoaded] = useState(false)
   useEffect(() => { setInitialBoardLoaded(false); setDraftBoard([]) }, [user?.id])
@@ -548,7 +549,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     if (!prospect?.id) {
       return
     }
-    if (prospect.draft_year && prospect.draft_year >= 2027) setSelectedBoardYear(prospect.draft_year)
+    if (prospect.draft_year && prospect.draft_year >= DRAFT_BOARD_MIN_YEAR) setSelectedBoardYear(prospect.draft_year)
     setDraftBoard((prev) => {
       // Check if already on board - use strict comparison
       const existingIndex = prev.findIndex((p) => p.id === prospect.id)

@@ -37,5 +37,27 @@ class CollegeStatsTest(unittest.TestCase):
         self.assertNotEqual(refresh.name_key("Tre Wisner"), refresh.name_key("Quintrevion Wisner"))
 
 
+class FindEspnIdTest(unittest.TestCase):
+    def search(self, contents):
+        refresh.get_json = lambda url, headers=None: {"results": [{"type": "player", "contents": contents}]}
+
+    def player(self, name, team, uid, league="NCAAF"):
+        return {"displayName": name, "subtitle": team, "uid": f"s:20~l:23~a:{uid}", "description": league,
+                "image": {"default": f"https://a.espncdn.com/i/headshots/college-football/players/full/{uid}.png"}}
+
+    def test_unique_name_and_school_match_returns_the_id(self):
+        self.search([self.player("Dia Bell", "Texas Longhorns", 5159112)])
+        found = refresh.find_espn_id({"id": 1, "name": "Dia Bell", "school": "Texas"})
+        self.assertEqual(found["espnId"], 5159112)
+
+    def test_wrong_school_wrong_league_or_two_matches_are_rejected(self):
+        self.search([self.player("Dia Bell", "Texas Tech Red Raiders", 1)])
+        self.assertEqual(refresh.find_espn_id({"id": 1, "name": "Dia Bell", "school": "Ohio State"})["reason"], "no_match")
+        self.search([self.player("Dia Bell", "Texas Longhorns", 1, league="NFL")])
+        self.assertEqual(refresh.find_espn_id({"id": 1, "name": "Dia Bell", "school": "Texas"})["reason"], "no_match")
+        self.search([self.player("Dia Bell", "Texas Longhorns", 1), self.player("Dia Bell", "Texas Longhorns", 2)])
+        self.assertEqual(refresh.find_espn_id({"id": 1, "name": "Dia Bell", "school": "Texas"})["reason"], "ambiguous")
+
+
 if __name__ == "__main__":
     unittest.main()

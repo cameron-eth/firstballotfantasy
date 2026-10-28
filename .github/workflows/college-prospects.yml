@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check ESPN parser safeguards
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s firstballot/scripts/tests -p 'test_*.py'
-      - name: Update the 2027 class from ESPN
+      - name: Update the 2027, 2028 and 2029 classes from ESPN
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -21,4 +21,6 @@ jobs:
             echo "Supabase service credentials are required."
             exit 1
           fi
-          python3 firstballot/scripts/refresh-college-prospects.py --apply
+          # The next class must verify almost fully; younger classes include redshirts with no current season.
+          python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --years 2027
+          python3 firstballot/scripts/refresh-college-prospects.py --apply --find-ids --years 2028 2029 --min-coverage 0.8

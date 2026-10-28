@@ -94,3 +94,29 @@ export function InjuryBadge({ status }: { status: string }) {
 const GRADE_TONE = (grade: string): TierTone =>
   /^A/.test(grade) ? 'elite' : /^B/.test(grade) ? 'good' : /^[DF]/.test(grade) ? 'bad' : 'neutral'
 export const gradeTone = GRADE_TONE
+
+/**
+ * Value and production are separate axes, so they never share a color:
+ * value (KTC market) is amber, production (points scored) is sky blue.
+ */
+export const VALUE_TONE = 'border-amber-300/50 bg-amber-300/10 text-amber-200'
+export const PRODUCTION_TONE = 'border-sky-300/50 bg-sky-300/10 text-sky-200'
+
+export function RankBadge({
+  kind,
+  rank,
+  of,
+}: {
+  kind: 'value' | 'production'
+  rank: number
+  of: number
+}) {
+  return (
+    <span
+      className={cn(base, kind === 'value' ? VALUE_TONE : PRODUCTION_TONE)}
+      title={`${kind === 'value' ? 'Dynasty value' : 'Points scored'} rank in this league`}
+    >
+      #{rank} of {of}
+    </span>
+  )
+}

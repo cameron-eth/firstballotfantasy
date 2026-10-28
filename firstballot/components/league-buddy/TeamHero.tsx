@@ -36,7 +36,7 @@ export function TeamHero({
         className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(#475569_1px,transparent_1px)] [background-size:22px_22px]"
       />
       <div className="relative grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-5">
           {stats.map((stat) => (
             <div key={stat.label} className="min-w-0">
               <dt className="text-[11px] text-slate-400">

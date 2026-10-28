@@ -27,3 +27,6 @@ export const sleeperRostersKey = (leagueId: string) => `sleeper:rosters:${league
  */
 export const leagueMetricsKey = (leagueId: string, format: 'sf' | '1qb', week: number) =>
   `league-metrics:${leagueId}:${format}:${week}`
+
+/** One league season's teams, trades and traded picks for the Trade Market (PR-16). Private. */
+export const tradeMarketSeasonKey = (leagueId: string) => `trade-market:${leagueId}`

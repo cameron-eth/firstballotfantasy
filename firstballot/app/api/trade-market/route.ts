@@ -3,10 +3,85 @@ import { TIER_KEY } from '@/lib/dynasty-tiers'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
 import { sleeperApi } from '@/lib/nextjs-cache'
 import { getCachedPlayers } from '@/lib/players-cache'
+import { snapshot } from '@/lib/platform/snapshots'
+import { tradeMarketSeasonKey } from '@/lib/platform/snapshot-keys'
+import { trimForTrades } from '@/lib/trade-market/payload'
 
 // Extend timeout for this route (fetching many weeks of transactions)
 export const maxDuration = 60 // 60 seconds
 export const dynamic = 'force-dynamic'
+
+/** A finished season's trades never change; the current one refreshes with the dashboard. */
+const CURRENT_SEASON_TTL = 15 * 60
+const PAST_SEASON_TTL = 30 * 24 * 3600
+const WEEKS = Array.from({ length: 21 }, (_, week) => week) // preseason (0) through week 20
+const BATCH_SIZE = 5
+
+type SeasonData = { teams: any[]; trades: any[]; picks: any[]; transactionsAnalyzed: number }
+
+/**
+ * One league season's teams, trades and traded picks, snapshotted (PR-16): about 25
+ * Sleeper calls per season ran on every page load before.
+ */
+function leagueSeason(league: { leagueId: string; season: string }, current: boolean) {
+  return snapshot<SeasonData>(
+    tradeMarketSeasonKey(league.leagueId),
+    'Sleeper',
+    current ? CURRENT_SEASON_TTL : PAST_SEASON_TTL,
+    async () => {
+      const [rosters, users] = await Promise.all([
+        sleeperApi.getLeagueRosters(league.leagueId).catch(() => []),
+        fetch(`https://api.sleeper.app/v1/league/${league.leagueId}/users`, { cache: 'no-store' })
+          .then((r) => r.json())
+          .catch(() => []),
+      ])
+      const teams = (rosters as any[]).map((roster: any) => {
+        const owner = roster.owner_id
+          ? (users as any[]).find((u: any) => u?.user_id === roster.owner_id)
+          : null
+        return {
+          rosterId: roster.roster_id,
+          teamName:
+            owner?.metadata?.team_name ||
+            owner?.display_name ||
+            owner?.first_name ||
+            `Team ${roster.roster_id}`,
+          ownerName: owner?.display_name || 'Unknown',
+          ownerAvatar: owner?.avatar || undefined,
+          ownerUsername: owner?.display_name || 'Unknown',
+          ownerId: roster.owner_id,
+          leagueId: league.leagueId,
+          season: league.season,
+        }
+      })
+      const transactions: any[] = []
+      for (let i = 0; i < WEEKS.length; i += BATCH_SIZE) {
+        const batch = await Promise.all(
+          WEEKS.slice(i, i + BATCH_SIZE).map((week) =>
+            sleeperApi.getTransactions(league.leagueId, week).catch(() => [])
+          )
+        )
+        transactions.push(...(batch.flat() as any[]))
+      }
+      const picks = (await sleeperApi.getTradedPicks(league.leagueId).catch(() => [])) as any[]
+      const tag = (row: Record<string, any>) => ({
+        ...row,
+        _leagueId: league.leagueId,
+        _leagueSeason: league.season,
+      })
+      return {
+        payload: {
+          teams,
+          trades: transactions.filter((tx) => tx.type === 'trade').map(tag),
+          picks: picks.map(tag),
+          transactionsAnalyzed: transactions.length,
+        },
+        season: Number(league.season) || undefined,
+      }
+    },
+    (p) => Array.isArray(p?.teams) && Array.isArray(p.trades) && Array.isArray(p.picks)
+  )
+}
 
 function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
@@ -17,6 +92,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const leagueId = searchParams.get('leagueId')
     const userId = searchParams.get('userId')
+    const fullPayload = searchParams.get('v') === '1'
 
     if (!leagueId) {
       return NextResponse.json({ error: 'League ID is required' }, { status: 400 })
@@ -112,42 +188,14 @@ export async function GET(request: NextRequest) {
       })(),
     ])) as [Record<string, any>, any, any]
 
-    // Build team metadata for ALL leagues in parallel (was sequential).
-    const teamsByLeague: Record<string, any[]> = {}
-    const teamMetaResults = await Promise.all(
-      leagueHistory.map(async (league) => {
-        const [rosters, users] = await Promise.all([
-          sleeperApi.getLeagueRosters(league.leagueId).catch(() => []),
-          fetch(`https://api.sleeper.app/v1/league/${league.leagueId}/users`, { cache: 'no-store' })
-            .then((r) => r.json())
-            .catch(() => []),
-        ])
-
-        const teams = (rosters as any[]).map((roster: any) => {
-          const owner = roster.owner_id ? (users as any[]).find((u: any) => u?.user_id === roster.owner_id) : null
-          const teamName =
-            owner?.metadata?.team_name ||
-            owner?.display_name ||
-            owner?.first_name ||
-            `Team ${roster.roster_id}`
-
-          return {
-            rosterId: roster.roster_id,
-            teamName,
-            ownerName: owner?.display_name || 'Unknown',
-            ownerAvatar: owner?.avatar || undefined,
-            ownerUsername: owner?.display_name || 'Unknown',
-            ownerId: roster.owner_id,
-            leagueId: league.leagueId,
-            season: league.season,
-          }
-        })
-        return { leagueId: league.leagueId, teams }
-      })
+    // Each season comes from its snapshot; only the current one refetches from Sleeper.
+    const seasons = await Promise.all(
+      leagueHistory.map((league, index) => leagueSeason(league, index === 0))
     )
-    for (const result of teamMetaResults) {
-      teamsByLeague[result.leagueId] = result.teams
-    }
+    const teamsByLeague: Record<string, any[]> = {}
+    leagueHistory.forEach((league, index) => {
+      teamsByLeague[league.leagueId] = seasons[index].payload.teams
+    })
     const teamsData = teamsByLeague[leagueId] || []
 
     // Process KTC values into a normalized lookup map
@@ -238,56 +286,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch all transactions + traded picks across ALL leagues in parallel (was sequential).
     const currentYear = new Date().getFullYear()
-    const weeksToFetch: number[] = []
-    const maxWeek = 20
-    for (let week = 0; week <= maxWeek; week++) weeksToFetch.push(week)
-
-    console.log(`📊 Fetching multi-year transactions for leagues: ${leagueHistory.map((l) => l.leagueId).join(', ')}`)
-
-    const batchSize = 5
-
-    // Each league fetches its own transactions + picks concurrently
-    const perLeagueResults = await Promise.all(
-      leagueHistory.map(async (league) => {
-        const txns: any[] = []
-        for (let i = 0; i < weeksToFetch.length; i += batchSize) {
-          const batch = weeksToFetch.slice(i, i + batchSize)
-          const batchResults = await Promise.all(
-            batch.map((week) =>
-              sleeperApi.getTransactions(league.leagueId, week).catch(() => [])
-            )
-          )
-          for (const result of batchResults.flat() as any[]) {
-            txns.push({
-              ...(result as Record<string, any>),
-              _leagueId: league.leagueId,
-              _leagueSeason: league.season,
-            })
-          }
-        }
-
-        const picks = (await sleeperApi.getTradedPicks(league.leagueId).catch(() => [])) as any[]
-        const taggedPicks = picks.map((pick) => ({
-          ...pick,
-          _leagueId: league.leagueId,
-          _leagueSeason: league.season,
-        }))
-
-        return { txns, picks: taggedPicks }
-      })
+    const trades = seasons.flatMap((season) => season.payload.trades)
+    const tradedPicks = seasons.flatMap((season) => season.payload.picks)
+    const totalTransactionsAnalyzed = seasons.reduce(
+      (sum, season) => sum + season.payload.transactionsAnalyzed,
+      0
     )
-
-    const allTransactions: any[] = []
-    const tradedPicks: any[] = []
-    for (const result of perLeagueResults) {
-      allTransactions.push(...result.txns)
-      tradedPicks.push(...result.picks)
-    }
-
-    // Filter transactions to only include trades
-    const trades = allTransactions.filter((tx: any) => tx.type === 'trade')
 
     // Log transaction summary with dates
     if (trades.length > 0) {
@@ -312,22 +317,25 @@ export async function GET(request: NextRequest) {
         teams: teamsData,
         teamsByLeague,
         leagueHistory,
-        allPlayers,
+        // Only the players and rankings these trades reference (PR-16); ?v=1 keeps the
+        // old full payload for one release.
+        ...(fullPayload
+          ? { allPlayers, dynastyRankings: rankingsMap }
+          : trimForTrades(trades, allPlayers, rankingsMap)),
         transactions: trades,
         tradedPicks,
-        dynastyRankings: rankingsMap,
         totalTrades: trades.length,
         totalTradedPicks: tradedPicks.length,
         totalTeams: teamsData.length,
         currentWeek,
         lastUpdated: new Date().toISOString(),
-        dataVersion: '1.2',
-        weeksAnalyzed: weeksToFetch,
-        totalTransactionsAnalyzed: allTransactions.length,
+        dataVersion: fullPayload ? '1.2' : '2.0',
+        weeksAnalyzed: WEEKS,
+        totalTransactionsAnalyzed,
         yearAnalyzed: currentYear,
         includesPreseason: true,
         fetchStrategy: 'full season weeks 0-20',
-        batchSize: batchSize,
+        batchSize: BATCH_SIZE,
       },
     }
 

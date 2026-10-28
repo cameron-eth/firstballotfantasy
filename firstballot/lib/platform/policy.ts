@@ -26,7 +26,6 @@ export function isPublicApi(path: string) {
     '/api/rankings',
     '/api/dynasty-tiers',
     '/api/roster-stats',
-    '/api/trade-market',
     '/api/prospects',
     '/api/history-outcomes',
     '/api/ktc-values',

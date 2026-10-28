@@ -4,12 +4,7 @@
 //
 //   node --import tsx --import ./tests/helpers/register.mjs scripts/bench/metrics.mjs
 import { performance } from 'node:perf_hooks'
-import {
-  installReplay,
-  installStorage,
-  loadFixture,
-  seedRandom,
-} from '../../tests/helpers/replay-fetch.mjs'
+import { installReplay, installStorage, loadFixture } from '../../tests/helpers/replay-fetch.mjs'
 import {
   fetchLeagueDataBundle,
   fetchKtcMaps,
@@ -51,7 +46,6 @@ for (const name of ['sf-dynasty', '1qb-dynasty', 'redraft-1qb']) {
   )
   const settings = await fetchStandingsSettings(fixture.leagueId, teams)
   const viewer = teams[0]
-  const restore = seedRandom(42)
   const cases = {
     'playoff odds (10k sims)': [
       () =>
@@ -80,7 +74,6 @@ for (const name of ['sf-dynasty', '1qb-dynasty', 'redraft-1qb']) {
   }
   for (const [label, [fn, runs]] of Object.entries(cases))
     rows.push({ fixture: name, metric: label, runs, ...time(fn, runs) })
-  restore()
 }
 
 console.log(`Node ${process.version} · ${new Date().toISOString()}`)

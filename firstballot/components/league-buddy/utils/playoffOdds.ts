@@ -25,6 +25,44 @@ interface ScheduleMap {
  * @param schedule - Map of remaining schedule: { week: { rosterId: opponentRosterId } }
  * @param simulations - Number of Monte Carlo simulations to run (default 10000)
  */
+/** mulberry32: small, fast and reproducible; the simulation only needs a stable stream. */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * Seed from everything the odds depend on, so the same league state always produces the
+ * same odds: Overview and Standings agree, and a re-render can't move the numbers.
+ */
+export function playoffOddsSeed(
+  teams: TeamData[],
+  currentWeek: number,
+  totalWeeks: number,
+  spots: number,
+  schedule?: ScheduleMap
+): number {
+  const text = JSON.stringify([
+    teams.map((t) => [t.rosterId, t.wins, t.losses, t.ties ?? 0, t.pointsFor]),
+    currentWeek,
+    totalWeeks,
+    spots,
+    schedule ?? null,
+  ])
+  let hash = 2166136261
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
 export function calculatePlayoffOdds(
   teams: TeamData[],
   currentWeek: number,
@@ -47,6 +85,13 @@ export function calculatePlayoffOdds(
   }
 
   const spots = playoffSpots || Math.ceil(teams.length / 2)
+
+  // Scores are simulated from each team's points per game. Before any game is decided
+  // there is nothing to simulate from (0 / 0), so there are no odds yet. Showing none is
+  // honest; the old behaviour made every simulated game a loss and printed 100%/0% in
+  // roster order.
+  if (!teams.some((t) => t.wins + t.losses > 0 && t.pointsFor > 0)) return []
+  const random = seededRandom(playoffOddsSeed(teams, currentWeek, totalWeeks, spots, schedule))
 
   // Detect games per week by looking at max games played vs weeks
   // If teams have ~2x games as weeks, it's a 2-game-per-week league (H2H + Median)
@@ -144,19 +189,20 @@ export function calculatePlayoffOdds(
         const teamStatsData = teamStats[teamIndex]
 
         // Simulate score with extreme outcomes accounted for
-        const randomFactor = Math.random()
+        const randomFactor = random()
         let scoreMultiplier: number
 
         if (randomFactor < 0.05) {
           // Extreme bust week (5% chance)
-          scoreMultiplier = 0.5 + Math.random() * 0.2 // 50-70% of average
+          scoreMultiplier = 0.5 + random() * 0.2 // 50-70% of average
         } else if (randomFactor > 0.95) {
           // Extreme boom week (5% chance)
-          scoreMultiplier = 1.5 + Math.random() * 0.5 // 150-200% of average
+          scoreMultiplier = 1.5 + random() * 0.5 // 150-200% of average
         } else {
           // Normal variance - Box-Muller transform
-          const u1 = Math.random()
-          const u2 = Math.random()
+          // 1 - r is in (0, 1], so the log below is always finite.
+          const u1 = 1 - random()
+          const u2 = random()
           const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
           scoreMultiplier = 1 + z * 0.3
         }
@@ -191,9 +237,9 @@ export function calculatePlayoffOdds(
 
         // Fallback to random opponent if no schedule
         if (opponentIndex === undefined || opponentIndex === -1) {
-          opponentIndex = Math.floor(Math.random() * teams.length)
+          opponentIndex = Math.floor(random() * teams.length)
           while (opponentIndex === index) {
-            opponentIndex = Math.floor(Math.random() * teams.length)
+            opponentIndex = Math.floor(random() * teams.length)
           }
         }
 

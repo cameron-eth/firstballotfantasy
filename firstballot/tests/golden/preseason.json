@@ -65,7 +65,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1913.22,
-      "playoffOdds": 100
+      "playoffOdds": null
     },
     "2": {
       "record": [
@@ -98,7 +98,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1551.21,
-      "playoffOdds": 100
+      "playoffOdds": null
     },
     "3": {
       "record": [
@@ -131,7 +131,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1526.97,
-      "playoffOdds": 100
+      "playoffOdds": null
     },
     "4": {
       "record": [
@@ -164,7 +164,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1816.41,
-      "playoffOdds": 100
+      "playoffOdds": null
     },
     "5": {
       "record": [
@@ -197,7 +197,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1827.72,
-      "playoffOdds": 100
+      "playoffOdds": null
     },
     "6": {
       "record": [
@@ -230,7 +230,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1277.97,
-      "playoffOdds": 100
+      "playoffOdds": null
     },
     "7": {
       "record": [
@@ -263,7 +263,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1192.79,
-      "playoffOdds": 0
+      "playoffOdds": null
     },
     "8": {
       "record": [
@@ -296,7 +296,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1654.81,
-      "playoffOdds": 0
+      "playoffOdds": null
     },
     "9": {
       "record": [
@@ -329,7 +329,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1713.09,
-      "playoffOdds": 0
+      "playoffOdds": null
     },
     "10": {
       "record": [
@@ -362,7 +362,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1859.16,
-      "playoffOdds": 0
+      "playoffOdds": null
     },
     "11": {
       "record": [
@@ -395,7 +395,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1757.76,
-      "playoffOdds": 0
+      "playoffOdds": null
     },
     "12": {
       "record": [
@@ -428,7 +428,7 @@
       },
       "maxPointsFor": null,
       "projectedMaxPointsFor": 1741.1,
-      "playoffOdds": 0
+      "playoffOdds": null
     }
   },
   "standingsOrder": [

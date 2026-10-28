@@ -13,7 +13,10 @@ import { fetchDraftOrderBundle } from '../../components/league-buddy/draft-order
 import { fetchStandingsSettings } from '../../components/league-buddy/useStandingsOdds.ts'
 import { projectLeagueMaxPointsFor } from '../../components/league-buddy/draft-order/projectedMaxPointsFor.ts'
 import { buildDraftOrder } from '../../components/league-buddy/draft-order/draftOrderBoard.ts'
-import { calculatePlayoffOdds } from '../../components/league-buddy/utils/playoffOdds.ts'
+import {
+  calculatePlayoffOdds,
+  clearPlayoffOddsCache,
+} from '../../components/league-buddy/utils/playoffOdds.ts'
 import {
   calculateLeaguePositionRankings,
   recordOrder,
@@ -31,6 +34,8 @@ const r = (n, places = 4) => (Number.isFinite(n) ? Number(n.toFixed(places)) : (
 export async function computeLeagueMetrics(leagueId) {
   // The players DB is memoized per module for 6 h; each league must load its own.
   clearPlayersMemo()
+  // The determinism check below must compare two real simulations, not a cache hit.
+  clearPlayoffOddsCache()
   const bundle = await fetchLeagueDataBundle(leagueId, null, 0)
   const ktc = await fetchKtcMaps(ktcNamesFor(bundle.teams), 0)
   const ctx = bundle.leagueContext

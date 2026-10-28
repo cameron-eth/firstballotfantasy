@@ -69,7 +69,53 @@ export function playoffOddsSeed(
   return hash >>> 0
 }
 
+/** Recent results by exact input; the simulation is seeded, so a hit is the same answer. */
+const oddsCache = new Map<string, PlayoffOddsResult[]>()
+const ODDS_CACHE_SIZE = 20
+
+/** For tests that must see a fresh simulation, e.g. the golden determinism check. */
+export function clearPlayoffOddsCache() {
+  oddsCache.clear()
+}
+
+/**
+ * Playoff odds, cached on the full input. Overview and Standings each mount their own odds
+ * hook, so without this every tab switch re-ran 10,000 simulated seasons (PR-14).
+ */
 export function calculatePlayoffOdds(
+  teams: TeamData[],
+  currentWeek: number,
+  totalWeeks: number = 14,
+  playoffSpots?: number,
+  schedule?: ScheduleMap,
+  simulations: number = 10000
+): PlayoffOddsResult[] {
+  const key = JSON.stringify([
+    teams.map((t) => [t.rosterId, t.teamName, t.wins, t.losses, t.ties ?? 0, t.pointsFor]),
+    currentWeek,
+    totalWeeks,
+    playoffSpots ?? null,
+    schedule ?? null,
+    simulations,
+  ])
+  let result = oddsCache.get(key)
+  if (!result) {
+    result = simulatePlayoffOdds(
+      teams,
+      currentWeek,
+      totalWeeks,
+      playoffSpots,
+      schedule,
+      simulations
+    )
+    oddsCache.set(key, result)
+    if (oddsCache.size > ODDS_CACHE_SIZE) oddsCache.delete(oddsCache.keys().next().value!)
+  }
+  // Copies, so one consumer can't change another's rows.
+  return result.map((row) => ({ ...row }))
+}
+
+function simulatePlayoffOdds(
   teams: TeamData[],
   currentWeek: number,
   totalWeeks: number = 14,

@@ -119,8 +119,15 @@ export function RosterSection({
     )
   const skill = selectedTeam.players.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position))
   // Quality-weighted team value: stars count more than depth, the deep bench barely counts.
-  const teamValue = leagueTeamValues(teams, leagueContext).get(selectedTeam.rosterId)
-  const coreAge = coreAvgAge(selectedTeam, leagueContext)
+  // League-wide scoring runs once per data change, not on every filter keystroke (PR-14).
+  const teamValue = useMemo(
+    () => leagueTeamValues(teams, leagueContext).get(selectedTeam.rosterId),
+    [teams, leagueContext, selectedTeam.rosterId]
+  )
+  const coreAge = useMemo(
+    () => coreAvgAge(selectedTeam, leagueContext),
+    [selectedTeam, leagueContext]
+  )
   const value = teamValue?.value ?? 0
   const valueRank = teamValue?.rank ?? 0
   const productionRank =

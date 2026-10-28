@@ -54,3 +54,15 @@ test('a finished season returns final standings unchanged', () => {
     [100, 100, 100, 100, 0, 0]
   )
 })
+
+test('a repeated call returns cached odds that callers cannot change', async () => {
+  const { calculatePlayoffOdds, clearPlayoffOddsCache } = await import('../components/league-buddy/utils/playoffOdds.ts')
+  clearPlayoffOddsCache()
+  const teams = [1, 2, 3, 4].map((id) => ({ rosterId: id, teamName: `T${id}`, wins: id, losses: 4 - id, ties: 0, pointsFor: 400 + id * 10 }))
+  const first = calculatePlayoffOdds(teams, 4, 10, 2)
+  first[0].playoffProbability = -1
+  const second = calculatePlayoffOdds(teams, 4, 10, 2)
+  assert.notEqual(second[0].playoffProbability, -1)
+  clearPlayoffOddsCache()
+  assert.deepEqual(calculatePlayoffOdds(teams, 4, 10, 2), second)
+})

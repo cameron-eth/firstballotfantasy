@@ -1,5 +1,5 @@
 'use client'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { useAuth } from '@/lib/auth'
 import { suggestedTeamTrades } from '@/lib/sleeper-sdk/trade-opportunities'
@@ -30,12 +30,13 @@ export function useSuggestedTrades(leagueId: string, team: TeamData, teams: Team
     () => (data ? suggestedTeamTrades(team, teams, data.superflex, dismissed) : []),
     [data, team, teams, dismissed]
   )
+  const retry = useCallback(() => mutate(), [mutate])
   return {
     suggestions,
     superflex: data?.superflex ?? true,
     error,
     isLoading,
-    retry: () => mutate(),
+    retry,
     dismiss,
   }
 }

@@ -1,6 +1,8 @@
 # Prospect grade refresh audit (2026-10-28)
 
-Production data, classes 2027-2029 (121 prospects). Read-only; nothing was changed.
+Production data, classes 2027-2029 (121 prospects), taken **before** the 2026-10-28 stats refresh.
+
+**After the refresh** (same rules): 66 of 121 still need a grade refresh. ESPN ids filled for 21 of 22 (Nate Shepard, Duke, still missing); 2026 stats now present for 72/75 (2027), 28/30 (2028), 13/16 (2029). Still open: 21 ungraded, 36 production-score mismatches (more now that 2028 has current stats to compare), 5 grades off their components, 7 HS scores with no HS rating.
 
 ## Data foundation
 

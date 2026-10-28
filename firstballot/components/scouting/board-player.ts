@@ -45,6 +45,8 @@ export function getTierLabel(gradeTier: string | null, grade: number): string {
 export function tierStyleFor(
   tier: string
 ): (typeof SCOUTING_TIER_STYLES)[ScoutingDisplayTier] {
+  if (tier === 'Ungraded')
+    return { bg: 'bg-white/5', text: 'text-slate-400', border: 'border-white/10' }
   return SCOUTING_TIER_STYLES[tier as ScoutingDisplayTier] ?? SCOUTING_TIER_STYLES.Depth
 }
 
@@ -74,7 +76,8 @@ export function toBoardPlayer(p: Prospect): BoardPlayer {
     position: p.position,
     draftYear: p.draft_year ?? null,
     grade: Number(p.overall_grade || 0),
-    tier: getTierLabel(p.grade_tier, Number(p.overall_grade || 0)),
+    // No grade means no tier; a missing grade is not a 0 grade (that read as "Walk-On").
+    tier: p.overall_grade == null ? 'Ungraded' : getTierLabel(p.grade_tier, Number(p.overall_grade)),
     height: p.height ? Number(p.height) : null,
     weight: Number(p.weight || 0),
     fortyTime: parseForty(p.college_stats || null),

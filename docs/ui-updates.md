@@ -5,6 +5,22 @@ what a user sees include images.
 
 All captured on production, signed in, desktop width (1440x900), The Meat Market league, 2027 view.
 
+## My Team redesign (hero, starting lineup rail, headshot rows)
+One badge system (position hue, tier gold/green/rose, 🔥/❄️ at +/-500 KTC), a hero band with the roster's
+highest-value faces, the starting lineup as the same cards used on the map, and slim headshot-first rows.
+Captured on localhost against production data, The Meat Market league, 1280x900.
+
+![My Team hero and starting lineup](screenshots/my-team-hero-lineup.jpg)
+
+![My Team roster rows](screenshots/my-team-roster-rows.jpg)
+
+## Activate team screen
+A glass call-to-action over a blurred preview of the real Team Builder, with three reasons to activate.
+
+![Activate team, desktop](screenshots/activate-team-desktop.jpg)
+
+![Activate team, mobile](screenshots/activate-team-mobile.jpg)
+
 ## Team Builder: map-first layout, team strip, tier tags, hot markers
 The page header now has **Refresh data**. A slim strip pinned to the top of the map shows team
 state, core age, record, picks and 2027 pick chips. Cards carry a tier tag at the bottom-left

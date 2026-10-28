@@ -176,7 +176,10 @@ export function LeagueBuddyView() {
 
           {/* League Dashboard - Reacts to global selection */}
           {selectedLeagueId && (
-            <TeamActivation leagueId={selectedLeagueId}>
+            <TeamActivation
+              leagueId={selectedLeagueId}
+              leagueName={leagues.find((l) => l.league_id === selectedLeagueId)?.name}
+            >
               <LeagueBuddy
                 leagueId={selectedLeagueId}
                 user={sleeperUser}

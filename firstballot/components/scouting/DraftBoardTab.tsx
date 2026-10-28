@@ -6,7 +6,7 @@ import { Reorder } from 'framer-motion'
 import Image from 'next/image'
 import useSWR from 'swr'
 import { cn } from '@/lib/utils'
-import { ChevronDown, ClipboardList, GripVertical, X } from 'lucide-react'
+import { ChevronDown, ClipboardList, GripVertical, Plus, X } from 'lucide-react'
 import { DraftBoardControls } from './DraftBoardControls'
 import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import { KtcSparkline } from './KtcSparkline'
@@ -448,33 +448,34 @@ export function DraftBoardTab({
       <ScoutingSectionHeader title="Draft Board" description={`${selectedYear} class · Your ranked prospects`}>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5">
-          <div className="flex w-full items-center gap-1 rounded-md border border-border bg-background/50 p-1 sm:w-auto" aria-label="Draft class">
-            {availableYears.map((year) => <button key={year} type="button" onClick={() => onSelectYear(year)} aria-pressed={selectedYear === year} className={cn('min-h-9 flex-1 rounded px-3 text-xs font-semibold tabular-nums sm:flex-none', selectedYear === year ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>{year}</button>)}
+          <div className="flex w-full items-center gap-1 rounded-xl border border-white/10 bg-slate-900/60 p-1 sm:w-auto" aria-label="Draft class">
+            {availableYears.map((year) => <button key={year} type="button" onClick={() => onSelectYear(year)} aria-pressed={selectedYear === year} className={cn('min-h-8 flex-1 rounded-lg px-3 text-xs font-medium tabular-nums transition-colors sm:flex-none', selectedYear === year ? 'bg-blue-400/20 text-white shadow-sm' : 'text-slate-400 hover:text-white')}>{year}</button>)}
           </div>
-          <div className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0" aria-label="Position">
+          <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-slate-900/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Position">
           {positionTabs.map((pos) => (
             <button
               key={pos}
               type="button"
               onClick={() => setPosition(pos)}
               className={cn(
-                'min-h-9 shrink-0 px-2.5 text-xs font-semibold rounded-md transition-colors active:scale-[0.98]',
+                'min-h-8 shrink-0 rounded-lg px-3 text-xs font-medium transition-colors',
                 position === pos
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  ? 'bg-blue-400/20 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               )}
             >
               {pos !== 'ALL' ? <>{pos} <span className="ml-1 tabular-nums opacity-70">{draftBoard.filter((p) => p.draft_year === selectedYear && p.position === pos).length}</span></> : 'All'}
             </button>
           ))}
           </div>
-          <span className="hidden sm:block w-px h-5 bg-border mx-1" />
           <button
             type="button"
             onClick={addTopAvailable}
-            className="min-h-9 w-full px-3 text-xs font-semibold rounded-md bg-secondary/80 text-secondary-foreground hover:bg-secondary transition-colors active:scale-[0.98] sm:w-auto"
+            className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 px-3 text-xs font-medium text-slate-200 transition-colors hover:border-white/30 hover:text-white sm:w-auto"
+            title="Add the highest-ranked prospect not on your board"
           >
-            Add Next
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            Add next
           </button>
           {sortByMyGrade && (
             <button
@@ -1144,7 +1145,6 @@ export function DraftBoardTab({
             <OffBoardPanel
               offBoardProspects={offBoardProspects}
               onAddToDraftBoard={onAddToDraftBoard}
-              onAddNext={addTopAvailable}
               onClearBoard={() => onReorderDraftBoard(draftBoard.filter((p) => p.draft_year !== selectedYear))}
             />
             <BoardBreakdownPanel

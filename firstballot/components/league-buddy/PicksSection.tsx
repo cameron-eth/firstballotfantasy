@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { SELECTED_ROW, STICKY_HOVER, STICKY_SELECTED } from '@/lib/design/tones'
 import { leagueCapital, pickLabel } from '@/lib/picks-overview'
+import { BASIS_PHRASE, type DraftSlotInputs } from '@/lib/league-metrics/draft-slots'
 import { Button } from '@/components/ui/button'
 import { SectionHeader } from '@/components/ui/section-header'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,7 +18,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { TeamData } from './types'
-import type { MaxPointsForEntry } from './draft-order/maxPointsFor'
 import { DraftOrderPanel } from './draft-order/DraftOrderPanel'
 import { PickChip } from './ui/PickChip'
 import { TeamIdentity } from './ui/TeamIdentity'
@@ -36,26 +36,10 @@ export function PicksSection({
   leagueId: string
   /** A draft year opened from the header summary; its card scrolls into view and is outlined. */
   focusSeason?: string | null
-  draftOrder: {
-    maxPointsFor: Record<number, MaxPointsForEntry>
-    projectedMaxPointsFor: Record<number, number>
-    weeksCounted: number
-    remainingWeeks: number
-    season: string
-    loading: boolean
-  }
+  draftOrder: DraftSlotInputs & { season: string }
 }) {
-  const {
-    picks,
-    years,
-    nextSeason,
-    slotByRoster,
-    slotsFor,
-    hasProjection,
-    error,
-    isLoading,
-    retry,
-  } = usePickCapital(leagueId, teams, selectedTeam.rosterId, draftOrder)
+  const { picks, years, nextSeason, slotByRoster, slotsFor, slotBasis, error, isLoading, retry } =
+    usePickCapital(leagueId, teams, selectedTeam.rosterId, draftOrder)
   useEffect(() => {
     if (focusSeason && !isLoading)
       document
@@ -89,9 +73,7 @@ export function PicksSection({
           title="Draft capital"
           subtitle={
             nextSeason
-              ? `Picks for the ${seasons.join(', ')} drafts · ${nextSeason} slots follow the ${
-                  hasProjection ? 'projected' : 'record'
-                } order`
+              ? `Picks for the ${seasons.join(', ')} drafts · ${nextSeason} slots by ${BASIS_PHRASE[slotBasis]}`
               : 'Picks for the next three drafts'
           }
         />
@@ -123,9 +105,7 @@ export function PicksSection({
                 detail={
                   topPick && topPick.roster_id !== selectedTeam.rosterId
                     ? `Via ${teamName(topPick.roster_id)}`
-                    : hasProjection
-                      ? 'Projected slot'
-                      : 'Slot by record'
+                    : `Slot by ${BASIS_PHRASE[slotBasis]}`
                 }
               />
               <StatTile
@@ -293,6 +273,7 @@ export function PicksSection({
         teams={teams}
         maxPointsFor={draftOrder.maxPointsFor}
         projectedMaxPointsFor={draftOrder.projectedMaxPointsFor}
+        projectedPerWeek={draftOrder.projectedPerWeek}
         weeksCounted={draftOrder.weeksCounted}
         remainingWeeks={draftOrder.remainingWeeks}
         season={draftOrder.season}

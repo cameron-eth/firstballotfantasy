@@ -75,6 +75,14 @@ for (const [name, { base, transform }] of Object.entries(VARIANTS)) {
         team.dynastyRank.teamValue,
         `team ${rosterId}: Outlook and dynasty rank disagree`
       )
+    // One draft-slot policy (D2): the default slots are the board's slots for that basis.
+    const { policy } = metrics.draftOrder
+    for (const [rosterId, slot] of Object.entries(policy.slots))
+      assert.equal(
+        metrics.draftOrder[policy.basis][rosterId],
+        `1.${String(slot).padStart(2, '0')}`,
+        `team ${rosterId}: default slot differs from the ${policy.basis} board`
+      )
     // Same inputs, same outputs: run twice and require identical results.
     installReplay(fixture, transform)
     assert.deepEqual(

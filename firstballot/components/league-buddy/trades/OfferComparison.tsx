@@ -2,7 +2,7 @@ import { ktcValue } from '@/lib/sleeper-sdk'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import type { PlayerData, TeamData } from '../types'
-import { pickLabel, type OfferSide } from './TradeAssetList'
+import { pickAssetLabel, type OfferSide } from './TradeAssetList'
 
 const portrait = (p: PlayerData) =>
   p.headshot_url || `https://sleepercdn.com/content/nfl/players/${p.playerId}.jpg`
@@ -84,7 +84,7 @@ function Side({
             <p className="text-[10px] uppercase tracking-wider text-violet-300">
               Draft pick · {pick.season}
             </p>
-            <p className="mt-1 text-lg font-bold text-white">{pickLabel(pick, teams)}</p>
+            <p className="mt-1 text-lg font-bold text-white">{pickAssetLabel(pick, teams)}</p>
           </div>
         ))}
         {side.faab > 0 && (

@@ -21,6 +21,7 @@ import {
 import { calculateLeaguePlacements } from '../../components/league-buddy/competitiveState.ts'
 import { buildPowerRankings } from '../../lib/sleeper-sdk/values.ts'
 import { leagueTeamValues } from '../../lib/league-metrics/team-value.ts'
+import { draftSlots } from '../../lib/league-metrics/draft-slots.ts'
 import { suggestedTeamTrades } from '../../lib/sleeper-sdk/trade-opportunities.ts'
 import { tradeSignals } from '../../lib/trade-signals.ts'
 import { picksByYear, leagueCapital } from '../../lib/picks-overview.ts'
@@ -133,6 +134,18 @@ export async function computeLeagueMetrics(leagueId) {
       maxpf: order('maxpf'),
       projected: order('projected'),
       weeksCounted: draft.weeksCounted,
+      // The default every page shows (D2): projected when every team has a real projection.
+      policy: (() => {
+        const slots = draftSlots(teams, {
+          maxPointsFor: draft.maxPointsFor,
+          projectedMaxPointsFor: projection.projected,
+          projectedPerWeek: projection.perWeek,
+          weeksCounted: draft.weeksCounted,
+          remainingWeeks: projection.remainingWeeks,
+          loading: false,
+        })
+        return { basis: slots.basis, slots: slots.slotByRoster }
+      })(),
     },
     viewer: {
       rosterId: viewer.rosterId,

@@ -15,7 +15,7 @@ import { packageOpportunities, tradeOpportunities } from '@/lib/sleeper-sdk/trad
 import type { TradeInventory } from '@/lib/sleeper-sdk/trade-inventory'
 import type { OwnedPick } from '@/lib/sleeper-sdk/pick-inventory'
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
-import { pickLabel, type OfferSide } from '../trades/TradeAssetList'
+import { pickAssetLabel, type OfferSide } from '../trades/TradeAssetList'
 export type PlanningOffer = { partnerId: number; give: OfferSide; receive: OfferSide }
 export type PlanningFocus =
   | { kind: 'player'; player: PlayerData }
@@ -150,7 +150,7 @@ export function PlanningSuggestions({
           ? `${pick.round}.${String(slots[pick.roster_id]).padStart(2, '0')}`
           : `Round ${pick.round}`}
       </p>
-      <p className="text-xs text-slate-400">Projected · {pickLabel(pick, teams)}</p>
+      <p className="text-xs text-slate-400">Projected · {pickAssetLabel(pick, teams)}</p>
     </div>
   )
   return (

@@ -220,6 +220,7 @@ export default function LeagueBuddy({ leagueId, user }: LeagueBuddyProps) {
     () => ({
       maxPointsFor,
       projectedMaxPointsFor: projection.projected,
+      projectedPerWeek: projection.perWeek,
       weeksCounted,
       remainingWeeks: projection.remainingWeeks,
       season: draftOrderSeason,

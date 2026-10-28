@@ -6,7 +6,8 @@ import { getCachedPlayers } from '@/lib/players-cache'
 import { snapshot } from '@/lib/platform/snapshots'
 import { tradeMarketSeasonKey } from '@/lib/platform/snapshot-keys'
 import { trimForTrades } from '@/lib/trade-market/payload'
-import { ktcDaysNeeded, normalizeKtcName, tradeDateKtc } from '@/lib/trade-market/trade-date-values'
+import { ktcDaysNeeded, tradeDateKtc } from '@/lib/trade-market/trade-date-values'
+import { ktcIdsBySleeper } from '@/lib/platform/identity'
 
 // Extend timeout for this route (fetching many weeks of transactions)
 export const maxDuration = 60 // 60 seconds
@@ -39,7 +40,7 @@ async function completeKtcDays(): Promise<string[]> {
   return [...new Set((data ?? []).map((r) => r.dataset.slice(KTC_DAY_MARKER_PREFIX.length)))].sort()
 }
 
-/** Normalized player name → KTC SF value, for each requested day. */
+/** KTC id → KTC SF value, for each requested day. */
 async function ktcValuesByDay(days: string[]) {
   const byDay: Record<string, Record<string, number>> = {}
   for (let i = 0; i < days.length; i += 8) {
@@ -47,12 +48,12 @@ async function ktcValuesByDay(days: string[]) {
       days.slice(i, i + 8).map(async (day) => {
         const { data, error } = await supabaseAdmin
           .from('ktc_player_values')
-          .select('player_name,value_sf')
+          .select('ktc_player_id,value_sf')
           .eq('scraped_date', day)
           .limit(2000)
         if (error) throw new Error('KTC_HISTORY_UNAVAILABLE')
         byDay[day] = Object.fromEntries(
-          (data ?? []).map((r) => [normalizeKtcName(r.player_name), Number(r.value_sf)])
+          (data ?? []).map((r) => [String(r.ktc_player_id), Number(r.value_sf)])
         )
       })
     )
@@ -67,7 +68,7 @@ async function ktcValuesByDay(days: string[]) {
 function leagueSeason(
   league: { leagueId: string; season: string },
   current: boolean,
-  players: Record<string, any>,
+  ktcIds: Map<string, number>,
   ktcDays: string[]
 ) {
   return snapshot<SeasonData>(
@@ -123,7 +124,7 @@ function leagueSeason(
           trades,
           picks: picks.map(tag),
           transactionsAnalyzed: transactions.length,
-          tradeDateKtc: tradeDateKtc(trades, players, ktcByDay, ktcDays),
+          tradeDateKtc: tradeDateKtc(trades, ktcIds, ktcByDay, ktcDays),
         },
         season: Number(league.season) || undefined,
       }
@@ -136,8 +137,70 @@ function leagueSeason(
   )
 }
 
-function normalizeName(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
+type TierPayload = {
+  players: { sf: Record<string, { rank: number; number: number; name: string }> }
+  identity: Record<
+    string,
+    { name: string; position: string; team: string; espnId: string; ktcId?: number }
+  >
+}
+
+/** Today's KTC by KTC id. */
+async function latestKtcById() {
+  const byId = new Map<number, { value_sf: number; rank_sf: number | null }>()
+  const { data: latest } = await supabaseServer
+    .from('ktc_player_values')
+    .select('scraped_date')
+    .order('scraped_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!latest?.scraped_date) return byId
+  const { data } = await supabaseServer
+    .from('ktc_player_values')
+    .select('ktc_player_id,value_sf,rank_sf')
+    .eq('scraped_date', latest.scraped_date)
+    .limit(2000)
+  for (const row of data ?? [])
+    byId.set(Number(row.ktc_player_id), {
+      value_sf: Number(row.value_sf) || 0,
+      rank_sf: row.rank_sf ? Number(row.rank_sf) : null,
+    })
+  return byId
+}
+
+/** One ranking record per tier-matched Sleeper id, in the shape the page reads. */
+function rankingsBySleeper(
+  payload: TierPayload,
+  ktcToday: Map<number, { value_sf: number; rank_sf: number | null }>
+) {
+  return Object.fromEntries(
+    Object.entries(payload.players.sf).flatMap(([id, tier]) => {
+      const person = payload.identity[id]
+      if (!person) return []
+      const ktc = person.ktcId != null ? ktcToday.get(person.ktcId) : undefined
+      return [
+        [
+          id,
+          {
+            rank: tier.rank,
+            position: person.position,
+            team: person.team,
+            name: person.name,
+            headshot_url: person.espnId
+              ? `https://a.espncdn.com/i/headshots/nfl/players/full/${person.espnId}.png`
+              : null,
+            espn_id: person.espnId || null,
+            // Trade valuation uses raw KTC; the old 13k-point model scale is gone.
+            total_score: null,
+            tier: tier.number,
+            tier_name: `${tier.name} (Tier ${tier.number})`,
+            ktc_value_sf: ktc?.value_sf ?? null,
+            ktc_rank_sf: ktc?.rank_sf ?? null,
+          },
+        ],
+      ]
+    })
+  )
 }
 
 export async function GET(request: NextRequest) {
@@ -145,7 +208,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const leagueId = searchParams.get('leagueId')
     const userId = searchParams.get('userId')
-    const fullPayload = searchParams.get('v') === '1'
 
     if (!leagueId) {
       return NextResponse.json({ error: 'League ID is required' }, { status: 400 })
@@ -186,65 +248,18 @@ export async function GET(request: NextRequest) {
       depth += 1
     }
 
-    // Fetch critical data in parallel - include all players (6h TTL cache) + rankings once
-    const [allPlayers, rankingsResult, ktcResult, ktcDays] = (await Promise.all([
+    // Players (6h cache), tiers, today's KTC and the complete KTC days, in parallel.
+    const [allPlayers, tierRow, ktcToday, ktcDays, ktcIds] = await Promise.all([
       getCachedPlayers(),
-      (async () => {
-        try {
-          const result = await supabaseAdmin.from('data_snapshots')
-            .select('payload,expires_at').eq('key', TIER_KEY).maybeSingle()
-          if (result.error || !result.data || Date.parse(result.data.expires_at) <= Date.now())
-            return { data: [], error: new Error('Current tiers unavailable') }
-          const payload = result.data.payload as {
-            players: { sf: Record<string, { rank: number; number: number; name: string }> }
-            identity: Record<string, { name: string; position: string; team: string; espnId: string }>
-          }
-          const data = Object.entries(payload.players.sf).flatMap(([id, tier]) => {
-            const person = payload.identity[id]
-            return person ? [{ player_name: person.name, position: person.position,
-              // Trade valuation uses raw KTC; its older 13k-point model scale is incompatible
-              // with the new 0–100 tier score.
-              team: person.team, espn_id: person.espnId, total_score: null,
-              tier: `${tier.name} (Tier ${tier.number})`, rank: tier.rank,
-              headshot_url: person.espnId ? `https://a.espncdn.com/i/headshots/nfl/players/full/${person.espnId}.png` : null,
-            }] : []
-          }).sort((a, b) => a.rank - b.rank)
-          return { data, error: null }
-        } catch (err) {
-          console.error('❌ Rankings fetch error:', err)
-          return { data: [], error: err }
-        }
-      })(),
-      (async () => {
-        try {
-          const { data: latestRow, error: latestError } = await supabaseServer
-            .from('ktc_player_values')
-            .select('scraped_date')
-            .order('scraped_date', { ascending: false })
-            .limit(1)
-            .single()
-
-          if (latestError || !latestRow?.scraped_date) {
-            return { data: [], error: latestError || new Error('No KTC snapshot found') }
-          }
-
-          const { data, error } = await supabaseServer
-            .from('ktc_player_values')
-            .select('player_name, value_sf, rank_sf')
-            .eq('scraped_date', latestRow.scraped_date)
-
-          return { data: data || [], error }
-        } catch (err) {
-          console.error('❌ KTC fetch error:', err)
-          return { data: [], error: err }
-        }
-      })(),
+      supabaseAdmin.from('data_snapshots').select('payload,expires_at').eq('key', TIER_KEY).maybeSingle(),
+      latestKtcById(),
       completeKtcDays(),
-    ])) as [Record<string, any>, any, any, string[]]
+      ktcIdsBySleeper(),
+    ])
 
     // Each season comes from its snapshot; only the current one refetches from Sleeper.
     const seasons = await Promise.all(
-      leagueHistory.map((league, index) => leagueSeason(league, index === 0, allPlayers, ktcDays))
+      leagueHistory.map((league, index) => leagueSeason(league, index === 0, ktcIds, ktcDays))
     )
     const teamsByLeague: Record<string, any[]> = {}
     leagueHistory.forEach((league, index) => {
@@ -252,93 +267,15 @@ export async function GET(request: NextRequest) {
     })
     const teamsData = teamsByLeague[leagueId] || []
 
-    // Process KTC values into a normalized lookup map
-    const ktcMap: Record<string, { value_sf: number; rank_sf: number | null }> = {}
-    if (Array.isArray(ktcResult?.data) && ktcResult.data.length > 0) {
-      for (const row of ktcResult.data) {
-        const playerName = row.player_name
-        if (!playerName) continue
-        const normalized = normalizeName(playerName)
-        ktcMap[playerName] = {
-          value_sf: Number(row.value_sf) || 0,
-          rank_sf: row.rank_sf ? Number(row.rank_sf) : null,
-        }
-        ktcMap[normalized] = ktcMap[playerName]
-      }
-    }
-
-    // Process dynasty rankings efficiently (handle errors gracefully), enriched with KTC
-    let rankingsMap: Record<string, any> = {}
-    if (
-      rankingsResult?.data &&
-      Array.isArray(rankingsResult.data) &&
-      rankingsResult.data.length > 0
-    ) {
-      rankingsMap = rankingsResult.data.reduce((acc: any, player: any, index: number) => {
-        const playerName = player.player_name
-        if (playerName) {
-          // Calculate rank from position in sorted list
-          const rank = player.rank ?? index + 1
-
-          // Extract tier number from tier string (e.g., "Elite (Tier 1)" -> 1)
-          let tierNum: number | null = null
-          if (player.tier) {
-            const tierMatch = player.tier.match(/Tier (\d+)/)
-            if (tierMatch) {
-              tierNum = parseInt(tierMatch[1])
-            } else if (player.tier.includes('Elite')) tierNum = 1
-            else if (player.tier.includes('Star')) tierNum = 2
-            else if (player.tier.includes('High-End Starter')) tierNum = 3
-            else if (player.tier.includes('Solid Starter')) tierNum = 4
-          }
-
-          const playerRecord = {
-            rank,
-            position: player.position,
-            team: player.team,
-            name: playerName,
-            headshot_url: player.headshot_url || null,
-            espn_id: player.espn_id || null,
-            total_score:
-              typeof player.total_score === 'string'
-                ? parseFloat(player.total_score)
-                : player.total_score,
-            tier: tierNum,
-            tier_name: player.tier,
-            ktc_value_sf:
-              ktcMap[playerName]?.value_sf ?? ktcMap[normalizeName(playerName)]?.value_sf ?? null,
-            ktc_rank_sf:
-              ktcMap[playerName]?.rank_sf ?? ktcMap[normalizeName(playerName)]?.rank_sf ?? null,
-          }
-          acc[playerName] = playerRecord
-          acc[normalizeName(playerName)] = playerRecord
-        }
-        return acc
-      }, {})
-    } else if (rankingsResult?.error) {
-      console.warn('Rankings unavailable:', rankingsResult.error)
-      // Continue without rankings - use default player values
-    }
-
-    // Backfill with KTC-only entries for players missing from dynasty rankings
-    for (const [playerKey, ktc] of Object.entries(ktcMap)) {
-      if (playerKey !== normalizeName(playerKey)) continue // Skip normalized aliases
-      if (!rankingsMap[playerKey]) {
-        rankingsMap[playerKey] = {
-          rank: ktc.rank_sf || 999,
-          position: '',
-          team: '',
-          name: playerKey,
-          headshot_url: null,
-          espn_id: null,
-          total_score: null,
-          tier: null,
-          tier_name: 'Unranked',
-          ktc_value_sf: ktc.value_sf,
-          ktc_rank_sf: ktc.rank_sf,
-        }
-      }
-    }
+    // Rankings keyed by Sleeper id (PR-19): tier and today's KTC come through the tier
+    // publish's KTC ↔ Sleeper match, never by display name. A player with no tier match
+    // has no entry and is valued by rank, as before for unranked players.
+    const tiersFresh =
+      !tierRow.error && tierRow.data && Date.parse(tierRow.data.expires_at) > Date.now()
+    if (!tiersFresh) console.warn('Rankings unavailable: current tiers expired or missing')
+    const rankingsMap = tiersFresh
+      ? rankingsBySleeper(tierRow.data!.payload as TierPayload, ktcToday)
+      : {}
 
     const currentYear = new Date().getFullYear()
     const trades = seasons.flatMap((season) => season.payload.trades)
@@ -371,11 +308,9 @@ export async function GET(request: NextRequest) {
         teams: teamsData,
         teamsByLeague,
         leagueHistory,
-        // Only the players and rankings these trades reference (PR-16); ?v=1 keeps the
-        // old full payload for one release.
-        ...(fullPayload
-          ? { allPlayers, dynastyRankings: rankingsMap }
-          : trimForTrades(trades, allPlayers, rankingsMap)),
+        // Only the players and rankings these trades reference (PR-16), keyed by Sleeper
+        // id (PR-19). The old full, name-keyed payload (?v=1) is retired.
+        ...trimForTrades(trades, allPlayers, rankingsMap),
         transactions: trades,
         tradedPicks,
         // D4: trade-date KTC per trade and player, and the first day prices exist.
@@ -386,7 +321,7 @@ export async function GET(request: NextRequest) {
         totalTeams: teamsData.length,
         currentWeek,
         lastUpdated: new Date().toISOString(),
-        dataVersion: fullPayload ? '1.2' : '2.0',
+        dataVersion: '3.0',
         weeksAnalyzed: WEEKS,
         totalTransactionsAnalyzed,
         yearAnalyzed: currentYear,

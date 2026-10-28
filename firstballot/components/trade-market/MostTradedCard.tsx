@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { MostTradedPlayer } from './types'
-import { normalizeName, resolveHeadshot } from './utils'
+import { resolveHeadshot } from './utils'
 
 
 export function MostTradedCard({
@@ -17,9 +17,8 @@ export function MostTradedCard({
   dynastyRankings: Record<string, any>
 }) {
   const [imageError, setImageError] = useState(false)
-  const headshot = resolveHeadshot(player.name, player.playerId, allPlayers, dynastyRankings)
-  const ranking =
-    dynastyRankings[player.name] || dynastyRankings[normalizeName(player.name)]
+  const headshot = resolveHeadshot(player.playerId, allPlayers, dynastyRankings)
+  const ranking = player.playerId ? dynastyRankings[player.playerId] : null
   const raw = player.playerId ? allPlayers[player.playerId] : null
   const position = ranking?.position || raw?.position || ''
   const team = ranking?.team || raw?.team || ''

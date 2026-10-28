@@ -2,7 +2,7 @@
 
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
 import type { PlayerValue } from '@/lib/trade-utils'
-import { normalizeName, resolveHeadshot } from './utils'
+import { resolveHeadshot } from './utils'
 
 export function TradePlayerCard({
   name,
@@ -23,9 +23,9 @@ export function TradePlayerCard({
   dynastyRankings: Record<string, any>
   cachedValuation?: PlayerValue | null
 }) {
-  const headshot = resolveHeadshot(name, playerId, allPlayers, dynastyRankings)
+  const headshot = resolveHeadshot(playerId, allPlayers, dynastyRankings)
   const rawPlayer = playerId ? allPlayers[playerId] : null
-  const rankingEntry = dynastyRankings[name] || dynastyRankings[normalizeName(name)]
+  const rankingEntry = playerId ? dynastyRankings[playerId] : null
   const position =
     rawPlayer?.position || rankingEntry?.position || cachedValuation?.position || 'FLEX'
   const team = rawPlayer?.team || rankingEntry?.team || cachedValuation?.team || 'NFL'

@@ -7,7 +7,7 @@ import { Activity } from 'lucide-react'
 import { Header } from '@/components/header'
 import { leagueCache } from '@/lib/league-cache'
 import { useLeagueContext } from '@/lib/league-context'
-import { processPlayerForTrade, rankingNameKeys, type PlayerValue } from '@/lib/trade-utils'
+import { processPlayerForTrade, type PlayerValue } from '@/lib/trade-utils'
 import { rankingsAtTradeDate } from '@/lib/trade-market/trade-date-values'
 import { computeTradeAnalytics } from '@/components/trade-market/analytics'
 import {
@@ -154,10 +154,8 @@ function TradeMarketContent() {
     const valueOnTradeDate = (trade: any, pid: string): PlayerValue | null => {
       const key = `${trade.transaction_id}:${pid}`
       if (!cache.has(key)) {
-        const player = allPlayers[pid]
-        const name = player ? `${player.first_name} ${player.last_name}` : ''
         const ktc = tradeDateKtc?.[trade.transaction_id]?.[pid] ?? null
-        const rankings = rankingsAtTradeDate(name, ktc, dynastyRankings, rankingNameKeys)
+        const rankings = rankingsAtTradeDate(pid, ktc, dynastyRankings)
         cache.set(key, processPlayerForTrade(pid, allPlayers, rankings))
       }
       return cache.get(key) ?? null

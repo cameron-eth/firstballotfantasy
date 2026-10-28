@@ -8,22 +8,13 @@ export function inWeekRange(week: number, weekRange: string): boolean {
   return week >= start && week <= end
 }
 
-export function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 export function resolveHeadshot(
-  playerName: string,
   playerId: string | null | undefined,
   allPlayers: Record<string, any>,
   dynastyRankings: Record<string, any>
 ): string | null {
-  const ranking =
-    dynastyRankings[playerName] || dynastyRankings[normalizeName(playerName)]
+  // Rankings are keyed by Sleeper id (PR-19).
+  const ranking = playerId ? dynastyRankings[playerId] : null
   if (ranking?.headshot_url) return ranking.headshot_url
   if (ranking?.espn_id)
     return `https://a.espncdn.com/i/headshots/nfl/players/full/${ranking.espn_id}.png`

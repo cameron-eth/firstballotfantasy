@@ -114,8 +114,6 @@ const convertKtcToValue = (ktcValue: number): number => {
   return Math.max(1, Math.min(100, ktcValue / 100))
 }
 
-const normalizeName = (name: string): string =>
-  name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim()
 
 /**
  * Get player value from FirstBallotModel scoring system
@@ -323,66 +321,24 @@ export const GRADE_COLORS = {
 
 // Smart player name matching with dynasty database
 /**
- * Name forms a ranking may be stored under, in the order matchPlayerToRankings tries
- * them (each also tried normalized). The Trade Market route uses the same list to send
- * only the rankings its trades can match (PR-16).
+ * A player's ranking, looked up by Sleeper id (PR-19). Rankings are keyed by the tier
+ * publish's KTC ↔ Sleeper match, so two players who share a name can't be confused; a
+ * player without a match is unranked and valued by rank.
  */
-export const rankingNameVariations = (playerName: string): string[] => [
-  playerName,
-  playerName.replace(/\./g, ''), // Remove periods
-  playerName.replace(/\s+/g, ' ').trim(), // Normalize spaces
-  playerName.toLowerCase(),
-  playerName.split(' ').reverse().join(' '), // Last, First
-]
-
-/** Every rankings key a player's name can match: each variation, raw and normalized. */
-export const rankingNameKeys = (playerName: string): string[] =>
-  rankingNameVariations(playerName).flatMap((v) => [v, normalizeName(v)])
-
-export const matchPlayerToRankings = (
-  playerName: string,
+export const rankingFor = (
+  playerId: string,
   dynastyRankings: Record<string, any>
 ): { rank: number; tier: string; isRanked: boolean; total_score?: number; ktc_value_sf?: number } => {
-  // Direct match
-  if (dynastyRankings[playerName]) {
-    const ranking = dynastyRankings[playerName]
-    const totalScore =
-      typeof ranking.total_score === 'string'
-        ? parseFloat(ranking.total_score)
-        : ranking.total_score
-    return {
-      rank: ranking.rank || (totalScore ? calculateRankFromScore(totalScore) : 999),
-      tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
-      isRanked: true,
-      total_score: totalScore,
-      ktc_value_sf: ranking.ktc_value_sf ? Number(ranking.ktc_value_sf) : undefined,
-    }
-  }
-
-  // Try different name formats
-  for (const variation of rankingNameVariations(playerName)) {
-    const normalizedVariation = normalizeName(variation)
-    if (dynastyRankings[variation] || dynastyRankings[normalizedVariation]) {
-      const ranking = dynastyRankings[variation] || dynastyRankings[normalizedVariation]
-      const totalScore =
-        typeof ranking.total_score === 'string'
-          ? parseFloat(ranking.total_score)
-          : ranking.total_score
-      return {
-        rank: ranking.rank || (totalScore ? calculateRankFromScore(totalScore) : 999),
-        tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
-        isRanked: true,
-        total_score: totalScore,
-        ktc_value_sf: ranking.ktc_value_sf ? Number(ranking.ktc_value_sf) : undefined,
-      }
-    }
-  }
-
-  // No match found - return unranked
+  const ranking = dynastyRankings[playerId]
+  if (!ranking) return { rank: 999, tier: 'Unranked', isRanked: false }
+  const totalScore =
+    typeof ranking.total_score === 'string' ? parseFloat(ranking.total_score) : ranking.total_score
   return {
-    rank: 999,
-    tier: 'Unranked',
-    isRanked: false,
+    rank: ranking.rank || (totalScore ? calculateRankFromScore(totalScore) : 999),
+    tier: ranking.tier_name || ranking.tier || 'Unranked', // Prefer tier_name (string) over tier (number)
+    isRanked: true,
+    total_score: totalScore,
+    ktc_value_sf: ranking.ktc_value_sf ? Number(ranking.ktc_value_sf) : undefined,
   }
 }
 
@@ -406,7 +362,7 @@ export const processPlayerForTrade = (
   if (!player) return null
 
   const playerName = `${player.first_name} ${player.last_name}`
-  const ranking = matchPlayerToRankings(playerName, dynastyRankings)
+  const ranking = rankingFor(playerId, dynastyRankings)
 
   // Get PPG data from player stats if available
   const stats = playerStats?.[playerId]

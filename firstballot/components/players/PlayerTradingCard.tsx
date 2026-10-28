@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react'
 import { ArrowUpRight, LoaderCircle } from 'lucide-react'
 import { COLLEGE_LOGOS } from '@/lib/college-logos'
 import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
+import { PRODUCTION_TONE, TONE } from '@/lib/design/tones'
 
 export function PlayerTradingCard({
   name,
@@ -14,6 +15,7 @@ export function PlayerTradingCard({
   team,
   image,
   label,
+  statBadges,
   action,
   onAction,
   outgoing = false,
@@ -51,6 +53,8 @@ export function PlayerTradingCard({
   signal?: Pick<TradeSignal, 'headline' | 'reasons' | 'partners'>
   compact?: boolean
   label?: string
+  /** Compact stat badges for the footer (e.g. season and career FPPG); replaces `label`. */
+  statBadges?: { label: string; description: string; tone: 'production' | 'neutral' }[]
   action?: string
   onAction?: () => void
   outgoing?: boolean
@@ -229,12 +233,28 @@ export function PlayerTradingCard({
         )}
         {children && <div className="mt-3 text-xs text-slate-300">{children}</div>}
         <div className="mt-auto pt-4">
-          {label && (
-            <p
-              className={`mb-3 border-t border-white/15 pt-3 text-xs ${outgoing ? 'text-orange-300' : 'text-slate-400'}`}
-            >
-              {label}
-            </p>
+          {statBadges?.length ? (
+            <div className="mb-3 flex flex-wrap gap-1.5 border-t border-white/15 pt-3">
+              {statBadges.map((b) => (
+                <span
+                  key={b.label}
+                  tabIndex={0}
+                  title={b.description}
+                  aria-label={b.description}
+                  className={`rounded-md border px-2 py-1 text-xs font-semibold tabular-nums ${b.tone === 'production' ? PRODUCTION_TONE : TONE.neutral}`}
+                >
+                  {b.label}
+                </span>
+              ))}
+            </div>
+          ) : (
+            label && (
+              <p
+                className={`mb-3 border-t border-white/15 pt-3 text-xs ${outgoing ? 'text-orange-300' : 'text-slate-400'}`}
+              >
+                {label}
+              </p>
+            )
           )}
           {action && onAction && (
             <button

@@ -234,6 +234,9 @@ async function fetchLeagueDataBundle(
       total_fantasy_points: number
       games_played: number
       headshot_url?: string | null
+      career_ppg?: number | null
+      career_games?: number
+      career_from?: number | null
     }
   > = {}
 
@@ -248,6 +251,9 @@ async function fetchLeagueDataBundle(
         total_fantasy_points: number | string
         games_played: number
         headshot_url?: string | null
+        career_ppg?: number | null
+        career_games?: number
+        career_from?: number | null
       }) => {
         if (playerStats.fantasy_ppg == null || !Number.isFinite(Number(playerStats.fantasy_ppg)))
           return
@@ -259,6 +265,9 @@ async function fetchLeagueDataBundle(
           total_fantasy_points: parseFloat(String(playerStats.total_fantasy_points)) || 0,
           games_played: playerStats.games_played || 0,
           headshot_url: playerStats.headshot_url || null,
+          career_ppg: playerStats.career_ppg,
+          career_games: playerStats.career_games,
+          career_from: playerStats.career_from,
         }
       }
     )
@@ -285,6 +294,9 @@ async function fetchLeagueDataBundle(
       fantasy_points_ppr: stats.total_fantasy_points,
       games_played: stats.games_played,
       headshot_url: stats.headshot_url,
+      career_ppg: stats.career_ppg,
+      career_games: stats.career_games,
+      career_from: stats.career_from,
     }
   })
 
@@ -426,6 +438,9 @@ async function fetchLeagueDataBundle(
             fppg_rank: player.fppg_rank,
             fppg_position: player.fppg_position,
             stats_season: player.stats_season,
+            career_ppg: player.career_ppg ?? undefined,
+            career_games: player.career_games,
+            career_from: player.career_from ?? undefined,
             rankingData: ranking
               ? {
                   rank: ranking.rank,

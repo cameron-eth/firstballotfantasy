@@ -11,19 +11,20 @@
     --card-foreground: 0 0% 98%;
     --popover: 222 34% 16%;
     --popover-foreground: 0 0% 98%;
-    --primary: 38 92% 50%;
-    --primary-foreground: 0 0% 8%;
+    /* Primary = action blue (DESIGN_SYSTEM.md §1). Amber is for tiers, value and the wordmark. */
+    --primary: 213 94% 68%;
+    --primary-foreground: 222 47% 11%;
     --secondary: 222 28% 20%;
     --secondary-foreground: 0 0% 96%;
     --muted: 222 28% 20%;
-    --muted-foreground: 0 0% 65%;
+    --muted-foreground: 215 20% 65%;
     --accent: 222 28% 20%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 98%;
     --border: 222 20% 28%;
     --input: 222 20% 28%;
-    --ring: 38 92% 50%;
+    --ring: 213 94% 68%;
     --chart-1: 38 92% 50%;
     --chart-2: 211 85% 58%;
     --chart-3: 160 84% 39%;
@@ -31,14 +32,34 @@
     --chart-5: 346 84% 58%;
     --radius: 0.625rem;
 
+    /*
+     * Semantic colors: each family has one job (docs/design-system/DESIGN_SYSTEM.md §1).
+     * Position hues live in lib/player-card-palette.ts; class recipes in lib/design/tones.ts.
+     */
+    --action: 213 94% 68%; /* blue-400: links, primary buttons, focus, selection */
+    --value: 46 97% 65%; /* amber-300: KTC market value */
+    --elite: 46 97% 65%; /* amber-300: tier 1-2, grade A, the 1.01 */
+    --production: 199 95% 74%; /* sky-300: fantasy points, projections */
+    --positive: 158 64% 52%; /* emerald-400: up, gain, good tier, hot */
+    --negative: 351 95% 71%; /* rose-400: down, loss, bad tier */
+    --warning: 27 96% 61%; /* orange-400: injury, risk */
+    --cold: 186 94% 82%; /* cyan-200: cold (-500 KTC in 30 days) */
+    --pick: 252 95% 85%; /* violet-300: draft picks, always a chip with a ticket glyph */
+
+    /* Surfaces and lines (slate ramp). */
+    --surface: 217 33% 17%; /* slate-800 */
+    --raised: 215 25% 27%; /* slate-700 */
+    --overlay: 229 84% 5%; /* slate-950 */
+    --line: 215 25% 27%; /* slate-700 */
+
     --sidebar-background: 222 34% 16%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-primary: 213 94% 68%;
+    --sidebar-primary-foreground: 222 47% 11%;
     --sidebar-accent: 222 28% 20%;
     --sidebar-accent-foreground: 0 0% 96%;
     --sidebar-border: 222 20% 28%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-ring: 213 94% 68%;
   }
 
   .dark {
@@ -48,19 +69,20 @@
     --card-foreground: 0 0% 98%;
     --popover: 222 34% 16%;
     --popover-foreground: 0 0% 98%;
-    --primary: 38 92% 50%;
-    --primary-foreground: 0 0% 8%;
+    /* Primary = action blue (DESIGN_SYSTEM.md §1). Amber is for tiers, value and the wordmark. */
+    --primary: 213 94% 68%;
+    --primary-foreground: 222 47% 11%;
     --secondary: 222 28% 20%;
     --secondary-foreground: 0 0% 96%;
     --muted: 222 28% 20%;
-    --muted-foreground: 0 0% 65%;
+    --muted-foreground: 215 20% 65%;
     --accent: 222 28% 20%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 98%;
     --border: 222 20% 28%;
     --input: 222 20% 28%;
-    --ring: 38 92% 50%;
+    --ring: 213 94% 68%;
     --chart-1: 38 92% 50%;
     --chart-2: 211 85% 58%;
     --chart-3: 160 84% 39%;
@@ -68,12 +90,12 @@
     --chart-5: 346 84% 58%;
     --sidebar-background: 222 34% 16%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-primary: 213 94% 68%;
+    --sidebar-primary-foreground: 222 47% 11%;
     --sidebar-accent: 222 28% 20%;
     --sidebar-accent-foreground: 0 0% 96%;
     --sidebar-border: 222 20% 28%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-ring: 213 94% 68%;
   }
 
   * {

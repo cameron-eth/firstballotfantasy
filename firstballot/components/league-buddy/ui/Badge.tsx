@@ -2,21 +2,25 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { positionPalette, neutralPalette } from '@/lib/player-card-palette'
 import { describeTier, isCold, isHot, type TierTone } from '@/lib/player-signals'
+import {
+  COLD_TONE,
+  HOT_TONE,
+  PRODUCTION_TONE,
+  TONE,
+  VALUE_TONE,
+  gradeTone,
+} from '@/lib/design/tones'
+
+export { gradeTone, PRODUCTION_TONE, VALUE_TONE }
 
 /**
  * One badge shape for the whole team view: 10px semibold, 6px radius, a tinted fill with a
  * matching hairline border. Color carries meaning and nothing else does:
  * position = hue (blue/green/amber/violet), tier = gold/green/rose, heat = emerald/ice.
+ * Tones come from lib/design/tones.ts.
  */
 const base =
-  'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold leading-none'
-
-const TONE: Record<TierTone, string> = {
-  elite: 'border-amber-300/50 bg-amber-300/10 text-amber-200',
-  good: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200',
-  neutral: 'border-white/10 bg-white/5 text-slate-300',
-  bad: 'border-rose-400/40 bg-rose-400/10 text-rose-300',
-}
+  'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-badge font-semibold leading-none'
 
 export function PositionBadge({ position }: { position: string }) {
   const palette = positionPalette[position] ?? neutralPalette
@@ -57,17 +61,14 @@ export function TierBadge({
 export function HeatBadge({ delta30 }: { delta30?: number | null }) {
   if (isHot(delta30))
     return (
-      <span
-        className={cn(base, 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200')}
-        title={`KTC up ${Math.round(delta30!)} in 30 days`}
-      >
+      <span className={cn(base, HOT_TONE)} title={`KTC up ${Math.round(delta30!)} in 30 days`}>
         🔥 +{Math.round(delta30!).toLocaleString()}
       </span>
     )
   if (isCold(delta30))
     return (
       <span
-        className={cn(base, 'border-sky-200/50 bg-sky-200/10 text-sky-100')}
+        className={cn(base, COLD_TONE)}
         title={`KTC down ${Math.abs(Math.round(delta30!))} in 30 days`}
       >
         ❄️ {Math.round(delta30!).toLocaleString()}
@@ -91,16 +92,10 @@ export function InjuryBadge({ status }: { status: string }) {
   )
 }
 
-const GRADE_TONE = (grade: string): TierTone =>
-  /^A/.test(grade) ? 'elite' : /^B/.test(grade) ? 'good' : /^[DF]/.test(grade) ? 'bad' : 'neutral'
-export const gradeTone = GRADE_TONE
-
-/**
- * Value and production are separate axes, so they never share a color:
- * value (KTC market) is amber, production (points scored) is sky blue.
- */
-export const VALUE_TONE = 'border-amber-300/50 bg-amber-300/10 text-amber-200'
-export const PRODUCTION_TONE = 'border-sky-300/50 bg-sky-300/10 text-sky-200'
+/** League grade letter, on the same gold/green/rose scale as tiers. */
+export function GradeBadge({ grade }: { grade: string }) {
+  return <Badge tone={gradeTone(grade)}>{grade}</Badge>
+}
 
 export function RankBadge({
   kind,

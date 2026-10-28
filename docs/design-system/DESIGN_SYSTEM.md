@@ -47,7 +47,7 @@ These rules resolve the conflicts found in the audit:
 
 There is one family, Inter. It's already loaded and becomes `fontFamily.sans` via `var(--font-inter)`. Space Grotesk is limited to the landing display line.
 
-**`font-mono` is banned** except for code, API keys and IDs (allowlist: `settings/ApiAccess`, `oauth/*`). Numbers use `tabular-nums`, not mono.
+**`font-mono` is reserved** for technical information: API keys, tokens, IDs, code, timestamps and dense raw stat grids. It is never used for labels, headings, names or ordinary metrics. Numbers use `tabular-nums`, not mono.
 
 | Variant | Classes | Use |
 |---|---|---|
@@ -124,7 +124,7 @@ The light theme is out of scope. `:root` and `.dark` stay identical, and the dea
 | `Button` | Variants `primary` (action), `secondary` (raised hairline), `ghost`, `tint` (map recipe `LineupMap.tsx:209`: `border-{tone}/30 bg-{tone}/10 text-{tone}`), `icon`. Replaces 170 raw `<button>` over time and the 10 hand-styled yellow CTAs |
 | `Card` | Variants `surface` / `raised` / `overlay`. Replaces ~165 ad-hoc containers |
 | `Badge` | Rebuilt on the `Badge.tsx` shape with a `tone` prop. Removes the shadcn/league-buddy name collision |
-| `Tabs` | Variant `pill` only (dashboard/scouting style). Trade market's underline tabs move to `pill` |
+| `Tabs` | Variant `pill` only (dashboard/scouting style). Trade market's underline tabs move to `pill`. The dashboard gains a **Picks** tab |
 | `SegmentedControl` | New, wraps `toggle-group`. Replaces 12 hand-rolled toggles |
 | `Table` | `ui/table` + `numeric` cell prop (right-aligned, tabular), `sticky` first column, selected-row style |
 | `SectionHeader` | Promote `scouting/ScoutingSectionHeader` → `ui/section-header` (title, subtitle, actions slot). Replaces 88 eyebrow labels |
@@ -171,9 +171,15 @@ The light theme is out of scope. `:root` and `.dark` stay identical, and the dea
 | Empty | `EmptyState` |
 | Motion | `framer-motion`, ease `[0.22,1,0.36,1]`, springs without overshoot (landing demo), all disabled under `prefers-reduced-motion` |
 
-## Open decisions (need product owner)
+## Decisions (2026-10-28)
 
-1. **CTA color:** blue (recommended) or keep amber/yellow as `--primary`.
-2. **Pick hue:** violet chip with a glyph (recommended, least change) or a new hue (lime).
-3. **Legacy routes** (`/insights`, `/metrics`, `/charts`, `/stats-dashboard`, `/draft-board`, `/prospect-board`, `/scout`, `/prospects`): redirect or delete (recommended) rather than restyle.
-4. **Dashboard IA:** keep Draft Order inside Overview (as a section, not a hidden toggle), or add a Picks tab.
+1. **Primary actions are blue.** `--primary` = `--action`. Yellow/amber is reserved for meaningful tiers (`elite`), KTC value, and brand identity (the wordmark), never for decoration or buttons.
+2. **Picks stay violet,** but are separated from TE by three cues:
+   - **Shape:** a pick is a `PickChip` (rounded-md chip with a ticket glyph), and a TE is a `PositionBadge` with no glyph.
+   - **Saturation:** picks use a lighter, desaturated violet (`--pick`, violet-300 ink on a /10 fill). The TE wash stays the saturated `#b7a0ff`/violet-600.
+   - **Content:** a pick always shows a slot or year label (`1.03`, `2027 R1`), never a position code.
+3. **Legacy routes:** verify inbound links, imports and API dependencies route by route, then remove the ones that are genuinely unused. Anything still referenced gets a redirect to its live equivalent.
+4. **Draft Order gets a dedicated Picks tab** (fifth dashboard tab). It brings together draft order, owned picks by year, traded-pick ownership and pick trade ideas.
+5. **Monospace is reserved, not banned.** It's for genuinely technical information where fixed width helps reading: API keys, tokens, IDs, code, timestamps and dense raw stat grids. Labels, headings, names and ordinary metrics use sans, with `tabular-nums` on numbers.
+
+**Rollout:** foundations first, then **one representative page (Standings)**, compared by screenshot against the Map, before migrating anything else.

@@ -37,7 +37,7 @@ Each is a small, low-risk PR that doesn't wait on tokens.
 | F5 | Charts | Hand-copied axis and tooltip hex | No chart theme | `chartTheme` in `tones.ts` | 6 chart files | P1 | S | Low |
 | F6 | Shell | Container widths 1280–1800; doubled padding | Per-page decisions | `max-w-app` token; gutter only in the shell | Scouting narrows 1800 → 1440 | P1 | S | Med |
 
-**Decisions needed before F1:** CTA color and pick hue (DESIGN_SYSTEM.md, open decisions 1–2).
+**Decisions (made 2026-10-28):** blue primary actions; violet picks told apart by shape, glyph and saturation; mono reserved for technical data. **Rollout gate:** after Phase 1 and the Standings page (P3, with C1/C2/C6/C8/C11), compare screenshots against the Map before migrating anything else.
 
 ## Phase 2: Shared component consolidation (P0/P1)
 
@@ -64,7 +64,7 @@ These are mechanical once C2 and C3 exist. Use the guard (UI_ENFORCEMENT.md) to 
 
 | ID | Scope | Correction | Cx | Risk |
 |---|---|---|---|---|
-| T1 | 59 files | Remove `font-mono` (keep the allowlist); numbers get `tabular-nums` | M | Med |
+| T1 | 59 files | Remove `font-mono` from labels, headings, names and metrics; keep it for technical data (decision 5). Numbers get `tabular-nums` | M | Med |
 | T2 | 100 lines | Remove `uppercase` + `tracking-*` eyebrows (→ `SectionHeader` / `label`); de-capitalize the 42 ALL-CAPS strings | M | Low |
 | T3 | 225 uses | `text-[7–9px]` → `text-2xs`; `text-[10px]` only on badges | M | Med (density) |
 | T4 | Overview, My Team, Trade Market | One `metric-hero` per surface | S | Low |
@@ -77,14 +77,14 @@ These are mechanical once C2 and C3 exist. Use the guard (UI_ENFORCEMENT.md) to 
 | P1 | **Overview** | Duplicate identity; no headline metric; five equal mono buttons; position strength shown twice; Power Rankings in four `h-[270px]` scrolling cards | Remove the OverviewHeader identity (the shell owns it). Lead with one `metric-hero` (dynasty rank or projection, pick one) plus 3 `StatTile`s. Draft Order becomes a section (or tab, decision 4); the other actions become `Button tint`. Keep the radar, drop the duplicate bars. Power Rankings cards size to content, with a 2-column grid on desktop | C2, C3, C6, C11 | L | **High** |
 | P2 | **Franchise Outlook** | Mono header; drifting columns; 7px SVG text; yellow selected row | `SectionHeader`; `Table`-style aligned list; SVG labels ≥ 11px; selected uses `action` | C2, C8 | M | Med |
 | P3 | **Standings** | 11 equal columns; faint selection; broken on mobile | `Table` with sticky team column (`TeamIdentity`), primary columns (Record, PF, Playoffs%) in `metric` and secondary columns in slate-400 with `md:` hiding; active sort column highlighted; pick slots → `PickChip`; footnote → `InfoTip` | C1, C6, C8, C11 | M | Med |
-| P4 | **Draft Order / picks** | Gold mono board; gap column hidden on mobile; no ownership | `PickChip` with owner; group by year with `SectionHeader`; chips `flex-wrap`; show traded ownership from `OwnedPick` | C6, C8 | M | Med |
+| P4 | **Picks tab** (new) | Draft Order hidden behind an Overview toggle; gold mono board; no ownership | New fifth tab `picks` in `league-buddy/navigation.ts`, containing draft order (`Table` + `PickChip`), owned picks grouped by year (`SectionHeader` per year, chips `flex-wrap`), traded ownership from `OwnedPick`, and pick trade ideas. Remove the Overview toggle | C2, C6, C8 | L | Med |
 | P5 | **Trade Intelligence** | Sideways rails with no overflow hint; yellow mono header | `SectionHeader`; rails with edge fade and snap; `PlayerTradingCard` unchanged | C2 | S | Low |
 | P6 | **My Team** | Five competing `text-3xl` stats; `w-48` cards | `metric-hero` + `StatTile`s; lineup cards `w-60` to match the map; SuggestedTrades → `PlayerRow` | C3, C5 | S | Low |
 | P7 | **Team Builder** | Blue = action and QB; violet = TE and picks; card magic numbers | Selection/action via `action` token, picks via `PickChip`; tokenized card. **The screenshot must be pixel-identical apart from these two hues** | F1, F3, C6 | S | Med |
 | P8 | **Scouting** | 1800 width; board needs ~1,072px; mono cells; duplicate "Ungraded" | `max-w-app`; board columns collapse under `2xl` (drop secondary stats into the row detail); sans cells; one "Ungraded" | F6, T1 | M | Med |
 | P9 | **Rankings** | Position pill colored by tier; tier icons; mono; raw images | `PositionBadge` + `TierBadge`; `PlayerRow`; `Table` | C1, C5, C8 | M | Med |
 | P10 | **Trade Market** | All mono uppercase; underline tabs; your team not highlighted | Sans; pill `Tabs`; `Table` with your-team row; `StatTile` velocity row | C3, C8 | M | Med |
-| P11 | **Legacy routes** | Main source of drift | Redirect to their live equivalents, or delete (decision 3) | — | S | Low |
+| P11 | **Legacy routes** | Main source of drift | Per route, check inbound links, imports and API use. Delete the ones that are genuinely unused; redirect anything still referenced (decision 3) | — | M | Low |
 
 ## Phase 5: Responsive refinements (P2)
 

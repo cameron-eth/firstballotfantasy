@@ -11,7 +11,7 @@ The guard runs in CI next to React doctor and Frontend guards.
 
 | Rule | Detects | Allowlist |
 |---|---|---|
-| `no-mono` | `font-mono` | `settings/ApiAccess*`, `app/oauth/**` |
+| `no-mono` | `font-mono` on labels, headings, names and metrics (ratchet). It is allowed in files on the technical allowlist | `settings/ApiAccess*`, `app/oauth/**`, `stats-dashboard/ngs-stats-table.tsx`, plus any file with a `// design-guard: technical` comment explaining why |
 | `no-tiny-text` | `text-[Npx]` with N < 10; `text-[10px]` outside badge components | `players/ui/Badge.tsx` |
 | `no-eyebrow` | `uppercase` and `tracking-*` on the same element | none |
 | `no-raw-color` | Hex or `rgb(a)(` in `className` / `style`, and `bg-[#…]` | `lib/design/tones.ts`, `lib/player-card-palette.ts`, `app/globals.css` |
@@ -88,6 +88,6 @@ The guard can't judge information hierarchy, composition, whether density feels 
 
 Add to the frontend rules:
 - Use tokens from `lib/design/tones.ts` and the Tailwind semantic colors. No raw hex, `gray-*`, or new hues without a DESIGN_SYSTEM.md entry.
-- No `font-mono`, no `uppercase` + `tracking` eyebrows, no text under 10px (badges only at 10px).
+- Use `font-mono` only for technical information (keys, IDs, code, timestamps, raw stat grids). No `uppercase` + `tracking` eyebrows, and no text under 10px (10px is for badges only).
 - Use the shared `SectionHeader`, `StatTile`, `Badge`, `PlayerFace`, `PlayerRow`, `PickChip`, `Button` and `Table` before writing markup by hand.
 - Every UI PR includes before and after screenshots at 1400×900 and 375×812.

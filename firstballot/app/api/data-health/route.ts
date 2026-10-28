@@ -2,41 +2,49 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import { freshness, KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { failure, json } from '@/lib/platform/http'
 import ktcArchive from '@/data/ktc-history.json'
+import { FIRST_ESPN_SEASON } from '@/lib/platform/player-data'
+
+/** Completed ESPN seasons behind career FPPG; an expired one hides career badges. */
+const isCareerSeason = (key: string, currentSeason: number | null) => {
+  const year = Number(/^espn:ppr:(\d{4})$/.exec(key)?.[1])
+  return currentSeason != null && year >= FIRST_ESPN_SEASON && year < currentSeason
+}
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const [snapshotResult, stateResponse, ktcResult, prospectResult, prospectSyncResult] = await Promise.all([
-      supabaseAdmin
-        .from('data_snapshots')
-        .select('key,source,fetched_at,source_observed_at,expires_at,quality,season,week')
-        // Only publish shared provider datasets. Per-league roster cache keys are private.
-        .or('key.like.espn:%,key.like.sleeper:projections:%,key.eq.dynasty:tiers:v1')
-        .order('key')
-        .limit(100),
-      fetch('https://api.sleeper.app/v1/state/nfl', {
-        next: { revalidate: 600 },
-        signal: AbortSignal.timeout(10000),
-      }).catch(() => null),
-      supabaseAdmin
-        .from('ktc_player_values')
-        .select('scraped_date')
-        .order('scraped_date', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabaseAdmin
-        .from('dynasty_prospects')
-        .select('draft_year,updated_at')
-        .not('updated_at', 'is', null)
-        .order('updated_at', { ascending: false })
-        .limit(5000),
-      supabaseAdmin
-        .from('data_snapshots')
-        .select('key,source,fetched_at,source_observed_at,expires_at,season,payload')
-        .like('key', 'prospects:%:espn')
-        .limit(20),
-    ])
+    const [snapshotResult, stateResponse, ktcResult, prospectResult, prospectSyncResult] =
+      await Promise.all([
+        supabaseAdmin
+          .from('data_snapshots')
+          .select('key,source,fetched_at,source_observed_at,expires_at,quality,season,week')
+          // Only publish shared provider datasets. Per-league roster cache keys are private.
+          .or('key.like.espn:%,key.like.sleeper:projections:%,key.eq.dynasty:tiers:v1')
+          .order('key')
+          .limit(100),
+        fetch('https://api.sleeper.app/v1/state/nfl', {
+          next: { revalidate: 600 },
+          signal: AbortSignal.timeout(10000),
+        }).catch(() => null),
+        supabaseAdmin
+          .from('ktc_player_values')
+          .select('scraped_date')
+          .order('scraped_date', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabaseAdmin
+          .from('dynasty_prospects')
+          .select('draft_year,updated_at')
+          .not('updated_at', 'is', null)
+          .order('updated_at', { ascending: false })
+          .limit(5000),
+        supabaseAdmin
+          .from('data_snapshots')
+          .select('key,source,fetched_at,source_observed_at,expires_at,season,payload')
+          .like('key', 'prospects:%:espn')
+          .limit(20),
+      ])
     if (snapshotResult.error) throw snapshotResult.error
     if (prospectSyncResult.error) throw prospectSyncResult.error
 
@@ -114,9 +122,10 @@ export async function GET() {
           recordUpdateWarning: recordAgeDays === null || recordAgeDays > 14,
           // ESPN does not publish an observation timestamp. A recent verified
           // fetch is recorded separately from a provider freshness claim.
-          status: sourceCheck && Date.parse(sourceCheck.expires_at) <= now
-            ? 'expired'
-            : 'source-time-unknown',
+          status:
+            sourceCheck && Date.parse(sourceCheck.expires_at) <= now
+              ? 'expired'
+              : 'source-time-unknown',
           sourceTimeAvailable: false,
           lastCheckedAt: sourceCheck?.fetched_at ?? null,
           verifiedCount: coverage?.verifiedCount ?? null,
@@ -148,6 +157,7 @@ export async function GET() {
       ...snapshots.filter(
         (dataset) =>
           dataset.key === `espn:ppr:${currentSeason}` ||
+          isCareerSeason(dataset.key, currentSeason) ||
           dataset.key === 'dynasty:tiers:v1' ||
           dataset.key === `sleeper:projections:${currentSeason}:season` ||
           (currentWeek !== null &&

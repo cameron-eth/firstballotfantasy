@@ -105,6 +105,10 @@ export interface PlayerData {
   fppg_rank?: number | null
   fppg_position?: string | null
   stats_season?: number
+  /** PPR points per game across every season since `career_from` (ESPN starts in 2018). */
+  career_ppg?: number
+  career_games?: number
+  career_from?: number
   rankingData?: {
     rank: number
     position: string

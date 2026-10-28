@@ -26,6 +26,7 @@ jobs:
           import json
           data=json.load(open('/tmp/espn-refresh.json'))
           assert data.get('season'), 'Refresh response did not include the active season'
+          assert data.get('careerSeasons'), 'Career FPPG seasons failed to refresh; career badges are hidden'
           open('/tmp/current-season.txt','w').write(str(data['season']))
           PY
       - name: Refresh current-season projections
@@ -107,6 +108,8 @@ jobs:
           season=open('/tmp/current-season.txt').read().strip()
           keys={d['key']:d for d in data['datasets']}
           expected=[f'espn:ppr:{season}', f'sleeper:projections:{season}:season', 'ktc:player-values', 'dynasty:tiers:v1']
+          # Completed seasons behind career FPPG (ESPN totals start in 2018).
+          expected += [f'espn:ppr:{year}' for year in range(2018, int(season))]
           week=open('/tmp/current-week.txt').read().strip()
           if week:
               expected.append(f'sleeper:projections:{season}:{week}')

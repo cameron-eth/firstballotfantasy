@@ -18,6 +18,34 @@ type MapPlayer = SlotPlayer & {
   target?: Target
   roster?: PlayerData
 }
+type StatBadge = { label: string; description: string; tone: 'production' | 'neutral' }
+
+/**
+ * Season and career PPR points per game. Career is total points over total games; ESPN's
+ * totals start in 2018, so a player who debuted earlier reads "Since 2018" rather than
+ * claiming a full career.
+ */
+function fppgBadges(p: MapPlayer, baseYear: number): StatBadge[] {
+  const r = p.roster
+  const season = r?.stats_season ?? baseYear
+  const badges: StatBadge[] = []
+  if (p.ppg != null)
+    badges.push({
+      label: `FPPG ${p.ppg.toFixed(1)}`,
+      description: `${season} PPR points per game over ${r?.games_played ?? 0} games (ESPN season totals).`,
+      tone: 'production',
+    })
+  if (r?.career_ppg != null && r.career_from) {
+    const full = season - (r.experience ?? 0) >= r.career_from
+    badges.push({
+      label: `${full ? 'Career' : `Since ${r.career_from}`} ${r.career_ppg.toFixed(1)}`,
+      description: `PPR points per game over ${r.career_games ?? 0} games ${full ? 'across the career' : `since ${r.career_from}, the first season ESPN totals cover`}.`,
+      tone: 'neutral',
+    })
+  }
+  return badges
+}
+
 export function LineupMap({
   team,
   teams,
@@ -116,7 +144,7 @@ export function LineupMap({
         departureYears: { ...scenario.departureYears, [p.roster.playerId]: horizon },
       })
   }
-  const card = (p: MapPlayer, label: string, slot?: string) => (
+  const card = (p: MapPlayer, slot?: string) => (
     <div className="space-y-2">
       <StrategyCard
         name={p.name}
@@ -161,7 +189,7 @@ export function LineupMap({
               : 'Trade target · not acquired'
             : undefined
         }
-        label={`${label} · ${p.ppg == null ? 'FPPG unavailable' : `${p.ppg.toFixed(1)} FPPG · ${p.roster?.stats_season ?? baseYear} PPR`}`}
+        statBadges={fppgBadges(p, baseYear)}
         action={
           slot
             ? placingId === p.id
@@ -253,12 +281,7 @@ export function LineupMap({
               </header>
               {starter ? (
                 <>
-                  <div className="relative">
-                    {card(
-                      starter,
-                      assignments[slot.id] === starter.id ? 'Your starter' : 'Starter'
-                    )}
-                  </div>
+                  <div className="relative">{card(starter)}</div>
                   {starter.roster && (
                     <button
                       className="w-full rounded-lg border border-blue-400/30 py-2 text-xs text-blue-200"
@@ -284,11 +307,7 @@ export function LineupMap({
             .filter((p) => !p.target && !slots.some((s) => s.starter?.id === p.id))
             .map((p) => (
               <div className="w-60 space-y-3" key={p.id}>
-                {card(
-                  p,
-                  p.target ? 'Planned arrival' : 'Bench',
-                  slots.some((s) => fitsSlot(s.eligible, p)) ? 'bench' : undefined
-                )}
+                {card(p, slots.some((s) => fitsSlot(s.eligible, p)) ? 'bench' : undefined)}
                 {p.roster && (
                   <button
                     className="w-full rounded-lg border border-blue-400/30 py-2 text-xs text-blue-200"
@@ -314,11 +333,7 @@ export function LineupMap({
               .filter((p) => p.target && !slots.some((s) => s.starter?.id === p.id))
               .map((p) => (
                 <div className="w-60" key={p.id}>
-                  {card(
-                    p,
-                    'Planned arrival',
-                    slots.some((s) => fitsSlot(s.eligible, p)) ? 'target' : undefined
-                  )}
+                  {card(p, slots.some((s) => fitsSlot(s.eligible, p)) ? 'target' : undefined)}
                 </div>
               ))}
           </div>

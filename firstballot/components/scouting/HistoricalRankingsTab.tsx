@@ -88,8 +88,7 @@ export function HistoricalRankingsTab() {
         }
         secondary={
           <p className="text-xs text-slate-400">
-            {visible.length} players · Highest grade first · {asOf} · Tap the signal bars for
-            outcomes{outcomeError ? ' · Outcome data could not be loaded' : ''}
+            {visible.length} players · Highest grade first · {asOf} · Hover or tap an outcome for detail{outcomeError ? ' · Outcome data could not be loaded' : ''}
           </p>
         }
       />

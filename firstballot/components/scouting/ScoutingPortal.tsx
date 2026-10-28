@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import useSWR from 'swr'
 import { Header } from '@/components/header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, TrendingUp, BarChart3 } from 'lucide-react'
+import { Eye, TrendingUp, BarChart3, ChartScatter } from 'lucide-react'
+import { HitsMissesTab } from './HitsMissesTab'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -44,7 +45,7 @@ interface ScoutingPortalProps {
   leagueId: string
   initialTab?: string
 }
-const PORTAL_TABS = ['prospects', 'draftboard', 'historical'] as const
+const PORTAL_TABS = ['prospects', 'draftboard', 'historical', 'hits'] as const
 type PortalTab = (typeof PORTAL_TABS)[number]
 
 /** Guards against stale deep links (e.g. the retired `?tab=alltime`). */
@@ -658,10 +659,10 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
             className="w-full"
           >
             <div className="mb-3 md:mb-4 shrink-0">
-              <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-white/10 bg-slate-900/60 p-1 md:inline-flex md:w-auto">
+              <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl border border-white/10 bg-slate-900/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:inline-flex md:w-auto">
                 <TabsTrigger
                   value="prospects"
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Eye className="h-4 w-4" aria-hidden="true" />
@@ -670,7 +671,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 </TabsTrigger>
                 <TabsTrigger
                   value="draftboard"
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <TrendingUp className="h-4 w-4" aria-hidden="true" />
@@ -679,11 +680,20 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
                 </TabsTrigger>
                 <TabsTrigger
                   value="historical"
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <BarChart3 className="h-4 w-4" aria-hidden="true" />
                     <span className="truncate">History</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="hits"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 sm:px-4 transition-colors hover:text-white data-[state=active]:bg-blue-400/20 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <ChartScatter className="h-4 w-4" aria-hidden="true" />
+                    <span className="truncate">Hits & misses</span>
                   </div>
                 </TabsTrigger>
               </TabsList>
@@ -747,6 +757,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
 
             <TabsContent value="historical" className="mt-3">
               <HistoricalRankingsTab />
+            </TabsContent>
+            <TabsContent value="hits" className="mt-3">
+              <HitsMissesTab />
             </TabsContent>
           </Tabs>
 

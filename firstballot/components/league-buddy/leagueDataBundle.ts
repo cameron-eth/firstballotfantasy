@@ -146,8 +146,6 @@ export function clearPlayersMemo() {
   playersMemo = null
 }
 
-const fresh = { cache: 'no-store' } as const
-
 export async function fetchLeagueDataBundle(
   leagueId: string,
   user: unknown,
@@ -169,8 +167,8 @@ export async function fetchLeagueDataBundle(
     (await Promise.all([
       // State, league and this week's matchups are shared with the other loaders (PR-18).
       sleeperState().catch(() => null),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/rosters`, fresh).then((r) => r.json()),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, fresh).then((r) => r.json()),
+      sleeperClient.getLeagueRosters(leagueId, SLEEPER_CACHE.fresh),
+      sleeperClient.getLeagueUsers(leagueId, SLEEPER_CACHE.fresh),
       getPlayersOnce(),
       sleeperLeague(leagueId),
       fetch(`${apiBase}/api/dynasty-tiers?${v}`)
@@ -196,9 +194,7 @@ export async function fetchLeagueDataBundle(
       : Promise.resolve(null),
     Promise.all(
       Array.from({ length: week }, (_, i) => i + 1).map((w) =>
-        fetch(`https://api.sleeper.app/v1/league/${leagueId}/transactions/${w}`, fresh)
-          .then((r) => (r.ok ? r.json() : []))
-          .catch(() => [])
+        sleeperClient.getTransactions(leagueId, w, SLEEPER_CACHE.fresh).catch(() => [])
       )
     ),
   ])) as [SleeperMatchup[], any[], any, SleeperTransaction[][]]

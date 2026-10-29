@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 import { isValidUserGrade } from '@/lib/user-grade'
 import type { SaveProspectGradeRequest } from '@/types/prospect-grades'
@@ -20,7 +21,7 @@ function getAuth(request: NextRequest): { userId: string; userJwt: string } | nu
 }
 
 function unauthenticated() {
-  return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+  return fail(401, 'User not authenticated')
 }
 
 /**
@@ -51,13 +52,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching prospect grades:', error)
-      return NextResponse.json({ error: 'Failed to fetch grades' }, { status: 500 })
+      return fail(500, 'Failed to fetch grades')
     }
 
     return NextResponse.json({ grades: data || [] })
   } catch (error) {
     console.error('Error in GET /api/scouting-grades:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -72,31 +73,22 @@ export async function PUT(request: NextRequest) {
 
     const prospectId = Number(body.prospect_id)
     if (!Number.isInteger(prospectId) || prospectId <= 0) {
-      return NextResponse.json({ error: 'A valid prospect_id is required' }, { status: 400 })
+      return fail(400, 'A valid prospect_id is required')
     }
 
     const film = readGrade(body.film_grade)
     const talent = readGrade(body.talent_grade)
     if (!film.ok || !talent.ok) {
-      return NextResponse.json(
-        { error: 'Grades must be numbers between 0 and 100' },
-        { status: 400 }
-      )
+      return fail(400, 'Grades must be numbers between 0 and 100')
     }
 
     if (film.value === undefined && talent.value === undefined) {
-      return NextResponse.json(
-        { error: 'film_grade or talent_grade is required' },
-        { status: 400 }
-      )
+      return fail(400, 'film_grade or talent_grade is required')
     }
 
     // The table rejects a row with neither grade — clearing both is a delete.
     if (film.value === null && talent.value === null) {
-      return NextResponse.json(
-        { error: 'Use DELETE to clear both grades' },
-        { status: 400 }
-      )
+      return fail(400, 'Use DELETE to clear both grades')
     }
 
     // An upsert replaces the whole row, so a field the caller left out has to be
@@ -113,10 +105,7 @@ export async function PUT(request: NextRequest) {
       talent.value === undefined ? (existing?.talent_grade ?? null) : talent.value
 
     if (nextFilm === null && nextTalent === null) {
-      return NextResponse.json(
-        { error: 'Use DELETE to clear both grades' },
-        { status: 400 }
-      )
+      return fail(400, 'Use DELETE to clear both grades')
     }
 
     const { data, error } = await supabase
@@ -135,13 +124,13 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       console.error('Error saving prospect grade:', error)
-      return NextResponse.json({ error: 'Failed to save grade' }, { status: 500 })
+      return fail(500, 'Failed to save grade')
     }
 
     return NextResponse.json({ grade: data })
   } catch (error) {
     console.error('Error in PUT /api/scouting-grades:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -156,7 +145,7 @@ export async function DELETE(request: NextRequest) {
     const prospectId = Number(searchParams.get('prospect_id'))
 
     if (!Number.isInteger(prospectId) || prospectId <= 0) {
-      return NextResponse.json({ error: 'A valid prospect_id is required' }, { status: 400 })
+      return fail(400, 'A valid prospect_id is required')
     }
 
     const { error } = await supabase
@@ -167,12 +156,12 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('Error deleting prospect grade:', error)
-      return NextResponse.json({ error: 'Failed to delete grade' }, { status: 500 })
+      return fail(500, 'Failed to delete grade')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error in DELETE /api/scouting-grades:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     // Create an authenticated Supabase client with the user's JWT token
@@ -22,11 +23,11 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
+      return fail(500, 'Failed to fetch profile')
     }
 
     return NextResponse.json(profile || {})
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

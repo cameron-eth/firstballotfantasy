@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { readSession } from '@/lib/platform/session'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     // Create an authenticated Supabase client with the user's JWT token
@@ -117,21 +118,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (error && error.code !== 'PGRST116') {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('User profile read failed:', error.code)
+      return fail(500, 'Could not load your profile')
     }
 
     // Self-heal missing profile for authenticated users.
     // Email and username come from the session middleware.ts verified.
     const session = readSession(request)
     if (!session?.email) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      return fail(404, 'Profile not found')
     }
 
     const username = deriveUsername(session.email, session.username)
     const profile = await ensureUserProfile(userJwt, userId, session.email, username)
     return NextResponse.json(profile)
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -142,13 +144,13 @@ export async function POST(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!authId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     const session = readSession(request)
     const resolvedEmail = session?.email ?? email
     if (!resolvedEmail) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
+      return fail(400, 'Email is required')
     }
 
     const resolvedUsername = deriveUsername(resolvedEmail, session?.username ?? username)
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(profile)
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -168,7 +170,7 @@ export async function PATCH(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     // Create an authenticated Supabase client with the user's JWT token
@@ -178,7 +180,7 @@ export async function PATCH(request: NextRequest) {
 
     const normalizedUsername = typeof sleeper_username === 'string' ? sleeper_username.trim() : ''
     if (!/^[A-Za-z0-9_.-]{2,32}$/.test(normalizedUsername)) {
-      return NextResponse.json({ error: 'Enter a valid Sleeper username' }, { status: 400 })
+      return fail(400, 'Enter a valid Sleeper username')
     }
 
     // Update the sleeper_username using the authenticated client (respects RLS)
@@ -190,11 +192,12 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('User profile update failed:', error.code)
+      return fail(500, 'Could not update your profile')
     }
 
     return NextResponse.json(data)
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

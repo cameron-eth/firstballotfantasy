@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseServer } from '@/lib/supabase-server'
 import { prospectTier } from '@/lib/scouting-grade-tier'
 import { nextDraftClass } from '@/lib/draft-years'
@@ -108,7 +109,7 @@ export async function GET() {
 
     if (error) {
       console.error('Database error fetching draftboard prospects:', error)
-      return NextResponse.json({ error: 'Failed to fetch draftboard prospects' }, { status: 500 })
+      return fail(500, 'Failed to fetch draftboard prospects')
     }
 
     const players = (data || []).map((row, idx) => toPlayer(row as RawProspect, idx + 1))
@@ -146,6 +147,6 @@ export async function GET() {
     })
   } catch (e) {
     console.error('Error in /api/prospects/draftboard:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

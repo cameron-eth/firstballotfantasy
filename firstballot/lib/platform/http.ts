@@ -11,6 +11,26 @@ export class PlatformError extends Error {
 export function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } })
 }
+const STATUS_CODE: Record<number, string> = {
+  400: 'INVALID_REQUEST',
+  401: 'UNAUTHENTICATED',
+  403: 'FORBIDDEN',
+  404: 'NOT_FOUND',
+  405: 'METHOD_NOT_ALLOWED',
+  409: 'CONFLICT',
+  413: 'BODY_TOO_LARGE',
+  500: 'INTERNAL_ERROR',
+  502: 'UPSTREAM_UNAVAILABLE',
+  503: 'UNAVAILABLE',
+}
+/**
+ * The one error shape: `{ error, code }`, never cached. `error` is text a person can read; the
+ * code follows the status unless `extra` names one; `extra` also carries fields a client reads,
+ * such as `voted`.
+ */
+export function fail(status: number, message: string, extra?: Record<string, unknown>) {
+  return json({ error: message, code: STATUS_CODE[status] ?? 'ERROR', ...extra }, status)
+}
 export function failure(error: unknown) {
   if (error instanceof PlatformError)
     return json({ error: error.message, code: error.code }, error.status)

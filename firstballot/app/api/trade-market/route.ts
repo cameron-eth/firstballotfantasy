@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { KTC_DAY_MARKER_PREFIX, TIER_KEY } from '@/lib/dynasty-tiers'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
 import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
@@ -212,7 +213,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
 
     if (!leagueId) {
-      return NextResponse.json({ error: 'League ID is required' }, { status: 400 })
+      return fail(400, 'League ID is required')
     }
 
     // Fetch FRESH NFL state (no cache) to ensure we get the latest week
@@ -338,17 +339,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData)
   } catch (error) {
     console.error('Trade Market API error:', error)
-    return NextResponse.json(
-      {
-        error: 'Failed to fetch trade market data',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString(),
-        requestParams: {
-          leagueId: new URL(request.url).searchParams.get('leagueId'),
-          userId: new URL(request.url).searchParams.get('userId'),
-        },
-      },
-      { status: 500 }
-    )
+    return fail(500, 'Failed to fetch trade market data')
   }
 }

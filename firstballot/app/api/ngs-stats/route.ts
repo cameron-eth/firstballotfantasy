@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseServer } from '@/lib/supabase-server'
 
 type NGSStatType = 'passing' | 'rushing' | 'receiving'
@@ -25,10 +26,7 @@ export async function GET(request: NextRequest) {
     // Validate stat type
     if (!stat_type || !TABLE_MAP[stat_type]) {
       console.error('Invalid stat type:', stat_type)
-      return NextResponse.json(
-        { error: "Invalid stat type. Must be 'passing', 'rushing', or 'receiving'" },
-        { status: 400 }
-      )
+      return fail(400, "Invalid stat type. Must be 'passing', 'rushing', or 'receiving'")
     }
 
     const tableName = TABLE_MAP[stat_type]
@@ -78,10 +76,7 @@ export async function GET(request: NextRequest) {
       console.error('Error details:', JSON.stringify(error, null, 2))
       console.error('Error code:', error.code)
       console.error('Error message:', error.message)
-      return NextResponse.json(
-        { error: 'Database query failed', details: error.message },
-        { status: 500 }
-      )
+      return fail(500, 'Database query failed')
     }
 
     console.log(`Successfully fetched ${data?.length || 0} records`)
@@ -101,9 +96,6 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('API error:', error)
     console.error('Error stack:', error.stack)
-    return NextResponse.json(
-      { error: 'Failed to fetch NGS stats', message: error.message },
-      { status: 500 }
-    )
+    return fail(500, 'Failed to fetch NGS stats')
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET() {
@@ -96,6 +97,6 @@ export async function GET() {
     })
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

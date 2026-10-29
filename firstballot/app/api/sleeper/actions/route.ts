@@ -10,7 +10,7 @@ import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store
 import { webAccount } from '@/lib/platform/auth'
 import { readSession } from '@/lib/platform/session'
 import { teamsFor } from '@/lib/platform/teams'
-import { failure } from '@/lib/platform/http'
+import { fail, failure } from '@/lib/platform/http'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   ownsRoster,
@@ -29,7 +29,7 @@ const reply = (data: unknown, status = 200) =>
 
 export async function POST(request: NextRequest) {
   const session = readSession(request)
-  if (!session) return reply({ error: 'Sign in to connect Sleeper.' }, 401)
+  if (!session) return fail(401, 'Sign in to connect Sleeper.')
   const body = await request.json().catch(() => null)
   if (
     !body ||
@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
     (!['status', 'disconnect'].includes(body.action) && !/^\d{10,25}$/.test(body.leagueId ?? '')) ||
     !['status', 'connect', 'restore', 'disconnect', 'trade', 'lineup'].includes(body.action)
   )
-    return reply({ error: 'Invalid Sleeper request.' }, 400)
+    return fail(400, 'Invalid Sleeper request.')
   if (['trade', 'lineup'].includes(body.action)) {
     try {
       const teams = await teamsFor(await webAccount(request))
       if (!teams.some((t) => t.league_id === body.leagueId && t.active))
-        return reply({ error: 'Activate this team before sending an action.' }, 403)
+        return fail(403, 'Activate this team before sending an action.')
     } catch (e) {
       return failure(e)
     }
@@ -56,28 +56,22 @@ export async function POST(request: NextRequest) {
     const saved = body.action === 'connect' ? body.token?.trim() : await loadToken(session.userId)
     if (body.action === 'status') return reply(sleeperConnectionStatus(saved))
     if (!saved)
-      return reply(
-        body.action === 'restore'
-          ? { connected: false }
-          : { error: 'Connect your Sleeper token first.' },
-        body.action === 'restore' ? 200 : 401
-      )
+      return body.action === 'restore'
+        ? reply({ connected: false })
+        : fail(401, 'Connect your Sleeper token first.')
     token = saved
   } catch (e) {
-    return reply({ error: e instanceof Error ? e.message : 'Connection unavailable.' }, 503)
+    return fail(503, e instanceof Error ? e.message : 'Connection unavailable.')
   }
   let identity: { user_id?: string; exp?: number }
   try {
     token = normalizeSleeperToken(token)
     identity = sleeperTokenIdentity(token)
   } catch (e) {
-    return reply(
-      { error: e instanceof Error ? e.message : 'Paste a valid Sleeper authorization token.' },
-      400
-    )
+    return fail(400, e instanceof Error ? e.message : 'Paste a valid Sleeper authorization token.')
   }
   if (!identity.user_id || !identity.exp || identity.exp * 1000 <= Date.now())
-    return reply({ error: 'Sleeper token has expired or is invalid.' }, 401)
+    return fail(401, 'Sleeper token has expired or is invalid.')
   // Decoded claims are not trusted for authorization. Sleeper verifies the token on
   // the read below before we inspect ownership or permit any fixed mutation.
   const gql = async (operation: { operationName: string; query: string; variables: object }) => {
@@ -116,14 +110,11 @@ export async function POST(request: NextRequest) {
       sleeperClient.read<any>(`/league/${body.leagueId}`, SLEEPER_CACHE.fresh).catch(() => null),
       sleeperClient.read<any>('/state/nfl', SLEEPER_CACHE.fresh).catch(() => null),
     ])
-    if (!rosters || !league || !state)
-      return reply({ error: 'Could not verify current league data.' }, 502)
+    if (!rosters || !league || !state) return fail(502, 'Could not verify current league data.')
     const mine = rosters.find((r) => ownsRoster(r, String(identity.user_id)))
-    if (!mine)
-      return reply({ error: 'This Sleeper account does not manage a team in this league.' }, 403)
+    if (!mine) return fail(403, 'This Sleeper account does not manage a team in this league.')
     const trades = read.league_transactions_filtered
-    if (!Array.isArray(trades))
-      return reply({ error: 'Sleeper did not return trade history.' }, 502)
+    if (!Array.isArray(trades)) return fail(502, 'Sleeper did not return trade history.')
     if (body.action === 'connect' || body.action === 'restore') {
       if (body.action === 'connect') await saveToken(session.userId, token)
       return reply({
@@ -135,14 +126,11 @@ export async function POST(request: NextRequest) {
       })
     }
     if (body.confirmed !== true || Number(body.rosterId) !== mine.roster_id)
-      return reply({ error: 'Review the action for your own team before confirming.' }, 400)
+      return fail(400, 'Review the action for your own team before confirming.')
     if (body.action === 'trade') {
       const other = rosters.find((r) => r.roster_id === body.partnerId)
       if (!other || !tradePlayersStillOwned(mine, other, body.give, body.receive))
-        return reply(
-          { error: 'Player ownership changed. Refresh and review the trade again.' },
-          409
-        )
+        return fail(409, 'Player ownership changed. Refresh and review the trade again.')
       let assets
       try {
         assets = validateTradeExtras(
@@ -152,10 +140,7 @@ export async function POST(request: NextRequest) {
           await loadTradeInventory(body.leagueId)
         )
       } catch (error) {
-        return reply(
-          { error: error instanceof Error ? error.message : 'Could not verify trade assets.' },
-          409
-        )
+        return fail(409, error instanceof Error ? error.message : 'Could not verify trade assets.')
       }
       const operation = tradeOperation(
         body.leagueId,
@@ -167,10 +152,7 @@ export async function POST(request: NextRequest) {
       )
       const result = await gql(operation)
       if (!result.propose_trade?.transaction_id)
-        return reply(
-          { error: 'No trade confirmation returned. Check Sleeper before retrying.' },
-          502
-        )
+        return fail(502, 'No trade confirmation returned. Check Sleeper before retrying.')
       return reply({ trade: result.propose_trade })
     }
     if (
@@ -178,19 +160,16 @@ export async function POST(request: NextRequest) {
       state.season_type !== 'regular' ||
       Number(body.week) !== state.week
     )
-      return reply(
-        { error: 'Lineup actions are available for the current regular-season week only.' },
-        409
-      )
+      return fail(409, 'Lineup actions are available for the current regular-season week only.')
     const matchups = await sleeperClient
       .read<
         { roster_id: number; starters: string[] }[]
       >(`/league/${body.leagueId}/matchups/${state.week}`, SLEEPER_CACHE.fresh)
       .catch(() => null)
-    if (!matchups) return reply({ error: 'Could not verify the current lineup.' }, 502)
+    if (!matchups) return fail(502, 'Could not verify the current lineup.')
     const matchup = matchups.find((r: { roster_id: number }) => r.roster_id === mine.roster_id)
     if (!matchup || !sameLineup(matchup.starters, body.expectedStarters))
-      return reply({ error: 'Your lineup changed. Refresh before reviewing it again.' }, 409)
+      return fail(409, 'Your lineup changed. Refresh before reviewing it again.')
     const slots = (league.roster_positions as string[]).filter(
       (slot) => !['BN', 'IR', 'TAXI'].includes(slot)
     )
@@ -199,30 +178,21 @@ export async function POST(request: NextRequest) {
       body.starters.length !== slots.length ||
       !body.starters.every((id: string) => mine.players?.includes(id))
     )
-      return reply(
-        { error: 'The lineup must fill every starting slot with a rostered player.' },
-        400
-      )
+      return fail(400, 'The lineup must fill every starting slot with a rostered player.')
     // Sleeper enforces position eligibility, game locks and league restrictions.
     // Never retry a mutation automatically: a timeout may follow a successful write.
     const result = await gql(
       lineupOperation(body.leagueId, mine.roster_id, state.week, body.starters)
     )
     if (!sameLineup(result.update_matchup_leg?.starters, body.starters))
-      return reply(
-        { error: 'No lineup confirmation returned. Check Sleeper before retrying.' },
-        502
-      )
+      return fail(502, 'No lineup confirmation returned. Check Sleeper before retrying.')
     return reply({ lineup: result.update_matchup_leg })
   } catch (error) {
-    return reply(
-      {
-        error:
-          error instanceof Error && !/fetch|JSON|timeout|abort/i.test(error.message)
-            ? error.message
-            : 'Sleeper did not confirm the request. Check Sleeper before retrying an action.',
-      },
-      502
+    return fail(
+      502,
+      error instanceof Error && !/fetch|JSON|timeout|abort/i.test(error.message)
+        ? error.message
+        : 'Sleeper did not confirm the request. Check Sleeper before retrying an action.'
     )
   }
 }

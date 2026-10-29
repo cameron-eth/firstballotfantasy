@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { TIER_KEY, type DynastyTier, type TierFormat } from '@/lib/dynasty-tiers'
 
@@ -10,8 +11,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabaseAdmin.from('data_snapshots')
     .select('payload,expires_at,fetched_at').eq('key', TIER_KEY).maybeSingle()
   if (error || !data || Date.parse(data.expires_at) <= Date.now())
-    return NextResponse.json({ error: 'Current rankings are unavailable' }, { status: 503,
-      headers: { 'Cache-Control': 'no-store' } })
+    return fail(503, 'Current rankings are unavailable')
   const payload = data.payload as Payload
   const maxAge = Math.max(0, Math.min(300, Math.floor((Date.parse(data.expires_at) - Date.now()) / 1000)))
   const format: TierFormat = request.nextUrl.searchParams.get('format') === 'one_qb' ? 'one_qb' : 'sf'
@@ -34,13 +34,13 @@ export async function GET(request: NextRequest) {
   const playerName = request.nextUrl.searchParams.get('player')
   if (playerName) {
     const found = rankings.find((p) => p.player_name.toLowerCase() === playerName.toLowerCase())
-    return found ? NextResponse.json(found) : NextResponse.json({ error: 'Player not found' }, { status: 404 })
+    return found ? NextResponse.json(found) : fail(404, 'Player not found')
   }
   const scoreQuery = request.nextUrl.searchParams.get('score')
   if (scoreQuery !== null) {
     const score = Number(scoreQuery)
     if (!Number.isFinite(score) || score < 0 || score > 100)
-      return NextResponse.json({ error: 'Score must be between 0 and 100' }, { status: 400 })
+      return fail(400, 'Score must be between 0 and 100')
     return NextResponse.json({ score, rank: rankings.find((p) => p.total_score <= score)?.rank ?? rankings.length + 1 })
   }
   return NextResponse.json({ data: rankings, fetchedAt: data.fetched_at,

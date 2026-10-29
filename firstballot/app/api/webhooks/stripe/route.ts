@@ -2,16 +2,16 @@ import type Stripe from 'stripe'
 import { reconcileBilling } from '@/lib/platform/reconcile-billing'
 import { getStripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase-server'
-import { failure, json } from '@/lib/platform/http'
+import { fail, failure, json } from '@/lib/platform/http'
 export async function POST(request: Request) {
   const signature = request.headers.get('stripe-signature'),
     secret = process.env.STRIPE_WEBHOOK_SECRET
-  if (!signature || !secret) return json({ error: 'Webhook verification unavailable' }, 400)
+  if (!signature || !secret) return fail(400, 'Webhook verification unavailable')
   let event: Stripe.Event
   try {
     event = getStripe().webhooks.constructEvent(await request.text(), signature, secret)
   } catch {
-    return json({ error: 'Invalid signature' }, 400)
+    return fail(400, 'Invalid signature')
   }
   try {
     const { data: processed, error: readError } = await supabaseAdmin

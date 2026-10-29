@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     const leagueId = searchParams.get('leagueId')
 
     if (!leagueId) {
-      return NextResponse.json({ error: 'League ID is required' }, { status: 400 })
+      return fail(400, 'League ID is required')
     }
 
     // Get the userId and JWT token from headers (set by middleware after auth verification)
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     if (!userId || !userJwt) {
       console.log('[league-roster] Missing auth headers')
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     // Create an authenticated Supabase client with the user's JWT token
@@ -43,14 +44,9 @@ export async function GET(request: NextRequest) {
     })
 
     if (profileError || !userProfile?.sleeper_username) {
-      return NextResponse.json(
-        {
-          error: 'Please connect your Sleeper account first',
-          message: 'Go to League Buddy and connect your Sleeper username',
-          debug: { profileError: profileError?.message, hasProfile: !!userProfile },
-        },
-        { status: 400 }
-      )
+      return fail(400, 'Please connect your Sleeper account first', {
+        message: 'Go to League Buddy and connect your Sleeper username',
+      })
     }
 
     // Fetch all data in parallel - Users without cache to get fresh team names
@@ -69,7 +65,7 @@ export async function GET(request: NextRequest) {
     )
 
     if (!sleeperUser) {
-      return NextResponse.json({ error: 'User not found in this league' }, { status: 404 })
+      return fail(404, 'User not found in this league')
     }
 
     // Find the user's roster
@@ -81,7 +77,7 @@ export async function GET(request: NextRequest) {
     )
 
     if (!userRoster) {
-      return NextResponse.json({ error: 'User roster not found' }, { status: 404 })
+      return fail(404, 'User roster not found')
     }
 
     // Get player IDs from user's roster only
@@ -119,6 +115,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching league roster:', error)
-    return NextResponse.json({ error: 'Failed to fetch league roster' }, { status: 500 })
+    return fail(500, 'Failed to fetch league roster')
   }
 }

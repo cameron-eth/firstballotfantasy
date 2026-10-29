@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseServer } from '@/lib/supabase-server'
 import { missingCurated2028, missingCurated2029 } from '@/lib/curated-prospects'
 import { lastDraftedClass, nextDraftClass } from '@/lib/draft-years'
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
     const yearNum = !isAllYears ? toNumberOrNull(draftYear) : null
 
     if (!isAllYears && yearNum === null) {
-      return NextResponse.json({ error: 'Invalid draft_year' }, { status: 400 })
+      return fail(400, 'Invalid draft_year')
     }
 
     let query = supabaseServer.from('dynasty_prospects').select(SELECT_COLUMNS)
@@ -195,7 +196,7 @@ export async function GET(request: NextRequest) {
 
     if (dynastyError) {
       console.error('Database error fetching prospects from dynasty_prospects:', dynastyError)
-      return NextResponse.json({ error: 'Failed to fetch prospects' }, { status: 500 })
+      return fail(500, 'Failed to fetch prospects')
     }
 
     const records = dynastyData || []
@@ -289,6 +290,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(prospects, { headers: CACHE_HEADERS })
   } catch (error) {
     console.error('Error fetching prospects:', error)
-    return NextResponse.json({ error: 'Failed to fetch prospects' }, { status: 500 })
+    return fail(500, 'Failed to fetch prospects')
   }
 }

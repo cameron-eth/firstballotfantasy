@@ -6,6 +6,7 @@ import { matchKtcToSleeper } from '@/lib/ktc-identity'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, KTC_DAY_MARKER_PREFIX, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
 import { writeSnapshot } from '@/lib/platform/snapshots'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import { identityMap } from '@/lib/platform/reference-data'
 import type { CurrentSeasonStat } from '@/lib/current-season-stats'
 
@@ -30,15 +31,16 @@ async function refresh() {
   if (!marker) throw Error('KTC_NO_COMPLETE_DAY')
   const latest = { scraped_date: marker.dataset.slice(KTC_DAY_MARKER_PREFIX.length) }
   if (!sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS)) throw Error('KTC_SOURCE_STALE')
-  const [ktc, sleeperResponse, stats] = await Promise.all([
+  const [ktc, sleeperPlayers, stats] = await Promise.all([
     supabaseAdmin.from('ktc_player_values')
       .select('ktc_player_id,player_name,position,team,value_sf,value_1qb,scraped_date')
       .eq('scraped_date', latest.scraped_date).limit(2000),
-    fetch('https://api.sleeper.app/v1/players/nfl', { cache: 'no-store', signal: AbortSignal.timeout(30000) }),
+    // One attempt, as before: a failed read fails the publish instead of stretching it.
+    sleeperClient.getAllPlayers({ ...SLEEPER_CACHE.fresh, attempts: 1 }).catch(() => null),
     playerData(['8144']), // Revalidates the shared ESPN current-season snapshot before reading it.
   ])
   if (ktc.error || !ktc.data || ktc.data.length < 250 || ktc.data.length < (marker.row_count ?? 0) ||
-      !sleeperResponse.ok)
+      !sleeperPlayers)
     throw Error('INCOMPLETE_TIER_INPUT')
   // 30-day change: the newest scrape on or before 30 days before the latest one.
   const cutoff = new Date(Date.parse(`${latest.scraped_date}T00:00:00Z`) - 30 * 86400000).toISOString().slice(0, 10)
@@ -52,7 +54,7 @@ async function refresh() {
     for (const row of priorRows ?? []) prior.set(Number(row.ktc_player_id), row)
   }
   const nflKtc = (ktc.data as KtcRow[]).filter((row) => ['QB', 'RB', 'WR', 'TE'].includes(row.position))
-  const sleeper = await sleeperResponse.json() as Record<string, SleeperPlayer>
+  const sleeper = sleeperPlayers as Record<string, SleeperPlayer>
   const { data: statSnapshot, error: statError } = await supabaseAdmin.from('data_snapshots')
     .select('payload,expires_at').eq('key', espnSeasonKey(stats.season)).single()
   if (statError || !statSnapshot || Date.parse(statSnapshot.expires_at) <= Date.now())

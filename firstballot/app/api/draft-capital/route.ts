@@ -1,26 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SleeperClient } from '@/lib/sleeper-sdk/client'
+import { sleeperClient, type SleeperReadOptions } from '@/lib/sleeper-sdk/client'
 import { draftCapital } from '@/lib/sleeper-sdk/draft-capital'
-const client = new SleeperClient({
-  fetcher: (url, init) => fetch(url, { ...init, next: { revalidate: 300 } }),
-})
+const FIVE_MINUTES: SleeperReadOptions = { next: { revalidate: 300 } }
 export async function GET(request: NextRequest) {
   const leagueId = request.nextUrl.searchParams.get('leagueId') ?? ''
   const roster = Number(request.nextUrl.searchParams.get('roster'))
   if (!/^\d{10,25}$/.test(leagueId) || !Number.isInteger(roster) || roster < 1)
     return NextResponse.json({ error: 'Invalid league or roster.' }, { status: 400 })
   try {
-    const [league, rosters, traded, draftResponse] = await Promise.all([
-      client.getLeague(leagueId),
-      client.getLeagueRosters(leagueId),
-      client.getLeagueTradedPicks(leagueId),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/drafts`, {
-        next: { revalidate: 300 },
-        signal: AbortSignal.timeout(10000),
-      }),
+    const [league, rosters, traded, drafts] = await Promise.all([
+      sleeperClient.getLeague(leagueId, FIVE_MINUTES),
+      sleeperClient.getLeagueRosters(leagueId, FIVE_MINUTES),
+      sleeperClient.getLeagueTradedPicks(leagueId, FIVE_MINUTES),
+      sleeperClient.getLeagueDrafts(leagueId, FIVE_MINUTES),
     ])
-    if (!draftResponse.ok) throw new Error()
-    const drafts: { season: string; status: string }[] = await draftResponse.json()
     const season = Number(league.season),
       rounds = Number(league.settings?.draft_rounds)
     if (

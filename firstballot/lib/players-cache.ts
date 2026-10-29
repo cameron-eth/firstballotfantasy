@@ -1,5 +1,6 @@
 // In-memory cache for NFL players data
 // This is too large for Next.js cache (17MB+), so we handle it separately
+import { sleeperClient } from '@/lib/sleeper-sdk/client'
 
 interface PlayersCache {
   data: Record<string, any> | null
@@ -17,15 +18,9 @@ const cache: PlayersCache = {
 const CACHE_DURATION = 6 * 60 * 60 * 1000
 
 async function fetchPlayersFromSleeper(): Promise<Record<string, any>> {
-  const response = await fetch('https://api.sleeper.app/v1/players/nfl', {
-    next: { revalidate: false }, // Don't use Next.js cache
-  })
-
-  if (!response.ok) {
+  return sleeperClient.getAllPlayers({ next: { revalidate: false } }).catch(() => {
     throw new Error('Failed to fetch players from Sleeper')
-  }
-
-  return response.json()
+  })
 }
 
 export async function getCachedPlayers(): Promise<Record<string, any>> {

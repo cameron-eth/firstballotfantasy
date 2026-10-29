@@ -6,6 +6,7 @@
 
 import type {
   SleeperLeague,
+  SleeperLeagueDraft,
   SleeperLeagueUser,
   SleeperMatchup,
   SleeperNflState,
@@ -28,8 +29,10 @@ export interface SleeperClientOptions {
 /** Per-read fetch cache settings (Next.js data cache on the server, HTTP cache in the browser). */
 export interface SleeperReadOptions {
   cache?: RequestCache
-  next?: { revalidate?: number; tags?: string[] }
+  next?: { revalidate?: number | false; tags?: string[] }
   timeoutMs?: number
+  /** Total attempts for this read; defaults to the client's `retries`. */
+  attempts?: number
 }
 
 /**
@@ -79,10 +82,10 @@ export class SleeperClient {
   }
 
   private async get<T>(path: string, options: SleeperReadOptions = {}): Promise<T> {
-    const { timeoutMs = this.timeoutMs, ...cache } = options
+    const { timeoutMs = this.timeoutMs, attempts = this.retries, ...cache } = options
     let lastError: unknown
 
-    for (let attempt = 1; attempt <= this.retries; attempt++) {
+    for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         const response = await this.fetcher(`${this.baseUrl}${path}`, {
           ...cache,
@@ -96,7 +99,7 @@ export class SleeperClient {
             response.status,
             path
           )
-          if (RETRYABLE_STATUS.has(response.status) && attempt < this.retries) {
+          if (RETRYABLE_STATUS.has(response.status) && attempt < attempts) {
             lastError = error
             await delay(attempt * 500)
             continue
@@ -109,7 +112,7 @@ export class SleeperClient {
         lastError = error
         if (error instanceof SleeperApiError && !RETRYABLE_STATUS.has(error.status ?? 0))
           throw error
-        if (attempt === this.retries) break
+        if (attempt === attempts) break
         await delay(attempt * 500)
       }
     }
@@ -122,12 +125,23 @@ export class SleeperClient {
     )
   }
 
+  /** Any other endpoint, by path from the API root (`/league/1/drafts`). */
+  read = <T>(path: string, options?: SleeperReadOptions) => this.get<T>(path, options)
+
   // Identity + league discovery
   getUser = (usernameOrUserId: string, options?: SleeperReadOptions) =>
-    this.get<SleeperUser | null>(`/user/${usernameOrUserId}`, options)
+    this.get<SleeperUser | null>(`/user/${encodeURIComponent(usernameOrUserId)}`, options)
   getNflState = (options?: SleeperReadOptions) => this.get<SleeperNflState>('/state/nfl', options)
-  getUserLeagues = (userId: string, season: string | number, sport = 'nfl') =>
-    this.get<SleeperLeague[]>(`/user/${userId}/leagues/${sport}/${season}`)
+  getUserLeagues = (
+    userId: string,
+    season: string | number,
+    sport = 'nfl',
+    options?: SleeperReadOptions
+  ) =>
+    this.get<SleeperLeague[]>(
+      `/user/${encodeURIComponent(userId)}/leagues/${sport}/${season}`,
+      options
+    )
 
   // League context
   getLeague = (leagueId: string, options?: SleeperReadOptions) =>
@@ -144,6 +158,8 @@ export class SleeperClient {
     this.get<SleeperTransaction[]>(`/league/${leagueId}/transactions/${week}`, options)
   getLeagueTradedPicks = (leagueId: string, options?: SleeperReadOptions) =>
     this.get<SleeperTradedPick[]>(`/league/${leagueId}/traded_picks`, options)
+  getLeagueDrafts = (leagueId: string, options?: SleeperReadOptions) =>
+    this.get<SleeperLeagueDraft[]>(`/league/${leagueId}/drafts`, options)
 
   // Player resolution — large payload, cache aggressively upstream.
   getAllPlayers = (options?: SleeperReadOptions) =>

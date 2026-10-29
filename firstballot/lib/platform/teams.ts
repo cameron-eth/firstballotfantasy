@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import type { Principal } from './auth'
 import { PlatformError } from './http'
 import { teamCapacity } from './policy'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 export async function billingFor(accountId: string) {
   const { data, error } = await supabaseAdmin
     .from('account_billing')
@@ -40,13 +41,9 @@ export async function requireTeam(principal: Principal, id: string) {
   return team
 }
 export async function sleeperRead(path: string) {
-  const r = await fetch(`https://api.sleeper.app/v1/${path}`, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
-  })
-  if (!r.ok)
+  return sleeperClient.read<any>(`/${path}`, SLEEPER_CACHE.fresh).catch(() => {
     throw new PlatformError(502, 'SLEEPER_UNAVAILABLE', 'Current Sleeper data is unavailable.')
-  return r.json()
+  })
 }
 export async function connectTeam(principal: Principal, leagueId: string) {
   if (!/^\d{10,25}$/.test(leagueId))

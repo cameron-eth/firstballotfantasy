@@ -51,3 +51,48 @@ test('retryable errors are retried; a 404 is not', async () => {
   await assert.rejects(client.getLeague('1'), { name: 'SleeperApiError', status: 404 })
   assert.equal(calls.length, 1)
 })
+
+test('a read can limit its attempts, and user ids are URL-encoded', async () => {
+  let calls = stubFetch([503, 200])
+  await assert.rejects(sleeperClient.getAllPlayers({ attempts: 1 }), { status: 503 })
+  assert.equal(calls.length, 1)
+
+  calls = stubFetch()
+  await sleeperClient.getUser('a b/c')
+  assert.equal(calls[0].url, 'https://api.sleeper.app/v1/user/a%20b%2Fc')
+})
+
+test('drafts and other paths go through the same transport', async () => {
+  const calls = stubFetch()
+  await sleeperClient.getLeagueDrafts('42', SLEEPER_CACHE.fresh)
+  await sleeperClient.read('/league/42/matchups/3')
+  assert.deepEqual(
+    calls.map((c) => c.url),
+    [
+      'https://api.sleeper.app/v1/league/42/drafts',
+      'https://api.sleeper.app/v1/league/42/matchups/3',
+    ]
+  )
+  assert.equal(calls[0].init.cache, 'no-store')
+})
+
+// PR-21: only the client names the Sleeper host. Browser loaders still listed here move in PR-21c.
+const STILL_DIRECT = new Set([
+  'components/league-buddy/leagueDataBundle.ts',
+  'hooks/use-league-format.ts',
+  'hooks/use-leagues.ts',
+  'lib/sleeper-shared.ts',
+])
+
+test('no app code outside the Sleeper client calls api.sleeper.app', async () => {
+  const { execFileSync } = await import('node:child_process')
+  const files = execFileSync(
+    'git',
+    ['grep', '-l', 'api\\.sleeper\\.app', '--', 'app', 'components', 'hooks', 'lib'],
+    { cwd: new URL('..', import.meta.url), encoding: 'utf8' }
+  )
+    .split('\n')
+    .filter(Boolean)
+  const offenders = files.filter((f) => f !== 'lib/sleeper-sdk/client.ts' && !STILL_DIRECT.has(f))
+  assert.deepEqual(offenders, [])
+})

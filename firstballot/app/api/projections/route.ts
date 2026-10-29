@@ -4,6 +4,7 @@ import { projectionsKey } from '@/lib/platform/snapshot-keys'
 import { analyzeCoverage, type ScoringSettings } from '@/lib/projections/scoring'
 
 import { normalizeProjection, type SleeperProjectionRow } from '@/lib/projections/normalize'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 
 /**
  * Sleeper projections, converted to a league's own scoring and slimmed for the client.
@@ -50,8 +51,8 @@ export async function GET(request: NextRequest) {
 
     const season =
       params.get('season') ||
-      (await fetch('https://api.sleeper.app/v1/state/nfl', { next: { revalidate: 600 } })
-        .then((r) => (r.ok ? r.json() : null))
+      (await sleeperClient
+        .getNflState({ next: { revalidate: 600 } })
         .then((state) => state?.season as string | undefined)
         .catch(() => undefined))
 
@@ -88,12 +89,7 @@ export async function GET(request: NextRequest) {
         { maxStaleSeconds: 24 * 3600 }
       ),
       leagueId
-        ? fetch(`https://api.sleeper.app/v1/league/${leagueId}`, {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(10000),
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null)
+        ? sleeperClient.getLeague(leagueId, SLEEPER_CACHE.fresh).catch(() => null)
         : Promise.resolve(null),
     ])
 

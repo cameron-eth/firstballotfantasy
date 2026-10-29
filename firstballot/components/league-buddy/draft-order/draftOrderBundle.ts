@@ -1,5 +1,5 @@
 // Draft-order inputs without React, so the server metrics route can load them too.
-import { sleeperApi } from '@/lib/nextjs-cache'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import { sleeperLeague, sleeperMatchups, sleeperState } from '@/lib/sleeper-shared'
 import type { SleeperMatchup } from '../types'
 import { computeMaxPointsFor } from './maxPointsFor'
@@ -20,13 +20,13 @@ export async function fetchDraftOrderBundle(
   const weeklyMatchups = await Promise.all(
     weeks.map((week) => {
       // Finished weeks never change, so they go through the shared cache. The week
-      // still being played does change, and `sleeperApi` asks for `force-cache` —
+      // still being played does change, and the shared client asks for `force-cache` —
       // which on the client is the browser cache, with no revalidate window to save
       // it. Read that one uncached, sharing the request with the other loaders (PR-18).
       const request =
         liveWeek !== null && week >= liveWeek
           ? sleeperMatchups(leagueId, week)
-          : sleeperApi.getLeagueMatchups(leagueId, week)
+          : sleeperClient.getMatchups(leagueId, week, SLEEPER_CACHE.matchups)
 
       return request
         .catch(() => [])

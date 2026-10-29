@@ -12,9 +12,8 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useMembershipCheck } from '@/hooks/use-membership'
 import { LeagueCard } from '@/components/league-access-control'
-import { sleeperApi } from '@/lib/nextjs-cache'
 import { userApi } from '@/lib/user-api'
-import type { SleeperUser } from '@/lib/sleeper-api'
+import { type SleeperUser, SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk'
 
 import { useLeagueContext } from '@/lib/league-context'
 
@@ -51,7 +50,7 @@ export function LeagueBuddyView() {
         if (data?.sleeper_username) {
           setUsername(data.sleeper_username)
 
-          const userData = await sleeperApi.getUser(data.sleeper_username)
+          const userData = await sleeperClient.getUser(data.sleeper_username, SLEEPER_CACHE.user)
           if (userData) {
             setSleeperUser(userData as SleeperUser)
           }
@@ -75,7 +74,7 @@ export function LeagueBuddyView() {
         setLoading(true)
         setError(null)
 
-        const userData = await sleeperApi.getUser(currentUsername)
+        const userData = await sleeperClient.getUser(currentUsername, SLEEPER_CACHE.user)
         if (!userData) throw new Error('Sleeper user not found')
 
         setSleeperUser(userData as SleeperUser)

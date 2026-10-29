@@ -25,6 +25,32 @@ export interface SleeperClientOptions {
   timeoutMs?: number
 }
 
+/** Per-read fetch cache settings (Next.js data cache on the server, HTTP cache in the browser). */
+export interface SleeperReadOptions {
+  cache?: RequestCache
+  next?: { revalidate?: number; tags?: string[] }
+  timeoutMs?: number
+}
+
+/**
+ * Cache settings per endpoint, carried over unchanged from the retired `sleeperApi` wrapper
+ * (lib/nextjs-cache.ts, PR-21). Tags match the old CACHE_TAGS values.
+ */
+export const SLEEPER_CACHE = {
+  league: { cache: 'force-cache', next: { revalidate: 600, tags: ['league'] } },
+  rosters: { cache: 'force-cache', next: { revalidate: 300, tags: ['league'] } },
+  matchups: { cache: 'force-cache', next: { revalidate: 120, tags: ['league'] } },
+  transactions: { cache: 'force-cache', next: { revalidate: 120, tags: ['transactions'] } },
+  tradedPicks: { cache: 'force-cache', next: { revalidate: 600, tags: ['league'] } },
+  players: { cache: 'force-cache', next: { revalidate: 3600, tags: ['players'] } },
+  trending: { cache: 'force-cache', next: { revalidate: 60, tags: ['players'] } },
+  user: { cache: 'force-cache', next: { revalidate: 1800, tags: ['user'] } },
+  fresh: { cache: 'no-store' },
+} as const satisfies Record<string, SleeperReadOptions>
+
+/** The players file is ~18 MB; 10 s is too short for it on a slow connection. */
+const PLAYERS_TIMEOUT_MS = 30_000
+
 export class SleeperApiError extends Error {
   constructor(
     message: string,
@@ -46,19 +72,22 @@ export class SleeperClient {
 
   constructor(options: SleeperClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? 'https://api.sleeper.app/v1'
-    this.fetcher = options.fetcher ?? fetch
+    // Resolved per call, so a fetch installed after import (tests, fixture replay) is used.
+    this.fetcher = options.fetcher ?? ((input, init) => globalThis.fetch(input, init))
     this.retries = options.retries ?? 3
     this.timeoutMs = options.timeoutMs ?? 10_000
   }
 
-  private async get<T>(path: string): Promise<T> {
+  private async get<T>(path: string, options: SleeperReadOptions = {}): Promise<T> {
+    const { timeoutMs = this.timeoutMs, ...cache } = options
     let lastError: unknown
 
     for (let attempt = 1; attempt <= this.retries; attempt++) {
       try {
         const response = await this.fetcher(`${this.baseUrl}${path}`, {
+          ...cache,
           headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(this.timeoutMs),
+          signal: AbortSignal.timeout(timeoutMs),
         })
 
         if (!response.ok) {
@@ -78,7 +107,8 @@ export class SleeperClient {
         return (await response.json()) as T
       } catch (error) {
         lastError = error
-        if (error instanceof SleeperApiError && !RETRYABLE_STATUS.has(error.status ?? 0)) throw error
+        if (error instanceof SleeperApiError && !RETRYABLE_STATUS.has(error.status ?? 0))
+          throw error
         if (attempt === this.retries) break
         await delay(attempt * 500)
       }
@@ -93,29 +123,43 @@ export class SleeperClient {
   }
 
   // Identity + league discovery
-  getUser = (usernameOrUserId: string) => this.get<SleeperUser>(`/user/${usernameOrUserId}`)
-  getNflState = () => this.get<SleeperNflState>('/state/nfl')
+  getUser = (usernameOrUserId: string, options?: SleeperReadOptions) =>
+    this.get<SleeperUser | null>(`/user/${usernameOrUserId}`, options)
+  getNflState = (options?: SleeperReadOptions) => this.get<SleeperNflState>('/state/nfl', options)
   getUserLeagues = (userId: string, season: string | number, sport = 'nfl') =>
     this.get<SleeperLeague[]>(`/user/${userId}/leagues/${sport}/${season}`)
 
   // League context
-  getLeague = (leagueId: string) => this.get<SleeperLeague>(`/league/${leagueId}`)
-  getLeagueUsers = (leagueId: string) => this.get<SleeperLeagueUser[]>(`/league/${leagueId}/users`)
-  getLeagueRosters = (leagueId: string) => this.get<SleeperRoster[]>(`/league/${leagueId}/rosters`)
-  getMatchups = (leagueId: string, week: number) =>
-    this.get<SleeperMatchup[]>(`/league/${leagueId}/matchups/${week}`)
+  getLeague = (leagueId: string, options?: SleeperReadOptions) =>
+    this.get<SleeperLeague>(`/league/${leagueId}`, options)
+  getLeagueUsers = (leagueId: string, options?: SleeperReadOptions) =>
+    this.get<SleeperLeagueUser[]>(`/league/${leagueId}/users`, options)
+  getLeagueRosters = (leagueId: string, options?: SleeperReadOptions) =>
+    this.get<SleeperRoster[]>(`/league/${leagueId}/rosters`, options)
+  getMatchups = (leagueId: string, week: number, options?: SleeperReadOptions) =>
+    this.get<SleeperMatchup[]>(`/league/${leagueId}/matchups/${week}`, options)
 
   // Capital + activity
-  getTransactions = (leagueId: string, week: number) =>
-    this.get<SleeperTransaction[]>(`/league/${leagueId}/transactions/${week}`)
-  getLeagueTradedPicks = (leagueId: string) =>
-    this.get<SleeperTradedPick[]>(`/league/${leagueId}/traded_picks`)
+  getTransactions = (leagueId: string, week: number, options?: SleeperReadOptions) =>
+    this.get<SleeperTransaction[]>(`/league/${leagueId}/transactions/${week}`, options)
+  getLeagueTradedPicks = (leagueId: string, options?: SleeperReadOptions) =>
+    this.get<SleeperTradedPick[]>(`/league/${leagueId}/traded_picks`, options)
 
   // Player resolution — large payload, cache aggressively upstream.
-  getAllPlayers = (sport = 'nfl') => this.get<Record<string, SleeperPlayer>>(`/players/${sport}`)
-  getTrendingPlayers = (type: 'add' | 'drop' = 'add', hours = 24, limit = 25, sport = 'nfl') =>
+  getAllPlayers = (options?: SleeperReadOptions) =>
+    this.get<Record<string, SleeperPlayer>>('/players/nfl', {
+      timeoutMs: PLAYERS_TIMEOUT_MS,
+      ...options,
+    })
+  getTrendingPlayers = (
+    type: 'add' | 'drop' = 'add',
+    hours = 24,
+    limit = 25,
+    options?: SleeperReadOptions
+  ) =>
     this.get<SleeperTrendingItem[]>(
-      `/players/${sport}/trending/${type}?lookback_hours=${hours}&limit=${limit}`
+      `/players/nfl/trending/${type}?lookback_hours=${hours}&limit=${limit}`,
+      options
     )
 }
 

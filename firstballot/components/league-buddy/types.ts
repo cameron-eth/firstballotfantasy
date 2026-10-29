@@ -1,4 +1,4 @@
-import type { SleeperUser } from '@/lib/sleeper-api'
+import type { SleeperUser } from '@/lib/sleeper-sdk/types'
 import type { UserLeague } from '@/types/league'
 
 // Type definitions for LeagueBuddy component

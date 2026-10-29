@@ -4,7 +4,7 @@ import { leagueCache } from '@/lib/league-cache'
 import { teamScores } from '@/lib/team-score'
 import { resolveLeagueContext, type LeagueContext } from '@/lib/league-metrics/context'
 import { sleeperPoints } from '@/lib/league-metrics/standings'
-import { sleeperApi } from '@/lib/nextjs-cache'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import { sleeperLeague, sleeperMatchups, sleeperState } from '@/lib/sleeper-shared'
 import type { KtcMaps } from './ktcMaps'
 import type {
@@ -134,7 +134,7 @@ let playersMemo: { at: number; data: Promise<Record<string, any>> } | null = nul
 /** The Sleeper player blob is ~10 MB parsed; keep one copy per session instead of one per refetch. */
 function getPlayersOnce(): Promise<Record<string, any>> {
   if (playersMemo && Date.now() - playersMemo.at < PLAYERS_TTL_MS) return playersMemo.data
-  const data = sleeperApi.getAllPlayers() as Promise<Record<string, any>>
+  const data = sleeperClient.getAllPlayers(SLEEPER_CACHE.players) as Promise<Record<string, any>>
   playersMemo = { at: Date.now(), data }
   data.catch(() => {
     if (playersMemo?.data === data) playersMemo = null
@@ -176,7 +176,7 @@ export async function fetchLeagueDataBundle(
       fetch(`${apiBase}/api/dynasty-tiers?${v}`)
         .then((res) => (res.ok ? res.json() : []))
         .catch(() => []),
-      sleeperApi.getTrendingPlayers().catch(() => []),
+      sleeperClient.getTrendingPlayers('add', 24, 10, SLEEPER_CACHE.trending).catch(() => []),
     ])) as [NflState, SleeperRoster[], SleeperUser[], Record<string, any>, any, any, any]
   const week = nflState?.week || nflState?.display_week || 1
 

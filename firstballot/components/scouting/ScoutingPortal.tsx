@@ -21,7 +21,7 @@ import { useDraftboard } from '@/hooks/use-draftboard'
 import { boardsToProspects, yearsToSave } from '@/lib/draftboard-classes'
 import { useProspectGrades } from '@/hooks/use-prospect-grades'
 import { useAuth } from '@/lib/auth'
-import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
+import { prospectTier } from '@/lib/scouting-grade-tier'
 import { sortProspectsForBrowse } from './sortProspectsForBrowse'
 import { DRAFT_BOARD_MIN_YEAR } from './board-player'
 
@@ -82,10 +82,7 @@ function calculatePlayerValue(rank: number, position?: string): number {
   return Math.round(value * 100) / 100
 }
 function getProspectGradeValue(prospect: Prospect): string {
-  const grade = prospect.overall_grade ?? 0
-  return !prospect.grade_tier && grade <= 0
-    ? 'Ungraded'
-    : normalizeScoutingGradeTier(prospect.grade_tier, grade)
+  return prospectTier(prospect)
 }
 
 async function fetchRosterWithStats(leagueId: string): Promise<RosterPlayer[]> {
@@ -421,8 +418,9 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
     return Math.round(value * 100) / 100
   }, [])
 
-  // Get tier from database or calculate fallback
-  const getProspectTier = useCallback((rank: number, dbTier?: string | null): string => {
+  // Projected draft range (Elite Prospect … Undrafted), the key of the hit-rate table. Not a
+  // grade tier: those come from prospectTier (PR-20). Grade v2's benchmarks replace this.
+  const getDraftRange = useCallback((rank: number, dbTier?: string | null): string => {
     // Use database tier if available
     if (dbTier) return dbTier
     // Fallback calculation
@@ -782,7 +780,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
             onSaveNotes={handleSaveNotes}
             getProspectGrade={getProspectGrade}
             getDraftPick={getDraftPick}
-            getProspectTier={getProspectTier}
+            getDraftRange={getDraftRange}
             calculateProspectValue={calculateProspectValue}
             getPositionColor={getPositionColor}
           />
@@ -790,7 +788,7 @@ export function ScoutingPortal({ leagueId, initialTab }: ScoutingPortalProps) {
           <ComparisonsModal
             prospect={selectedProspectForComps}
             onClose={handleCloseCompsModal}
-            getProspectTier={getProspectTier}
+            getDraftRange={getDraftRange}
             getTierColor={getTierColor}
             getPositionColor={getPositionColor}
             hitRateData={hitRateData}

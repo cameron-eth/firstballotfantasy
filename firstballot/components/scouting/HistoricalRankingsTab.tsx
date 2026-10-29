@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ScoutingSectionHeader } from './ScoutingSectionHeader'
 import { CareerOutcomeMeter } from './CareerOutcomeMeter'
 import { gradeOrder, type CareerOutcome } from '@/lib/history-outcomes'
+import { prospectTier } from '@/lib/scouting-grade-tier'
 import type { Prospect } from './types'
 const fetcher = async (url: string) => {
   const response = await fetch(url)
@@ -88,7 +89,8 @@ export function HistoricalRankingsTab() {
         }
         secondary={
           <p className="text-xs text-slate-400">
-            {visible.length} players · Highest grade first · {asOf} · Hover or tap an outcome for detail{outcomeError ? ' · Outcome data could not be loaded' : ''}
+            {visible.length} players · Highest grade first · {asOf} · Hover or tap an outcome for
+            detail{outcomeError ? ' · Outcome data could not be loaded' : ''}
           </p>
         }
       />
@@ -123,7 +125,7 @@ export function HistoricalRankingsTab() {
             }
             imageHeight="h-48"
             compact
-            badge={`${p.draft_year} class${p.grade_tier ? ` · ${p.grade_tier}` : ''}`}
+            badge={`${p.draft_year} class · ${prospectTier(p)}`}
           >
             <div className="flex items-center justify-between gap-2 border-t border-white/10 pt-2">
               <div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { PlayerTradingCard } from '@/components/players/PlayerTradingCard'
-import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
+import { prospectTier } from '@/lib/scouting-grade-tier'
 import type { Prospect } from './types'
 
 interface ProspectCardProps {
@@ -58,10 +58,6 @@ function parseFortyTime(stats?: Record<string, number | string> | null): number 
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function normalizeTier(prospect: Prospect): string {
-  return normalizeScoutingGradeTier(prospect.grade_tier, prospect.overall_grade ?? 0)
-}
-
 function clampScore(value: number | null | undefined): number {
   const next = Number(value ?? 0)
   if (!Number.isFinite(next)) return 0
@@ -77,7 +73,7 @@ function toCardPlayer(prospect: Prospect): CardPlayer {
     school: prospect.school || 'TBD',
     year: prospect.draft_year ?? null,
     grade: prospect.overall_grade ?? null,
-    tier: prospect.overall_grade == null ? 'Ungraded' : normalizeTier(prospect),
+    tier: prospectTier(prospect),
     height: formatHeight(prospect.height),
     weight: prospect.weight || 0,
     fortyTime: parseFortyTime(prospect.college_stats),

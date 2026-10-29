@@ -11,7 +11,7 @@ import type { Prospect } from './types'
 interface ComparisonsModalProps {
   prospect: Prospect | null
   onClose: () => void
-  getProspectTier: (rank: number, tier?: string | null) => string
+  getDraftRange: (rank: number, tier?: string | null) => string
   getTierColor: (tier: string) => string
   getPositionColor: (position: string) => string
   hitRateData: Record<
@@ -26,7 +26,7 @@ interface ComparisonsModalProps {
 export function ComparisonsModal({
   prospect,
   onClose,
-  getProspectTier,
+  getDraftRange,
   getTierColor,
   getPositionColor,
   hitRateData,
@@ -40,7 +40,7 @@ export function ComparisonsModal({
   if (!mounted) return null
   if (!prospect) return null
 
-  const tier = getProspectTier(prospect.rank, prospect.tier)
+  const tier = getDraftRange(prospect.rank, prospect.tier)
   const position = prospect.position
   const hitRate = hitRateData[position]?.[tier]
   const isCollege = Number(prospect.draft_year || 0) >= 2025

@@ -6,24 +6,15 @@ import { Player, Position, fetchAllProspects } from '@/lib/players'
 import { PlayerCard } from './player-card'
 import { SkeletonGrid } from './player-skeleton'
 import { cn } from '@/lib/utils'
+import { PROSPECT_TIER_ORDER, type ProspectTier } from '@/lib/scouting-grade-tier'
 
-type FilterTier = 'all' | 'Elite' | 'Blue Chip' | 'Starter' | 'Rotational' | 'Depth' | 'Longshot' | 'Ungraded'
+type FilterTier = 'all' | ProspectTier
 
 /** Class filter: every undrafted class, one specific class, or the whole archive. */
 type YearFilter = number | 'all' | 'upcoming'
 
 /** Classes at or after this year have not been drafted yet. */
 const FIRST_UPCOMING_CLASS = 2027
-
-const TIER_ORDER: Exclude<FilterTier, 'all'>[] = [
-  'Elite',
-  'Blue Chip',
-  'Starter',
-  'Rotational',
-  'Depth',
-  'Longshot',
-  'Ungraded',
-]
 
 function matchesYear(year: number | null, filter: YearFilter): boolean {
   if (filter === 'all') return true
@@ -97,16 +88,10 @@ export function RankingsGrid() {
   const yearFilteredPlayers = players.filter((p) => matchesYear(p.year, selectedYear))
   const visiblePlayers = filteredPlayers.slice(0, visibleCount)
 
-  const tierCounts: Record<FilterTier, number> = {
-    all: yearFilteredPlayers.length,
-    Elite: 0,
-    'Blue Chip': 0,
-    Starter: 0,
-    Rotational: 0,
-    Depth: 0,
-    Longshot: 0,
-    Ungraded: 0,
-  }
+  const tierCounts = Object.fromEntries([
+    ['all', yearFilteredPlayers.length],
+    ...PROSPECT_TIER_ORDER.map((tier) => [tier, 0]),
+  ]) as Record<FilterTier, number>
   for (const player of yearFilteredPlayers) {
     if (player.tier in tierCounts && player.tier !== 'all') {
       tierCounts[player.tier as FilterTier] += 1
@@ -114,7 +99,7 @@ export function RankingsGrid() {
   }
   const availableTiers: FilterTier[] = [
     'all',
-    ...TIER_ORDER.filter((tier) => tierCounts[tier] > 0),
+    ...PROSPECT_TIER_ORDER.filter((tier) => tierCounts[tier] > 0),
   ]
 
   return (

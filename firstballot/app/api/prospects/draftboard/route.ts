@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { normalizeScoutingGradeTier } from '@/lib/scouting-grade-tier'
+import { prospectTier } from '@/lib/scouting-grade-tier'
 import { nextDraftClass } from '@/lib/draft-years'
 
 export const dynamic = 'force-dynamic'
@@ -56,10 +56,6 @@ function parseFortyTime(stats: Record<string, number | string> | null): number |
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function normalizeTier(tier: string | null, grade: number): string {
-  return normalizeScoutingGradeTier(tier, grade)
-}
-
 function toPlayer(raw: RawProspect, rank: number): DraftboardPlayer {
   const grade = Number(raw.overall_grade || 0)
   const espnIdStr = raw.espn_id ? String(raw.espn_id) : ''
@@ -69,7 +65,7 @@ function toPlayer(raw: RawProspect, rank: number): DraftboardPlayer {
     school: raw.school || 'TBD',
     position: raw.position || '',
     grade,
-    tier: normalizeTier(raw.grade_tier, grade),
+    tier: prospectTier(raw),
     height: formatHeight(raw.height),
     weight: raw.weight ? Math.round(Number(raw.weight)) : 0,
     fortyTime: parseFortyTime(raw.college_stats),

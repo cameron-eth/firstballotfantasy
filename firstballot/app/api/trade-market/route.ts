@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { KTC_DAY_MARKER_PREFIX, TIER_KEY } from '@/lib/dynasty-tiers'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
-import { sleeperApi } from '@/lib/nextjs-cache'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import { getCachedPlayers } from '@/lib/players-cache'
 import { snapshot } from '@/lib/platform/snapshots'
 import { tradeMarketSeasonKey } from '@/lib/platform/snapshot-keys'
@@ -77,7 +77,7 @@ function leagueSeason(
     current ? CURRENT_SEASON_TTL : PAST_SEASON_TTL,
     async () => {
       const [rosters, users] = await Promise.all([
-        sleeperApi.getLeagueRosters(league.leagueId).catch(() => []),
+        sleeperClient.getLeagueRosters(league.leagueId, SLEEPER_CACHE.rosters).catch(() => []),
         fetch(`https://api.sleeper.app/v1/league/${league.leagueId}/users`, { cache: 'no-store' })
           .then((r) => r.json())
           .catch(() => []),
@@ -105,12 +105,16 @@ function leagueSeason(
       for (let i = 0; i < WEEKS.length; i += BATCH_SIZE) {
         const batch = await Promise.all(
           WEEKS.slice(i, i + BATCH_SIZE).map((week) =>
-            sleeperApi.getTransactions(league.leagueId, week).catch(() => [])
+            sleeperClient
+              .getTransactions(league.leagueId, week, SLEEPER_CACHE.transactions)
+              .catch(() => [])
           )
         )
         transactions.push(...(batch.flat() as any[]))
       }
-      const picks = (await sleeperApi.getTradedPicks(league.leagueId).catch(() => [])) as any[]
+      const picks = (await sleeperClient
+        .getLeagueTradedPicks(league.leagueId, SLEEPER_CACHE.tradedPicks)
+        .catch(() => [])) as any[]
       const tag = (row: Record<string, any>) => ({
         ...row,
         _leagueId: league.leagueId,
@@ -234,8 +238,8 @@ export async function GET(request: NextRequest) {
     let depth = 0
     while (cursorLeagueId && depth < 8 && !seenLeagueIds.has(cursorLeagueId)) {
       seenLeagueIds.add(cursorLeagueId)
-      const leagueInfo = (await sleeperApi
-        .getLeagueInfo(cursorLeagueId)
+      const leagueInfo = (await sleeperClient
+        .getLeague(cursorLeagueId, SLEEPER_CACHE.league)
         .catch(() => null)) as Record<string, any> | null
       leagueHistory.push({
         leagueId: cursorLeagueId,
@@ -251,7 +255,11 @@ export async function GET(request: NextRequest) {
     // Players (6h cache), tiers, today's KTC and the complete KTC days, in parallel.
     const [allPlayers, tierRow, ktcToday, ktcDays, ktcIds] = await Promise.all([
       getCachedPlayers(),
-      supabaseAdmin.from('data_snapshots').select('payload,expires_at').eq('key', TIER_KEY).maybeSingle(),
+      supabaseAdmin
+        .from('data_snapshots')
+        .select('payload,expires_at')
+        .eq('key', TIER_KEY)
+        .maybeSingle(),
       latestKtcById(),
       completeKtcDays(),
       ktcIdsBySleeper(),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
-import { sleeperApi } from '@/lib/nextjs-cache'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 
 // Force dynamic to always get fresh data
 export const dynamic = 'force-dynamic'
@@ -55,12 +55,12 @@ export async function GET(request: NextRequest) {
 
     // Fetch all data in parallel - Users without cache to get fresh team names
     const [leagueData, rostersData, usersData, playersData] = await Promise.all([
-      sleeperApi.getLeagueInfo(leagueId),
-      sleeperApi.getLeagueRosters(leagueId),
+      sleeperClient.getLeague(leagueId, SLEEPER_CACHE.league),
+      sleeperClient.getLeagueRosters(leagueId, SLEEPER_CACHE.rosters),
       fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
         (r) => r.json()
       ),
-      sleeperApi.getAllPlayers(),
+      sleeperClient.getAllPlayers(SLEEPER_CACHE.players),
     ])
 
     // Find the user's Sleeper user ID

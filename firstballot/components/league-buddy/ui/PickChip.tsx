@@ -6,7 +6,7 @@ import { PICK_PINNED_TONE, PICK_PLANNED_TONE, PICK_TONE, pickRoundTone } from '@
 /**
  * A draft pick. Violet like the builder's pick rail, but told apart from a TE badge by shape
  * (chip with a ticket glyph), a softer violet, and a slot label instead of a position code.
- * With `round`, an owned pick's strength shows its value: firsts brightest, later rounds neutral.
+ * With `round`, the colour shows its value: firsts gold, seconds violet, later rounds grey.
  * Rounded like the section cards it sits in.
  */
 export function PickChip({

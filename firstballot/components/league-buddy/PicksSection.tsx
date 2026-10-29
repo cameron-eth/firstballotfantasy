@@ -169,7 +169,7 @@ export function PicksSection({
               ))}
             </div>
             <p className="text-2xs text-slate-500">
-              Brighter chips are earlier rounds: firsts brightest, thirds and later neutral.
+              Gold is a first, violet a second, grey a third or later.
             </p>
           </div>
         )}

@@ -176,7 +176,7 @@ The light theme is out of scope. `:root` and `.dark` stay identical, and the dea
 1. **Primary actions are blue.** `--primary` = `--action`. Yellow/amber is reserved for meaningful tiers (`elite`), KTC value, and brand identity (the wordmark), never for decoration or buttons.
 2. **Picks stay violet,** but are separated from TE by three cues:
    - **Shape:** a pick is a `PickChip` (a chip with a ticket glyph, `rounded-xl` like the section cards it sits in), and a TE is a `PositionBadge` with no glyph.
-   - **Value:** where rounds vary (Picks tab, next-draft panel), the chip's strength shows the round: a first is the brightest violet (`pick/20` fill, `pick/60` hairline), a second the base chip, and later rounds neutral slate (`pickRoundTone` in `lib/design/tones.ts`). Amber stays reserved for KTC value.
+   - **Value:** where rounds vary (Picks tab, next-draft panel), the chip's colour shows the round on the tier scale: a first is `elite` (gold), a second the base pick violet, a third or later `neutral` (`pickRoundTone` in `lib/design/tones.ts`). The glyph and shape still mark it as a pick.
    - **Saturation:** picks use a lighter, desaturated violet (`--pick`, violet-300 ink on a /10 fill). The TE wash stays the saturated `#b7a0ff`/violet-600.
    - **Content:** a pick always shows a slot or year label (`1.03`, `2027 R1`), never a position code.
 3. **Legacy routes:** verify inbound links, imports and API dependencies route by route, then remove the ones that are genuinely unused. Anything still referenced gets a redirect to its live equivalent.

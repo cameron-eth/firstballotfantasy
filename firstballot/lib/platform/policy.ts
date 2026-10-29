@@ -21,7 +21,6 @@ export function isPublicApi(path: string) {
   return new Set([
     '/api/internal/refresh-data',
     '/api/webhooks/stripe',
-    '/api/overview',
     '/api/ngs-stats',
     '/api/rankings',
     '/api/dynasty-tiers',
@@ -31,9 +30,7 @@ export function isPublicApi(path: string) {
     '/api/ktc-values',
     '/api/player-image',
     '/api/projections',
-    '/api/draft-capital',
     '/api/trade-inventory',
-    '/api/player-momentum',
     '/api/data-health',
   ]).has(path)
 }

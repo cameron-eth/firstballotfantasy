@@ -1,10 +1,7 @@
 // Utility functions for LeagueBuddy component
-import type { PlayerData, PositionStrengths, TeamData, SleeperTransaction } from './types'
+import type { PlayerData, TeamData, SleeperTransaction } from './types'
 import { ktcValue, playerValue, type LeagueContext } from '@/lib/sleeper-sdk'
 import { standingsOrder } from '@/lib/league-metrics/standings'
-
-/** Top of the value scale a single position group is measured against. */
-const POSITION_VALUE_CEILING = 9999
 
 export const getTierFromRank = (rank: number): string => {
   if (!rank || rank <= 0) return 'Tier 4'
@@ -38,41 +35,6 @@ export const calculateGradeFromPercentile = (
   else letter = 'D'
 
   return { letter, score: Math.round(percentile) }
-}
-
-/**
- * 0–100 strength per position: the average dynasty value of the players who would
- * actually start there, measured against an elite asset. A team whose top two RBs are
- * both consensus RB1s scores near 100; a team starting waiver bodies scores near 0.
- */
-export const calculatePositionStrengths = (
-  players: PlayerData[],
-  ctx: LeagueContext
-): PositionStrengths => {
-  // How many players carry the position in a dynasty superflex lineup.
-  const starterSlots: Record<string, number> = { QB: 2, RB: 4, WR: 4, TE: 2 }
-
-  function positionScore(pos: string): number {
-    const posPlayers = players
-      .filter((p) => p.position?.toUpperCase() === pos)
-      .map((p) => playerValue(p, ctx))
-      .sort((a, b) => b - a)
-      .slice(0, starterSlots[pos] ?? 3)
-
-    if (posPlayers.length === 0) return 0
-
-    const avg = posPlayers.reduce((sum, value) => sum + value, 0) / posPlayers.length
-    return Math.min(100, Math.round((avg / POSITION_VALUE_CEILING) * 100))
-  }
-
-  return {
-    QB: positionScore('QB'),
-    RB: positionScore('RB'),
-    WR: positionScore('WR'),
-    TE: positionScore('TE'),
-    FLEX: 0,
-    SFLX: 0,
-  }
 }
 
 export const calculateRecentForm = (roster: any, matchups: any[]): string => {

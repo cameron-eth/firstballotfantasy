@@ -56,7 +56,7 @@ export function NextDraftPanel({
           <ul className="divide-y divide-line/40">
             {next.owned.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 py-1.5">
-                <PickChip label={pickLabel(p, slotsFor(next.season))} />
+                <PickChip label={pickLabel(p, slotsFor(next.season))} round={p.round} />
                 <span className="truncate text-xs text-slate-400">
                   {p.roster_id === team.rosterId ? 'Own pick' : `Via ${teamName(p.roster_id)}`}
                 </span>

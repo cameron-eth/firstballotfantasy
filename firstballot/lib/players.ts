@@ -5,6 +5,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
+import { prospectTier } from '@/lib/scouting-grade-tier'
+
 export type Position = 'QB' | 'RB' | 'WR' | 'TE'
 
 // Raw API shape from /api/prospects
@@ -59,66 +61,6 @@ export interface Player {
 }
 
 // ---------------------------------------------------------------------------
-// Tier colors matching the design system
-// ---------------------------------------------------------------------------
-
-const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  Elite: {
-    bg: 'bg-amber-500/20',
-    text: 'text-amber-400',
-    border: 'border-amber-500/30',
-  },
-  'Blue Chip': {
-    bg: 'bg-blue-500/20',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
-  },
-  Starter: {
-    bg: 'bg-emerald-500/20',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/30',
-  },
-  Rotational: {
-    bg: 'bg-purple-500/20',
-    text: 'text-purple-400',
-    border: 'border-purple-500/30',
-  },
-  Depth: {
-    bg: 'bg-slate-500/20',
-    text: 'text-slate-400',
-    border: 'border-slate-500/30',
-  },
-  Longshot: {
-    bg: 'bg-rose-500/20',
-    text: 'text-rose-400',
-    border: 'border-rose-500/30',
-  },
-}
-
-const FALLBACK_TIER = {
-  bg: 'bg-slate-500/10',
-  text: 'text-slate-500',
-  border: 'border-slate-600/20',
-}
-
-export function getTierColor(tier: string | null) {
-  if (!tier) return FALLBACK_TIER
-  if (TIER_COLORS[tier]) return TIER_COLORS[tier]
-
-  // Positional rank tiers (e.g. "WR5", "QB2", "RB12", "TE3")
-  if (/^QB\d+$/i.test(tier))
-    return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' }
-  if (/^RB\d+$/i.test(tier))
-    return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' }
-  if (/^WR\d+$/i.test(tier))
-    return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' }
-  if (/^TE\d+$/i.test(tier))
-    return { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' }
-
-  return FALLBACK_TIER
-}
-
-// ---------------------------------------------------------------------------
 // Image helpers
 // ---------------------------------------------------------------------------
 
@@ -158,14 +100,16 @@ function normalize(raw: RawProspect): Player {
     position: raw.position as Position,
     school: raw.school || 'TBD',
     espnId: raw.espn_id,
-    tier: raw.overall_grade == null ? 'Ungraded' : raw.grade_tier || 'Depth',
+    tier: prospectTier(raw),
     positionRank: `${raw.position}${raw.rank}`,
     grade: raw.overall_grade ?? null,
     height: formatHeight(raw.height),
     weight: raw.weight ? Math.round(raw.weight) : null,
     fortyTime: fortyRaw ? Number(fortyRaw) : null,
-    production: raw.college_production_score == null ? null : Math.round(raw.college_production_score),
-    physical: raw.physical_measurables_score == null ? null : Math.round(raw.physical_measurables_score),
+    production:
+      raw.college_production_score == null ? null : Math.round(raw.college_production_score),
+    physical:
+      raw.physical_measurables_score == null ? null : Math.round(raw.physical_measurables_score),
     valuation: raw.valuation ? Number(raw.valuation) : raw.overall_grade || 0,
     year: raw.draft_year,
     isCollege: (raw.draft_year || 0) >= 2025,

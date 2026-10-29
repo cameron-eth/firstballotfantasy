@@ -1,5 +1,5 @@
 import {
-  normalizeScoutingGradeTier,
+  prospectTier,
   SCOUTING_TIER_STYLES,
   type ScoutingDisplayTier,
 } from '@/lib/scouting-grade-tier'
@@ -40,10 +40,6 @@ export const BOARD_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 /** The board starts at the next class to be drafted (lib/draft-years). */
 export const DRAFT_BOARD_MIN_YEAR = nextDraftClass()
 
-export function getTierLabel(gradeTier: string | null, grade: number): string {
-  return normalizeScoutingGradeTier(gradeTier, grade)
-}
-
 export function tierStyleFor(
   tier: string
 ): (typeof SCOUTING_TIER_STYLES)[ScoutingDisplayTier] {
@@ -78,8 +74,7 @@ export function toBoardPlayer(p: Prospect): BoardPlayer {
     position: p.position,
     draftYear: p.draft_year ?? null,
     grade: Number(p.overall_grade || 0),
-    // No grade means no tier; a missing grade is not a 0 grade (that read as "Walk-On").
-    tier: p.overall_grade == null ? 'Ungraded' : getTierLabel(p.grade_tier, Number(p.overall_grade)),
+    tier: prospectTier(p),
     height: p.height ? Number(p.height) : null,
     weight: Number(p.weight || 0),
     fortyTime: parseForty(p.college_stats || null),

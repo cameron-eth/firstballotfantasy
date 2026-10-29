@@ -23,7 +23,7 @@ interface ProspectDetailModalProps {
   notesAvailable?: boolean
   getProspectGrade: (prospect: Prospect) => string
   getDraftPick: (prospect: Prospect) => string
-  getProspectTier: (rank: number, tier?: string | null) => string
+  getDraftRange: (rank: number, tier?: string | null) => string
   calculateProspectValue: (rank: number, position?: string) => number
   getPositionColor: (position: string) => string
 }

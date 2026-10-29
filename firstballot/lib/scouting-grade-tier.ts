@@ -24,10 +24,31 @@ export function scoutingTierFromGrade(grade: number): ScoutingDisplayTier {
   return 'Walk-On'
 }
 
+export type ProspectTier = ScoutingDisplayTier | 'Ungraded'
+
+/** Display order, best first; Ungraded last. */
+export const PROSPECT_TIER_ORDER: readonly ProspectTier[] = [
+  ...SCOUTING_DISPLAY_TIER_ORDER,
+  'Ungraded',
+]
+
+/**
+ * The one prospect tier every screen shows (PR-20, decision D3). No grade → Ungraded; otherwise
+ * the stored label mapped into the display vocabulary, or the grade cutoffs when there is no
+ * label. Grade v2 (docs/product/PROSPECT_RANKING_PLAN.md) moves this to the cutoffs only.
+ */
+export function prospectTier(prospect: {
+  grade_tier?: string | null
+  overall_grade?: number | string | null
+}): ProspectTier {
+  if (prospect.overall_grade == null || prospect.overall_grade === '') return 'Ungraded'
+  return normalizeScoutingGradeTier(prospect.grade_tier, Number(prospect.overall_grade))
+}
+
 /**
  * Map `grade_tier` from DB (or legacy values) + numeric grade → display tier.
  */
-export function normalizeScoutingGradeTier(
+function normalizeScoutingGradeTier(
   gradeTier: string | null | undefined,
   grade: number
 ): ScoutingDisplayTier {

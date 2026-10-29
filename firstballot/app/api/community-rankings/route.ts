@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
+import { readSession } from '@/lib/platform/session'
 import { candidates, dailySeed, readTallies, readToday, saveBallot } from '@/lib/community/store'
 import { parseBallotRound, MAX_DAILY_BALLOTS } from '@/lib/community/rounds'
 import { communityRatingsFromTallies, dailyPair, type Ballot } from '@/lib/community/rating'
@@ -8,13 +8,8 @@ export const dynamic = 'force-dynamic'
 const reply = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 async function handle(request: NextRequest) {
-  const jwt = request.headers.get('x-user-jwt')
-  if (!jwt) return reply({ error: 'Sign in to contribute.' }, 401)
-  const {
-    data: { user },
-    error,
-  } = await supabaseServer.auth.getUser(jwt)
-  if (error || !user) return reply({ error: 'Sign in again.' }, 401)
+  const session = readSession(request)
+  if (!session) return reply({ error: 'Sign in to contribute.' }, 401)
   const round = parseBallotRound(request.nextUrl.searchParams.get('round'))
   if (round === null) return reply({ error: 'Invalid comparison number.' }, 400)
   try {
@@ -30,13 +25,16 @@ async function handle(request: NextRequest) {
       pool = Number(settings.settings?.type) === 2 ? 'dynasty' : 'nfl'
     }
     const day = new Date().toISOString().slice(0, 10)
-    const [players, existing] = await Promise.all([candidates(), readToday(user.id, day, round)])
+    const [players, existing] = await Promise.all([
+      candidates(),
+      readToday(session.userId, day, round),
+    ])
     if (existing) pool = existing.pool
     const choices = existing
       ? existing.pair
           .map((key) => players.find((p) => p.key === key))
           .filter((p): p is (typeof players)[number] => Boolean(p))
-      : dailyPair(players, dailySeed(user.id, round ? `${day}:round:${round}` : day), pool)
+      : dailyPair(players, dailySeed(session.userId, round ? `${day}:round:${round}` : day), pool)
     if (!choices || choices.length !== 2) throw new Error('No comparison available')
     let voted = Boolean(existing)
     let winner = existing?.winner
@@ -64,7 +62,7 @@ async function handle(request: NextRequest) {
         pair: [choices[0].key, choices[1].key],
         winner: body.winner,
       }
-      await saveBallot(user.id, ballot, round)
+      await saveBallot(session.userId, ballot, round)
       voted = true
       winner = ballot.winner
     }

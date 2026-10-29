@@ -1,7 +1,8 @@
 import 'server-only'
 import { createHash, randomUUID } from 'node:crypto'
-import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { PlatformError } from './http'
+import { sessionUser } from './session'
 export type Principal = {
   accountId: string
   email?: string
@@ -10,22 +11,12 @@ export type Principal = {
   teamIds: string[] | null
   requestId: string
 }
+/** The browser session middleware.ts verified, metered. The JWT is not checked a second time. */
 export async function webAccount(request: Request): Promise<Principal> {
-  const token = request.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1]
-  if (!token || token.length > 12000)
-    throw new PlatformError(401, 'UNAUTHENTICATED', 'Sign in to continue.')
-  const { data, error } = await supabaseServer.auth.getUser(token)
-  if (error || !data.user) throw new PlatformError(401, 'UNAUTHENTICATED', 'Sign in again.')
-  const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
-  if (claims.client_id)
-    throw new PlatformError(
-      403,
-      'WEB_SESSION_REQUIRED',
-      'Use a First Ballot website session for this operation.'
-    )
+  const session = sessionUser(request)
   const requestId = randomUUID()
   const { data: allowed, error: meterError } = await supabaseAdmin.rpc('consume_platform_usage', {
-    p_account: data.user.id,
+    p_account: session.userId,
     p_request: requestId,
     p_operation: 'web:account',
     p_channel: 'web',
@@ -39,8 +30,8 @@ export async function webAccount(request: Request): Promise<Principal> {
   if (!allowed)
     throw new PlatformError(429, 'RATE_LIMIT', 'Too many requests. Please wait a minute.')
   return {
-    accountId: data.user.id,
-    email: data.user.email,
+    accountId: session.userId,
+    email: session.email,
     channel: 'web',
     scopes: [],
     teamIds: null,

@@ -8,10 +8,10 @@ import {
 } from '@/lib/sleeper-sdk/token-identity'
 import { loadToken, saveToken, deleteToken } from '@/lib/sleeper-sdk/token-store'
 import { webAccount } from '@/lib/platform/auth'
+import { readSession } from '@/lib/platform/session'
 import { teamsFor } from '@/lib/platform/teams'
 import { failure } from '@/lib/platform/http'
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer } from '@/lib/supabase-server'
 import {
   ownsRoster,
   tradePlayersStillOwned,
@@ -28,13 +28,8 @@ const reply = (data: unknown, status = 200) =>
   NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } })
 
 export async function POST(request: NextRequest) {
-  const jwt = request.headers.get('x-user-jwt')
-  if (!jwt) return reply({ error: 'Sign in to connect Sleeper.' }, 401)
-  const {
-    data: { user },
-    error,
-  } = await supabaseServer.auth.getUser(jwt)
-  if (error || !user) return reply({ error: 'Sign in again to continue.' }, 401)
+  const session = readSession(request)
+  if (!session) return reply({ error: 'Sign in to connect Sleeper.' }, 401)
   const body = await request.json().catch(() => null)
   if (
     !body ||
@@ -55,10 +50,10 @@ export async function POST(request: NextRequest) {
   let token: string
   try {
     if (body.action === 'disconnect') {
-      await deleteToken(user.id)
+      await deleteToken(session.userId)
       return reply({ disconnected: true })
     }
-    const saved = body.action === 'connect' ? body.token?.trim() : await loadToken(user.id)
+    const saved = body.action === 'connect' ? body.token?.trim() : await loadToken(session.userId)
     if (body.action === 'status') return reply(sleeperConnectionStatus(saved))
     if (!saved)
       return reply(
@@ -130,7 +125,7 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(trades))
       return reply({ error: 'Sleeper did not return trade history.' }, 502)
     if (body.action === 'connect' || body.action === 'restore') {
-      if (body.action === 'connect') await saveToken(user.id, token)
+      if (body.action === 'connect') await saveToken(session.userId, token)
       return reply({
         connected: true,
         rosterId: mine.roster_id,

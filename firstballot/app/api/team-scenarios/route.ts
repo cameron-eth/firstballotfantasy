@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { webAccount } from '@/lib/platform/auth'
+import { readSession } from '@/lib/platform/session'
 import { teamsFor } from '@/lib/platform/teams'
 import { failure } from '@/lib/platform/http'
 import { validateScenarios } from '@/lib/team-scenarios'
@@ -8,19 +9,14 @@ export const dynamic = 'force-dynamic'
 const reply = (data: unknown, status = 200) =>
   NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } })
 async function handle(request: NextRequest) {
-  const jwt = request.headers.get('x-user-jwt')
-  if (!jwt) return reply({ error: 'Sign in to save scenarios.' }, 401)
-  const {
-    data: { user },
-    error,
-  } = await supabaseServer.auth.getUser(jwt)
-  if (error || !user) return reply({ error: 'Sign in again.' }, 401)
+  const session = readSession(request)
+  if (!session) return reply({ error: 'Sign in to save scenarios.' }, 401)
   const league = request.nextUrl.searchParams.get('league') ?? ''
   const roster = request.nextUrl.searchParams.get('roster') ?? ''
   if (!/^\d{10,25}$/.test(league) || !/^\d{1,4}$/.test(roster))
     return reply({ error: 'Invalid league or roster.' }, 400)
   const storage = supabaseAdmin.storage.from('team-scenarios')
-  const path = `${user.id}/${league}/${roster}.json`
+  const path = `${session.userId}/${league}/${roster}.json`
   if (request.method === 'GET') {
     const { data, error } = await storage.download(path)
     if (error) {

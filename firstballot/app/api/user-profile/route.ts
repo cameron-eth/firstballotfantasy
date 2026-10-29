@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { readSession } from '@/lib/platform/session'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 
 interface CreateProfileRequestBody {
@@ -120,20 +121,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Self-heal missing profile for authenticated users.
-    const {
-      data: { user },
-      error: userError,
-    } = await userSupabase.auth.getUser()
-
-    if (userError || !user?.email) {
+    // Email and username come from the session middleware.ts verified.
+    const session = readSession(request)
+    if (!session?.email) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const username = deriveUsername(
-      user.email,
-      typeof user.user_metadata?.username === 'string' ? user.user_metadata.username : undefined
-    )
-    const profile = await ensureUserProfile(userJwt, userId, user.email, username)
+    const username = deriveUsername(session.email, session.username)
+    const profile = await ensureUserProfile(userJwt, userId, session.email, username)
     return NextResponse.json(profile)
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -150,27 +145,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
     }
 
-    const userSupabase = createAuthenticatedSupabaseClient(userJwt)
-    const {
-      data: { user },
-      error: userError,
-    } = await userSupabase.auth.getUser()
-
-    const resolvedEmail = user?.email ?? email
+    const session = readSession(request)
+    const resolvedEmail = session?.email ?? email
     if (!resolvedEmail) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
 
-    const metadataUsername =
-      typeof user?.user_metadata?.username === 'string' ? user.user_metadata.username : undefined
-    const resolvedUsername = deriveUsername(resolvedEmail, metadataUsername ?? username)
+    const resolvedUsername = deriveUsername(resolvedEmail, session?.username ?? username)
 
     const profile = await ensureUserProfile(userJwt, authId, resolvedEmail, resolvedUsername)
-
-    if (userError) {
-      // Profile can still be created/returned even if metadata lookup fails.
-      return NextResponse.json(profile)
-    }
 
     return NextResponse.json(profile)
   } catch (error) {

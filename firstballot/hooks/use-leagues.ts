@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
+import { sleeperClient } from '@/lib/sleeper-sdk/client'
 import type { UserLeague, SleeperLeagueResponse } from '@/types/league'
 
 interface UseLeaguesReturn {
@@ -14,8 +15,6 @@ interface UseLeaguesReturn {
   refetch: () => Promise<void>
   addLeagueByUsername: (sleeperUsername: string) => Promise<UserLeague[]>
 }
-
-const SLEEPER_API_BASE = 'https://api.sleeper.app/v1'
 
 export function useLeagues(): UseLeaguesReturn {
   const { user } = useAuth()
@@ -28,24 +27,21 @@ export function useLeagues(): UseLeaguesReturn {
     async (sleeperUsername: string): Promise<UserLeague[]> => {
       try {
         // First get the Sleeper user ID
-        const userResponse = await fetch(`${SLEEPER_API_BASE}/user/${sleeperUsername}`)
-        if (!userResponse.ok) {
+        const sleeperUser = await sleeperClient.getUser(sleeperUsername).catch(() => null)
+        if (!sleeperUser) {
           throw new Error('Sleeper user not found')
         }
-        const sleeperUser = await userResponse.json()
         const sleeperId = sleeperUser.user_id
 
         // Then fetch their leagues for current NFL season
         const currentYear = new Date().getFullYear()
-        const leaguesResponse = await fetch(
-          `${SLEEPER_API_BASE}/user/${sleeperId}/leagues/nfl/${currentYear}`
-        )
-
-        if (!leaguesResponse.ok) {
-          throw new Error('Failed to fetch leagues')
-        }
-
-        const leaguesData: SleeperLeagueResponse[] = await leaguesResponse.json()
+        const leaguesData = await sleeperClient
+          .read<
+            SleeperLeagueResponse[]
+          >(`/user/${encodeURIComponent(sleeperId)}/leagues/nfl/${currentYear}`)
+          .catch(() => {
+            throw new Error('Failed to fetch leagues')
+          })
 
         // Transform to UserLeague format
         return leaguesData.map((league) => ({

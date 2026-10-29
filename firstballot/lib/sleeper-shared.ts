@@ -1,3 +1,5 @@
+import { SLEEPER_CACHE, sleeperClient } from './sleeper-sdk/client'
+
 /**
  * Sleeper reads shared by the dashboard's loaders on one page (PR-18, audit R3-4).
  *
@@ -13,19 +15,16 @@ const SHARE_MS = 10_000
 
 const recent = new Map<string, { at: number; json: Promise<unknown> }>()
 
-async function readJson(url: string): Promise<unknown> {
-  const response = await fetch(url, { cache: 'no-store' })
-  if (!response.ok) throw new Error(`Sleeper request failed (${response.status})`)
-  return response.json()
-}
+const readJson = (path: string) => sleeperClient.read<unknown>(path, SLEEPER_CACHE.fresh)
 
-export function sharedSleeperJson<T>(url: string): Promise<T> {
-  if (typeof window === 'undefined') return readJson(url) as Promise<T>
-  const hit = recent.get(url)
+/** `path` is from the Sleeper API root, e.g. `/league/123` (PR-21: the client owns the host). */
+export function sharedSleeperJson<T>(path: string): Promise<T> {
+  if (typeof window === 'undefined') return readJson(path) as Promise<T>
+  const hit = recent.get(path)
   if (hit && Date.now() - hit.at < SHARE_MS) return hit.json.then(structuredClone) as Promise<T>
-  const json = readJson(url)
-  recent.set(url, { at: Date.now(), json })
-  json.catch(() => recent.delete(url))
+  const json = readJson(path)
+  recent.set(path, { at: Date.now(), json })
+  json.catch(() => recent.delete(path))
   return json.then(structuredClone) as Promise<T>
 }
 
@@ -34,9 +33,7 @@ export function clearSharedSleeperReads() {
   recent.clear()
 }
 
-const SLEEPER = 'https://api.sleeper.app/v1'
-export const sleeperState = () => sharedSleeperJson<any>(`${SLEEPER}/state/nfl`)
-export const sleeperLeague = (leagueId: string) =>
-  sharedSleeperJson<any>(`${SLEEPER}/league/${leagueId}`)
+export const sleeperState = () => sharedSleeperJson<any>('/state/nfl')
+export const sleeperLeague = (leagueId: string) => sharedSleeperJson<any>(`/league/${leagueId}`)
 export const sleeperMatchups = (leagueId: string, week: number) =>
-  sharedSleeperJson<any[]>(`${SLEEPER}/league/${leagueId}/matchups/${week}`)
+  sharedSleeperJson<any[]>(`/league/${leagueId}/matchups/${week}`)

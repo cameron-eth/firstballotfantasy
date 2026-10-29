@@ -5,10 +5,10 @@ import { sharedSleeperJson } from '@/lib/sleeper-shared'
 export function useLeagueFormat() {
   const { selectedLeagueId } = useLeagueContext()
   const { data } = useSWR(
-    selectedLeagueId ? `https://api.sleeper.app/v1/league/${selectedLeagueId}` : null,
+    selectedLeagueId ? `/league/${selectedLeagueId}` : null,
     // Shares the request with the dashboard's league loaders (PR-18).
-    (url: string) =>
-      sharedSleeperJson<{ settings?: { type?: number } }>(url).catch(() => {
+    (path: string) =>
+      sharedSleeperJson<{ settings?: { type?: number } }>(path).catch(() => {
         throw new Error('League format unavailable')
       }),
     { dedupingInterval: 60000 }

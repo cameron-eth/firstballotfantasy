@@ -76,14 +76,7 @@ test('drafts and other paths go through the same transport', async () => {
   assert.equal(calls[0].init.cache, 'no-store')
 })
 
-// PR-21: only the client names the Sleeper host. Browser loaders still listed here move in PR-21c.
-const STILL_DIRECT = new Set([
-  'components/league-buddy/leagueDataBundle.ts',
-  'hooks/use-league-format.ts',
-  'hooks/use-leagues.ts',
-  'lib/sleeper-shared.ts',
-])
-
+// PR-21: only the client names the Sleeper host.
 test('no app code outside the Sleeper client calls api.sleeper.app', async () => {
   const { execFileSync } = await import('node:child_process')
   const files = execFileSync(
@@ -93,6 +86,5 @@ test('no app code outside the Sleeper client calls api.sleeper.app', async () =>
   )
     .split('\n')
     .filter(Boolean)
-  const offenders = files.filter((f) => f !== 'lib/sleeper-sdk/client.ts' && !STILL_DIRECT.has(f))
-  assert.deepEqual(offenders, [])
+  assert.deepEqual(files, ['lib/sleeper-sdk/client.ts'])
 })

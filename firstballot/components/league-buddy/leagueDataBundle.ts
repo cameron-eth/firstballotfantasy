@@ -18,7 +18,6 @@ import type {
 } from './types'
 import {
   calculateGradeFromPercentile,
-  calculatePositionStrengths,
   calculateRecentForm,
   getOpponentInfo,
   countRosterPositions,
@@ -450,7 +449,6 @@ export async function fetchLeagueDataBundle(
         gradeScore: 0,
         players,
         starters: roster.starters || [],
-        positionStrengths: calculatePositionStrengths(players, leagueContext),
         waiverPosition: roster.settings?.waiver_position || 0,
         totalMoves: roster.settings?.total_moves || 0,
         recentForm: calculateRecentForm(roster, matchups),
@@ -553,8 +551,6 @@ export function applyKtc(teams: TeamData[], maps: KtcMaps): TeamData[] {
         ktcHistory: hist ?? undefined,
         ktcValueSf: latest?.value_sf ?? undefined,
         ktcValue1qb: latest?.value_1qb ?? undefined,
-        ktcTrendDelta:
-          hist && hist.length >= 2 ? hist[hist.length - 1].value_sf - hist[0].value_sf : undefined,
       }
     }),
   }))

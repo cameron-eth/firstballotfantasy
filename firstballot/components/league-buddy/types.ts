@@ -61,7 +61,6 @@ export interface TeamData {
   gradeScore: number
   players: PlayerData[]
   starters: string[] // Sleeper player IDs of starters from roster
-  positionStrengths: PositionStrengths
   waiverPosition: number
   totalMoves: number
   recentForm: string
@@ -119,16 +118,6 @@ export interface PlayerData {
   ktcHistory?: KtcHistoryPoint[] // KTC value history for sparkline
   ktcValueSf?: number // Latest KTC SF value
   ktcValue1qb?: number // Latest KTC 1QB value
-  ktcTrendDelta?: number // Change in KTC SF value over the history window
-}
-
-export interface PositionStrengths {
-  QB: number
-  RB: number
-  WR: number
-  TE: number
-  FLEX: number
-  SFLX: number
 }
 
 // Raw Sleeper API matchup structure

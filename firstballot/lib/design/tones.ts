@@ -24,6 +24,13 @@ export const PICK_TONE = 'border-pick/30 bg-pick/10 text-violet-200'
 export const PICK_PLANNED_TONE = 'border-dashed border-value/40 bg-value/5 text-violet-200'
 export const PICK_PINNED_TONE = 'border-positive/50 bg-positive/5 text-violet-200'
 
+/**
+ * Pick value by round, on the tier scale: a first is elite (gold), a second the base pick
+ * violet, a third or later neutral. The ticket glyph and chip shape still say "pick".
+ */
+export const pickRoundTone = (round: number) =>
+  round <= 1 ? TONE.elite : round === 2 ? PICK_TONE : TONE.neutral
+
 /** Selected row, tab or card: action tint plus an accent. Never gold. */
 export const SELECTED_ROW = 'bg-action/10 shadow-[inset_3px_0_0_hsl(var(--action))]'
 /** Sticky table cells need an opaque fill, so the selected and hover tints are pre-mixed. */

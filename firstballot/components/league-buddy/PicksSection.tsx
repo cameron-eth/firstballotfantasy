@@ -134,7 +134,11 @@ export function PicksSection({
                   {y.owned.length ? (
                     <div className="flex flex-wrap gap-2">
                       {y.owned.map((p) => (
-                        <PickChip key={p.id} label={pickLabel(p, slotsFor(y.season))}>
+                        <PickChip
+                          key={p.id}
+                          label={pickLabel(p, slotsFor(y.season))}
+                          round={p.round}
+                        >
                           {p.roster_id !== selectedTeam.rosterId
                             ? `via ${teamName(p.roster_id)}`
                             : undefined}
@@ -152,6 +156,7 @@ export function PicksSection({
                           <PickChip
                             key={p.id}
                             label={pickLabel(p, slotsFor(y.season))}
+                            round={p.round}
                             className="opacity-60"
                           >
                             {`to ${teamName(p.owner_id)}`}
@@ -163,6 +168,9 @@ export function PicksSection({
                 </div>
               ))}
             </div>
+            <p className="text-2xs text-slate-500">
+              Gold is a first, violet a second, grey a third or later.
+            </p>
           </div>
         )}
       </div>

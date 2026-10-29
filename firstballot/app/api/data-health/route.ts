@@ -14,6 +14,7 @@ import {
   PROSPECT_STATS_PATTERN,
   TIER_KEY,
 } from '@/lib/platform/snapshot-keys'
+import { sleeperClient } from '@/lib/sleeper-sdk/client'
 
 /** Completed ESPN seasons behind career FPPG; an expired one hides career badges. */
 const isCareerSeason = (key: string, currentSeason: number | null) => {
@@ -43,10 +44,7 @@ export async function GET() {
           )
           .order('key')
           .limit(100),
-        fetch('https://api.sleeper.app/v1/state/nfl', {
-          next: { revalidate: 600 },
-          signal: AbortSignal.timeout(10000),
-        }).catch(() => null),
+        sleeperClient.getNflState({ next: { revalidate: 600 } }).catch(() => null),
         supabaseAdmin
           .from('ktc_player_values')
           .select('scraped_date')
@@ -68,7 +66,7 @@ export async function GET() {
     if (snapshotResult.error) throw snapshotResult.error
     if (prospectSyncResult.error) throw prospectSyncResult.error
 
-    const state = stateResponse?.ok ? await stateResponse.json().catch(() => null) : null
+    const state = stateResponse
     const currentSeason = Number(state?.season) || null
     const week = Number(state?.week)
     const currentWeek = Number.isInteger(week) && week >= 1 && week <= 18 ? week : null

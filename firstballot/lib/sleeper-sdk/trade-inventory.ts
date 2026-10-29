@@ -1,4 +1,5 @@
 import { resolveLeagueContext } from '../league-metrics/context'
+import { SLEEPER_CACHE, sleeperClient } from './client'
 import { pickInventory, type OwnedPick } from './pick-inventory'
 import type { SleeperLeague, SleeperRoster, SleeperTradedPick } from './types'
 export interface TradeInventory {
@@ -9,14 +10,10 @@ export interface TradeInventory {
   updatedAt: string
 }
 export async function loadTradeInventory(leagueId: string): Promise<TradeInventory> {
-  const read = async (path: string) => {
-    const response = await fetch(`https://api.sleeper.app/v1/league/${leagueId}${path}`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(10000),
+  const read = (path: string) =>
+    sleeperClient.read<any>(`/league/${leagueId}${path}`, SLEEPER_CACHE.fresh).catch(() => {
+      throw new Error('Could not verify current picks and FAAB.')
     })
-    if (!response.ok) throw new Error('Could not verify current picks and FAAB.')
-    return response.json()
-  }
   const [league, rosters, traded, drafts]: [
     SleeperLeague,
     (SleeperRoster & { settings?: { waiver_budget_used?: number } })[],

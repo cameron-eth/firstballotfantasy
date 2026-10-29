@@ -78,9 +78,7 @@ function leagueSeason(
     async () => {
       const [rosters, users] = await Promise.all([
         sleeperClient.getLeagueRosters(league.leagueId, SLEEPER_CACHE.rosters).catch(() => []),
-        fetch(`https://api.sleeper.app/v1/league/${league.leagueId}/users`, { cache: 'no-store' })
-          .then((r) => r.json())
-          .catch(() => []),
+        sleeperClient.getLeagueUsers(league.leagueId, SLEEPER_CACHE.fresh).catch(() => []),
       ])
       const teams = (rosters as any[]).map((roster: any) => {
         const owner = roster.owner_id
@@ -218,9 +216,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch FRESH NFL state (no cache) to ensure we get the latest week
-    const nflState = await fetch('https://api.sleeper.app/v1/state/nfl', {
-      cache: 'no-store',
-    }).then((r) => r.json())
+    const nflState = await sleeperClient.getNflState(SLEEPER_CACHE.fresh)
 
     const currentWeek = nflState.week || nflState.display_week || 1
     console.log('🏈 Trade Market - NFL State:', {

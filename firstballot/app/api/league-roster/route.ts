@@ -57,9 +57,7 @@ export async function GET(request: NextRequest) {
     const [leagueData, rostersData, usersData, playersData] = await Promise.all([
       sleeperClient.getLeague(leagueId, SLEEPER_CACHE.league),
       sleeperClient.getLeagueRosters(leagueId, SLEEPER_CACHE.rosters),
-      fetch(`https://api.sleeper.app/v1/league/${leagueId}/users`, { cache: 'no-store' }).then(
-        (r) => r.json()
-      ),
+      sleeperClient.getLeagueUsers(leagueId, SLEEPER_CACHE.fresh),
       sleeperClient.getAllPlayers(SLEEPER_CACHE.players),
     ])
 

@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server'
+import { sleeperClient } from '@/lib/sleeper-sdk/client'
 export async function GET() {
   try {
-    const state = await fetch('https://api.sleeper.app/v1/state/nfl', {
-      next: { revalidate: 3600 },
-    }).then((r) => {
-      if (!r.ok) throw Error()
-      return r.json()
-    })
+    const state = await sleeperClient.getNflState({ next: { revalidate: 3600 } })
     const end = state.season_type === 'regular' ? Math.min(18, state.week - 1) : 18
     const weeks = Array.from({ length: Math.min(6, Math.max(0, end)) }, (_, i) => end - i).reverse()
     const history: Record<string, { week: number; points: number }[]> = {}

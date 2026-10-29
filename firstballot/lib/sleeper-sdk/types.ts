@@ -98,6 +98,13 @@ export interface SleeperTradedPick {
   owner_id: number
 }
 
+/** One entry of `/league/{id}/drafts` (fields the app reads). */
+export interface SleeperLeagueDraft {
+  draft_id: string
+  season: string
+  status: string
+}
+
 export interface SleeperTransaction {
   transaction_id: string
   type: 'trade' | 'waiver' | 'free_agent' | string

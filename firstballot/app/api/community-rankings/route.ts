@@ -3,6 +3,7 @@ import { supabaseServer } from '@/lib/supabase-server'
 import { candidates, dailySeed, readTallies, readToday, saveBallot } from '@/lib/community/store'
 import { parseBallotRound, MAX_DAILY_BALLOTS } from '@/lib/community/rounds'
 import { communityRatingsFromTallies, dailyPair, type Ballot } from '@/lib/community/rating'
+import { sleeperClient } from '@/lib/sleeper-sdk/client'
 export const dynamic = 'force-dynamic'
 const reply = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
@@ -21,11 +22,11 @@ async function handle(request: NextRequest) {
     const league = request.nextUrl.searchParams.get('leagueId')
     if (league) {
       if (!/^\d{10,25}$/.test(league)) return reply({ error: 'Invalid league' }, 400)
-      const r = await fetch(`https://api.sleeper.app/v1/league/${league}`, {
-        next: { revalidate: 300 },
-      })
-      if (!r.ok) throw new Error('League settings unavailable')
-      const settings = await r.json()
+      const settings = await sleeperClient
+        .getLeague(league, { next: { revalidate: 300 } })
+        .catch(() => {
+          throw new Error('League settings unavailable')
+        })
       pool = Number(settings.settings?.type) === 2 ? 'dynasty' : 'nfl'
     }
     const day = new Date().toISOString().slice(0, 10)

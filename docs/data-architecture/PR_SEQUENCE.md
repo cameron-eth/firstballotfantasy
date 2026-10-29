@@ -26,7 +26,7 @@ None of these will be chosen silently, because each one changes a scoring method
 | **D1** | Canonical "dynasty value" for teams | (a) `teamValueScore`: quality-weighted and depth-decayed (current My Team definition); (b) lineup-slot power score; (c) linear KTC sum | (a). It was the most recent product decision. Power rankings would be relabelled "Lineup strength" and kept as a separate, clearly named metric | PR-6 |
 | **D2** | Default basis for draft slots | Record / Max PF / projected Max PF, with a per-league override | Projected Max PF when every team has data, otherwise Record, labelled everywhere | PR-8 |
 | **D5** | Roster-fit trade signal vs Market signal when they disagree | Hide one / rank one above the other / show both | Show both with their reasons and flag the disagreement (owner, 2026-10-28) | PR-9b |
-| **D3** | Prospect tier source | (a) derive from the grade cutoffs; (b) keep stored labels and flag disagreements | (b) first: show disagreements in data-health, then fix the data | PR-20 |
+| **D3** | Prospect tier source | (a) derive from the grade cutoffs; (b) keep stored labels and flag disagreements | (b) first: show disagreements in data-health, then fix the data. **Decided 2026-10-28: (a)**, through the approved prospect plan (`docs/product/PROSPECT_RANKING_PLAN.md`); data-health still flags disagreements until grade v2 ships | PR-20 |
 | **D4** | Trade Market valuation | Today's values (current) vs value on the trade date from KTC history | Value on the trade date, with today's value as a second column | PR-16 |
 
 ## Test leagues
@@ -95,7 +95,7 @@ Legend: **M** = has a DB migration. **F** = behind a flag or compatibility layer
 | PR | Scope | Acceptance criteria |
 |---|---|---|
 | **PR-19** | R4-1: identity service; remove name joins (fixes the Malik Washington mismatch) | No KTC joins by display name remain |
-| **PR-20** ⏸D3 | R4-2: one prospect tier vocabulary; merge 11 cross-class duplicates; backfill 45 ESPN ids (**M** data migration with a backup table) | One tier function; 0 duplicate names |
+| **PR-20** (= prospect plan P1) | R4-2: one prospect tier vocabulary; merge 11 cross-class duplicates; backfill 45 ESPN ids (**M** data migration with a backup table) | One tier function; 0 duplicate names |
 | **PR-21** | R4-3: one Sleeper client (`SleeperClient`) | `api.sleeper.app` appears only in the client module |
 | **PR-23** | R4-4/R4-5: `http.ts` and single-pass auth everywhere; remove dead code and legacy routes after reference checks | One error shape; dead modules gone |
 | **PR-24** | R4-6: data-health dataset → feature map, job rows, "stale since" | data-health answers "what is stale, why, and what does it affect" |

@@ -1,17 +1,9 @@
-import { timingSafeEqual } from 'node:crypto'
 import { playerData } from '@/lib/platform/player-data'
 import { json, failure, PlatformError } from '@/lib/platform/http'
+import { refreshAuthorized } from '@/lib/platform/auth'
 export async function POST(request: Request) {
   try {
-    const expected = process.env.DATA_REFRESH_SECRET,
-      provided = request.headers.get('authorization')?.replace(/^Bearer /, '')
-    if (
-      !expected ||
-      !provided ||
-      Buffer.byteLength(expected) !== Buffer.byteLength(provided) ||
-      !timingSafeEqual(Buffer.from(expected), Buffer.from(provided))
-    )
-      throw new PlatformError(401, 'UNAUTHORIZED', 'Unauthorized.')
+    if (!refreshAuthorized(request)) throw new PlatformError(401, 'UNAUTHORIZED', 'Unauthorized.')
     // Also warms every past season behind career FPPG (cached 30 days, refetched on expiry).
     const stats = await playerData(['8144'])
     return json({

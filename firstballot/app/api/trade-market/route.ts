@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fail } from '@/lib/platform/http'
-import { KTC_DAY_MARKER_PREFIX, TIER_KEY } from '@/lib/dynasty-tiers'
+import { TIER_KEY } from '@/lib/dynasty-tiers'
+import { completeKtcDays, latestKtcDay } from '@/lib/platform/ktc-days'
 import { supabaseAdmin, supabaseServer } from '@/lib/supabase-server'
 import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import { getCachedPlayers } from '@/lib/players-cache'
@@ -27,18 +28,6 @@ type SeasonData = {
   transactionsAnalyzed: number
   /** transaction_id → player id → KTC SF value on the trade date (D4); absent before history. */
   tradeDateKtc: Record<string, Record<string, number>>
-}
-
-/** Complete KTC days, oldest first (marked by scripts/sync-ktc-values.mjs, PR-11). */
-async function completeKtcDays(): Promise<string[]> {
-  const { data, error } = await supabaseAdmin
-    .from('ingestion_runs')
-    .select('dataset')
-    .eq('status', 'success')
-    .like('dataset', `${KTC_DAY_MARKER_PREFIX}%`)
-    .limit(5000)
-  if (error) throw new Error('KTC_DAYS_UNAVAILABLE')
-  return [...new Set((data ?? []).map((r) => r.dataset.slice(KTC_DAY_MARKER_PREFIX.length)))].sort()
 }
 
 /** KTC id → KTC SF value, for each requested day. */
@@ -151,17 +140,13 @@ type TierPayload = {
 /** Today's KTC by KTC id. */
 async function latestKtcById() {
   const byId = new Map<number, { value_sf: number; rank_sf: number | null }>()
-  const { data: latest } = await supabaseServer
-    .from('ktc_player_values')
-    .select('scraped_date')
-    .order('scraped_date', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (!latest?.scraped_date) return byId
+  // No freshness budget here, as before: Trade Market prices history, and today's value is one input.
+  const latest = await latestKtcDay().catch(() => null)
+  if (!latest) return byId
   const { data } = await supabaseServer
     .from('ktc_player_values')
     .select('ktc_player_id,value_sf,rank_sf')
-    .eq('scraped_date', latest.scraped_date)
+    .eq('scraped_date', latest.date)
     .limit(2000)
   for (const row of data ?? [])
     byId.set(Number(row.ktc_player_id), {

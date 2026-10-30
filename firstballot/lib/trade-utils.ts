@@ -48,23 +48,6 @@ export interface TradeAnalysis {
   winner: number | null
 }
 
-export interface TraderStats {
-  rosterId: number
-  teamName: string
-  ownerName: string
-  totalTrades: number
-  totalValueGained: number
-  avgValuePerTrade: number
-  winRate: number
-  bestTrade: number
-  worstTrade: number
-  totalValueMoved: number
-  grade: string
-  marketShareByTrades: number // Percentage of total trades
-  marketShareByValue: number // Percentage of total value moved
-  marketShareByActivity: number // Percentage of total trading activity
-}
-
 // Dynasty Player Valuation System
 // Based on FirstBallotModel comprehensive scoring (0-13125 scale)
 
@@ -113,7 +96,6 @@ const convertKtcToValue = (ktcValue: number): number => {
   // Convert to 0-100 style trade value while preserving spread.
   return Math.max(1, Math.min(100, ktcValue / 100))
 }
-
 
 /**
  * Get player value from FirstBallotModel scoring system
@@ -283,12 +265,6 @@ export const getDraftPickValue = (round: number, season: string): DraftPickValue
   }
 }
 
-// Get approximate 2027 enhanced values (for reference)
-export const get2027EnhancedValues = (round: number): number => {
-  const baseValue = getDraftPickValue(round, '2027')
-  return baseValue.finalValue
-}
-
 // Grade calculation based on total value gained
 export const getGradeFromValue = (value: number): string => {
   if (value >= 50) return 'A+'
@@ -408,77 +384,6 @@ export const processPlayerForTrade = (
   }
 }
 
-// Calculate trade statistics
-export const calculateTraderStats = (tradeAnalysis: TradeAnalysis[]): TraderStats[] => {
-  const stats: Record<number, TraderStats & { winningTrades: number }> = {}
-
-  tradeAnalysis.forEach((trade) => {
-    trade.teams.forEach((team) => {
-      if (!stats[team.rosterId]) {
-        stats[team.rosterId] = {
-          rosterId: team.rosterId,
-          teamName: team.teamName,
-          ownerName: team.ownerName,
-          totalTrades: 0,
-          totalValueGained: 0,
-          avgValuePerTrade: 0,
-          winRate: 0,
-          bestTrade: 0,
-          worstTrade: 0,
-          totalValueMoved: 0,
-          grade: 'F',
-          marketShareByTrades: 0,
-          marketShareByValue: 0,
-          marketShareByActivity: 0,
-          winningTrades: 0,
-        }
-      }
-
-      const stat = stats[team.rosterId]
-      stat.totalTrades++
-      stat.totalValueGained += team.netValueGain
-      stat.totalValueMoved += team.totalValueReceived + team.totalValueSent
-
-      // Count winning trades (trades where they left with more value)
-      if (team.netValueGain > 0) {
-        stat.winningTrades++
-      }
-
-      if (team.netValueGain > stat.bestTrade) {
-        stat.bestTrade = team.netValueGain
-      }
-      if (team.netValueGain < stat.worstTrade) {
-        stat.worstTrade = team.netValueGain
-      }
-    })
-  })
-
-  // Calculate totals for market share percentages
-  const totalTrades = tradeAnalysis.length
-  const totalValueMoved = Object.values(stats).reduce((sum, stat) => sum + stat.totalValueMoved, 0)
-  const totalActivity = Object.values(stats).reduce((sum, stat) => sum + stat.totalTrades, 0)
-
-  // Calculate averages, win rates, and market share percentages
-  Object.values(stats).forEach((stat) => {
-    stat.avgValuePerTrade = stat.totalTrades > 0 ? stat.totalValueGained / stat.totalTrades : 0
-    stat.grade = getGradeFromValue(stat.totalValueGained)
-
-    // Calculate win rate as percentage of trades where they left with more value
-    stat.winRate = stat.totalTrades > 0 ? (stat.winningTrades / stat.totalTrades) * 100 : 0
-
-    // Calculate market share percentages
-    stat.marketShareByTrades = totalTrades > 0 ? (stat.totalTrades / totalActivity) * 100 : 0
-    stat.marketShareByValue =
-      totalValueMoved > 0 ? (stat.totalValueMoved / totalValueMoved) * 100 : 0
-    stat.marketShareByActivity = totalActivity > 0 ? (stat.totalTrades / totalActivity) * 100 : 0
-  })
-
-  // Remove temporary winningTrades field and return clean TraderStats
-  return Object.values(stats)
-    .map(({ winningTrades, ...stat }) => stat)
-    .sort((a, b) => b.totalValueGained - a.totalValueGained)
-}
-
 // Format value for display
 export const formatValue = (value: number): string => {
   if (value >= 0) {
@@ -487,28 +392,3 @@ export const formatValue = (value: number): string => {
   return `${Math.round(value * 10) / 10}`
 }
 
-// Get valuation system description
-export const getValuationSystemDescription = () => ({
-  playerValues: {
-    title: 'Player Values (Based on Dynasty SF Rankings)',
-    tiers: [
-      'Top 12: 85-100 points',
-      'Ranks 13-36: 65-84 points',
-      'Ranks 37-72: 45-64 points',
-      'Ranks 73-120: 25-44 points',
-      'Ranks 121+: 5-24 points',
-      'Unranked: 3-15 points',
-    ],
-  },
-  draftPickValues: {
-    title: 'Draft Pick Values (Base)',
-    values: ['1st: 55 points', '2nd: 25 points', '3rd: 15 points', '4th+: 8-3 points'],
-    timeDiscount: 'Future picks discounted 15% per year (dynasty format)',
-  },
-  classBonus: {
-    title: '2027 Draft Class Bonus',
-    description: '2027 is considered a strong draft class with exceptional talent depth',
-    bonuses: ['1st: +25%', '2nd: +35%', '3rd: +30%', '4th+: +25%'],
-    enhancedValues: ['1st: ~69 points', '2nd: ~34 points', '3rd: ~20 points', '4th+: ~10 points'],
-  },
-})

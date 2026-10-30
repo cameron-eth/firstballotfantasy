@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fail } from '@/lib/platform/http'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
-import { sleeperClient } from '@/lib/sleeper-sdk/client'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import type { SleeperLeagueResponse, UserLeague } from '@/types/league'
 
 export const dynamic = 'force-dynamic'
@@ -21,13 +21,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ leagues: [], fetched_at: new Date().toISOString() })
 
   try {
-    const fiveMinutes = { next: { revalidate: 300 } }
-    const sleeperUser = await sleeperClient.getUser(profile.sleeper_username, fiveMinutes)
+    const sleeperUser = await sleeperClient.getUser(
+      profile.sleeper_username,
+      SLEEPER_CACHE.userLeagues
+    )
     if (!sleeperUser) throw new Error('Sleeper user unavailable')
     const season = new Date().getFullYear()
     const sleeperLeagues = await sleeperClient.read<SleeperLeagueResponse[]>(
       `/user/${encodeURIComponent(sleeperUser.user_id)}/leagues/nfl/${season}`,
-      fiveMinutes
+      SLEEPER_CACHE.userLeagues
     )
     const leagues: UserLeague[] = sleeperLeagues.map((league) => ({
       league_id: league.league_id,

@@ -1,5 +1,5 @@
 import 'server-only'
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { PlatformError } from './http'
 import { sessionUser } from './session'
@@ -37,6 +37,17 @@ export async function webAccount(request: Request): Promise<Principal> {
     teamIds: null,
     requestId,
   }
+}
+/** The scheduled jobs' bearer secret (DATA_REFRESH_SECRET), compared in constant time. */
+export function refreshAuthorized(request: Request) {
+  const expected = process.env.DATA_REFRESH_SECRET
+  const provided = request.headers.get('authorization')?.replace(/^Bearer /, '')
+  return Boolean(
+    expected &&
+    provided &&
+    Buffer.byteLength(expected) === Buffer.byteLength(provided) &&
+    timingSafeEqual(Buffer.from(expected), Buffer.from(provided))
+  )
 }
 export function tokenHash(token: string) {
   return createHash('sha256').update(token).digest('hex')

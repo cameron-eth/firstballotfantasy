@@ -4,7 +4,7 @@ import { readSession } from '@/lib/platform/session'
 import { candidates, dailySeed, readTallies, readToday, saveBallot } from '@/lib/community/store'
 import { parseBallotRound, MAX_DAILY_BALLOTS } from '@/lib/community/rounds'
 import { communityRatingsFromTallies, dailyPair, type Ballot } from '@/lib/community/rating'
-import { sleeperClient } from '@/lib/sleeper-sdk/client'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 export const dynamic = 'force-dynamic'
 const reply = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
@@ -18,11 +18,9 @@ async function handle(request: NextRequest) {
     const league = request.nextUrl.searchParams.get('leagueId')
     if (league) {
       if (!/^\d{10,25}$/.test(league)) return fail(400, 'Invalid league')
-      const settings = await sleeperClient
-        .getLeague(league, { next: { revalidate: 300 } })
-        .catch(() => {
-          throw new Error('League settings unavailable')
-        })
+      const settings = await sleeperClient.getLeague(league, SLEEPER_CACHE.league).catch(() => {
+        throw new Error('League settings unavailable')
+      })
       pool = Number(settings.settings?.type) === 2 ? 'dynasty' : 'nfl'
     }
     const day = new Date().toISOString().slice(0, 10)

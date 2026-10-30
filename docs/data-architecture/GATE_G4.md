@@ -27,7 +27,7 @@ Everything on the P3-1 list is gone from `main`, removed in PR-21 and PR-23a (#1
 - `/api/draft-capital` and `TeamCard.tsx`
 - the six unused routes
 
-New dead code found during this check: in `lib/trade-utils.ts`, six exports have no importers. They are `getPlayerValue`, `getPlayerValueFromRank`, `get2027EnhancedValues`, `rankingFor`, `calculateTraderStats` and `getValuationSystemDescription`, and they make up the old 0–13,125 valuation path.
+New dead code found during this check: `lib/trade-utils.ts` has three exports nothing calls, `get2027EnhancedValues`, `calculateTraderStats` and `getValuationSystemDescription`. *(Corrected in PR-25: the first version of this note listed six. `getPlayerValue`, `getPlayerValueFromRank` and `rankingFor` have no outside importers, but Trade Market's `processPlayerForTrade` calls them, so they are live. They contain the old 0–13,125 path, which belongs with D6.)*
 
 ## To pass
 
@@ -36,7 +36,7 @@ New dead code found during this check: in `lib/trade-utils.ts`, six exports have
 2. **One refresh-secret check:** `refreshAuthorized(request)` in `lib/platform/auth.ts`, used by both routes.
 3. **Shared cache profiles:** the four ad hoc Sleeper reads use `SLEEPER_CACHE` profiles. Any TTL that changes is listed in the PR.
 4. **Team Map demo by id:** the demo looks up live values by Sleeper id instead of by name.
-5. **Dead code:** remove the six unused `trade-utils` exports.
+5. **Dead code:** remove the three unused `trade-utils` exports.
 
 **Owner decisions:**
 - **D6, Trade Market pick values.** (a) Price picks from KTC pick assets, which the Builder already uses; Trade Market P&L and grades change. (b) Keep the synthetic scale, document it as Trade Market's own, and drop the 2027 bonus once that class is drafted.

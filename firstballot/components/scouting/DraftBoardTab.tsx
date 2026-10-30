@@ -327,27 +327,6 @@ export function DraftBoardTab({
     return byYear
   }, [classProspects, position])
 
-  const consensusRankByClassName = useMemo(() => {
-    const byYear = new Map<number, Map<string, number>>()
-    const pool =
-      position === 'ALL'
-        ? classProspects
-        : classProspects.filter((p) => p.position === position)
-
-    const grouped = new Map<number, Prospect[]>()
-    for (const p of pool) {
-      const year = p.draft_year ?? 0
-      if (!grouped.has(year)) grouped.set(year, [])
-      grouped.get(year)!.push(p)
-    }
-    for (const [year, prospects] of grouped.entries()) {
-      const rankMap = new Map<string, number>()
-      prospects.forEach((p, idx) => rankMap.set(p.name, idx + 1))
-      byYear.set(year, rankMap)
-    }
-    return byYear
-  }, [classProspects, position])
-
   const addTopAvailable = () => {
     const onBoardIds = new Set(draftBoard.map((p) => p.id))
     const firstMissing = availableProspects.find((p) => !onBoardIds.has(p.id))
@@ -1165,7 +1144,7 @@ export function DraftBoardTab({
               consensusBoard={consensusBoard}
               allEligibleProspects={classProspects}
               position={position}
-              consensusRankByClassName={consensusRankByClassName}
+              consensusRankByClassId={consensusRankByClassId}
             />
           </div>
         </div>

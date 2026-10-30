@@ -7,7 +7,9 @@ import {
   COMMUNITY_TALLIES_KEY,
   featuresFor,
   runDatasetFor,
+  READ_THROUGH_MAX_IDLE_MS,
   runSummary,
+  settleStatus,
   staleSince,
 } from '../lib/platform/dataset-features.ts'
 
@@ -87,4 +89,42 @@ test('affected features list the expired datasets behind them', () => {
   assert.deepEqual(byId.tradeMarket, ['ktc:player-values'])
   assert.deepEqual(byId.community, [COMMUNITY_TALLIES_KEY])
   assert.equal(byId.tiers, undefined)
+})
+
+test('a lapsed read-through snapshot is idle, not expired, until its refresh fails or it sits a day', () => {
+  const now = Date.parse('2026-10-30T04:00:00Z')
+  const lapsed = {
+    key: 'espn:ppr:2026',
+    status: 'expired',
+    expires_at: '2026-10-30T03:41:00Z',
+    source_observed_at: null,
+  }
+  assert.deepEqual(settleStatus(lapsed, 'success', now), {
+    status: 'source-time-unknown',
+    idleSince: '2026-10-30T03:41:00Z',
+  })
+  assert.equal(
+    settleStatus(
+      { ...lapsed, key: 'sleeper:projections:2026:8', source_observed_at: 'x' },
+      'success',
+      now
+    ).status,
+    'current'
+  )
+  // The latest refresh failed: the next read won't fix it.
+  assert.equal(settleStatus(lapsed, 'failed', now).status, 'expired')
+  // No refresh on record.
+  assert.equal(settleStatus(lapsed, null, now).status, 'expired')
+  // Idle for more than the declared 24 h stale bound.
+  assert.equal(settleStatus(lapsed, 'success', now + READ_THROUGH_MAX_IDLE_MS).status, 'expired')
+  // Not a read-through dataset: KTC is refreshed by its job, so expiry is staleness.
+  assert.equal(
+    settleStatus({ ...lapsed, key: 'ktc:player-values' }, 'success', now).status,
+    'expired'
+  )
+  // Within its cache time nothing changes.
+  assert.deepEqual(settleStatus({ ...lapsed, status: 'current' }, 'success', now), {
+    status: 'current',
+    idleSince: null,
+  })
 })

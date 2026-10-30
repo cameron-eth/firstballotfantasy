@@ -134,3 +134,38 @@ export function affectedFeatures(datasets: { key: string; status: string }[]) {
   }
   return [...byFeature.entries()].map(([id, keys]) => ({ id, ...FEATURES[id], datasets: keys }))
 }
+
+/**
+ * Snapshots a reader refreshes when their cache time lapses (ESPN seasons, Sleeper
+ * projections). A lapsed one nobody has read yet is idle, not stale: the next read refreshes
+ * it. It counts as expired only when its latest refresh failed, or after it has sat idle past
+ * the 24 h stale bound those snapshots already declare (player-data.ts, projections route).
+ */
+const READ_THROUGH_PREFIXES = [ESPN_PPR_PREFIX, PROJECTIONS_PREFIX]
+export const READ_THROUGH_MAX_IDLE_MS = 24 * 3600 * 1000
+
+export function settleStatus(
+  dataset: {
+    key: string
+    status: string
+    expires_at?: string | null
+    source_observed_at?: string | null
+  },
+  lastRunStatus: string | null,
+  now = Date.now()
+): { status: string; idleSince: string | null } {
+  const readThrough = READ_THROUGH_PREFIXES.some((prefix) => dataset.key.startsWith(prefix))
+  const expiredAt = Date.parse(dataset.expires_at ?? '')
+  if (
+    dataset.status !== 'expired' ||
+    !readThrough ||
+    lastRunStatus !== 'success' ||
+    !Number.isFinite(expiredAt) ||
+    now - expiredAt > READ_THROUGH_MAX_IDLE_MS
+  )
+    return { status: dataset.status, idleSince: null }
+  return {
+    status: dataset.source_observed_at ? 'current' : 'source-time-unknown',
+    idleSince: dataset.expires_at ?? null,
+  }
+}

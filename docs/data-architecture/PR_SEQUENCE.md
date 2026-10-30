@@ -99,7 +99,8 @@ Legend: **M** = has a DB migration. **F** = behind a flag or compatibility layer
 | **PR-21** | R4-3: one Sleeper client (`SleeperClient`) | `api.sleeper.app` appears only in the client module |
 | **PR-23** | R4-4/R4-5: `http.ts` and single-pass auth everywhere; remove dead code and legacy routes after reference checks | One error shape; dead modules gone |
 | **PR-24** | R4-6: data-health dataset → feature map, job rows, "stale since" | data-health answers "what is stale, why, and what does it affect" |
-| → **G4** | | |
+| **PR-25** | G4 follow-up: one KTC day reader, one refresh-secret check, Sleeper cache profiles, Team Map demo by id, dead `trade-utils` exports | No visible number changes (GATE_G4.md) |
+| → **G4** **Not passed 2026-10-29** (GATE_G4.md): PR-19 to PR-24 merged; 5 mechanical leftovers (PR-25) and 2 owner decisions (D6 Trade Market pick values, D7 community pool) remain | | |
 
 ## Deployment order
 

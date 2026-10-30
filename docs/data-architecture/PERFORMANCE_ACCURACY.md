@@ -135,6 +135,8 @@ The writer uses `DYNASTY_TIER_VERSION`, so a version bump makes rankings return 
 
 `lib/sleeper-api.ts` runtime, `sleeperClient` singleton, `lib/cache-config.ts`, `lib/api-cache.ts`, `positionStrengths`, `calculateRawScore`, `/api/draft-capital`, `TeamCard.tsx`, unused routes (membership, overview, player-stats, player-momentum, conversion-examples, ngs player-fantasy-stats) [V].
 
+**Resolved 2026-10-29:** all removed by PR-21 and PR-23a (#133). GATE_G4.md lists six more unused exports found in `lib/trade-utils.ts`.
+
 ## Performance findings
 
 These are code-supported estimates and have not been profiled.

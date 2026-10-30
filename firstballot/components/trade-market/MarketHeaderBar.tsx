@@ -17,6 +17,8 @@ interface MarketHeaderBarProps {
   onBasisChange: (basis: 'tradeDate' | 'today') => void
   datedTradeCount: number
   priceHistoryFrom: string | null
+  /** D6: traded picks KTC has no price for on this basis; they add no value. */
+  unpricedPickCount: number
   onBack: () => void
 }
 
@@ -31,6 +33,7 @@ export function MarketHeaderBar({
   onBasisChange,
   datedTradeCount,
   priceHistoryFrom,
+  unpricedPickCount,
   onBack,
 }: MarketHeaderBarProps) {
   const since = priceHistoryFrom
@@ -71,6 +74,13 @@ export function MarketHeaderBar({
           <p className="mt-2 text-[11px] font-mono text-amber-300">
             {tradeCount - datedTradeCount} trades before {since} have no price history, so they
             count only under today&apos;s prices.
+          </p>
+        )}
+        {unpricedPickCount > 0 && (
+          <p className="mt-1 text-[11px] font-mono text-amber-300">
+            {unpricedPickCount} traded {unpricedPickCount === 1 ? 'pick has' : 'picks have'} no
+            KTC price (picks used before KTC history, or rounds past the 4th), so{' '}
+            {unpricedPickCount === 1 ? 'it adds' : 'they add'} no value.
           </p>
         )}
 

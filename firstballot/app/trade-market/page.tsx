@@ -8,6 +8,7 @@ import { Header } from '@/components/header'
 import { leagueCache } from '@/lib/league-cache'
 import { useLeagueContext } from '@/lib/league-context'
 import { processPlayerForTrade, type PlayerValue } from '@/lib/trade-utils'
+import { pickValue, unpricedPicks, type PickKtc } from '@/lib/trade-market/pick-values'
 import { rankingsAtTradeDate } from '@/lib/trade-market/trade-date-values'
 import { computeTradeAnalytics } from '@/components/trade-market/analytics'
 import {
@@ -34,6 +35,7 @@ interface TradeMarketData {
   dynastyRankings: Record<string, any>
   /** transaction_id → player id → KTC value on the trade date (D4); absent before history. */
   tradeDateKtc?: Record<string, Record<string, number>>
+  pickKtc?: PickKtc
   /** First day KTC prices exist; older trades can only be valued at today's prices. */
   priceHistoryFrom?: string | null
 }
@@ -80,6 +82,7 @@ function TradeMarketContent() {
   const transactions = tradeData?.transactions ?? []
   const dynastyRankings = tradeData?.dynastyRankings ?? {}
   const tradeDateKtc = tradeData?.tradeDateKtc
+  const pickKtc = tradeData?.pickKtc
   const priceHistoryFrom = tradeData?.priceHistoryFrom ?? null
 
   const getTeamMeta = useCallback(
@@ -140,8 +143,15 @@ function TradeMarketContent() {
 
   const todayAnalytics = useMemo(
     () =>
-      computeTradeAnalytics(filteredTransactions, allPlayers, getTeamMeta, playerValuationCache),
-    [filteredTransactions, allPlayers, getTeamMeta, playerValuationCache]
+      computeTradeAnalytics(
+        filteredTransactions,
+        allPlayers,
+        getTeamMeta,
+        playerValuationCache,
+        undefined,
+        (trade, pick) => pickValue(pickKtc, 'today', trade, pick)
+      ),
+    [filteredTransactions, allPlayers, getTeamMeta, playerValuationCache, pickKtc]
   )
 
   // Trades on or after the first KTC day have a price on their date; older ones don't.
@@ -165,9 +175,28 @@ function TradeMarketContent() {
       allPlayers,
       getTeamMeta,
       playerValuationCache,
-      valueOnTradeDate
+      valueOnTradeDate,
+      (trade, pick) => pickValue(pickKtc, 'tradeDate', trade, pick)
     )
-  }, [datedTransactions, allPlayers, dynastyRankings, tradeDateKtc, getTeamMeta, playerValuationCache])
+  }, [
+    datedTransactions,
+    allPlayers,
+    dynastyRankings,
+    tradeDateKtc,
+    pickKtc,
+    getTeamMeta,
+    playerValuationCache,
+  ])
+
+  const unpricedPickCount = useMemo(
+    () =>
+      unpricedPicks(
+        basis === 'tradeDate' ? datedTransactions : filteredTransactions,
+        pickKtc,
+        basis
+      ),
+    [basis, datedTransactions, filteredTransactions, pickKtc]
+  )
 
   const {
     rosterKPIs,
@@ -220,6 +249,7 @@ function TradeMarketContent() {
         onBasisChange={setBasis}
         datedTradeCount={datedTransactions.length}
         priceHistoryFrom={priceHistoryFrom}
+        unpricedPickCount={unpricedPickCount}
         onBack={() => router.push(`/league-buddy?leagueId=${leagueId}`)}
       />
 

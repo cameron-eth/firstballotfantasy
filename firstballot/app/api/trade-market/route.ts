@@ -8,7 +8,13 @@ import { getCachedPlayers } from '@/lib/players-cache'
 import { snapshot } from '@/lib/platform/snapshots'
 import { tradeMarketSeasonKey } from '@/lib/platform/snapshot-keys'
 import { trimForTrades } from '@/lib/trade-market/payload'
-import { ktcDaysNeeded, tradeDateKtc } from '@/lib/trade-market/trade-date-values'
+import {
+  ktcDayFor,
+  ktcDaysNeeded,
+  tradeDateKtc,
+  tradeDay,
+} from '@/lib/trade-market/trade-date-values'
+import { pickAssets, tradePickKtc, type PickKtc } from '@/lib/trade-market/pick-values'
 import { ktcIdsBySleeper } from '@/lib/platform/identity'
 
 // Extend timeout for this route (fetching many weeks of transactions)
@@ -154,6 +160,78 @@ async function latestKtcById() {
       rank_sf: row.rank_sf ? Number(row.rank_sf) : null,
     })
   return byId
+}
+
+/** A KTC pick asset's first (ascending) or last listing on or before a complete day. */
+function pickListing(name: string, onOrBefore: string, ascending: boolean) {
+  return supabaseAdmin
+    .from('ktc_player_values')
+    .select('player_name,scraped_date,value_sf')
+    .eq('player_name', name)
+    .lte('scraped_date', onOrBefore)
+    .order('scraped_date', { ascending })
+    .limit(1)
+    .maybeSingle()
+}
+
+/**
+ * KTC prices for the picks in these trades (D6): each trade's picks on its KTC day, and
+ * today's price, which for a pick already used in a draft is its last KTC listing.
+ */
+async function pickPrices(trades: any[], ktcDays: string[]): Promise<PickKtc> {
+  const assets = pickAssets(trades)
+  const names = [...new Set(assets.values())]
+  const latestDay = ktcDays.at(-1)
+  if (!names.length || !latestDay) return { today: {}, byTrade: {} }
+  const days = ktcDaysNeeded(
+    trades.filter((t) => t.draft_picks?.length),
+    ktcDays
+  )
+  const [dated, last, first] = await Promise.all([
+    days.length
+      ? supabaseAdmin
+          .from('ktc_player_values')
+          .select('player_name,scraped_date,value_sf')
+          .in('scraped_date', days)
+          .in('player_name', names)
+          .limit(days.length * names.length)
+      : Promise.resolve({ data: [], error: null }),
+    Promise.all(names.map((name) => pickListing(name, latestDay, false))),
+    Promise.all(names.map((name) => pickListing(name, latestDay, true))),
+  ])
+  if (dated.error || [...last, ...first].some((row) => row.error))
+    throw new Error('KTC_PICKS_UNAVAILABLE')
+  const byDay: Record<string, Record<string, number>> = {}
+  for (const row of (dated.data ?? []) as {
+    player_name: string
+    scraped_date: string
+    value_sf: number
+  }[])
+    (byDay[row.scraped_date] ??= {})[row.player_name] = Number(row.value_sf)
+  const lastByName = new Map(
+    last.flatMap((row) => (row.data ? [[row.data.player_name, Number(row.data.value_sf)]] : []))
+  )
+  const today: Record<string, number> = {}
+  for (const [key, name] of assets) {
+    const value = lastByName.get(name)
+    if (value && value > 0) today[key] = value
+  }
+  const firstListed = new Map(
+    first.flatMap((row) =>
+      row.data
+        ? [[row.data.player_name, { day: row.data.scraped_date, value: Number(row.data.value_sf) }]]
+        : []
+    )
+  )
+  return {
+    today,
+    byTrade: tradePickKtc(
+      trades,
+      (trade) => ktcDayFor(tradeDay(trade), ktcDays),
+      byDay,
+      firstListed
+    ),
+  }
 }
 
 /** One ranking record per tier-matched Sleeper id, in the shape the page reads. */
@@ -306,6 +384,8 @@ export async function GET(request: NextRequest) {
         // D4: trade-date KTC per trade and player, and the first day prices exist.
         tradeDateKtc: Object.assign({}, ...seasons.map((season) => season.payload.tradeDateKtc)),
         priceHistoryFrom: ktcDays[0] ?? null,
+        // D6: KTC pick prices on both bases (lib/trade-market/pick-values.ts).
+        pickKtc: await pickPrices(trades, ktcDays),
         totalTrades: trades.length,
         totalTradedPicks: tradedPicks.length,
         totalTeams: teamsData.length,

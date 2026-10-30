@@ -138,10 +138,17 @@ jobs:
           outcomes=sorted(k for k in keys if k.startswith('history-outcomes:'))
           assert outcomes, 'Missing history-outcomes snapshot'
           expected.append(outcomes[-1])
+          # Ballot tallies that still disagree with the ballot files (PR-17, PR-24).
+          expected.append('community:tallies')
           missing=[key for key in expected if key not in keys]
           assert not missing, f'Missing monitored datasets: {missing}'
           expired=[key for key in expected if keys[key]['status']=='expired']
-          assert not expired, f'Dataset freshness budget exceeded: {expired}'
+          affected=', '.join(f['name'] for f in data.get('affected', []))
+          assert not expired, (
+              'Dataset freshness budget exceeded: '
+              + ', '.join(f"{key} (stale since {keys[key].get('staleSince')}, last error {keys[key].get('lastError')})" for key in expired)
+              + (f'. Affects: {affected}' if affected else '')
+          )
           # The next class to be drafted (same rule as lib/draft-years.ts): upcoming through April.
           import datetime
           today=datetime.datetime.now(datetime.timezone.utc).date()

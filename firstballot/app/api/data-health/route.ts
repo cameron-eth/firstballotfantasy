@@ -14,7 +14,8 @@ import {
   PROSPECT_STATS_PATTERN,
   TIER_KEY,
 } from '@/lib/platform/snapshot-keys'
-import { sleeperClient } from '@/lib/sleeper-sdk/client'
+import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
+import { latestKtcDay } from '@/lib/platform/ktc-days'
 import {
   affectedFeatures,
   COMMUNITY_TALLIES_KEY,
@@ -102,13 +103,11 @@ export async function GET() {
         )
         .order('key')
         .limit(100),
-      sleeperClient.getNflState({ next: { revalidate: 600 } }).catch(() => null),
-      supabaseAdmin
-        .from('ktc_player_values')
-        .select('scraped_date')
-        .order('scraped_date', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+      sleeperClient.getNflState(SLEEPER_CACHE.state).catch(() => null),
+      latestKtcDay().then(
+        (day) => ({ day, error: null }),
+        (error: Error) => ({ day: null, error })
+      ),
       supabaseAdmin
         .from('dynasty_prospects')
         .select('draft_year,updated_at')
@@ -130,8 +129,8 @@ export async function GET() {
     const week = Number(state?.week)
     const currentWeek = Number.isInteger(week) && week >= 1 && week <= 18 ? week : null
     const now = Date.now()
-    const ktcDate = ktcResult.data?.scraped_date ?? ktcArchive.dates.at(-1) ?? null
-    const ktcSource = ktcResult.data?.scraped_date ? 'supabase' : 'sdk-archive'
+    const ktcDate = ktcResult.day?.date ?? ktcArchive.dates.at(-1) ?? null
+    const ktcSource = ktcResult.day ? 'supabase' : 'sdk-archive'
     const ktcExpiresAt = ktcDate
       ? new Date(Date.parse(`${ktcDate}T00:00:00Z`) + KTC_MAX_AGE_MS).toISOString()
       : null

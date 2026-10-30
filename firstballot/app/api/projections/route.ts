@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const season =
       params.get('season') ||
       (await sleeperClient
-        .getNflState({ next: { revalidate: 600 } })
+        .getNflState(SLEEPER_CACHE.state)
         .then((state) => state?.season as string | undefined)
         .catch(() => undefined))
 

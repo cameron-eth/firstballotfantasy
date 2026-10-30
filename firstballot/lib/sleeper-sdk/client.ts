@@ -48,6 +48,10 @@ export const SLEEPER_CACHE = {
   players: { cache: 'force-cache', next: { revalidate: 3600, tags: ['players'] } },
   trending: { cache: 'force-cache', next: { revalidate: 60, tags: ['players'] } },
   user: { cache: 'force-cache', next: { revalidate: 1800, tags: ['user'] } },
+  /** A user's league list; shorter than `user` so a newly joined league shows up within minutes. */
+  userLeagues: { cache: 'force-cache', next: { revalidate: 300, tags: ['user'] } },
+  /** NFL season and week. */
+  state: { cache: 'force-cache', next: { revalidate: 600, tags: ['state'] } },
   fresh: { cache: 'no-store' },
 } as const satisfies Record<string, SleeperReadOptions>
 

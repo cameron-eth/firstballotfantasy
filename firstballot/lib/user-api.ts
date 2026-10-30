@@ -1,12 +1,3 @@
-interface UserProfileResponse {
-  id: string
-  auth_id: string
-  username: string
-  email: string
-  sleeper_username?: string | null
-  sleeper_id?: string | null
-}
-
 interface UserSettingsResponse {
   sleeper_username?: string | null
 }
@@ -22,7 +13,6 @@ interface CreateUserProfileInput {
 }
 
 export interface IUserApi {
-  getUserProfile(): Promise<UserProfileResponse>
   updateUserSleeperProfile(data: UpdateSleeperProfileInput): Promise<Response>
   addUserProfile(data: CreateUserProfileInput): Promise<Response>
   getUserSettings(): Promise<UserSettingsResponse>
@@ -32,18 +22,6 @@ export class UserApi implements IUserApi {
   public async getUserSettings(): Promise<UserSettingsResponse> {
     const response = await fetch('/api/settings', {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    return response.json()
-  }
-
-  public async getUserProfile(): Promise<UserProfileResponse> {
-    const response = await fetch('/api/user-profile', {
-      cache: 'force-cache',
-      method: 'GET',
-      next: { revalidate: 300 },
       headers: {
         'Content-Type': 'application/json',
       },

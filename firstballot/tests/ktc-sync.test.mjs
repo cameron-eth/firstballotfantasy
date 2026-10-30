@@ -85,6 +85,6 @@ test('a day already stored in full is marked without being re-sent (first run on
 test('the tier build reads the same marker the sync writes', () => {
   const script = readFileSync(new URL('../scripts/sync-ktc-values.mjs', import.meta.url), 'utf8')
   assert.match(script, new RegExp('`' + KTC_DAY_MARKER_PREFIX + '\\$\\{date\\}`'))
-  const route = readFileSync(new URL('../app/api/dynasty-tiers/route.ts', import.meta.url), 'utf8')
+  const route = readFileSync(new URL('../lib/platform/ktc-days.ts', import.meta.url), 'utf8')
   assert.match(route, /KTC_DAY_MARKER_PREFIX/)
 })

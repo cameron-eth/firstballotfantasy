@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import useSWR from 'swr'
 import { describeTier, plainTierName } from '@/lib/player-signals'
 import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion'
@@ -19,6 +19,8 @@ type DemoPlayer = {
   tag: string
   tagTone: 'elite' | 'good' | 'neutral' | 'bad'
   note?: string
+  /** NFL players only: live values come from the tier snapshot by this id, never by name. */
+  sleeperId?: string
 }
 
 const nfl = (id: string) =>
@@ -32,6 +34,7 @@ const ROSTER: DemoPlayer[] = [
   {
     id: 'daniels',
     name: 'Jayden Daniels',
+    sleeperId: '11566',
     position: 'QB',
     team: 'WAS',
     image: nfl('vrdweg39v1ay4zoc0lgp'),
@@ -43,6 +46,7 @@ const ROSTER: DemoPlayer[] = [
   {
     id: 'cook',
     name: 'James Cook III',
+    sleeperId: '8138',
     position: 'RB',
     team: 'BUF',
     image: nfl('anjbznqb9i21wzcgrtbs'),
@@ -54,6 +58,7 @@ const ROSTER: DemoPlayer[] = [
   {
     id: 'lamb',
     name: 'CeeDee Lamb',
+    sleeperId: '6786',
     position: 'WR',
     team: 'DAL',
     image: nfl('ijxzvtumjhqu3zva1bwc'),
@@ -65,6 +70,7 @@ const ROSTER: DemoPlayer[] = [
   {
     id: 'olave',
     name: 'Chris Olave',
+    sleeperId: '8144',
     position: 'WR',
     team: 'NO',
     image: nfl('vrrmyvpvujynckag9jop'),
@@ -76,6 +82,7 @@ const ROSTER: DemoPlayer[] = [
   {
     id: 'loveland',
     name: 'Colston Loveland',
+    sleeperId: '12517',
     position: 'TE',
     team: 'CHI',
     image: nfl('tyjb6vfug7gaunvcune3'),
@@ -111,7 +118,6 @@ const TRADE: DemoPlayer = {
 }
 
 type TierPayload = {
-  identity: Record<string, { name: string }>
   players: {
     sf: Record<string, { value: number; number: number; name: string; positionRank?: number }>
   }
@@ -126,9 +132,9 @@ const fetchTiers = async (url: string): Promise<TierPayload> => {
 /** Live KTC value and tier tag for the NFL players in the demo; prospects keep their grade. */
 function withLiveValues(
   player: DemoPlayer,
-  byName: Map<string, TierPayload['players']['sf'][string]>
+  sfPlayers: TierPayload['players']['sf'] | undefined
 ): DemoPlayer {
-  const live = player.metricLabel === 'KTC' ? byName.get(player.name) : undefined
+  const live = player.sleeperId ? sfPlayers?.[player.sleeperId] : undefined
   if (!live) return player
   const standing = describeTier({
     tierNumber: live.number,
@@ -327,18 +333,9 @@ export function TeamMapPreview() {
   }, [playing, scene])
 
   const { data: tiers } = useSWR('/api/dynasty-tiers', fetchTiers, { revalidateOnFocus: false })
-  const byName = useMemo(
-    () =>
-      new Map(
-        Object.entries(tiers?.identity ?? {}).flatMap(([id, who]) =>
-          tiers?.players.sf[id] ? [[who.name, tiers.players.sf[id]] as const] : []
-        )
-      ),
-    [tiers]
-  )
   const current = {
     ...SCENES[scene],
-    roster: SCENES[scene].roster.map((p) => withLiveValues(p, byName)),
+    roster: SCENES[scene].roster.map((p) => withLiveValues(p, tiers?.players?.sf)),
   }
   return (
     <div

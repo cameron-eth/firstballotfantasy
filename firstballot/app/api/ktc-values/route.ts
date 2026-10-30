@@ -4,6 +4,7 @@ import { supabaseServer } from '@/lib/supabase-server'
 import archive from '@/data/ktc-history.json'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
 import { resolvePlayers, sleeperIdsForEspn } from '@/lib/platform/identity'
+import { latestKtcDay } from '@/lib/platform/ktc-days'
 const assets = Object.entries(archive.players).map(([id, player]) => ({ id, ...player }))
 type Point = {
   scraped_date: string
@@ -21,13 +22,8 @@ async function bySleeperIds(sleeperIds: string[]) {
   const identities = (await resolvePlayers(sleeperIds)).filter((p) => p.ktcId != null)
   const sleeperByKtc = new Map(identities.map((p) => [p.ktcId!, p.sleeperId]))
   const history: Record<string, Point[]> = {}
-  const latestQuery = await supabaseServer
-    .from('ktc_player_values')
-    .select('scraped_date')
-    .order('scraped_date', { ascending: false })
-    .limit(1)
-    .single()
-  if (latestQuery.error || !latestQuery.data) throw Error('No stored history')
+  const latestDay = await latestKtcDay()
+  if (!latestDay) throw Error('No stored history')
   const ktcIds = [...sleeperByKtc.keys()]
   for (let offset = 0; ktcIds.length; offset += 1000) {
     const result = await supabaseServer
@@ -44,7 +40,7 @@ async function bySleeperIds(sleeperIds: string[]) {
     }
     if ((result.data?.length ?? 0) < 1000) break
   }
-  const latestDate = latestQuery.data.scraped_date
+  const latestDate = latestDay.date
   const latest = Object.fromEntries(
     Object.entries(history).flatMap(([sleeperId, points]) => {
       const last = points.at(-1)
@@ -107,13 +103,8 @@ export async function GET(request: NextRequest) {
   let latestDate: string = archive.dates.at(-1)!
   let source = 'sdk-archive'
   try {
-    const latest = await supabaseServer
-      .from('ktc_player_values')
-      .select('scraped_date')
-      .order('scraped_date', { ascending: false })
-      .limit(1)
-      .single()
-    if (latest.error || !latest.data) throw Error('No stored history')
+    const latest = await latestKtcDay()
+    if (!latest) throw Error('No stored history')
     const ids = [...new Set(selected.map((p) => Number(p.asset.id)))]
     if (ids.length) {
       for (let offset = 0; ; offset += 1000) {
@@ -124,14 +115,14 @@ export async function GET(request: NextRequest) {
           .order('scraped_date', { ascending: true })
           .order('ktc_player_id', { ascending: true })
           .range(offset, offset + 999)
-        query = query.eq('scraped_date', latest.data.scraped_date)
+        query = query.eq('scraped_date', latest.date)
         const result = await query
         if (result.error) throw result.error
         for (const row of result.data ?? []) (byId[String(row.ktc_player_id)] ??= []).push(row)
         if ((result.data?.length ?? 0) < 1000) break
       }
     }
-    latestDate = latest.data.scraped_date
+    latestDate = latest.date
     source = 'supabase'
   } catch {
     for (const id of Object.keys(byId)) delete byId[id]

@@ -1,12 +1,14 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { fail } from '@/lib/platform/http'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { espnSeasonKey, playerData } from '@/lib/platform/player-data'
 import { matchKtcToSleeper } from '@/lib/ktc-identity'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
-import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, KTC_DAY_MARKER_PREFIX, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
+import { buildDynastyTiers, DRAFT_CAPITAL_KEY, DYNASTY_TIER_VERSION, DYNASTY_TIERS, TIER_KEY, type TierPlayer } from '@/lib/dynasty-tiers'
 import { writeSnapshot } from '@/lib/platform/snapshots'
+import { latestKtcDay } from '@/lib/platform/ktc-days'
+import { refreshAuthorized } from '@/lib/platform/auth'
 import { SLEEPER_CACHE, sleeperClient } from '@/lib/sleeper-sdk/client'
 import { identityMap } from '@/lib/platform/reference-data'
 import type { CurrentSeasonStat } from '@/lib/current-season-stats'
@@ -25,12 +27,9 @@ async function refresh() {
   const generatedAt = new Date()
   // Build from the newest KTC day the sync marked complete, never from a day it is still
   // writing (or left partial when interrupted).
-  const { data: marker, error: markerError } = await supabaseAdmin.from('ingestion_runs')
-    .select('dataset,row_count').eq('status', 'success').like('dataset', `${KTC_DAY_MARKER_PREFIX}%`)
-    .order('dataset', { ascending: false }).limit(1).maybeSingle()
-  if (markerError) throw Error('KTC_DAY_MARKERS_UNAVAILABLE')
+  const marker = await latestKtcDay()
   if (!marker) throw Error('KTC_NO_COMPLETE_DAY')
-  const latest = { scraped_date: marker.dataset.slice(KTC_DAY_MARKER_PREFIX.length) }
+  const latest = { scraped_date: marker.date }
   if (!sourceWithinBudget(latest.scraped_date, KTC_MAX_AGE_MS)) throw Error('KTC_SOURCE_STALE')
   const [ktc, sleeperPlayers, stats] = await Promise.all([
     supabaseAdmin.from('ktc_player_values')
@@ -40,7 +39,7 @@ async function refresh() {
     sleeperClient.getAllPlayers({ ...SLEEPER_CACHE.fresh, attempts: 1 }).catch(() => null),
     playerData(['8144']), // Revalidates the shared ESPN current-season snapshot before reading it.
   ])
-  if (ktc.error || !ktc.data || ktc.data.length < 250 || ktc.data.length < (marker.row_count ?? 0) ||
+  if (ktc.error || !ktc.data || ktc.data.length < 250 || ktc.data.length < (marker.rowCount ?? 0) ||
       !sleeperPlayers)
     throw Error('INCOMPLETE_TIER_INPUT')
   // 30-day change: the newest scrape on or before 30 days before the latest one.
@@ -148,11 +147,7 @@ async function refresh() {
 }
 
 export async function POST(request: Request) {
-  const expected = process.env.DATA_REFRESH_SECRET
-  const provided = request.headers.get('authorization')?.replace(/^Bearer /, '')
-  if (!expected || !provided || Buffer.byteLength(expected) !== Buffer.byteLength(provided) ||
-      !timingSafeEqual(Buffer.from(expected), Buffer.from(provided)))
-    return fail(401, 'Unauthorized')
+  if (!refreshAuthorized(request)) return fail(401, 'Unauthorized')
   try { return NextResponse.json(await refresh()) }
   catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN'

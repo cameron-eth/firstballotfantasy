@@ -67,7 +67,7 @@ const convertKtcToValue = (ktcValue: number): number => {
 
 /**
  * Get player value from FirstBallotModel scoring system
- * @param valuationData - Player valuation data from dynasty_player_tiers table
+ * @param valuationData - Player valuation data from the published tier rankings
  * @param fantasyPpg - Optional fantasy PPG for adjustment
  * @param gamesPlayed - Optional games played for adjustment
  */

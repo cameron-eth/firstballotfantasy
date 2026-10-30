@@ -3,6 +3,9 @@ import { supabaseAdmin } from '@/lib/supabase-server'
 import { createHash } from 'node:crypto'
 import { dailyTallies, type Ballot, type Candidate, type DailyTally } from './rating'
 import { nextDraftClass } from '@/lib/draft-years'
+import { readSnapshot } from '@/lib/platform/snapshots'
+import { TIER_KEY } from '@/lib/dynasty-tiers'
+import { nflCandidates, type TierPool } from './nfl-pool'
 const bucket = 'community-ballots'
 export const ballotPath = (userId: string, day: string, round = 0) =>
   `${day}${round ? `-r${round}` : ''}-${createHash('sha256').update(userId).digest('hex')}.json`
@@ -128,13 +131,8 @@ export async function readBallots(): Promise<Ballot[]> {
   return votes
 }
 export async function candidates(): Promise<Candidate[]> {
-  const [nfl, prospects] = await Promise.all([
-    supabaseAdmin
-      .from('dynasty_player_tiers')
-      .select('player_id,player_name,position,team,headshot_url,total_score')
-      .in('position', ['QB', 'RB', 'WR', 'TE'])
-      .order('total_score', { ascending: false })
-      .limit(200),
+  const [tiers, prospects] = await Promise.all([
+    readSnapshot(TIER_KEY).catch(() => null),
     supabaseAdmin
       .from('dynasty_prospects')
       .select('id,name,position,school,draft_year,headshot_url,rank')
@@ -143,16 +141,9 @@ export async function candidates(): Promise<Candidate[]> {
       .order('rank', { ascending: true })
       .limit(1000),
   ])
-  if (nfl.error || prospects.error) throw new Error('Player pool unavailable')
+  if (!tiers?.payload || prospects.error) throw new Error('Player pool unavailable')
   const result: Candidate[] = [
-    ...(nfl.data ?? []).map((p) => ({
-      key: `nfl:${p.player_id || p.player_name}`,
-      name: p.player_name,
-      position: p.position,
-      team: p.team || 'NFL',
-      image: p.headshot_url,
-      kind: 'nfl' as const,
-    })),
+    ...nflCandidates(tiers.payload as TierPool),
     ...(prospects.data ?? []).map((p) => ({
       key: `prospect:${p.id}`,
       name: p.name,

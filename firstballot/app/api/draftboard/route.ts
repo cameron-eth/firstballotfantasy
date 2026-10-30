@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 import type { SaveDraftboardRequest } from '@/types/draftboard'
 import { nextDraftClass } from '@/lib/draft-years'
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     const supabase = createAuthenticatedSupabaseClient(userJwt)
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (error) {
-        return NextResponse.json({ error: 'Board not found' }, { status: 404 })
+        return fail(404, 'Board not found')
       }
 
       return NextResponse.json({ board: data })
@@ -44,13 +45,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching draftboards:', error)
-      return NextResponse.json({ error: 'Failed to fetch boards' }, { status: 500 })
+      return fail(500, 'Failed to fetch boards')
     }
 
     return NextResponse.json({ boards: data || [] })
   } catch (error) {
     console.error('Error in GET /api/draftboard:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -61,14 +62,14 @@ export async function POST(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     const supabase = createAuthenticatedSupabaseClient(userJwt)
     const body: SaveDraftboardRequest = await request.json()
 
     if (!body.name || !body.prospect_ids) {
-      return NextResponse.json({ error: 'Name and prospect_ids are required' }, { status: 400 })
+      return fail(400, 'Name and prospect_ids are required')
     }
 
     // Check if a board with this name already exists for this user
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error updating draftboard:', error)
-        return NextResponse.json({ error: 'Failed to update board' }, { status: 500 })
+        return fail(500, 'Failed to update board')
       }
 
       return NextResponse.json({ board: data })
@@ -114,13 +115,13 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating draftboard:', error)
-      return NextResponse.json({ error: 'Failed to create board' }, { status: 500 })
+      return fail(500, 'Failed to create board')
     }
 
     return NextResponse.json({ board: data }, { status: 201 })
   } catch (error) {
     console.error('Error in POST /api/draftboard:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -131,14 +132,14 @@ export async function PUT(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     const supabase = createAuthenticatedSupabaseClient(userJwt)
     const body: SaveDraftboardRequest = await request.json()
 
     if (!body.id) {
-      return NextResponse.json({ error: 'Board id is required for updates' }, { status: 400 })
+      return fail(400, 'Board id is required for updates')
     }
 
     const updateData: Record<string, unknown> = {}
@@ -156,17 +157,17 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       console.error('Error updating draftboard:', error)
-      return NextResponse.json({ error: 'Failed to update board' }, { status: 500 })
+      return fail(500, 'Failed to update board')
     }
 
     if (!data) {
-      return NextResponse.json({ error: 'Board not found' }, { status: 404 })
+      return fail(404, 'Board not found')
     }
 
     return NextResponse.json({ board: data })
   } catch (error) {
     console.error('Error in PUT /api/draftboard:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }
 
@@ -177,7 +178,7 @@ export async function DELETE(request: NextRequest) {
     const userJwt = request.headers.get('x-user-jwt')
 
     if (!userId || !userJwt) {
-      return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
+      return fail(401, 'User not authenticated')
     }
 
     const supabase = createAuthenticatedSupabaseClient(userJwt)
@@ -185,7 +186,7 @@ export async function DELETE(request: NextRequest) {
     const boardId = searchParams.get('id')
 
     if (!boardId) {
-      return NextResponse.json({ error: 'Board id is required' }, { status: 400 })
+      return fail(400, 'Board id is required')
     }
 
     const { error } = await supabase
@@ -196,12 +197,12 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('Error deleting draftboard:', error)
-      return NextResponse.json({ error: 'Failed to delete board' }, { status: 500 })
+      return fail(500, 'Failed to delete board')
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error in DELETE /api/draftboard:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

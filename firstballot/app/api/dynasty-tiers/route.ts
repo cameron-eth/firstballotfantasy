@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseAdmin } from '@/lib/supabase-server'
 import { espnSeasonKey, playerData } from '@/lib/platform/player-data'
 import { matchKtcToSleeper } from '@/lib/ktc-identity'
@@ -151,14 +152,14 @@ export async function POST(request: Request) {
   const provided = request.headers.get('authorization')?.replace(/^Bearer /, '')
   if (!expected || !provided || Buffer.byteLength(expected) !== Buffer.byteLength(provided) ||
       !timingSafeEqual(Buffer.from(expected), Buffer.from(provided)))
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return fail(401, 'Unauthorized')
   try { return NextResponse.json(await refresh()) }
   catch (error) {
     const code = error instanceof Error ? error.message : 'UNKNOWN'
     console.error(JSON.stringify({ event: 'dynasty_tier_refresh_failed', code }))
     await supabaseAdmin.from('ingestion_runs').insert({ dataset: key, status: 'failed',
       completed_at: new Date().toISOString(), error_code: code.slice(0, 80) })
-    return NextResponse.json({ error: 'Tier refresh failed', code }, { status: 503 })
+    return fail(503, 'Tier refresh failed', { code })
   }
 }
 
@@ -166,8 +167,7 @@ export async function GET() {
   const { data, error } = await supabaseAdmin.from('data_snapshots')
     .select('payload,fetched_at,expires_at,source_observed_at').eq('key', key).maybeSingle()
   if (error || !data || Date.parse(data.expires_at) <= Date.now())
-    return NextResponse.json({ error: 'Current dynasty tiers are unavailable' }, { status: 503,
-      headers: { 'Cache-Control': 'private, no-store' } })
+    return fail(503, 'Current dynasty tiers are unavailable')
   const maxAge = Math.max(0, Math.min(300, Math.floor((Date.parse(data.expires_at) - Date.now()) / 1000)))
   return NextResponse.json({ ...data.payload, fetchedAt: data.fetched_at, expiresAt: data.expires_at,
     sourceObservedAt: data.source_observed_at }, { headers: { 'Cache-Control': `public, max-age=${maxAge}` } })

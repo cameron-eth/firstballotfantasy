@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { snapshot, snapshotMetadata } from '@/lib/platform/snapshots'
 import { projectionsKey } from '@/lib/platform/snapshot-keys'
 import { analyzeCoverage, type ScoringSettings } from '@/lib/projections/scoring'
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     const leagueId = params.get('leagueId')
 
     if (week && (!/^\d+$/.test(week) || Number(week) < 1 || Number(week) > 18)) {
-      return NextResponse.json({ error: 'Invalid regular-season week' }, { status: 400 })
+      return fail(400, 'Invalid regular-season week')
     }
 
     const season =
@@ -57,11 +58,11 @@ export async function GET(request: NextRequest) {
         .catch(() => undefined))
 
     if (!season) {
-      return NextResponse.json({ error: 'Could not resolve the current season' }, { status: 502 })
+      return fail(502, 'Could not resolve the current season')
     }
 
     if (!/^20\d{2}$/.test(season) || (leagueId && !/^\d{10,25}$/.test(leagueId)))
-      return NextResponse.json({ error: 'Invalid season or league' }, { status: 400 })
+      return fail(400, 'Invalid season or league')
     const positionQuery = FANTASY_POSITIONS.map((p) => `position[]=${p}`).join('&')
     const path = week ? `${season}/${week}` : season
     const url = `${PROJECTIONS_HOST}/projections/nfl/${path}?season_type=regular&${positionQuery}&order_by=pts_ppr`
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     const rows = projectionResponse.payload
 
     if (leagueId && !league?.scoring_settings) {
-      return NextResponse.json({ error: 'League scoring unavailable' }, { status: 502 })
+      return fail(502, 'League scoring unavailable')
     }
 
     const scoring: ScoringSettings | null = league?.scoring_settings ?? null
@@ -144,9 +145,7 @@ export async function GET(request: NextRequest) {
       }
     )
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load projections' },
-      { status: 500 }
-    )
+    console.error('Projections API error:', error)
+    return fail(500, 'Failed to load projections')
   }
 }

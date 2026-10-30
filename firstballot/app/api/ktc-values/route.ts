@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseServer } from '@/lib/supabase-server'
 import archive from '@/data/ktc-history.json'
 import { KTC_MAX_AGE_MS, sourceWithinBudget } from '@/lib/platform/policy'
@@ -74,8 +75,7 @@ export async function GET(request: NextRequest) {
   const sleeperIds = ids('sleeperIds')
   const espnIds = ids('espnIds')
   if (sleeperIds || espnIds) {
-    if ((sleeperIds ?? espnIds)!.length > 100)
-      return NextResponse.json({ error: 'Maximum 100 players' }, { status: 400 })
+    if ((sleeperIds ?? espnIds)!.length > 100) return fail(400, 'Maximum 100 players')
     try {
       // ESPN ids (prospects) resolve to Sleeper ids first; results come back keyed the
       // way they were asked for.
@@ -89,28 +89,19 @@ export async function GET(request: NextRequest) {
           }
         : bySleeper
       if (!sourceWithinBudget(result.latestDate, KTC_MAX_AGE_MS))
-        return NextResponse.json(
-          { error: 'Current KTC values are unavailable.', code: 'STALE_SOURCE' },
-          { status: 503, headers: { 'Cache-Control': 'no-store' } }
-        )
+        return fail(503, 'Current KTC values are unavailable.', { code: 'STALE_SOURCE' })
       return NextResponse.json(
         { ...result, source: 'supabase' },
         { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
       )
     } catch {
-      return NextResponse.json(
-        { error: 'KTC values are unavailable.' },
-        { status: 503, headers: { 'Cache-Control': 'no-store' } }
-      )
+      return fail(503, 'KTC values are unavailable.')
     }
   }
   // Without ids: today's value of every KTC asset (players and draft picks), one row per
   // KTC id. The name and player lookups are gone (PR-19); ask by sleeperIds or espnIds.
   if (params.has('names') || params.has('player'))
-    return NextResponse.json(
-      { error: 'Look players up by sleeperIds or espnIds.' },
-      { status: 400, headers: { 'Cache-Control': 'no-store' } }
-    )
+    return fail(400, 'Look players up by sleeperIds or espnIds.')
   const selected = assets.map((asset) => ({ name: asset.name, asset }))
   const byId: Record<string, Point[]> = {}
   let latestDate: string = archive.dates.at(-1)!
@@ -147,10 +138,11 @@ export async function GET(request: NextRequest) {
   }
   // Per-source and per-player freshness apply equally to archive and database records.
   if (!sourceWithinBudget(latestDate, KTC_MAX_AGE_MS)) {
-    return NextResponse.json(
-      { error: 'Current KTC values are unavailable.', code: 'STALE_SOURCE', latestDate, source },
-      { status: 503, headers: { 'Cache-Control': 'no-store' } }
-    )
+    return fail(503, 'Current KTC values are unavailable.', {
+      code: 'STALE_SOURCE',
+      latestDate,
+      source,
+    })
   }
   const rows: object[] = []
   for (const { name, asset: p } of selected) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { createAuthenticatedSupabaseClient } from '@/lib/supabase-server'
 import { sleeperClient } from '@/lib/sleeper-sdk/client'
 import type { SleeperLeagueResponse, UserLeague } from '@/types/league'
@@ -8,15 +9,14 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   const userId = request.headers.get('x-user-id')
   const jwt = request.headers.get('x-user-jwt')
-  if (!userId || !jwt) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId || !jwt) return fail(401, 'Unauthorized')
 
   const { data: profile, error } = await createAuthenticatedSupabaseClient(jwt)
     .from('user_profiles')
     .select('sleeper_username')
     .eq('auth_id', userId)
     .maybeSingle()
-  if (error)
-    return NextResponse.json({ error: 'Could not load Sleeper connection' }, { status: 500 })
+  if (error) return fail(500, 'Could not load Sleeper connection')
   if (!profile?.sleeper_username)
     return NextResponse.json({ leagues: [], fetched_at: new Date().toISOString() })
 
@@ -44,9 +44,6 @@ export async function GET(request: NextRequest) {
       { headers: { 'Cache-Control': 'private, no-store' } }
     )
   } catch {
-    return NextResponse.json(
-      { error: 'Sleeper leagues are temporarily unavailable' },
-      { status: 502 }
-    )
+    return fail(502, 'Sleeper leagues are temporarily unavailable')
   }
 }

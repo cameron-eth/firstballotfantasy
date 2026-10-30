@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { supabaseServer } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Database error:', error)
-      return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
+      return fail(500, 'Failed to fetch data')
     }
 
     // Process data and filter for breakout/bust players
@@ -88,6 +89,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data: sortedData.slice(0, limit) })
   } catch (error) {
     console.error('API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return fail(500, 'Internal server error')
   }
 }

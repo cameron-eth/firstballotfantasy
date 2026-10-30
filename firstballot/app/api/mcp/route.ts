@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { mcpAccount, mcpResource } from '@/lib/platform/oauth'
 import { listTeams, teamRoster } from '@/lib/platform/api-service'
 import { playerData } from '@/lib/platform/player-data'
-import { failure, json, PlatformError } from '@/lib/platform/http'
+import { PlatformError, fail, failure } from '@/lib/platform/http'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
@@ -80,8 +80,8 @@ export async function POST(request: Request) {
   }
 }
 export async function GET() {
-  return json({ error: 'Use POST for stateless MCP requests.' }, 405)
+  return fail(405, 'Use POST for stateless MCP requests.')
 }
 export async function DELETE() {
-  return json({ error: 'This MCP endpoint is stateless. Revoke access in Settings.' }, 405)
+  return fail(405, 'This MCP endpoint is stateless. Revoke access in Settings.')
 }

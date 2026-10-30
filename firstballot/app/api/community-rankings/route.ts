@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fail } from '@/lib/platform/http'
 import { readSession } from '@/lib/platform/session'
 import { candidates, dailySeed, readTallies, readToday, saveBallot } from '@/lib/community/store'
 import { parseBallotRound, MAX_DAILY_BALLOTS } from '@/lib/community/rounds'
@@ -9,14 +10,14 @@ const reply = (body: unknown, status = 200) =>
   NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } })
 async function handle(request: NextRequest) {
   const session = readSession(request)
-  if (!session) return reply({ error: 'Sign in to contribute.' }, 401)
+  if (!session) return fail(401, 'Sign in to contribute.')
   const round = parseBallotRound(request.nextUrl.searchParams.get('round'))
-  if (round === null) return reply({ error: 'Invalid comparison number.' }, 400)
+  if (round === null) return fail(400, 'Invalid comparison number.')
   try {
     let pool: 'dynasty' | 'nfl' = 'dynasty'
     const league = request.nextUrl.searchParams.get('leagueId')
     if (league) {
-      if (!/^\d{10,25}$/.test(league)) return reply({ error: 'Invalid league' }, 400)
+      if (!/^\d{10,25}$/.test(league)) return fail(400, 'Invalid league')
       const settings = await sleeperClient
         .getLeague(league, { next: { revalidate: 300 } })
         .catch(() => {
@@ -39,14 +40,14 @@ async function handle(request: NextRequest) {
     let voted = Boolean(existing)
     let winner = existing?.winner
     if (request.method === 'POST') {
-      if (existing) return reply({ error: 'This pick is already saved.', voted: true }, 409)
+      if (existing) return fail(409, 'This pick is already saved.', { voted: true })
       const raw = await request.text()
-      if (raw.length > 2000) return reply({ error: 'Invalid ballot' }, 400)
+      if (raw.length > 2000) return fail(400, 'Invalid ballot')
       let body
       try {
         body = JSON.parse(raw)
       } catch {
-        return reply({ error: 'Invalid ballot' }, 400)
+        return fail(400, 'Invalid ballot')
       }
       if (
         body.day !== day ||
@@ -54,7 +55,7 @@ async function handle(request: NextRequest) {
         body.pair.join('|') !== choices.map((p) => p.key).join('|') ||
         !choices.some((p) => p.key === body.winner)
       )
-        return reply({ error: 'This ballot changed. Refresh to make today’s pick.' }, 400)
+        return fail(400, 'This ballot changed. Refresh to make today’s pick.')
       const ballot: Ballot = {
         version: 1,
         day,
@@ -92,10 +93,7 @@ async function handle(request: NextRequest) {
       choiceRatings: rated.filter((p) => choices.some((c) => c.key === p.key)),
     })
   } catch {
-    return reply(
-      { error: 'Community rankings are temporarily unavailable. Please try again.' },
-      503
-    )
+    return fail(503, 'Community rankings are temporarily unavailable. Please try again.')
   }
 }
 export const GET = handle

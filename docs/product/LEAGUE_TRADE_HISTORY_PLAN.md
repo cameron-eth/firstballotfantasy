@@ -51,7 +51,7 @@ The core unit is one **price observation**: in trade T, on date D, roster A rece
 2. **Sample size is always shown.** Below 3 priced observations we show the trades but no average, labelled "Not enough trades".
 3. **Unpriced trades stay visible.** A trade before 2026-04-17 lists what was paid with no number, labelled "Before price history".
 4. **Format-correct.** 1QB leagues use KTC 1QB values. This also fixes the PR-16b SF-only shortcut, which is a visible change and is listed in that PR's golden diff.
-5. **Picks on the trade date.** Use KTC's own pick values (round and Early/Mid/Late) if `ktc_player_values` has them (to be checked in T0). Otherwise keep the synthetic scale, labelled "estimated", with the trade-date year in place of today's.
+5. **Picks on the trade date.** Use KTC's own pick values (round and Early/Mid/Late). T0 confirmed `ktc_player_values` has them, and D6 (PR-27) already prices Trade Market's picks from them.
 6. **FAAB** is listed. It gets a value only if the owner picks a conversion (D-T2); until then it is shown as "+$12 FAAB, unvalued".
 7. **Managers by `owner_id`**, not roster id.
 8. **No new cache** without documented invalidation. Phase 1 is a pure function over the existing per-season snapshots, so it inherits their expiry (15 minutes current season, 30 days past seasons).
@@ -62,7 +62,7 @@ Each PR is small, uses golden tests, and ships default off where it changes visi
 
 | PR | Scope | Done when |
 |---|---|---|
-| **T0** audit | Read-only script `scripts/audit/trade-history.mjs`. For each connected league: trade count, priced %, 3-team %, picks/FAAB share, owner changes. Confirms whether KTC stores pick values and their history depth. Records fixtures for The OGs (SF dynasty), Ball Knowers, one 1QB dynasty and one redraft league | Report committed under `docs/data-architecture/`. Owner answers D-T1 to D-T4 |
+| **T0** audit — **done 2026-10-30** (`docs/data-architecture/TRADE_HISTORY_AUDIT.md`) | Read-only script `scripts/audit/trade-history.mjs`. For each connected league: trade count, priced %, 3-team %, picks/FAAB share, owner changes. Confirms whether KTC stores pick values and their history depth. Records fixtures for The OGs (SF dynasty), Ball Knowers, one 1QB dynasty and one redraft league | Report committed under `docs/data-architecture/`. Owner answers D-T1 to D-T4 |
 | **T1** observations | `lib/trade-market/price-observations.ts` (pure): turns trades + trade-date values into observations, with proportional attribution, 3-team support, picks, FAAB, `owner_id`. Format-aware KTC (1QB) in `tradeDateKtc` | Golden tests: the 10 Rome trades in The OGs checked by hand, a 3-team trade, a pick-only trade, a FAAB trade, a 1QB league. Existing goldens unchanged except the listed 1QB fix |
 | **T2** API | `GET /api/league/[id]/trade-history?player=&manager=`, built from the snapshots. Response states the coverage (priced / total) | Parity test against T1; production check on The OGs and Ball Knowers |
 | **T3** player UI | Player price history in the trade modal / Team Builder target and on Trade Market → Trends | Screenshots; UI review on 1QB and SF |

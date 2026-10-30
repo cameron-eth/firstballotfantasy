@@ -22,6 +22,7 @@ import {
   featuresFor,
   runDatasetFor,
   runSummary,
+  settleStatus,
   staleSince,
   type IngestionRun,
 } from '@/lib/platform/dataset-features'
@@ -57,20 +58,31 @@ type Explainable = {
   key: string
   status: string
   expires_at?: string | null
+  source_observed_at?: string | null
   expiresAt?: string | null
   /** A problem found by the check itself, reported ahead of the last job error. */
   problem?: string | null
 }
 
-/** Adds what a dataset feeds, when it went stale, and its last refresh and error. */
-function explain<T extends Explainable>(dataset: T, runs: Map<string, IngestionRun[]>) {
+/**
+ * Adds what a dataset feeds, when it went stale, and its last refresh and error. A lapsed
+ * snapshot that refreshes on its next read is reported idle, not expired (settleStatus).
+ */
+function explain<T extends Explainable>(
+  dataset: T,
+  runs: Map<string, IngestionRun[]>,
+  now: number
+) {
   const { problem, ...rest } = dataset
   const run = runDatasetFor(dataset.key)
   const summary = runSummary(run ? (runs.get(run) ?? []) : [])
+  const { status, idleSince } = settleStatus(dataset, summary.lastRun?.status ?? null, now)
   return {
     ...rest,
+    status,
+    idleSince,
     features: featuresFor(dataset.key),
-    staleSince: staleSince(dataset.status, dataset.expires_at ?? dataset.expiresAt),
+    staleSince: staleSince(status, dataset.expires_at ?? dataset.expiresAt),
     runDataset: run,
     ...summary,
     lastError: problem ?? summary.lastError,
@@ -275,23 +287,24 @@ export async function GET() {
       ...prospectYears,
       community,
     ]
-    const status = monitored.some((dataset) => dataset.status === 'expired')
-      ? 'degraded'
-      : monitored.some((dataset) => dataset.status === 'source-time-unknown')
-        ? 'unverified'
-        : 'current'
     const datasets = [...snapshots, ktc, ...prospectYears, community]
     const runDatasets = [
       ...new Set(datasets.map((d) => runDatasetFor(d.key)).filter((d): d is string => d !== null)),
     ]
     const runs = await latestRuns(runDatasets)
+    const explained = monitored.map((d) => explain(d, runs, now))
+    const status = explained.some((dataset) => dataset.status === 'expired')
+      ? 'degraded'
+      : explained.some((dataset) => dataset.status === 'source-time-unknown')
+        ? 'unverified'
+        : 'current'
     return json({
       status,
       currentSeason,
       currentWeek,
-      datasets: datasets.map((d) => explain(d, runs)),
-      monitored: monitored.map((d) => explain(d, runs)),
-      affected: affectedFeatures(monitored),
+      datasets: datasets.map((d) => explain(d, runs, now)),
+      monitored: explained,
+      affected: affectedFeatures(explained),
       checkedAt: new Date().toISOString(),
     })
   } catch (e) {

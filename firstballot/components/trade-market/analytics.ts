@@ -1,7 +1,7 @@
 // Trade analytics: turns raw league transactions into the per-roster KPIs, league
 // velocity, counterparty pairs and P&L series the market views render. Pure — the
 // container memoizes one call and threads the result down.
-import { getDraftPickValue, getGradeFromValue, type PlayerValue } from '@/lib/trade-utils'
+import { getGradeFromValue, type PlayerValue } from '@/lib/trade-utils'
 import {
   PNL_COLORS,
   type CounterpartyPair,
@@ -23,7 +23,12 @@ export function computeTradeAnalytics(
    * trade-date view (D4) passes the value on the trade's date instead.
    */
   valueInTrade: (trade: any, pid: string) => PlayerValue | null = (_trade, pid) =>
-    valuationCache.get(pid) ?? null
+    valuationCache.get(pid) ?? null,
+  /**
+   * A traded pick's value on the same basis, from KTC's pick assets (D6,
+   * lib/trade-market/pick-values.ts). Without prices, picks add nothing.
+   */
+  pickValueInTrade: (trade: any, pick: any) => number = () => 0
 ) {
   const rosterMap: Record<
     number,
@@ -140,8 +145,7 @@ export function computeTradeAnalytics(
       // Picks received
       for (const pick of draftPicks) {
         if (pick.owner_id === rosterId && pick.previous_owner_id !== rosterId) {
-          const pv = getDraftPickValue(pick.round, String(pick.season))
-          valueIn += pv.finalValue
+          valueIn += pickValueInTrade(trade, pick)
         }
       }
 
@@ -159,8 +163,7 @@ export function computeTradeAnalytics(
       // Picks sent
       for (const pick of draftPicks) {
         if (pick.previous_owner_id === rosterId && pick.owner_id !== rosterId) {
-          const pv = getDraftPickValue(pick.round, String(pick.season))
-          valueOut += pv.finalValue
+          valueOut += pickValueInTrade(trade, pick)
         }
       }
 

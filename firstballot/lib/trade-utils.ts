@@ -16,38 +16,6 @@ export interface PlayerValue {
   valueWithPpg?: number
 }
 
-export interface DraftPickValue {
-  season: string
-  round: number
-  baseValue: number
-  adjustedValue: number
-  bonus: number
-  timeDiscount: number
-  finalValue: number
-}
-
-export interface TradeAnalysis {
-  transactionId: string
-  week: number
-  season: string
-  date: string
-  timestamp?: number // Unix timestamp for sorting
-  teams: {
-    rosterId: number
-    teamName: string
-    ownerName: string
-    playersReceived: PlayerValue[]
-    picksReceived: DraftPickValue[]
-    totalValueReceived: number
-    playersSent: PlayerValue[]
-    picksSent: DraftPickValue[]
-    totalValueSent: number
-    netValueGain: number
-  }[]
-  totalTradeValue: number
-  winner: number | null
-}
-
 // Dynasty Player Valuation System
 // Based on FirstBallotModel comprehensive scoring (0-13125 scale)
 
@@ -210,59 +178,6 @@ export const getPlayerValueFromRank = (
     fantasyPpg,
     gamesPlayed
   )
-}
-
-// Draft Pick Valuation System
-// Base values with 2027 class bonus and time discounting
-
-export const getDraftPickValue = (round: number, season: string): DraftPickValue => {
-  const currentYear = new Date().getFullYear()
-  const yearDiff = parseInt(season) - currentYear
-
-  // Base values (more realistic dynasty values)
-  let baseValue = 0
-  if (round === 1)
-    baseValue = 55.25 // Reduced from 65 by 15%
-  else if (round === 2) baseValue = 25
-  else if (round === 3) baseValue = 15
-  else baseValue = Math.max(3, 8 - (round - 4) * 1) // 4th+: 8-3
-
-  // 2027 Draft Class Bonus
-  // 2027 is considered a strong draft class with exceptional talent depth
-  let bonus = 0
-  if (season === '2027') {
-    if (round === 1)
-      bonus = baseValue * 0.25 // +25%
-    else if (round === 2)
-      bonus = baseValue * 0.35 // +35%
-    else if (round === 3)
-      bonus = baseValue * 0.3 // +30%
-    else bonus = baseValue * 0.25 // +25%
-  }
-
-  // Time discounting for future/past picks
-  let timeDiscount = 0
-  let adjustedValue = baseValue + bonus
-
-  if (yearDiff > 0) {
-    // Future picks discounted 15% per year (dynasty format)
-    timeDiscount = adjustedValue * (1 - Math.pow(0.85, yearDiff))
-    adjustedValue *= Math.pow(0.85, yearDiff)
-  } else if (yearDiff < 0) {
-    // Past picks heavily discounted (70% per year)
-    timeDiscount = adjustedValue * (1 - Math.pow(0.3, Math.abs(yearDiff)))
-    adjustedValue *= Math.pow(0.3, Math.abs(yearDiff))
-  }
-
-  return {
-    season,
-    round,
-    baseValue: Math.round(baseValue * 100) / 100,
-    adjustedValue: Math.round(adjustedValue * 100) / 100,
-    bonus: Math.round(bonus * 100) / 100,
-    timeDiscount: Math.round(timeDiscount * 100) / 100,
-    finalValue: Math.round(adjustedValue * 100) / 100,
-  }
 }
 
 // Grade calculation based on total value gained

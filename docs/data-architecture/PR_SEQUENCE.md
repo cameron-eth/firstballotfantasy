@@ -100,7 +100,10 @@ Legend: **M** = has a DB migration. **F** = behind a flag or compatibility layer
 | **PR-23** | R4-4/R4-5: `http.ts` and single-pass auth everywhere; remove dead code and legacy routes after reference checks | One error shape; dead modules gone |
 | **PR-24** | R4-6: data-health dataset → feature map, job rows, "stale since" | data-health answers "what is stale, why, and what does it affect" |
 | **PR-25** | G4 follow-up: one KTC day reader, one refresh-secret check, Sleeper cache profiles, Team Map demo by id, dead `trade-utils` exports | No visible number changes (GATE_G4.md) |
-| → **G4** **Not passed 2026-10-29** (GATE_G4.md): PR-19 to PR-24 merged; 5 mechanical leftovers (PR-25) and 2 owner decisions (D6 Trade Market pick values, D7 community pool) remain | | |
+| **PR-26** | data-health: an idle read-through snapshot is idle, not expired | No false "degraded" between reads |
+| **PR-27** (D6) | Trade Market prices picks from KTC pick assets | Old pick scale removed; changed numbers measured in the PR |
+| **PR-28** (D7) | Community ballot NFL pool from the published tiers | `dynasty_player_tiers` no longer read |
+| → **G4** **Passed 2026-10-30** (GATE_G4.md): no class-D system left; the first check (2026-10-29) failed and PR-25 to PR-28 closed it | | |
 
 ## Deployment order
 

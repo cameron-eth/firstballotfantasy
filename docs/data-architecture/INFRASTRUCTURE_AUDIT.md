@@ -9,7 +9,7 @@ Classes used throughout:
 | **C** | One-off |
 | **D** | Competing duplicate implementations |
 
-> **Status at G4 (2026-10-29):** see GATE_G4.md for where each class-D row stands after Phase E. This document records the state on 2026-10-28 and is kept as written.
+> **Status at G4 (2026-10-30): passed.** Every class-D row is now one implementation; GATE_G4.md has the evidence per row. This document records the state on 2026-10-28 and is kept as written.
 
 Counts come from grep over `firstballot/app`, `lib`, `components` and `hooks` on 2026-10-28. There are 46 API route files. Evidence labels: [V] verified, [C] code-supported, [S] suspected, [U] unknown.
 

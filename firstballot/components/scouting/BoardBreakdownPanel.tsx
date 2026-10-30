@@ -28,7 +28,8 @@ interface BoardBreakdownPanelProps {
   allEligibleProspects: Prospect[]
   position: string
   /** Consensus rank per draft class, keyed by player name. */
-  consensusRankByClassName: Map<number, Map<string, number>>
+  /** Consensus rank per class, keyed by prospect id (the same map the board uses). */
+  consensusRankByClassId: Map<number, Map<number, number>>
 }
 
 /**
@@ -41,7 +42,7 @@ export function BoardBreakdownPanel({
   consensusBoard,
   allEligibleProspects,
   position,
-  consensusRankByClassName,
+  consensusRankByClassId,
 }: BoardBreakdownPanelProps) {
   const { open: showBreakdown, toggle: toggleBreakdown } = useBreakdownPanelOpen()
 
@@ -142,14 +143,14 @@ export function BoardBreakdownPanel({
     }
     const results: { player: BoardPlayer; diff: number }[] = []
     for (const [year, players] of byYear) {
-      const classNameMap = consensusRankByClassName.get(year)
+      const classRankMap = consensusRankByClassId.get(year)
       players.forEach((p, idx) => {
-        const consensusRank = classNameMap?.get(p.name) ?? idx + 1
+        const consensusRank = classRankMap?.get(p.id) ?? idx + 1
         results.push({ player: p, diff: consensusRank - (idx + 1) })
       })
     }
     return results
-  }, [userBoard, consensusRankByClassName])
+  }, [userBoard, consensusRankByClassId])
 
   const higherThanConsensus = useMemo(
     () =>

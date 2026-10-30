@@ -2,44 +2,61 @@
 
 **Criterion (PR_SEQUENCE.md):** INFRASTRUCTURE_AUDIT has no class-D rows left.
 
-**Status, 2026-10-29: not passed.** Phase E (PR-19 to PR-24) consolidated the bulk of every class-D system. A re-check of `main` at `e1b9f30` with the audit's own greps still finds duplicates in four of the seven D systems:
+**Status, 2026-10-30: passed.** I re-checked `main` at `d93225d` with the audit's own greps, and no system in the audit's class D (competing duplicate implementations) still has one. The first check, on 2026-10-29, failed with seven leftovers. Since then:
+- PR-25 (#139) fixed the five mechanical ones.
+- PR-27 (#142, D6) and PR-28 (#143, D7) carried out the owner's two decisions.
+- This PR keys the last name-keyed prospect consensus map by id.
 
-- **5 are mechanical:** they change no number a user sees. Proposed for one PR, PR-25.
-- **2 change visible numbers,** so they need an owner decision first (D6, D7).
+Along the way, PR-26 (#141) stopped data-health reporting idle caches as stale.
 
 ## The seven class-D systems
 
-| System | Was | Now | Evidence |
+| System | Was (2026-10-28) | Now | Evidence |
 |---|---|---|---|
-| Sleeper API client | 5 implementations, 21 files | **Resolved (A)** | PR-21a–c. `api.sleeper.app` appears only in `lib/sleeper-sdk/client.ts`, enforced by a guard test. The Python job `scripts/import-history-outcomes.py` calls Sleeper on its own; scripts are outside the app and outside the audit's scope. |
-| Player identity | 4 approaches, name joins | **Resolved, one leftover** | PR-19a–d. The KTC↔Sleeper match is done once, at publish time (`lib/ktc-identity.ts`), and readers go by Sleeper or KTC id. **Leftover:** the landing-page Team Map demo looks live tier values up by display name (`TeamMapPreview.tsx:131`). |
-| Auth | 9 mechanisms; JWT verified 2–3× | **Resolved, one leftover** | PR-23b. The JWT is verified only in `middleware.ts`, enforced by a guard test. **Leftover:** the `DATA_REFRESH_SECRET` check is still copied in `dynasty-tiers/route.ts:151` and `internal/refresh-data/route.ts:6`. |
-| Metric calculations | 20 of 43 metrics duplicated | **Resolved except one** | G1 resolved 13. PR-16, PR-19, PR-20 and PR-23 resolved the carried items: KTC deltas, FPPG sources, pick ownership, prospect tiers. **Open (owner, D6):** Trade Market prices picks on a hard-coded synthetic scale with a 2027 bonus (`lib/trade-utils.ts:236`, `getDraftPickValue`), not on KTC pick values. **Open (owner, D7, G1 metric 4):** the community ballot pool reads `dynasty_player_tiers`. That table has no writer and was last updated 2026-02-22 (972 rows, ranked on the old 0–13,125 score), so the pool is eight months behind the published tiers. |
-| Ranking algorithms | 5 standings orders, 3 position ranks, 2 prospect ranks | **Resolved** for standings (PR-7) and position ranks (PR-5, PR-9b). **Assigned** for prospect ranks | Prospect rank derivation is step P2 of the approved prospect plan (`docs/product/PROSPECT_RANKING_PLAN.md`). |
-| KTC access | 4 "latest date" queries, 2 freshness rules | **Still D** | Three readers still find "today's KTC" themselves, each with a different rule: `ktc-values` (2 queries, newest date, 48 h budget), `data-health` (newest date, 48 h), `trade-market:latestKtcById` (newest date, **no budget**). Tier publication uses a fourth rule: the newest **complete** day by its `ktc:day` marker. A raw newest-date read can pick a day whose scrape is still in progress. |
-| Caching layers | 7 layers, 16 presets plus ad hoc | **Mostly resolved** | PR-21 deleted `nextjs-cache`, `cache-config` and `api-cache`; Sleeper reads use the `SLEEPER_CACHE` profiles. The remaining layers (snapshots, the Next fetch cache, the per-instance memo, CDN headers, SWR, bundled JSON) each do a different job; they are layers, not duplicates. **Leftover:** four Sleeper reads pass an ad hoc `{ next: { revalidate } }` instead of a profile: `community-rankings:22`, `leagues:24`, `projections:56`, `data-health:105`. |
+| Sleeper API client | 5 implementations, 21 files | **A: one client** | PR-21a–c. `api.sleeper.app` appears only in `lib/sleeper-sdk/client.ts`, guarded by a test. Every read takes its cache settings from `SLEEPER_CACHE` (PR-25, guarded). The Python job `scripts/import-history-outcomes.py` calls Sleeper on its own; it's outside the app. |
+| KTC access | 4 "latest date" queries, 2 freshness rules | **A: one reader** | PR-25: `latestKtcDay()` / `completeKtcDays()` in `lib/platform/ktc-days.ts` (the complete-day markers) serve ktc-values, data-health, Trade Market and tier publication, with one budget (`KTC_MAX_AGE_MS`). Guarded by a test. The other `scraped_date` query left, in tier publication, finds the day **30 days back** for the 30-day change; that's a different question. |
+| Caching layers | 7 layers, 16 presets plus ad hoc | **B → A** | The remaining layers each do a different job: snapshots, the Next fetch cache via `SLEEPER_CACHE`, the per-instance memo, CDN headers, SWR, bundled JSON. Dead layers were removed (PR-21, PR-23a), no ad hoc fetch TTL is left (guarded), and data-health tells an idle read-through snapshot apart from a stale one (PR-26). |
+| Player identity | 4 approaches, name joins | **A: by id** | PR-19a–d: KTC↔Sleeper is matched once, at publish time (`lib/ktc-identity.ts`), and readers go by Sleeper or KTC id. PR-25 moved the landing Team Map demo to Sleeper ids. PR-28 keys the community pool by Sleeper id. The KTC pick lookups (Builder, Trade Market) go by KTC's own asset names such as "2027 Mid 1st", not by people's names. |
+| Auth | 9 mechanisms; JWT verified 2–3× | **A** | PR-23b: the session JWT is verified only in `middleware.ts`. PR-25: the refresh secret is checked only in `refreshAuthorized()`. Both are guarded by tests. |
+| Metric calculations | 20 of 43 metrics duplicated | **A** | G1 resolved 13. The seven it carried forward: <ul><li>**KTC scale:** PR-16, PR-19, and D6 (PR-27), which prices Trade Market picks from KTC's pick assets; the hard-coded scale is gone (guarded).</li><li>**KTC deltas:** PR-23a.</li><li>**Community tier pool:** D7 (PR-28) builds it from the published tiers; `dynasty_player_tiers` is no longer read (guarded).</li><li>**FPPG sources, pick ownership:** PR-23a.</li><li>**Prospect tiers:** PR-20.</li></ul> |
+| Ranking algorithms | 5 standings orders, 3 position ranks, 2 prospect ranks | **A** | <ul><li>**Standings:** one `compareStandings` (PR-7).</li><li>**Position ranks:** one rule (PR-5, PR-9b).</li><li>**Prospect ranks:** one server derivation (`deriveRanks` in `/api/prospects`). The audit's second derivation, ScoutingPortal using a positional rank as overall, is gone: its remaining rank use concerns NFL players. This PR removes a duplicate client consensus map keyed by name; the board breakdown now uses the board's id-keyed map.</li></ul> |
+
+**What G4 doesn't settle:** grade v2 (prospect plan P2–P6) changes how prospects are *graded*, not how many implementations there are. The legacy `/draft-board` page compares a user's board to consensus by name within one response, because its prospects carry no id. PR-20b ensured names are unique within a class.
 
 ## Dead code (PERFORMANCE_ACCURACY P3-1)
 
-Everything on the P3-1 list is gone from `main`, removed in PR-21 and PR-23a (#133):
+Everything on the P3-1 list is gone from `main`, removed in PR-21 and PR-23a (#133). That covers:
 - `lib/sleeper-api.ts`, `lib/cache-config.ts` and `lib/api-cache.ts`
 - `positionStrengths` and `calculateRawScore`
 - `/api/draft-capital` and `TeamCard.tsx`
 - the six unused routes
 
-New dead code found during this check: `lib/trade-utils.ts` has three exports nothing calls, `get2027EnhancedValues`, `calculateTraderStats` and `getValuationSystemDescription`. *(Corrected in PR-25: the first version of this note listed six. `getPlayerValue`, `getPlayerValueFromRank` and `rankingFor` have no outside importers, but Trade Market's `processPlayerForTrade` calls them, so they are live. They contain the old 0–13,125 path, which belongs with D6.)*
+Found and removed during G4:
+- **PR-25:** three unused `trade-utils` exports and `UserApi.getUserProfile`.
+- **PR-27:** `getDraftPickValue`, `DraftPickValue` and `TradeAnalysis`.
 
-## To pass
+## How it was checked
 
-**PR-25 (mechanical; no visible number changes; one PR):**
-1. **One KTC day reader:** `latestKtcDay({ budget })` in `lib/platform`, using the complete-day marker rule tier publication already uses. ktc-values, data-health and Trade Market use it. Trade Market has no budget today; the PR keeps that and states it.
-2. **One refresh-secret check:** `refreshAuthorized(request)` in `lib/platform/auth.ts`, used by both routes.
-3. **Shared cache profiles:** the four ad hoc Sleeper reads use `SLEEPER_CACHE` profiles. Any TTL that changes is listed in the PR.
-4. **Team Map demo by id:** the demo looks up live values by Sleeper id instead of by name.
-5. **Dead code:** remove the three unused `trade-utils` exports.
+The audit's greps, re-run on `d93225d`:
 
-**Owner decisions:**
-- **D6, Trade Market pick values.** (a) Price picks from KTC pick assets, which the Builder already uses; Trade Market P&L and grades change. (b) Keep the synthetic scale, document it as Trade Market's own, and drop the 2027 bonus once that class is drafted.
-- **D7, community ballot pool.** (a) Build the NFL half of the pool from the published tier snapshot (top 200 by KTC). This adds 2026 rookies and drops retired players. Today's ballot keys use the table's GSIS ids (`nfl:00-0039139`), so past NFL ballots need those keys mapped to Sleeper ids through the identity map, or they stop counting. (b) Keep `dynasty_player_tiers` and give it a writer.
+| Check | Result |
+|---|---|
+| `api.sleeper.app` | only in `lib/sleeper-sdk/client.ts` |
+| newest-KTC-date queries | none outside `ktc-days.ts` |
+| ad hoc `next: { revalidate: N }` | none outside the Sleeper client |
+| `auth.getUser(` | only in `middleware.ts` |
+| `DATA_REFRESH_SECRET` | only in `lib/platform/auth.ts` |
+| `getDraftPickValue`, `dynasty_player_tiers` in app code | none |
+| standings comparators | only `compareStandings` |
 
-Once PR-25 lands and D6 and D7 are decided and built, re-run this check. G4 passes when the "Now" column has no D.
+Tests now guard each of these: `sleeper-client`, `session-auth`, `g4-consolidation`, `trade-market-pick-values` and `community-nfl-pool`.
+
+**Production checks after each merge:**
+- **KTC:** identical responses before and after PR-25.
+- **Trade Market:** 81 trades, 35 priced. After D6, the today view shows the 68 unpriced picks the harness predicted.
+- **Community ballot (2026-10-30):** today's pair includes `nfl:13349` (Eli Stowers, a 2026 rookie) with a headshot.
+- **data-health:** "unverified"; nothing expired, nothing affected.
+
+## History
+
+The first check (2026-10-29, #138) found five mechanical leftovers (PR-25) and two owner decisions (D6 Trade Market pick values, D7 community pool). The owner chose (a) for both on 2026-10-30. D7 needed no ballot migration: all 15 stored ballots were prospect against prospect, so no GSIS `nfl:` key existed to remap.
